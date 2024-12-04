@@ -1,9 +1,17 @@
 import Gtk from "gi://Gtk?version=4.0"
 import Gdk from "gi://Gdk?version=4.0"
 
-const provider = new Gtk.CssProvider()
+const stylesheets: string[] = []
 
 export function apply() {
+    const provider = new Gtk.CssProvider()
+
+    try {
+        provider.load_from_string(stylesheets.join(" "))
+    } catch (err) {
+        logError(err)
+    }
+
     const display = Gdk.Display.get_default()
     if (!display) {
         throw Error("Could not get default Gdk.Display")
@@ -19,12 +27,12 @@ export function apply() {
 
 export function css(css: TemplateStringsArray, ...values: any[]): void
 export function css(css: string): void
-export function css(css: TemplateStringsArray | string, ...values: any[]): void {
+export function css(css: TemplateStringsArray | string, ...values: any[]) {
     const style = typeof css === "string"
         ? css
         : css
             .flatMap((str, i) => str + `${values[i] ?? ""}`)
             .join("")
 
-    provider.load_from_string(style)
+    stylesheets.push(style)
 }
