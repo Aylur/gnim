@@ -28,6 +28,8 @@ export function jsx<T extends GObject.Object>(
     ctor: (new (props: any) => T) | ((props: any) => T),
     { $$, $type = null, children = [], ...props }: Partial<JsxProps> & SignalHandler<T> & Partial<Setup<T>> & Record<string, unknown>,
 ): T {
+    children = Array.isArray(children) ? children : [children]
+
     const signals: Array<[string, (...props: unknown[]) => unknown]> = []
 
     for (const [key, handler] of Object.entries(props)) {
@@ -42,28 +44,18 @@ export function jsx<T extends GObject.Object>(
     if (isGObject<T>(ctor)) {
         object = Object.assign(new ctor(props), { [typeAttr]: $type ?? null })
 
-        if ("addChild" in object && typeof object.addChild === "function") {
-            if (Array.isArray(children)) {
-                for (const child of children) {
-                    object.addChild(child, child[typeAttr])
-                }
-            } else if (children instanceof GObject.Object) {
-                object.addChild(children, children[typeAttr])
-            }
-        } else if (object instanceof Gtk.Buildable) {
-            if (Array.isArray(children)) {
-                for (const child of children) {
-                    object.vfunc_add_child(dummyBuilder, child, child[typeAttr])
-                }
-            } else if (children instanceof GObject.Object) {
-                object.vfunc_add_child(dummyBuilder, children, children[typeAttr])
+        for (const child of children.flat(Infinity)) {
+            if ("addChild" in object && typeof object.addChild === "function") {
+                object.addChild(child, child[typeAttr])
+            } else if (object instanceof Gtk.Buildable) {
+                object.vfunc_add_child(dummyBuilder, child, child[typeAttr])
             }
         }
     } else {
-        if (Array.isArray(children)) {
-            props.children = children
-        } else {
+        if (children.length === 1) {
             props.child = children
+        } else {
+            props.children = children
         }
 
         object = Object.assign(ctor(props), { [typeAttr]: $type ?? null })
@@ -78,7 +70,7 @@ export function Fragment({ children = [], child }: {
     children?: Array<GObject.Object>
 }) {
     if (child) children.push(child)
-    return children
+    return children.flat(Infinity)
 }
 
 declare global {
