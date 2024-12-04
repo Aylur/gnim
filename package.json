@@ -1,0 +1,34 @@
+{
+    "name": "gjsx",
+    "version": "0.1.0",
+    "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/aylur/gjsx.git"
+    },
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "scripts": {
+        "lint": "eslint . --fix"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.1",
+        "@girs/gtk-4.0": "^4.16.3-4.0.0-beta.19",
+        "@stylistic/eslint-plugin": "^2.11.0",
+        "@types/eslint__js": "^8.42.3",
+        "esbuild": "^0.24.0",
+        "eslint": "^9.16.0",
+        "typescript": "^5.7.2",
+        "typescript-eslint": "^8.17.0"
+    },
+    "exports": {
+        "./gobject": "./src/gobject.ts",
+        "./jsx-runtime": "./src/jsx-runtime.ts",
+        "./esbuild-blueprint": "./src/esbuild-blueprint.mjs",
+        "./style": "./src/style.ts"
+    }
+}
