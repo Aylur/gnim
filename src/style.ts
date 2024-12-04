@@ -1,23 +1,9 @@
 import Gtk from "gi://Gtk?version=4.0"
 import Gdk from "gi://Gdk?version=4.0"
 
-export function css(css: TemplateStringsArray, ...values: any[]): () => void
-export function css(css: string): () => void
-export function css(css: TemplateStringsArray | string, ...values: any[]): () => void {
-    const style = typeof css === "string"
-        ? css
-        : css
-            .flatMap((str, i) => str + `${values[i] ?? ""}`)
-            .join("")
+const provider = new Gtk.CssProvider()
 
-    const provider = new Gtk.CssProvider()
-
-    try {
-        provider.load_from_string(style)
-    } catch (err) {
-        logError(err)
-    }
-
+export function apply() {
     const display = Gdk.Display.get_default()
     if (!display) {
         throw Error("Could not get default Gdk.Display")
@@ -29,4 +15,16 @@ export function css(css: TemplateStringsArray | string, ...values: any[]): () =>
     return () => {
         Gtk.StyleContext.remove_provider_for_display(display, provider)
     }
+}
+
+export function css(css: TemplateStringsArray, ...values: any[]): void
+export function css(css: string): void
+export function css(css: TemplateStringsArray | string, ...values: any[]): void {
+    const style = typeof css === "string"
+        ? css
+        : css
+            .flatMap((str, i) => str + `${values[i] ?? ""}`)
+            .join("")
+
+    provider.load_from_string(style)
 }
