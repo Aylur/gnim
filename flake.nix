@@ -22,6 +22,7 @@
           libadwaita
           gtk4
           gjs
+          typescript
         ];
       };
     });

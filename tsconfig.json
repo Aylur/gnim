@@ -4,6 +4,7 @@
         "module": "ES2022",
         "target": "ES2023",
         "outDir": "dist",
+        "declaration": true,
         "strict": true,
         "moduleResolution": "Bundler",
         "skipLibCheck": true,
