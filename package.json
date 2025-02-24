@@ -28,7 +28,6 @@
         "typescript-eslint": "^8.17.0"
     },
     "exports": {
-        "./esbuild-blueprint": "./src/esbuild-blueprint.mjs",
         "./state": "./src/state.ts",
         "./gobject": "./src/gobject.ts",
         "./gtk4": "./src/gtk4/index.ts",
