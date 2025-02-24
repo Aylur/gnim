@@ -9,7 +9,7 @@
         "skipLibCheck": true,
         "jsx": "react-jsx",
         "baseUrl": ".",
-        "jsxImportSource": "src",
+        "jsxImportSource": "src/gtk4",
     },
     "include": [
         "./node_modules/@girs/**/*",

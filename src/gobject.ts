@@ -1,9 +1,14 @@
 import GObject from "gi://GObject"
+export { GObject, GObject as default }
 
 const meta = Symbol("meta")
 const priv = Symbol("priv")
 
 const { ParamSpec, ParamFlags } = GObject
+
+function isGType(obj: any): obj is GObject.GType {
+    return GObject.type_check_is_value_type(obj)
+}
 
 const kebabify = (str: string) => str
     .replace(/([a-z])([A-Z])/g, "$1-$2")
@@ -18,6 +23,7 @@ type SignalDeclaration = {
 }
 
 type PropertyDeclaration =
+    | ((name: string, flags: GObject.ParamFlags) => GObject.ParamSpec)
     | InstanceType<typeof GObject.ParamSpec>
     | { $gtype: GObject.GType }
     | typeof String
@@ -39,7 +45,6 @@ export function register(options: MetaInfo = {}) {
     return function (cls: GObjectConstructor) {
         const t = options.Template
         if (typeof t === "string" && !t.startsWith("resource://") && !t.startsWith("file://")) {
-            // assume xml template
             options.Template = new TextEncoder().encode(t)
         }
 
@@ -61,9 +66,12 @@ export function property(declaration: PropertyDeclaration = Object) {
         const name = kebabify(prop)
 
         if (!desc) {
+            const spec = pspec(name, ParamFlags.READWRITE, declaration)
+            target.constructor[meta].Properties[name] = spec
+
             Object.defineProperty(target, prop, {
                 get() {
-                    return this[priv]?.[prop] ?? defaultValue(declaration)
+                    return this[priv]?.[prop] ?? spec.get_default_value()
                 },
                 set(v: any) {
                     if (v !== this[prop]) {
@@ -85,27 +93,27 @@ export function property(declaration: PropertyDeclaration = Object) {
                     return this[prop]
                 },
             })
-
-            target.constructor[meta].Properties[kebabify(prop)] = pspec(name, ParamFlags.READWRITE, declaration)
         } else {
             let flags = 0
             if (desc.get) flags |= ParamFlags.READABLE
             if (desc.set) flags |= ParamFlags.WRITABLE
 
-            target.constructor[meta].Properties[kebabify(prop)] = pspec(name, flags, declaration)
+
+            const spec = pspec(name, flags, declaration)
+            target.constructor[meta].Properties[name] = spec
         }
     }
 }
 
-export function signal(...params: Array<{ $gtype: GObject.GType } | typeof Object>):
-(target: any, signal: any, desc?: PropertyDescriptor) => void
+export function signal(...params: Array<{ $gtype: GObject.GType } | GObject.GType>):
+    (target: any, signal: any, desc?: PropertyDescriptor) => void
 
 export function signal(declaration?: SignalDeclaration):
-(target: any, signal: any, desc?: PropertyDescriptor) => void
+    (target: any, signal: any, desc?: PropertyDescriptor) => void
 
 export function signal(
-    declaration?: SignalDeclaration | { $gtype: GObject.GType } | typeof Object,
-    ...params: Array<{ $gtype: GObject.GType } | typeof Object>
+    declaration?: SignalDeclaration | { $gtype: GObject.GType } | GObject.GType,
+    ...params: Array<{ $gtype: GObject.GType } | GObject.GType>
 ) {
     return function (target: any, signal: any, desc?: PropertyDescriptor) {
         target.constructor[meta] ??= {}
@@ -114,8 +122,11 @@ export function signal(
         const name = kebabify(signal)
 
         if (declaration || params.length > 0) {
-            // @ts-expect-error TODO: type assert
-            const arr = [declaration, ...params].map(v => v.$gtype)
+            const arr = [declaration, ...params].map(v => {
+                if (isGType(v)) return v
+                throw Error(`${v} is not a valid GType`)
+            })
+
             target.constructor[meta].Signals[name] = {
                 param_types: arr,
             }
@@ -139,45 +150,40 @@ export function signal(
             }
             Object.defineProperty(target, `on_${name.replace("-", "_")}`, {
                 value: function (...args: any[]) {
-                    return og(...args)
+                    return og.apply(this, args)
                 },
             })
         }
     }
 }
 
-function pspec(name: string, flags: number, declaration: PropertyDeclaration) {
+function pspec(name: string, flags: GObject.ParamFlags, declaration: PropertyDeclaration) {
     if (declaration instanceof ParamSpec)
         return declaration
 
-    switch (declaration) {
-        case String:
-            return ParamSpec.string(name, "", "", flags, "")
-        case Number:
-            return ParamSpec.double(name, "", "", flags, -Number.MAX_VALUE, Number.MAX_VALUE, 0)
-        case Boolean:
-            return ParamSpec.boolean(name, "", "", flags, false)
-        case Object:
-            return ParamSpec.jsobject(name, "", "", flags)
-        default:
-            // @ts-expect-error misstyped
-            return ParamSpec.object(name, "", "", flags, declaration.$gtype)
+    if (declaration === Object) {
+        return ParamSpec.jsobject(name, "", "", flags)
     }
-}
 
-function defaultValue(declaration: PropertyDeclaration) {
-    if (declaration instanceof ParamSpec)
-        return declaration.get_default_value()
-
-    switch (declaration) {
-        case String:
-            return ""
-        case Number:
-            return 0
-        case Boolean:
-            return false
-        case Object:
-        default:
-            return null
+    if (declaration === String) {
+        return ParamSpec.string(name, "", "", flags, "")
     }
+
+    if (declaration === Number) {
+        return ParamSpec.double(name, "", "", flags, -Number.MAX_VALUE, Number.MAX_VALUE, 0)
+    }
+
+    if (declaration === Boolean) {
+        return ParamSpec.boolean(name, "", "", flags, false)
+    }
+
+    if ("$gtype" in declaration) {
+        return ParamSpec.object(name, "", "", flags as any, declaration.$gtype)
+    }
+
+    if (typeof declaration === "function") {
+        return declaration(name, flags)
+    }
+
+    throw Error("invalid PropertyDeclaration")
 }

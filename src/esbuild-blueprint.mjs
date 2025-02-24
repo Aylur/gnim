@@ -1,3 +1,4 @@
+// @ts-check
 import { resolve } from "path"
 import { exec } from "child_process"
 

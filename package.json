@@ -1,12 +1,12 @@
 {
     "name": "gjsx",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/aylur/gjsx.git"
+        "url": "https://github.com/Aylur/gjsx.git"
     },
     "funding": {
         "type": "kofi",
@@ -16,19 +16,25 @@
         "lint": "eslint . --fix"
     },
     "devDependencies": {
-        "@types/node": "^22.10.1",
+        "@girs/adw-1": "^1.7.0-4.0.0-beta.21",
+        "@girs/clutter-16": "^16.0.0-4.0.0-beta.21",
         "@girs/gtk-4.0": "^4.16.3-4.0.0-beta.19",
         "@stylistic/eslint-plugin": "^2.11.0",
         "@types/eslint__js": "^8.42.3",
+        "@types/node": "^22.10.1",
         "esbuild": "^0.24.0",
         "eslint": "^9.16.0",
         "typescript": "^5.7.2",
         "typescript-eslint": "^8.17.0"
     },
     "exports": {
-        "./gobject": "./src/gobject.ts",
-        "./jsx-runtime": "./src/jsx-runtime.ts",
         "./esbuild-blueprint": "./src/esbuild-blueprint.mjs",
-        "./style": "./src/style.ts"
+        "./state": "./src/state.ts",
+        "./gobject": "./src/gobject.ts",
+        "./gtk4": "./src/gtk4/index.ts",
+        "./gtk4/jsx-runtime": "./src/gtk4/jsx-runtime.ts",
+        "./gtk4/style": "./src/gtk4/style.ts",
+        "./gnome": "./src/gnome/index.ts",
+        "./gnome/jsx-runtime": "./src/gnome/jsx-runtime.ts"
     }
 }
