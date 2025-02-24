@@ -58,7 +58,7 @@ function isGObjectCtor<T extends GObject.Object>(ctor: any): ctor is CC<T> {
 }
 
 function isFunctionCtor<T extends GObject.Object>(ctor: any): ctor is FC<T> {
-    return typeof ctor === "function"
+    return typeof ctor === "function" && !isGObjectCtor(ctor)
 }
 
 const kebabify = (str: string) => str
