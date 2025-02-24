@@ -64,7 +64,7 @@ export class State<T> extends Function {
     }
 
     toString(): string {
-        return `Binding<${typeof this.value}>`
+        return `State<${typeof this.get()}>`
     }
 
     [Symbol.toPrimitive]() {
@@ -125,6 +125,15 @@ export class Binding<Value> {
             () => callback(this.get()),
         )
         return () => this[_emitter].disconnect(id)
+    }
+
+    toString(): string {
+        return `Binding<${typeof this.get()}>`
+    }
+
+    [Symbol.toPrimitive]() {
+        console.warn("Binding implicitly converted to a primitive value.")
+        return this.toString()
     }
 }
 
