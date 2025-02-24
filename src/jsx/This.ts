@@ -4,7 +4,7 @@ import { addChild } from "./index.js"
 type Element = JSX.Element | "" | false | null | undefined
 
 interface ThisProps<T> {
-    this: T,
+    this: T
     children?: Element | Array<Element>
 }
 

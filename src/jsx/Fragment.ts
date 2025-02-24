@@ -1,10 +1,25 @@
-import GObject, { register, property, signal } from "../gobject.js"
+import GObject from "gi://GObject"
 
-@register({ GTypeName: "Fragment" })
 export default class Fragment<T = any> extends GObject.Object {
+    static {
+        GObject.registerClass({
+            Properties: {
+                children: GObject.ParamSpec.jsobject("children", "", "", GObject.ParamFlags.READWRITE),
+            },
+            Signals: {
+                "child-added": {
+                    param_types: [GObject.TYPE_OBJECT, GObject.TYPE_UINT],
+                },
+                "child-removed": {
+                    param_types: [GObject.TYPE_OBJECT, GObject.TYPE_UINT],
+                },
+            },
+
+        }, this)
+    }
+
     private _children: Array<{ $: T }>
 
-    @property(Object)
     get children() {
         return this._children.map(({ $ }) => $)
     }
@@ -12,12 +27,6 @@ export default class Fragment<T = any> extends GObject.Object {
     set children(_: Array<T>) {
         // ignore
     }
-
-    @signal(GObject.Object, GObject.TYPE_UINT)
-    declare childAdded: (child: T, index: number) => void
-
-    @signal(GObject.Object, GObject.TYPE_UINT)
-    declare childRemoved: (child: T, index: number) => void
 
     addChild(child: T, index: number = -1) {
         if (child instanceof Fragment) {
@@ -28,14 +37,14 @@ export default class Fragment<T = any> extends GObject.Object {
             this._children = [
                 ...this._children.slice(0, index),
                 { $: child },
-                ...this._children.slice(index)
-            ];
+                ...this._children.slice(index),
+            ]
         } else {
             this._children.push({ $: child })
             index = this._children.length - 1
         }
 
-        this.childAdded(child, index)
+        this.emit("child-added", child, index)
         this.notify("children")
     }
 
@@ -43,13 +52,13 @@ export default class Fragment<T = any> extends GObject.Object {
         const index = this._children.findIndex(({ $ }) => $ === child)
         this._children.splice(index, 1)
 
-        this.childRemoved(child, index)
+        this.emit("child-removed", child, index)
         this.notify("children")
     }
 
     constructor({ children = [] }: Partial<{ children: Array<T> | T }> = {}) {
         super()
-        this._children = Array.isArray(children) ? children.map(($) => ({ $ })) : [{ $: children }]
+        this._children = Array.isArray(children) ? children.map($ => ({ $ })) : [{ $: children }]
     }
 
     static new<T>(children: Array<T> = []) {

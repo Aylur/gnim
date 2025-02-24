@@ -48,8 +48,8 @@ type FC<T extends GObject.Object = GObject.Object> = (props: any) => T
 
 type JsxProps<Self, Props extends GObject.Object.ConstructorProps> =
     Self extends typeof Fragment ? (Props & Setup<InstanceType<Self>>)
-    : Self extends FC ? (Props & Setup<ReturnType<Self>>)
-    : Self extends CC ? CtorProps<InstanceType<Self>, Props> & Children : never
+        : Self extends FC ? (Props & Setup<ReturnType<Self>>)
+            : Self extends CC ? CtorProps<InstanceType<Self>, Props> & Children : never
 
 export const gtkType = Symbol("gtk builder type")
 
@@ -78,7 +78,7 @@ export function jsx<T extends (new (props: any) => GObject.Object)>(
 
 export function jsx<T extends GObject.Object>(
     ctor: keyof typeof intrinsicElements | (new (props: any) => T) | ((props: any) => T),
-    { $, _type, _constructor, children = [], ...props }: CtorProps<T, any>
+    { $, _type, _constructor, children = [], ...props }: CtorProps<T, any>,
 ): T {
     for (const [key, value] of Object.entries(props)) {
         if (value === undefined) delete props[key]
@@ -147,19 +147,22 @@ export function jsx<T extends GObject.Object>(
 export const jsxs = jsx
 
 declare global {
+    // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace JSX {
         type ElementType = CC | FC | keyof IntrinsicElements
         type Element = GObject.Object
         type ElementClass = GObject.Object
         type LibraryManagedAttributes<Self, Props extends GObject.Object.ConstructorProps> = JsxProps<Self, Props>
 
+        // eslint-disable-next-line @typescript-eslint/no-empty-object-type
         interface IntrinsicElements {
             // cc: CtorProps<Gtk.Box, Gtk.Box.ConstructorProps>
             // fc: FcProp
         }
 
         interface ElementChildrenAttribute {
-            children: {};
+            // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+            children: {}
         }
     }
 }

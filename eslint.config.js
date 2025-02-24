@@ -13,6 +13,7 @@ export default tseslint.config({
         }),
     ],
     rules: {
+        "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
         "@typescript-eslint/no-explicit-any": "off",
         "@stylistic/new-parens": "off",
         "@stylistic/brace-style": ["error", "1tbs", { allowSingleLine: true }],

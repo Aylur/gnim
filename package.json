@@ -35,5 +35,8 @@
         "./gtk4/style": "./src/gtk4/style.ts",
         "./gnome": "./src/gnome/index.ts",
         "./gnome/jsx-runtime": "./src/gnome/jsx-runtime.ts"
+    },
+    "engines": {
+        "gjs": ">=1.79.0"
     }
 }

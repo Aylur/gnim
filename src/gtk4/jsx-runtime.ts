@@ -1,7 +1,7 @@
-import Gtk from "gi://Gtk?version=4.0";
+import Gtk from "gi://Gtk?version=4.0"
 import GObject from "gi://GObject"
-import Fragment from "../jsx/Fragment.js";
-import { configue, gtkType } from "../jsx/index.js";
+import Fragment from "../jsx/Fragment.js"
+import { configue, gtkType } from "../jsx/index.js"
 
 const dummyBuilder = new Gtk.Builder()
 

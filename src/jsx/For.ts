@@ -2,16 +2,16 @@ import Fragment from "./Fragment.js"
 import { Binding, State, sync } from "../state.js"
 
 interface ForProps<T> {
-    each: Binding<Array<T>>,
-    children: (item: T, index: Binding<number>) => JSX.Element,
-    cleanup?: (element: JSX.Element, item: T, index: number) => void,
+    each: Binding<Array<T>>
+    children: (item: T, index: Binding<number>) => JSX.Element
+    cleanup?: (element: JSX.Element, item: T, index: number) => void
 }
 
 export default function For<T extends object>({ each, children, cleanup }: ForProps<T>) {
     const map = new Map<T, { child: JSX.Element, index: State<number> }>()
     const fragment = new Fragment()
 
-    sync(fragment, "children", each.as(arr => {
+    sync(fragment, "children", each.as((arr) => {
         // cleanup children missing from arr
         for (const [key, { child, index }] of map.entries()) {
             fragment.removeChild(child)

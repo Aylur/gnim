@@ -1,4 +1,4 @@
-import GObject, { register, property } from "./gobject.js"
+import GObject from "gi://GObject"
 import Gio from "gi://Gio"
 
 const _value = Symbol("state value")
@@ -11,9 +11,16 @@ const kebabify = (str: string) => str
     .replaceAll("_", "-")
     .toLowerCase()
 
-@register()
 class StateObject<T extends object> extends GObject.Object {
-    @property(Object) declare value: T
+    static {
+        GObject.registerClass({
+            Properties: {
+                value: GObject.ParamSpec.jsobject("value", "", "", GObject.ParamFlags.READWRITE),
+            },
+        }, this)
+    }
+
+    declare value: T
 
     constructor(value: T) {
         super()
@@ -21,6 +28,7 @@ class StateObject<T extends object> extends GObject.Object {
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class State<T> extends Function {
     private [_value]: StateObject<{ $: T }>
 

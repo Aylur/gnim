@@ -98,7 +98,6 @@ export function property(declaration: PropertyDeclaration = Object) {
             if (desc.get) flags |= ParamFlags.READABLE
             if (desc.set) flags |= ParamFlags.WRITABLE
 
-
             const spec = pspec(name, flags, declaration)
             target.constructor[meta].Properties[name] = spec
         }
@@ -106,10 +105,10 @@ export function property(declaration: PropertyDeclaration = Object) {
 }
 
 export function signal(...params: Array<{ $gtype: GObject.GType } | GObject.GType>):
-    (target: any, signal: any, desc?: PropertyDescriptor) => void
+(target: any, signal: any, desc?: PropertyDescriptor) => void
 
 export function signal(declaration?: SignalDeclaration):
-    (target: any, signal: any, desc?: PropertyDescriptor) => void
+(target: any, signal: any, desc?: PropertyDescriptor) => void
 
 export function signal(
     declaration?: SignalDeclaration | { $gtype: GObject.GType } | GObject.GType,
@@ -122,7 +121,7 @@ export function signal(
         const name = kebabify(signal)
 
         if (declaration || params.length > 0) {
-            const arr = [declaration, ...params].map(v => {
+            const arr = [declaration, ...params].map((v) => {
                 if (isGType(v)) return v
                 throw Error(`${v} is not a valid GType`)
             })
