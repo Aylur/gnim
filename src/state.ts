@@ -161,6 +161,8 @@ export function sync<
     const transform = binding[_transformFn]
     const sig = emitter instanceof Gio.Settings ? "changed" : "notify"
 
+    set(object, kebabify(prop), transform(emitter[key]))
+
     // @ts-expect-error missing types
     const id: number = emitter.connect_object(
         `${sig}::${binding[_prop]}`,
