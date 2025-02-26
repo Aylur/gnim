@@ -139,6 +139,15 @@ export class Binding<Value> {
 
 export const { bind } = Binding
 
+function set(obj: object, prop: string, value: any) {
+    const setter = `set_${prop}` as keyof typeof obj
+    if (setter in obj && typeof obj[setter] === "function") {
+        (obj[setter] as (v: any) => void)(value)
+    } else {
+        Object.assign(obj, { [prop]: value })
+    }
+}
+
 export function sync<
     O extends GObject.Object,
     P extends keyof O,
@@ -146,24 +155,21 @@ export function sync<
     object: O,
     prop: Extract<P, string>,
     binding: Binding<O[P]>,
-) {
-    if (binding[_emitter] instanceof Gio.Settings) {
-        binding[_emitter].bind(
-            binding[_prop],
-            object,
-            kebabify(prop),
-            Gio.SettingsBindFlags.SET,
-        )
-        return
-    }
+): () => void {
+    const emitter = binding[_emitter]
+    const key = binding[_prop] as keyof typeof emitter
+    const transform = binding[_transformFn]
+    const sig = emitter instanceof Gio.Settings ? "changed" : "notify"
 
-    // @ts-expect-error bind_property_full is mistyped
-    binding[_emitter].bind_property_full(
-        binding[_prop], object, kebabify(prop),
-        GObject.BindingFlags.SYNC_CREATE,
-        (_, value) => [true, binding[_transformFn](value)],
-        null,
+    // @ts-expect-error missing types
+    const id: number = emitter.connect_object(
+        `${sig}::${binding[_prop]}`,
+        () => set(object, kebabify(prop), transform(emitter[key])),
+        object,
+        GObject.ConnectFlags.DEFAULT,
     )
+
+    return () => emitter.disconnect(id)
 }
 
 export function derive<

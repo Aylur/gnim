@@ -26,10 +26,6 @@ type PropertyDeclaration =
     | ((name: string, flags: GObject.ParamFlags) => GObject.ParamSpec)
     | InstanceType<typeof GObject.ParamSpec>
     | { $gtype: GObject.GType }
-    | typeof String
-    | typeof Number
-    | typeof Boolean
-    | typeof Object
 
 type GObjectConstructor = {
     [meta]?: {

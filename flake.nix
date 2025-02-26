@@ -23,6 +23,7 @@
           gtk4
           gjs
           typescript
+          esbuild
         ];
       };
     });
