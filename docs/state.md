@@ -135,3 +135,17 @@ const derived: State<string> = derive(
     (label, number, { member }) => `${label} ${number} ${member}`,
 )
 ```
+
+## Observing signals
+
+It is possible to observe a list of signals and capture their values in State.
+
+```ts
+import { observe } from "gjsx/state"
+
+const state = observe(
+    "initial value",
+    [obj1, "some-signal", (arg: string) => `captured ${arg}`],
+    [obj2, "some-signal", (arg: number) => `captured ${arg}`],
+)
+```
