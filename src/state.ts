@@ -138,7 +138,17 @@ export class Binding<T> {
             return fn(obj.get_value(prop).deepUnpack())
         }
 
-        return fn(obj[prop as keyof typeof obj])
+        const getter = `get_${prop.replaceAll("-", "_")}`
+
+        if (getter in obj && typeof obj[getter] === "function") {
+            return fn(obj[getter]())
+        }
+
+        if (prop in obj) {
+            return fn(obj[prop])
+        }
+
+        throw Error(`cannot get "${prop}" on ${obj}`)
     }
 
     subscribe(callback: (value: T) => void): () => void

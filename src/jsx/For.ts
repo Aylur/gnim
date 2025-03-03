@@ -17,7 +17,7 @@ export default function For<T extends object>({
     const map = new Map<T, { child: JSX.Element, index: State<number> }>()
     const fragment = new Fragment<JSX.Element>()
 
-    each.subscribe(fragment, (arr) => {
+    function callback(arr: T[]) {
         // cleanup children missing from arr
         for (const [key, { child, index }] of map.entries()) {
             fragment.removeChild(child)
@@ -41,7 +41,10 @@ export default function For<T extends object>({
                 fragment.addChild(child)
             }
         })
-    })
+    }
+
+    each.subscribe(fragment, callback)
+    callback(each.get())
 
     return fragment
 }
