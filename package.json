@@ -13,19 +13,19 @@
         "url": "https://ko-fi.com/aylur"
     },
     "scripts": {
-        "lint": "eslint . --fix"
+        "lint": "eslint . --fix",
+        "docs:dev": "vitepress dev docs",
+        "docs:build": "vitepress build docs",
+        "docs:preview": "vitepress preview docs"
     },
     "devDependencies": {
         "@girs/adw-1": "latest",
         "@girs/clutter-16": "latest",
-        "@girs/gtk-4.0": "latest",
-        "@stylistic/eslint-plugin": "^2.11.0",
-        "@types/eslint__js": "^8.42.3",
-        "@types/node": "^22.10.1",
-        "esbuild": "^0.24.0",
-        "eslint": "^9.16.0",
-        "typescript": "^5.7.2",
-        "typescript-eslint": "^8.17.0"
+        "esbuild": "latest",
+        "eslint": "latest",
+        "typescript": "latest",
+        "typescript-eslint": "latest",
+        "vitepress": "latest"
     },
     "exports": {
         "./state": "./src/state.ts",
@@ -38,5 +38,12 @@
     },
     "engines": {
         "gjs": ">=1.79.0"
+    },
+    "prettier": {
+        "semi": false,
+        "tabWidth": 4,
+        "trailingComma": "all",
+        "printWidth": 100,
+        "experimentalTernaries": true
     }
 }

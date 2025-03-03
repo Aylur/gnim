@@ -28,11 +28,9 @@ export function apply() {
 export function css(css: TemplateStringsArray, ...values: any[]): void
 export function css(css: string): void
 export function css(css: TemplateStringsArray | string, ...values: any[]) {
-    const style = typeof css === "string"
-        ? css
-        : css
-            .flatMap((str, i) => str + `${values[i] ?? ""}`)
-            .join("")
+    const style = typeof css === "string" ? css : css
+        .flatMap((str, i) => str + `${values[i] ?? ""}`)
+        .join("")
 
     stylesheets.push(style)
 }

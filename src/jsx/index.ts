@@ -2,9 +2,12 @@ import GObject from "../gobject.js"
 import Fragment from "./Fragment.js"
 import { Binding, sync } from "../state.js"
 
+type CC<T extends GObject.Object = GObject.Object> = { new(props: any): T }
+type FC<T extends GObject.Object = GObject.Object> = (props: any) => T
+
 export { Fragment }
 export { default as For } from "./For.js"
-export { default as When } from "./When.js"
+export { default as With } from "./With.js"
 export { default as This } from "./This.js"
 
 type ChildFn = (parent: GObject.Object, child: GObject.Object, index?: number) => void
@@ -12,44 +15,67 @@ type ChildFn = (parent: GObject.Object, child: GObject.Object, index?: number) =
 export let addChild: ChildFn
 export let intrinsicElements: Record<string, CC | FC>
 
-export function configue(conf: { addChild: ChildFn, intrinsicElements: Record<string, CC | FC> }) {
+export function configue(conf: {
+    addChild: ChildFn,
+    intrinsicElements: Record<string, CC | FC>,
+}) {
     addChild = conf.addChild
     intrinsicElements = conf.intrinsicElements
     return conf
 }
 
-type Setup<T> = {
-    $?(self: T): void
-    _type?: string
-}
-
-type SignalHandlers<T> = {
-    [Key in `$${string}`]: (self: T, ...args: any[]) => any
-}
-
-type BindableProps<T> = {
-    [K in keyof T]: Binding<T[K]> | T[K];
-}
-
 type Element = GObject.Object | "" | false | null | undefined
 
-type Children = {
-    children?: Array<Element> | Element
-}
+export type FCProps<Self, Props> = Props & Partial<{
+    /**
+     * Gtk.Builder type
+     * its consumed internally and not actually passed as a parameters
+     */
+    _type: string
+    /**
+     * setup function
+     * its consumed internally and not actually passed as a parameters
+     */
+    $(self: Self): void
+}>
 
-export type CtorProps<Self, Props extends GObject.Object.ConstructorProps> = Partial<
-    SignalHandlers<Self> & BindableProps<Props> & Setup<Self> & {
-        _constructor?(): Self
-    }
->
+export type CCProps<Self, Props> = Partial<{
+    /**
+     * @internal children elements
+     * its consumed internally and not actually passed to class component constructors
+     */
+    children: Array<Element> | Element
+    /**
+     * Gtk.Builder type
+     * its consumed internally and not actually passed to class component constructors
+     */
+    _type: string
+    /**
+     * function to use as a constructor,
+     * its consumed internally and not actually passed to class component constructors
+     */
+    _constructor(props: Partial<Props>): Self
+    /**
+     * setup function,
+     * its consumed internally and not actually passed to class component constructors
+     */
+    $(self: Self): void
+} & {
+    [Key in `$${string}`]: (self: Self, ...args: any[]) => any
+} & {
+    [K in keyof Props]: Binding<Props[K]> | Props[K]
+}>
 
-type CC<T extends GObject.Object = GObject.Object> = { new(props: any): T }
-type FC<T extends GObject.Object = GObject.Object> = (props: any) => T
-
-type JsxProps<Self, Props extends GObject.Object.ConstructorProps> =
-    Self extends typeof Fragment ? (Props & Setup<InstanceType<Self>>)
-        : Self extends FC ? (Props & Setup<ReturnType<Self>>)
-            : Self extends CC ? CtorProps<InstanceType<Self>, Props> & Children : never
+type JsxProps<C, Props> =
+    C extends typeof Fragment ? (Props & {})
+    // FIXME: IntrinsicElements always resolve as FC
+    // so if we use the same symbol for both CC and FC setup functions 
+    // then intrinsicElement setup functions will be typed as
+    // `$(self: GObject.Object | InstanceType<C>): void`
+    // : C extends FC ? FCProps<ReturnType<FC>, Props>
+    : C extends FC ? Props & { _type?: string }
+    : C extends CC ? CCProps<InstanceType<C>, Props>
+    : never
 
 export const gtkType = Symbol("gtk builder type")
 
@@ -59,6 +85,23 @@ function isGObjectCtor<T extends GObject.Object>(ctor: any): ctor is CC<T> {
 
 function isFunctionCtor<T extends GObject.Object>(ctor: any): ctor is FC<T> {
     return typeof ctor === "function" && !isGObjectCtor(ctor)
+}
+
+function setType(object: object, type: string) {
+    if (gtkType in object && object[gtkType] !== "") {
+        console.warn(`type overriden from ${object[gtkType]} to ${type} on ${object}`)
+    }
+
+    Object.assign(object, { [gtkType]: type })
+}
+
+function setup<T>(object: T, ...setups: unknown[]): T {
+    for (const setup of setups) {
+        if (typeof setup === "function") {
+            setup(object)
+        }
+    }
+    return object
 }
 
 const kebabify = (str: string) => str
@@ -78,7 +121,7 @@ export function jsx<T extends (new (props: any) => GObject.Object)>(
 
 export function jsx<T extends GObject.Object>(
     ctor: keyof typeof intrinsicElements | (new (props: any) => T) | ((props: any) => T),
-    { $, _type, _constructor, children = [], ...props }: CtorProps<T, any>,
+    { $, _, _type, _constructor, children = [], ...props }: CCProps<T, any>
 ): T {
     for (const [key, value] of Object.entries(props)) {
         if (value === undefined) delete props[key]
@@ -90,9 +133,8 @@ export function jsx<T extends GObject.Object>(
 
     if (isFunctionCtor(ctor)) {
         const object = ctor({ children, ...props })
-        if (_type) Object.assign(object, { [gtkType]: _type })
-        $?.(object)
-        return object
+        if (_type) setType(object, _type)
+        return setup(object, $, _)
     }
 
     const signals: Array<[string, (...props: unknown[]) => unknown]> = []
@@ -111,9 +153,9 @@ export function jsx<T extends GObject.Object>(
     }
 
     // construct
-    const object = _constructor ? _constructor() : new (ctor as CC<T>)(props)
+    const object = _constructor ? _constructor(props) : new (ctor as CC<T>)(props)
     if (_constructor) Object.assign(object, props)
-    if (_type) Object.assign(object, { [gtkType]: _type })
+    if (_type) setType(object, _type)
 
     if (typeof addChild === "function" && isGObjectCtor(ctor)) {
         if (Array.isArray(children)) {
@@ -139,9 +181,8 @@ export function jsx<T extends GObject.Object>(
         sync(object, prop as any, binding)
     }
 
-    // return
     $?.(object)
-    return object
+    return setup(object, $, _)
 }
 
 export const jsxs = jsx
@@ -149,15 +190,18 @@ export const jsxs = jsx
 declare global {
     // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace JSX {
-        type ElementType = CC | FC | keyof IntrinsicElements
+        type ElementType = keyof IntrinsicElements | FC | CC
         type Element = GObject.Object
         type ElementClass = GObject.Object
-        type LibraryManagedAttributes<Self, Props extends GObject.Object.ConstructorProps> = JsxProps<Self, Props>
+
+        type LibraryManagedAttributes<C, Props> = JsxProps<C, Props>
+        // FIXME: why does an intrinsic element always resolve as FC?
+        // __type?: C extends CC ? "CC" : C extends FC ? "FC" : never
 
         // eslint-disable-next-line @typescript-eslint/no-empty-object-type
         interface IntrinsicElements {
-            // cc: CtorProps<Gtk.Box, Gtk.Box.ConstructorProps>
-            // fc: FcProp
+            // cc: CCProps<Gtk.Box, Gtk.Box.ConstructorProps>
+            // fc: FCProps<Gtk.Widget, FnProps>
         }
 
         interface ElementChildrenAttribute {

@@ -4,7 +4,7 @@ export default class Fragment<T = any> extends GObject.Object {
     static {
         GObject.registerClass({
             Properties: {
-                children: GObject.ParamSpec.jsobject("children", "", "", GObject.ParamFlags.READWRITE),
+                children: GObject.ParamSpec.jsobject("children", "", "", GObject.ParamFlags.READABLE),
             },
             Signals: {
                 "child-added": {
@@ -22,10 +22,6 @@ export default class Fragment<T = any> extends GObject.Object {
 
     get children() {
         return this._children.map(({ $ }) => $)
-    }
-
-    set children(_: Array<T>) {
-        // ignore
     }
 
     addChild(child: T, index: number = -1) {

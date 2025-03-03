@@ -101,10 +101,10 @@ export function property(declaration: PropertyDeclaration = Object) {
 }
 
 export function signal(...params: Array<{ $gtype: GObject.GType } | GObject.GType>):
-(target: any, signal: any, desc?: PropertyDescriptor) => void
+    (target: any, signal: any, desc?: PropertyDescriptor) => void
 
 export function signal(declaration?: SignalDeclaration):
-(target: any, signal: any, desc?: PropertyDescriptor) => void
+    (target: any, signal: any, desc?: PropertyDescriptor) => void
 
 export function signal(
     declaration?: SignalDeclaration | { $gtype: GObject.GType } | GObject.GType,

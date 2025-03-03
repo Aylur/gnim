@@ -1,2 +1,2 @@
-export { jsx, Fragment, For, When, This, CtorProps } from "../jsx/index.js"
+export { jsx, Fragment, For, With, This, CCProps, FCProps } from "../jsx/index.js"
 export { addChild } from "./jsx-runtime.js"

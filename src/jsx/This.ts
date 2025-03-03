@@ -8,6 +8,7 @@ interface ThisProps<T> {
     children?: Element | Array<Element>
 }
 
+/** @experimental */
 export default function This<T extends GObject.Object>({ this: self, children }: ThisProps<T>) {
     if (Array.isArray(children)) {
         for (const ch of children) {

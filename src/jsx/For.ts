@@ -1,17 +1,23 @@
 import Fragment from "./Fragment.js"
-import { Binding, State, sync } from "../state.js"
+import { Binding, State } from "../state.js"
 
 interface ForProps<T> {
     each: Binding<Array<T>>
     children: (item: T, index: Binding<number>) => JSX.Element
-    cleanup?: (element: JSX.Element, item: T, index: number) => void
+    cleanup?: (element: JSX.Element, item: T, index: number) => void | null
 }
 
-export default function For<T extends object>({ each, children, cleanup }: ForProps<T>) {
-    const map = new Map<T, { child: JSX.Element, index: State<number> }>()
-    const fragment = new Fragment()
+// TODO: support Gio.ListModel
 
-    sync(fragment, "children", each.as((arr) => {
+export default function For<T extends object>({
+    each,
+    children: mkChild,
+    cleanup = item => item.run_dispose(),
+}: ForProps<T>): Fragment<JSX.Element> {
+    const map = new Map<T, { child: JSX.Element, index: State<number> }>()
+    const fragment = new Fragment<JSX.Element>()
+
+    each.subscribe(fragment, (arr) => {
         // cleanup children missing from arr
         for (const [key, { child, index }] of map.entries()) {
             fragment.removeChild(child)
@@ -30,14 +36,12 @@ export default function For<T extends object>({ each, children, cleanup }: ForPr
                 fragment.addChild(child)
             } else {
                 const index = new State(i)
-                const child = children(key, index())
+                const child = mkChild(key, index())
                 map.set(key, { child, index })
                 fragment.addChild(child)
             }
         })
-
-        return fragment.children
-    }))
+    })
 
     return fragment
 }

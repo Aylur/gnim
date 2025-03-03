@@ -1,25 +1,77 @@
 import Gtk from "gi://Gtk?version=4.0"
+import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
 import { configue, gtkType } from "../jsx/index.js"
 
 const dummyBuilder = new Gtk.Builder()
 
+function type(object: GObject.Object) {
+    return gtkType in object ? object[gtkType] as string : null
+}
+
 function add(parent: Gtk.Buildable, child: GObject.Object, _: number) {
-    const type = gtkType in child ? child[gtkType] as string : null
-    parent.vfunc_add_child(dummyBuilder, child, type)
+    parent.vfunc_add_child(dummyBuilder, child, type(child))
+}
+
+function specialRemove(_parent: GObject.Object, _child: GObject.Object) {
+    // TODO: add any special case
+    return false
+}
+
+function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
+    // TODO: add any other special case
+    if (
+        child instanceof Gtk.Adjustment
+        && "set_adjustment" in parent
+        && typeof parent.set_adjustment === "function"
+    ) {
+        parent.set_adjustment(child)
+        return true
+    }
+
+    if (
+        child instanceof Gtk.Widget
+        && parent instanceof Gtk.Stack
+        && child.name !== ""
+        && child.name !== null
+        && type(child) === "named"
+    ) {
+        parent.add_named(child, child.name)
+        return true
+    }
+
+    if (child instanceof Gtk.Popover && parent instanceof Gtk.MenuButton) {
+        parent.set_popover(child)
+        return true
+    }
+
+    if (
+        child instanceof Gio.MenuModel && (
+            parent instanceof Gtk.MenuButton
+            || parent instanceof Gtk.PopoverMenu
+        )
+    ) {
+        parent.set_menu_model(child)
+        return true
+    }
+
+    if (child instanceof Gio.MenuItem && parent instanceof Gio.Menu) {
+        // reutnr
+    }
+
+    return false
 }
 
 function remove(parent: GObject.Object, child: GObject.Object) {
+    if (specialRemove(parent, child)) return
+
     if ("set_child" in parent && typeof parent.set_child == "function") {
         return parent.set_child(null)
     }
 
-    if (child instanceof Gtk.Widget) {
-        // TODO: container types
-        if (parent instanceof Gtk.Box) {
-            return parent.remove(child)
-        }
+    if ("remove" in parent && typeof parent.remove == "function") {
+        return parent.remove(child)
     }
 
     throw Error(`cannot remove ${child} from ${parent}`)
@@ -28,6 +80,8 @@ function remove(parent: GObject.Object, child: GObject.Object) {
 export const { addChild, intrinsicElements } = configue({
     intrinsicElements: {},
     addChild(parent, child, index = -1) {
+        if (specialAdd(parent, child, index)) return
+
         if (parent instanceof Fragment) {
             parent.addChild(child)
             return
@@ -64,7 +118,7 @@ export const { addChild, intrinsicElements } = configue({
             return
         }
 
-        console.error(TypeError(`cannot add ${child} to ${parent}`))
+        throw Error(`cannot add ${child} to ${parent}`)
     },
 })
 

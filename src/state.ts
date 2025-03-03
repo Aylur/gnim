@@ -28,6 +28,8 @@ class StateObject<T extends object> extends GObject.Object {
     }
 }
 
+// TODO: consider Proxying objects to make them deeply reactive
+
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class State<T> extends Function {
     private [_value]: StateObject<{ $: T }>
@@ -58,9 +60,29 @@ export class State<T> extends Function {
         }
     }
 
-    subscribe(callback: (value: T) => void): () => void {
-        const id = this[_value].connect("notify", ({ value }) => callback(value.$))
-        return () => this[_value].disconnect(id)
+    subscribe(callback: (value: T) => void): () => void
+    subscribe(object: GObject.Object, callback: (value: T) => void): () => void
+
+    subscribe(
+        objOrCallback: GObject.Object | ((value: T) => void),
+        callback?: (value: T) => void,
+    ) {
+        if (typeof objOrCallback === "function") {
+            const id = this[_value].connect("notify::value", ({ value }) => objOrCallback(value.$))
+            return () => this[_value].disconnect(id)
+        }
+
+        if (objOrCallback instanceof GObject.Object && typeof callback === "function") {
+            // https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Overrides.md?ref_type=heads#gobjectobjectconnect_objectname-callback-gobject-flags
+            // @ts-expect-error missing types
+            const id: number = this[_value].connect_object(
+                "notify::value",
+                ({ value }: StateObject<{ $: T }>) => callback(value.$),
+                objOrCallback,
+                GObject.ConnectFlags.DEFAULT,
+            )
+            return () => this[_value].disconnect(id)
+        }
     }
 
     toString(): string {
@@ -78,7 +100,7 @@ export interface State<T> {
     (): Binding<T>
 }
 
-export class Binding<Value> {
+export class Binding<T> {
     private [_transformFn] = (v: any) => v
     private [_emitter]: GObject.Object
     private [_prop]: string
@@ -101,13 +123,13 @@ export class Binding<Value> {
         return object instanceof State ? object() : new Binding(object, property!)
     }
 
-    as<T>(fn: (v: Value) => T): Binding<T> {
+    as<U>(fn: (v: T) => U): Binding<U> {
         const bind = new Binding(this[_emitter], this[_prop])
-        bind[_transformFn] = (v: Value) => fn(this[_transformFn](v))
-        return bind as unknown as Binding<T>
+        bind[_transformFn] = (v: T) => fn(this[_transformFn](v))
+        return bind as unknown as Binding<U>
     }
 
-    get(): Value {
+    get(): T {
         const fn = this[_transformFn]
         const obj = this[_emitter]
         const prop = this[_prop]
@@ -119,12 +141,33 @@ export class Binding<Value> {
         return fn(obj[prop as keyof typeof obj])
     }
 
-    subscribe(callback: (value: Value) => void): () => void {
-        const id = this[_emitter].connect(
-            `notify::${kebabify(this[_prop])}`,
-            () => callback(this.get()),
-        )
-        return () => this[_emitter].disconnect(id)
+    subscribe(callback: (value: T) => void): () => void
+    subscribe(object: GObject.Object, callback: (value: T) => void): () => void
+
+    subscribe(
+        objOrCallback: GObject.Object | ((value: T) => void),
+        callback?: (value: T) => void,
+    ) {
+        const sig = this[_emitter] instanceof Gio.Settings ? "changed" : "notify"
+
+        if (typeof objOrCallback === "function") {
+            const id = this[_emitter].connect(
+                `${sig}::${kebabify(this[_prop])}`,
+                () => objOrCallback(this.get()),
+            )
+            return () => this[_emitter].disconnect(id)
+        }
+
+        if (objOrCallback instanceof GObject.Object && typeof callback === "function") {
+            // @ts-expect-error missing types
+            const id: number = this[_emitter].connect_object(
+                `${sig}::${kebabify(this[_prop])}`,
+                () => callback(this.get()),
+                objOrCallback,
+                GObject.ConnectFlags.DEFAULT,
+            )
+            return () => this[_emitter].disconnect(id)
+        }
     }
 
     toString(): string {
@@ -156,22 +199,8 @@ export function sync<
     prop: Extract<P, string>,
     binding: Binding<O[P]>,
 ): () => void {
-    const emitter = binding[_emitter]
-    const key = binding[_prop] as keyof typeof emitter
-    const transform = binding[_transformFn]
-    const sig = emitter instanceof Gio.Settings ? "changed" : "notify"
-
-    set(object, kebabify(prop), transform(emitter[key]))
-
-    // @ts-expect-error missing types
-    const id: number = emitter.connect_object(
-        `${sig}::${binding[_prop]}`,
-        () => set(object, kebabify(prop), transform(emitter[key])),
-        object,
-        GObject.ConnectFlags.DEFAULT,
-    )
-
-    return () => emitter.disconnect(id)
+    set(object, kebabify(prop), binding.get())
+    return binding.subscribe(object, value => set(object, kebabify(prop), value))
 }
 
 export function derive<
