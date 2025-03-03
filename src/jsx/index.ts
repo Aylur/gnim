@@ -26,6 +26,9 @@ export function configue(conf: {
 
 type Element = GObject.Object | "" | false | null | undefined
 
+/**
+ * Function Component Properties
+ */
 export type FCProps<Self, Props> = Props & Partial<{
     /**
      * Gtk.Builder type
@@ -39,6 +42,9 @@ export type FCProps<Self, Props> = Props & Partial<{
     $(self: Self): void
 }>
 
+/**
+ * Class Component Properties
+ */
 export type CCProps<Self, Props> = Partial<{
     /**
      * @internal children elements

@@ -3,6 +3,7 @@ import Gdk from "gi://Gdk?version=4.0"
 
 const stylesheets: string[] = []
 
+/** @experimental */
 export function apply() {
     const provider = new Gtk.CssProvider()
 

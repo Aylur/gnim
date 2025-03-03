@@ -11,6 +11,18 @@ const kebabify = (str: string) => str
     .replaceAll("_", "-")
     .toLowerCase()
 
+// https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Overrides.md
+// alias, because ts-for-gir has missing types for this
+function connect<T extends GObject.Object>(
+    obj: T,
+    sig: string,
+    callback: (emitter: T, ...args: unknown[]) => unknown,
+    lifetime: GObject.Object,
+): number {
+    // @ts-expect-error missing types
+    return obj.connect_object(sig, callback, lifetime, GObject.ConnectFlags.DEFAULT)
+}
+
 class StateObject<T extends object> extends GObject.Object {
     static {
         GObject.registerClass({
@@ -42,14 +54,30 @@ export class State<T> extends Function {
         })
     }
 
-    private _call<R = T>(transform?: (value: T) => R): Binding<R> {
-        const b = Binding.bind(this[_value], "value").as(({ $ }) => $)
-        return transform ? b.as(transform) : b as unknown as Binding<R>
+    private _call(): Binding<T>
+
+    private _call<R = T>(transform: (value: T) => R): Binding<R>
+
+    private _call(transform?: (value: T) => unknown) {
+        const b = Binding.bind(this[_value], "value")
+        return transform ? b.as(({ $ }) => transform($)) : b.as(({ $ }) => $)
     }
 
+    /**
+     * @returns The current value.
+     */
     get() { return this.value }
+
+    /**
+     * Set the current value.
+     * *NOTE*: value is checked by reference.
+     * @returns The current value.
+     */
     set(value: T) { return this.value = value }
 
+    /**
+     * The current value.
+     */
     get value(): T {
         return this[_value].value.$
     }
@@ -60,7 +88,19 @@ export class State<T> extends Function {
         }
     }
 
+    /**
+     * Subscribe for value changes.
+     * @param callback The function to run when the current value changes.
+     * @returns Unsubscribe function.
+     */
     subscribe(callback: (value: T) => void): () => void
+
+    /**
+     * Subscribe for value changes.
+     * @param object An object to limit the lifetime of the subscription to.
+     * @param callback The function to run when the current value changes.
+     * @returns Unsubscribe function.
+     */
     subscribe(object: GObject.Object, callback: (value: T) => void): () => void
 
     subscribe(
@@ -73,13 +113,11 @@ export class State<T> extends Function {
         }
 
         if (objOrCallback instanceof GObject.Object && typeof callback === "function") {
-            // https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Overrides.md?ref_type=heads#gobjectobjectconnect_objectname-callback-gobject-flags
-            // @ts-expect-error missing types
-            const id: number = this[_value].connect_object(
+            const id = connect(
+                this[_value],
                 "notify::value",
                 ({ value }: StateObject<{ $: T }>) => callback(value.$),
                 objOrCallback,
-                GObject.ConnectFlags.DEFAULT,
             )
             return () => this[_value].disconnect(id)
         }
@@ -110,55 +148,84 @@ export class Binding<T> {
         this[_prop] = kebabify(prop)
     }
 
+    /**
+     * Create a `Binding` on a `State`.
+     * @param object The `State` to create the `Binding` on.
+     */
     static bind<T>(object: State<T>): Binding<T>
 
+    /**
+     * Create a `Binding` on a `GObject.Object`'s `property`.
+     * @param object The `GObject.Object` to create the `Binding` on.
+     */
     static bind<
         T extends GObject.Object,
         P extends keyof T,
     >(object: T, property: Extract<P, string>): Binding<T[P]>
 
-    static bind<T>(object: Gio.Settings, property: string): Binding<T>
+    /**
+     * Create a `Binding` on a `Gio.Settings`'s `key`.
+     * @param object The `Gio.Settings` to create the `Binding` on.
+     */
+    static bind<T>(object: Gio.Settings, key: string): Binding<T>
 
     static bind<T>(object: GObject.Object | State<T>, property?: string): Binding<T> {
         return object instanceof State ? object() : new Binding(object, property!)
     }
 
-    as<U>(fn: (v: T) => U): Binding<U> {
+    /**
+     * Create a new `Binding` that applies a transformation on its value.
+     * @param transform The transformation to apply. Should be a pure function.
+     */
+    as<U>(transform: (v: T) => U): Binding<U> {
         const bind = new Binding(this[_emitter], this[_prop])
-        bind[_transformFn] = (v: T) => fn(this[_transformFn](v))
+        bind[_transformFn] = (v: T) => transform(this[_transformFn](v))
         return bind as unknown as Binding<U>
     }
 
+    /**
+     * @returns The current value.
+     */
     get(): T {
         const fn = this[_transformFn]
         const obj = this[_emitter]
-        const prop = this[_prop]
+        const prop = this[_prop] as keyof typeof obj
 
         if (obj instanceof Gio.Settings) {
             return fn(obj.get_value(prop).deepUnpack())
         }
 
-        const getter = `get_${prop.replaceAll("-", "_")}`
+        const getter = `get_${prop.replaceAll("-", "_")}` as keyof typeof obj
 
-        if (getter in obj && typeof obj[getter] === "function") {
-            return fn(obj[getter]())
+        if (Object.hasOwn(obj, getter) && typeof obj[getter] === "function") {
+            return fn((obj[getter] as () => unknown)())
         }
 
-        if (prop in obj) {
-            return fn(obj[prop])
-        }
-
-        throw Error(`cannot get "${prop}" on ${obj}`)
+        return fn(obj[prop])
     }
 
+    /**
+     * Subscribe for value changes.
+     * @param callback The function to run when the current value changes.
+     * @returns Unsubscribe function.
+     */
     subscribe(callback: (value: T) => void): () => void
+
+    /**
+     * Subscribe for value changes.
+     * @param object An object to limit the lifetime of the subscription to.
+     * @param callback The function to run when the current value changes.
+     * @returns Unsubscribe function.
+     */
     subscribe(object: GObject.Object, callback: (value: T) => void): () => void
 
     subscribe(
         objOrCallback: GObject.Object | ((value: T) => void),
         callback?: (value: T) => void,
     ) {
-        const sig = this[_emitter] instanceof Gio.Settings ? "changed" : "notify"
+        const emitter = this[_emitter]
+
+        const sig = emitter instanceof Gio.Settings ? "changed" : "notify"
 
         if (typeof objOrCallback === "function") {
             const id = this[_emitter].connect(
@@ -169,12 +236,11 @@ export class Binding<T> {
         }
 
         if (objOrCallback instanceof GObject.Object && typeof callback === "function") {
-            // @ts-expect-error missing types
-            const id: number = this[_emitter].connect_object(
+            const id = connect(
+                this[_emitter],
                 `${sig}::${kebabify(this[_prop])}`,
                 () => callback(this.get()),
                 objOrCallback,
-                GObject.ConnectFlags.DEFAULT,
             )
             return () => this[_emitter].disconnect(id)
         }
@@ -201,31 +267,67 @@ function set(obj: object, prop: string, value: any) {
     }
 }
 
+/**
+ * Create a synchronization between a `GObject.Object` and a `Binding`.
+ * This is equivalent to `GObject.Object.bind_property_full`.
+ * @param object Target object.
+ * @param property - Target property.
+ * @param binding - The Binding the object will subscribe to.
+ * @returns The disconnect function.
+ */
 export function sync<
     O extends GObject.Object,
     P extends keyof O,
 >(
     object: O,
-    prop: Extract<P, string>,
+    property: Extract<P, string>,
     binding: Binding<O[P]>,
 ): () => void {
-    set(object, kebabify(prop), binding.get())
-    return binding.subscribe(object, value => set(object, kebabify(prop), value))
+    set(object, kebabify(property), binding.get())
+    return binding.subscribe(object, value => set(object, kebabify(property), value))
 }
 
+/**
+ * Create a derived `State` from a list of `Binding`s.
+ * @param deps List of `Bindings`.
+ * @param transform An optional transform function.
+ * @returns The derived `State`.
+ */
 export function derive<
     const Deps extends Array<Binding<any>>,
     Args extends {
         [K in keyof Deps]: Deps[K] extends Binding<infer T> ? T : never
     },
     V = Args,
->(deps: Deps, fn: (...args: Args) => V = (...args) => args as unknown as V) {
-    const get = () => fn(...deps.map(d => d.get()) as Args)
+>(deps: Deps, transform: (...args: Args) => V = (...args) => args as unknown as V) {
+    const get = () => transform(...deps.map(d => d.get()) as Args)
     const state = new State(get())
 
     for (const dep of deps) {
         sync(state[_value], "value", dep.as(() => ({ $: get() })))
     }
 
+    return state
+}
+
+/**
+ * Create a `State` which observes a list of `GObject.Object` signals.
+ * @param init The initial value of the `State`
+ * @param signals A list of `GObject.Object`, signal name and callback pairs to observe.
+ * @returns The observing `State`.
+ */
+export function observe<T>(
+    init: T,
+    ...signals: Array<[GObject.Object, string, /** Parameters are coming from the signal. @returns new value */ (...args: Array<any>) => T]>
+) {
+    const state = new State(init)
+    for (const [obj, sig, callback] of signals) {
+        connect(
+            obj,
+            sig,
+            (_, ...args) => state.set(callback(...args)),
+            state[_value],
+        )
+    }
     return state
 }
