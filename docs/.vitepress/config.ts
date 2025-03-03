@@ -2,7 +2,7 @@ import { defineConfig } from "vitepress"
 
 export default defineConfig({
     title: "Gjsx",
-    base: "/astal/",
+    base: "/gjsx/",
     themeConfig: {
         outline: "deep",
 
