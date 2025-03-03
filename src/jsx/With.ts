@@ -14,7 +14,7 @@ export default function With<T>({
 }: WithProps<T>): Fragment<JSX.Element> {
     const fragment = new Fragment<JSX.Element>()
 
-    value.subscribe(fragment, (v) => {
+    function callback(v: T) {
         for (const child of fragment.children) {
             fragment.removeChild(child)
             cleanup?.(child)
@@ -24,7 +24,10 @@ export default function With<T>({
         if (ch !== "" && ch !== false && ch !== null && ch !== undefined) {
             fragment.addChild(ch)
         }
-    })
+    }
+
+    value.subscribe(fragment, callback)
+    callback(value.get())
 
     return fragment
 }
