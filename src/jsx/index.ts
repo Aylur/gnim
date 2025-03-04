@@ -1,4 +1,4 @@
-import GObject from "../gobject.js"
+import GObject from "gi://GObject"
 import Fragment from "./Fragment.js"
 import { Binding, sync } from "../state.js"
 
@@ -69,7 +69,7 @@ export type CCProps<Self, Props> = Partial<{
 } & {
     [Key in `$${string}`]: (self: Self, ...args: any[]) => any
 } & {
-    [K in keyof Props]: Binding<Props[K]> | Props[K]
+    [K in keyof Props]: Binding<NonNullable<Props[K]>> | Props[K]
 }>
 
 type JsxProps<C, Props> =
