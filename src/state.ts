@@ -11,18 +11,6 @@ const kebabify = (str: string) => str
     .replaceAll("_", "-")
     .toLowerCase()
 
-// https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Overrides.md
-// alias, because ts-for-gir has missing types for this
-function connect<T extends GObject.Object>(
-    obj: T,
-    sig: string,
-    callback: (emitter: T, ...args: unknown[]) => unknown,
-    lifetime: GObject.Object,
-): number {
-    // @ts-expect-error missing types
-    return obj.connect_object(sig, callback, lifetime, GObject.ConnectFlags.DEFAULT)
-}
-
 class StateObject<T extends object> extends GObject.Object {
     static {
         GObject.registerClass({
@@ -113,13 +101,12 @@ export class State<T> extends Function {
         }
 
         if (objOrCallback instanceof GObject.Object && typeof callback === "function") {
-            const id = connect(
+            return hook(
+                objOrCallback,
                 this[_value],
                 "notify::value",
                 ({ value }: StateObject<{ $: T }>) => callback(value.$),
-                objOrCallback,
             )
-            return () => this[_value].disconnect(id)
         }
     }
 
@@ -236,13 +223,12 @@ export class Binding<T> {
         }
 
         if (objOrCallback instanceof GObject.Object && typeof callback === "function") {
-            const id = connect(
+            return hook(
+                objOrCallback,
                 this[_emitter],
                 `${sig}::${kebabify(this[_prop])}`,
                 () => callback(this.get()),
-                objOrCallback,
             )
-            return () => this[_emitter].disconnect(id)
         }
     }
 
@@ -322,12 +308,38 @@ export function observe<T>(
 ) {
     const state = new State(init)
     for (const [obj, sig, callback] of signals) {
-        connect(
+        hook(
+            state[_value],
             obj,
             sig,
             (_, ...args) => state.set(callback(...args)),
-            state[_value],
         )
     }
     return state
+}
+
+
+/**
+ * Connect to a signal and limit the connections lifetime to an object.
+ * @param lifetime The object to limit the lifetime of the connection to.
+ * @param object Object to connect to.
+ * @param signal Signal name.
+ * @param callback The callback to execute on the signal.
+ * @returns The disconnect function.
+ */
+export function hook<T extends GObject.Object>(
+    lifetime: GObject.Object,
+    object: T,
+    signal: string,
+    callback: (emitter: T, ...args: unknown[]) => unknown,
+): () => void {
+    // @ts-expect-error missing types
+    const id: number = object.connect_object(
+        signal,
+        callback,
+        lifetime,
+        GObject.ConnectFlags.DEFAULT,
+    )
+
+    return () => object.disconnect(id)
 }
