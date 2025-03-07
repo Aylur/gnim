@@ -21,6 +21,7 @@
     "devDependencies": {
         "@girs/adw-1": "latest",
         "@girs/clutter-16": "latest",
+        "@girs/gtk-3.0": "latest",
         "esbuild": "latest",
         "eslint": "latest",
         "typescript": "latest",
