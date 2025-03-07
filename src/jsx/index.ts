@@ -74,12 +74,11 @@ export type CCProps<Self, Props> = Partial<{
 
 type JsxProps<C, Props> =
     C extends typeof Fragment ? (Props & {})
-    // FIXME: IntrinsicElements always resolve as FC
-    // so if we use the same symbol for both CC and FC setup functions 
-    // then intrinsicElement setup functions will be typed as
-    // `$(self: GObject.Object | InstanceType<C>): void`
-    // : C extends FC ? FCProps<ReturnType<FC>, Props>
-    : C extends FC ? Props & { _type?: string }
+    // intrinsicElements always resolve as FC
+    // so we can't narrow it down, and in some cases
+    // the setup function is typed as a union of Object and actual type
+    // as a fix users can and should use FCProps
+    : C extends FC ? Props & Omit<FCProps<ReturnType<C>, Props>, "$">
     : C extends CC ? CCProps<InstanceType<C>, Props>
     : never
 
@@ -175,7 +174,7 @@ export function jsx<T extends GObject.Object>(
 
     // handle signals
     for (const [sig, handler] of signals) {
-        if (sig.startsWith("_")) {
+        if (sig.startsWith("$")) {
             object.connect(`notify::${kebabify(sig.slice(1))}`, handler)
         } else {
             object.connect(kebabify(sig), handler)
@@ -187,7 +186,6 @@ export function jsx<T extends GObject.Object>(
         sync(object, prop as any, binding)
     }
 
-    $?.(object)
     return setup(object, $, _)
 }
 

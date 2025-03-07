@@ -106,7 +106,7 @@ Under the hood the `jsx` function uses the [Gtk.Buildable](https://docs.gtk.org/
 ### Signal handlers
 
 Signal handlers can be defined with a `$` prefix and `notify::` signal
-handlers can be defined with a `$_` prefix.
+handlers can be defined with a `$$` prefix.
 
 > [!NOTE]
 > Passed arguments by signals are not typed because of TypeScript limitations.
@@ -114,7 +114,7 @@ handlers can be defined with a `$_` prefix.
 
 ```tsx
 <Gtk.Revealer
-    $_childRevealed={(self) => print(self, "child-revealed")}
+    $$childRevealed={(self) => print(self, "child-revealed")}
     $destroy={(self) => print(self, "destroyed")}
 />
 ```
@@ -178,7 +178,9 @@ Function components don't really benefit from JSX, they are just called as is.
 Just like class components, function components can also have a setup function.
 
 ```tsx
-function MyComponent() {
+import { FCProps } from "gjsx/gtk4"
+
+function MyComponent(props: FCProps<Gtk.Button, {}>) {
     return (
         <Gtk.Button>
             <Gtk.Label />
@@ -188,6 +190,9 @@ function MyComponent() {
 
 <MyComponent $={self => print(self, "is a Button")} />
 ```
+
+> [!NOTE]
+> `FCProps` is required for TypeScript to be aware of the `$` function.
 
 ### How children are passed to function components
 
@@ -323,7 +328,8 @@ There are no intrinsic elements by default, but they can be set.
 - Function components
 
     ```tsx
-    import { intrinsicElements, FCProps } from "gjsx/gtk4"
+    import { FCProps } from "gjsx/gtk4"
+    import { intrinsicElements } from "gjsx/gtk4/jsx-runtime"
 
     type MyLabelProps = FCProps<Gtk.Label, {
         someProp: string
@@ -349,7 +355,8 @@ There are no intrinsic elements by default, but they can be set.
 - Class components
 
     ```tsx
-    import { intrinsicElements, CCProps } from "gjsx/gtk4"
+    import { CCProps } from "gjsx/gtk4"
+    import { intrinsicElements } from "gjsx/gtk4/jsx-runtime"
     import { property, register } from "gjsx/gobject"
 
     interface MyWidgetProps extends Gtk.Widget.ConstructorProps {
