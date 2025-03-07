@@ -316,6 +316,18 @@ return <For each={list()}>
 > is added it is simply **appended** to the parent. Order of widgets
 > are not kept so make sure to wrap `<For>` in a container to avoid this.
 
+### Fragments
+
+Both `<When>` and `<For>` are `Fragment`s. A `Fragment` is a collection of
+children. Whenever the children array changes it is reflected on the parent
+widget the `Fragment` was assigned to. When implementing custom widgets
+you need to take into consideration the API being used for child insertion and removing.
+
+- Both Gtk3 and Gtk4 uses the `Gtk.Buildable` interface to append children.
+- Gtk3 uses the `Gtk.Container` interface to remove children.
+- Gtk4 checks for a method called `remove`.
+- Clutter uses `Clutter.Actor.add_child` and `Clutter.Actor.remove_child`.
+
 ## Intrinsic Elements
 
 Intrinsic elements are globally available components which in
