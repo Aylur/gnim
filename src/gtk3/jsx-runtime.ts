@@ -56,6 +56,9 @@ function remove(parent: GObject.Object, child: GObject.Object) {
 
 export const { addChild, intrinsicElements } = configue({
     intrinsicElements: {},
+    initProps(props) {
+        props.visible ??= true
+    },
     setCss(object, css) {
         if (!(object instanceof Gtk.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))

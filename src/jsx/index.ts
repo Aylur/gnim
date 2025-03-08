@@ -12,22 +12,27 @@ export { default as This } from "./This.js"
 
 type ChildFn = (parent: GObject.Object, child: GObject.Object, index?: number) => void
 type CssSetter = (object: GObject.Object, css: string | Binding<string>) => void
+type InitProps = (props: any) => void
 
 export let addChild: ChildFn
 export let intrinsicElements: Record<string, CC | FC>
-export let setCss: CssSetter
-export let setClass: CssSetter
+
+let setCss: CssSetter
+let setClass: CssSetter
+let initProps: InitProps
 
 export function configue(conf: {
     addChild: ChildFn,
     intrinsicElements: Record<string, CC | FC>,
     setCss: CssSetter,
     setClass: CssSetter,
+    initProps?: InitProps
 }) {
+    intrinsicElements = conf.intrinsicElements
     addChild = conf.addChild
     setCss = conf.setCss
     setClass = conf.setClass
-    intrinsicElements = conf.intrinsicElements
+    initProps = conf.initProps ?? (props => props)
     return conf
 }
 
@@ -143,6 +148,8 @@ export function jsx<T extends GObject.Object>(
     ctor: keyof typeof intrinsicElements | (new (props: any) => T) | ((props: any) => T),
     { $, _, _type, _constructor, children = [], ...props }: CCProps<T, any>
 ): T {
+    initProps(props)
+
     for (const [key, value] of Object.entries(props)) {
         if (value === undefined) delete props[key]
     }
