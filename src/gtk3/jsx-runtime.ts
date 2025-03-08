@@ -2,6 +2,7 @@ import Gtk from "gi://Gtk?version=3.0"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
 import { configue, gtkType } from "../jsx/index.js"
+import { Binding } from "../state.js"
 
 const dummyBuilder = new Gtk.Builder()
 
@@ -55,6 +56,56 @@ function remove(parent: GObject.Object, child: GObject.Object) {
 
 export const { addChild, intrinsicElements } = configue({
     intrinsicElements: {},
+    setCss(object, css) {
+        if (!(object instanceof Gtk.Widget)) {
+            return console.warn(Error(`cannot set css on ${object}`))
+        }
+
+        const ctx = object.get_style_context()
+        let provider: Gtk.CssProvider
+
+        const setter = (css: string) => {
+            if (!css.includes('{') || !css.includes('}'))
+                css = `* { ${css} }`;
+
+            if (provider)
+                ctx.remove_provider(provider);
+
+            provider = new Gtk.CssProvider();
+            provider.load_from_data(new TextEncoder().encode(css));
+            ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
+        }
+
+        if (css instanceof Binding) {
+            css.subscribe(object, setter)
+            setter(css.get())
+        } else {
+            setter(css)
+        }
+    },
+    setClass(object, className) {
+        if (!(object instanceof Gtk.Widget)) {
+            return console.warn(Error(`cannot set className on ${object}`))
+        }
+
+        const ctx = object.get_style_context();
+        const setter = (names: string) => {
+            for (const name of ctx.list_classes()) {
+                ctx.remove_class(name)
+            }
+
+            for (const name of names.split(/\s+/)) {
+                ctx.add_class(name)
+            }
+        }
+
+        if (className instanceof Binding) {
+            className.subscribe(object, setter)
+            setter(className.get())
+        } else {
+            setter(className)
+        }
+    },
     addChild(parent, child, index = -1) {
         if (specialAdd(parent, child, index)) return
 

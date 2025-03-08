@@ -11,15 +11,22 @@ export { default as With } from "./With.js"
 export { default as This } from "./This.js"
 
 type ChildFn = (parent: GObject.Object, child: GObject.Object, index?: number) => void
+type CssSetter = (object: GObject.Object, css: string | Binding<string>) => void
 
 export let addChild: ChildFn
 export let intrinsicElements: Record<string, CC | FC>
+export let setCss: CssSetter
+export let setClass: CssSetter
 
 export function configue(conf: {
     addChild: ChildFn,
     intrinsicElements: Record<string, CC | FC>,
+    setCss: CssSetter,
+    setClass: CssSetter,
 }) {
     addChild = conf.addChild
+    setCss = conf.setCss
+    setClass = conf.setClass
     intrinsicElements = conf.intrinsicElements
     return conf
 }
@@ -66,6 +73,14 @@ export type CCProps<Self, Props> = Partial<{
      * its consumed internally and not actually passed to class component constructors
      */
     $(self: Self): void
+    /**
+     * CSS class names
+     */
+    class?: string | Binding<string>
+    /**
+     * inline CSS
+     */
+    css?: string | Binding<string>
 } & {
     [Key in `$${string}`]: (self: Self, ...args: any[]) => any
 } & {
@@ -142,6 +157,11 @@ export function jsx<T extends GObject.Object>(
         return setup(object, $, _)
     }
 
+    // collect css and className
+    const { css, class: className } = props
+    delete props.css
+    delete props.class
+
     const signals: Array<[string, (...props: unknown[]) => unknown]> = []
     const bindings: Array<[string, Binding<unknown>]> = []
 
@@ -161,6 +181,9 @@ export function jsx<T extends GObject.Object>(
     const object = _constructor ? _constructor(props) : new (ctor as CC<T>)(props)
     if (_constructor) Object.assign(object, props)
     if (_type) setType(object, _type)
+
+    if (css) setCss(object, css)
+    if (className) setClass(object, className)
 
     if (typeof addChild === "function" && isGObjectCtor(ctor)) {
         if (Array.isArray(children)) {

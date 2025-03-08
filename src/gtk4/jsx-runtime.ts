@@ -3,6 +3,7 @@ import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
 import { configue, gtkType } from "../jsx/index.js"
+import { Binding, sync } from "../state.js"
 
 const dummyBuilder = new Gtk.Builder()
 
@@ -79,6 +80,44 @@ function remove(parent: GObject.Object, child: GObject.Object) {
 
 export const { addChild, intrinsicElements } = configue({
     intrinsicElements: {},
+    setCss(object, css) {
+        if (!(object instanceof Gtk.Widget)) {
+            return console.warn(Error(`cannot set css on ${object}`))
+        }
+
+        const ctx = object.get_style_context()
+        let provider: Gtk.CssProvider
+
+        const setter = (css: string) => {
+            if (!css.includes('{') || !css.includes('}'))
+                css = `* { ${css} }`;
+
+            if (provider)
+                ctx.remove_provider(provider);
+
+            provider = new Gtk.CssProvider();
+            provider.load_from_string(css)
+            ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
+        }
+
+        if (css instanceof Binding) {
+            css.subscribe(object, setter)
+            setter(css.get())
+        } else {
+            setter(css)
+        }
+    },
+    setClass(object, className) {
+        if (!(object instanceof Gtk.Widget)) {
+            return console.warn(Error(`cannot set className on ${object}`))
+        }
+
+        if (className instanceof Binding) {
+            sync(object, "cssClasses", className.as(cn => cn.split(/\s+/)))
+        } else {
+            object.set_css_classes(className.split(/\s+/))
+        }
+    },
     addChild(parent, child, index = -1) {
         if (specialAdd(parent, child, index)) return
 

@@ -1,7 +1,9 @@
 import Clutter from "gi://Clutter"
+import St from "gi://St"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
 import { configue } from "../jsx/index.js"
+import { Binding, sync } from "../state.js"
 
 function add(parent: GObject.Object, child: GObject.Object, _: number) {
     if (parent instanceof Clutter.Actor) {
@@ -26,6 +28,28 @@ function remove(parent: GObject.Object, child: GObject.Object) {
 
 export const { addChild, intrinsicElements } = configue({
     intrinsicElements: {},
+    setCss(object, css) {
+        if (!(object instanceof St.Widget)) {
+            return console.warn(Error(`cannot set css on ${object}`))
+        }
+
+        if (css instanceof Binding) {
+            sync(object, "style", css)
+        } else {
+            object.set_style(css)
+        }
+    },
+    setClass(object, className) {
+        if (!(object instanceof St.Widget)) {
+            return console.warn(Error(`cannot set className on ${object}`))
+        }
+
+        if (className instanceof Binding) {
+            sync(object, "style_class", className)
+        } else {
+            object.set_style_class_name(className)
+        }
+    },
     addChild(parent, child, index = -1) {
         if (parent instanceof Fragment) {
             parent.addChild(child)
