@@ -4,13 +4,13 @@ import { Binding } from "../state.js"
 interface WithProps<T> {
     value: Binding<T>
     children: (value: T) => JSX.Element | "" | false | null | undefined
-    cleanup?: (element: JSX.Element) => void | null
+    cleanup?: (element: JSX.Element) => void
 }
 
 export default function With<T>({
     value,
     children: mkChild,
-    cleanup = item => item.run_dispose(),
+    cleanup,
 }: WithProps<T>): Fragment<JSX.Element> {
     const fragment = new Fragment<JSX.Element>()
 

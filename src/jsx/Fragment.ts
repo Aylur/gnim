@@ -1,21 +1,29 @@
 import GObject from "gi://GObject"
 
 export default class Fragment<T = any> extends GObject.Object {
-    static {
-        GObject.registerClass({
-            Properties: {
-                children: GObject.ParamSpec.jsobject("children", "", "", GObject.ParamFlags.READABLE),
-            },
-            Signals: {
-                "child-added": {
-                    param_types: [GObject.TYPE_OBJECT, GObject.TYPE_UINT],
-                },
-                "child-removed": {
-                    param_types: [GObject.TYPE_OBJECT, GObject.TYPE_UINT],
-                },
-            },
+    static [GObject.signals] = {
+        "child-added": {
+            param_types: [GObject.TYPE_OBJECT, GObject.TYPE_UINT],
+        },
+        "child-removed": {
+            param_types: [GObject.TYPE_OBJECT, GObject.TYPE_UINT],
+        },
+    }
 
-        }, this)
+    static [GObject.properties] = {
+        children: GObject.ParamSpec.jsobject(
+            "children", "", "",
+            GObject.ParamFlags.READABLE,
+        ),
+    }
+
+    static {
+        GObject.registerClass(this)
+    }
+
+
+    static new<T>(children: Array<T> = []) {
+        return new Fragment({ children })
     }
 
     private _children: Array<{ $: T }>
@@ -55,9 +63,5 @@ export default class Fragment<T = any> extends GObject.Object {
     constructor({ children = [] }: Partial<{ children: Array<T> | T }> = {}) {
         super()
         this._children = Array.isArray(children) ? children.map($ => ({ $ })) : [{ $: children }]
-    }
-
-    static new<T>(children: Array<T> = []) {
-        return new Fragment({ children })
     }
 }

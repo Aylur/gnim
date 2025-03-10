@@ -1,21 +1,21 @@
 import Fragment from "./Fragment.js"
 import { Binding, State } from "../state.js"
 
-interface ForProps<T> {
+interface ForProps<T, E extends JSX.Element> {
     each: Binding<Array<T>>
-    children: (item: T, index: Binding<number>) => JSX.Element
-    cleanup?: (element: JSX.Element, item: T, index: number) => void | null
+    children: (item: T, index: Binding<number>) => E
+    cleanup?: (element: E, item: T, index: number) => void
 }
 
 // TODO: support Gio.ListModel
 
-export default function For<T extends object>({
+export default function For<T extends object, E extends JSX.Element>({
     each,
     children: mkChild,
-    cleanup = item => item.run_dispose(),
-}: ForProps<T>): Fragment<JSX.Element> {
-    const map = new Map<T, { child: JSX.Element, index: State<number> }>()
-    const fragment = new Fragment<JSX.Element>()
+    cleanup,
+}: ForProps<T, E>): Fragment<E> {
+    const map = new Map<T, { child: E, index: State<number> }>()
+    const fragment = new Fragment<E>()
 
     function callback(arr: T[]) {
         // cleanup children missing from arr
@@ -43,8 +43,10 @@ export default function For<T extends object>({
         })
     }
 
-    each.subscribe(fragment, callback)
-    callback(each.get())
+    if (each instanceof Binding) {
+        each.subscribe(fragment, callback)
+        callback(each.get())
+    }
 
     return fragment
 }

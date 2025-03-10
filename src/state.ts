@@ -12,12 +12,15 @@ const kebabify = (str: string) => str
     .toLowerCase()
 
 class StateObject<T extends object> extends GObject.Object {
+    static [GObject.properties] = {
+        value: GObject.ParamSpec.jsobject(
+            "value", "", "",
+            GObject.ParamFlags.READWRITE,
+        ),
+    }
+
     static {
-        GObject.registerClass({
-            Properties: {
-                value: GObject.ParamSpec.jsobject("value", "", "", GObject.ParamFlags.READWRITE),
-            },
-        }, this)
+        GObject.registerClass(this)
     }
 
     declare value: T
@@ -101,12 +104,20 @@ export class State<T> extends Function {
         }
 
         if (objOrCallback instanceof GObject.Object && typeof callback === "function") {
-            return hook(
+            const unsub = hook(
                 objOrCallback,
                 this[_value],
                 "notify::value",
                 ({ value }: StateObject<{ $: T }>) => callback(value.$),
             )
+
+            // @ts-expect-error ctor is typed as `Function`
+            const t = objOrCallback.constructor.$gtype as GObject.GType
+            if (GObject.signal_lookup("destroy", t)) {
+                objOrCallback.connect("destroy", unsub)
+            }
+
+            return unsub
         }
     }
 
