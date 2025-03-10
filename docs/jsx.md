@@ -4,9 +4,10 @@ Syntactic sugar for creating objects declaratively.
 In GJS building UIs connecting signals,
 binding properties between objects is done mostly imperatively.
 
-> [!WARNING] This is not React.js
+> [!WARNING]
+> This is not React.js
 > This works nothing like React.js and has nothing in common with React.js
-> other than the XML syntax. Functions components are only called once.
+> other than the XML syntax.
 
 Consider the following example:
 
@@ -334,7 +335,7 @@ Intrinsic elements are globally available components which in
 web frameworks are usually HTMLElements such as `<div>` `<span>` `<p>`.
 There are no intrinsic elements by default, but they can be set.
 
-> [!TIP] This API is not meant for applications to be used.
+> [!TIP]
 > It should always be preferred to just export/import components.
 
 - Function components

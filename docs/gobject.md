@@ -130,7 +130,7 @@ class MyObj extends GObject.Object {
 This will create a getter and setter for the property and will also
 emit the notify signal when the value is set to a new value.
 
-> [!INFO]
+> [!TIP]
 > The `declare` keyword is required if the property is not set in the constructor.
 > or if its set with `super()`.
 

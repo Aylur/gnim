@@ -35,8 +35,8 @@ Similarly to `bind_property_full` you can define transform function.
 sync(obj2, "label", bind(obj1, "label").as(label => `transformed ${label}`))
 ```
 
-> [!TIP] Bindings are immutable
-> `.as` always returns a new instance.
+> [!TIP]
+> Bindings are immutable: `.as` always returns a new instance.
 
 If you want a two way binding `sync` will have to be called twice.
 
