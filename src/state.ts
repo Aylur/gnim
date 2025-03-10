@@ -274,6 +274,13 @@ export function sync<
 }
 
 /**
+ * ```ts Example
+ * let a: Binding<number>
+ * let b: Binding<string>
+ * const c: State<[number, string]> = derive([a, b])
+ * const d: State<string> = derive([a, b], (a: number, b: string) => `${a} ${b}`)
+ * ```
+ *
  * Create a derived `State` from a list of `Binding`s.
  * @param deps List of `Bindings`.
  * @param transform An optional transform function.
@@ -285,8 +292,45 @@ export function derive<
         [K in keyof Deps]: Deps[K] extends Binding<infer T> ? T : never
     },
     V = Args,
->(deps: Deps, transform: (...args: Args) => V = (...args) => args as unknown as V) {
-    const get = () => transform(...deps.map(d => d.get()) as Args)
+>(deps: Deps, transform?: (...args: Args) => V): State<V>
+
+/**
+ * ```ts Example
+ * let a: Binding<number>
+ * let b: Binding<string>
+ * const c: State<[number, string]> = derive(a, b)
+ * const d: State<string> = derive(a, b, (a: number, b: string) => `${a} ${b}`)
+ * ```
+ *
+ * Create a derived `State` from a list of `Binding`s.
+ * @param args List of `Bindings` with the last argument being an optional transform function.
+ * @returns The derived `State`.
+ */
+export function derive<
+    const Deps extends Array<Binding<any>>,
+    Args extends {
+        [K in keyof Deps]: Deps[K] extends Binding<infer T> ? T : never
+    },
+    V = Args,
+>(...args: [...Deps] | [...Deps, transform: (...args: Args) => V]): State<V>
+
+
+export function derive<T>(...args: any[]) {
+    let deps: Array<Binding<unknown>>
+    let fn: (...args: unknown[]) => T
+
+    if (Array.isArray(args[0])) {
+        deps = args[0]
+        fn = args[1] ?? ((...args: unknown[]) => args)
+    } else if (typeof args.at(-1) === "function") {
+        deps = args.slice(0, -1)
+        fn = args.at(-1)
+    } else {
+        deps = args
+        fn = (...args: unknown[]) => args as T
+    }
+
+    const get = () => fn(...deps.map(d => d.get()))
     const state = new State(get())
 
     for (const dep of deps) {
@@ -297,6 +341,14 @@ export function derive<
 }
 
 /**
+ * ```ts Example
+ * const state: State<string> = observe(
+ *   "",
+ *   [obj1, "sig-name", (...args) => "str"],
+ *   [obj2, "sig-name", (...args) => "str"]
+ * )
+ * ```
+ *
  * Create a `State` which observes a list of `GObject.Object` signals.
  * @param init The initial value of the `State`
  * @param signals A list of `GObject.Object`, signal name and callback pairs to observe.
