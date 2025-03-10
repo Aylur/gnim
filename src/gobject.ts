@@ -138,7 +138,7 @@ export function signal(
                 },
             })
         } else {
-            const og: ((...args: any[]) => void) = desc.value
+            const og: ((...args: any[]) => unknown) = desc.value
             desc.value = function (...args: any[]) {
                 // @ts-expect-error not typed
                 this.emit(name, ...args)
@@ -156,7 +156,7 @@ function pspec(name: string, flags: GObject.ParamFlags, declaration: PropertyDec
     if (declaration instanceof ParamSpec)
         return declaration
 
-    if (declaration === Object) {
+    if (declaration === Object || declaration === Function || declaration === Array) {
         return ParamSpec.jsobject(name, "", "", flags)
     }
 
@@ -182,3 +182,16 @@ function pspec(name: string, flags: GObject.ParamFlags, declaration: PropertyDec
 
     throw Error("invalid PropertyDeclaration")
 }
+
+declare global {
+    interface FunctionConstructor {
+        $gtype: GObject.GType<object>
+    }
+
+    interface ArrayConstructor {
+        $gtype: GObject.GType<object>
+    }
+}
+
+Function.$gtype = Object.$gtype
+Array.$gtype = Object.$gtype

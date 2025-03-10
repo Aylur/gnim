@@ -5,7 +5,7 @@ Decorators that wrap [`GObject.registerClass`](https://gitlab.gnome.org/GNOME/gj
 ## Example Usage
 
 ```ts
-import GObject, { register, property } from "gjsx/gobject"
+import GObject, { register, property, signal } from "gjsx/gobject"
 
 @register({ GTypeName: "MyObj" })
 class MyObj extends GObject.Object {
@@ -16,6 +16,65 @@ class MyObj extends GObject.Object {
     declare mySignal: (a: string, b: number) => void
 }
 ```
+
+::: details What it transpiles to
+
+```js
+const props = Symbol("private props")
+
+class MyObj extends GObject.Object {
+    [props] = { myProp: "" }
+
+    get myProp() {
+        return this[props].myProp
+    }
+
+    set myProp(value) {
+        if (this.myProp !== value) {
+            this[props].myProp = value
+            this.notify("my-prop")
+        }
+    }
+
+    get_my_prop() {
+        return this.myProp
+    }
+
+    set_my_prop() {
+        return this.myProp
+    }
+
+    mySignal(a, b) {
+        this.emit("my-signal", a, b)
+    }
+
+    on_my_signal(a, b) {
+        // default handler would go here
+        // which is then hooked up with registerClass
+    }
+}
+
+GObject.registerClass({
+    GTypeName: "MyObj",
+    Properties: {
+        "my-prop": GObject.ParamSpec.string(
+            "my-prop",
+            "",
+            "",
+            GObject.ParamFlags.READWRITE,
+            "",
+        ),
+    },
+    Signals: {
+        "my-si": {
+            param_types: [String.$gtype, GObject.TYPE_UINT]
+        }
+    },
+
+}, MyObj)
+```
+
+:::
 
 ## Property decorator
 
