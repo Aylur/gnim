@@ -110,6 +110,10 @@ export const { addChild, intrinsicElements } = configue({
         }
     },
     addChild(parent, child, index = -1) {
+        if (!(child instanceof GObject.Object)) {
+            child = Gtk.Label.new(String(child))
+        }
+
         if (specialAdd(parent, child, index)) return
 
         if (parent instanceof Fragment) {

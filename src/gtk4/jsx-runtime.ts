@@ -89,15 +89,15 @@ export const { addChild, intrinsicElements } = configue({
         let provider: Gtk.CssProvider
 
         const setter = (css: string) => {
-            if (!css.includes('{') || !css.includes('}'))
-                css = `* { ${css} }`;
+            if (!css.includes("{") || !css.includes("}")) {
+                css = `* { ${css} }`
+            }
 
-            if (provider)
-                ctx.remove_provider(provider);
+            if (provider) ctx.remove_provider(provider)
 
-            provider = new Gtk.CssProvider();
+            provider = new Gtk.CssProvider()
             provider.load_from_string(css)
-            ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
+            ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
         }
 
         if (css instanceof Binding) {
@@ -113,12 +113,16 @@ export const { addChild, intrinsicElements } = configue({
         }
 
         if (className instanceof Binding) {
-            sync(object, "cssClasses", className.as(cn => cn.split(/\s+/)))
+            sync(object, "cssClasses", className.as((cn) => cn.split(/\s+/)))
         } else {
             object.set_css_classes(className.split(/\s+/))
         }
     },
     addChild(parent, child, index = -1) {
+        if (!(child instanceof GObject.Object)) {
+            child = Gtk.Label.new(String(child))
+        }
+
         if (specialAdd(parent, child, index)) return
 
         if (parent instanceof Fragment) {

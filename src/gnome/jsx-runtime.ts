@@ -51,6 +51,10 @@ export const { addChild, intrinsicElements } = configue({
         }
     },
     addChild(parent, child, index = -1) {
+        if (!(child instanceof GObject.Object)) {
+            child = new St.Label({ text: String(child) })
+        }
+
         if (parent instanceof Fragment) {
             parent.addChild(child)
             return
@@ -79,7 +83,7 @@ export const { addChild, intrinsicElements } = configue({
                     }),
                 ]
 
-                parent.connect("destroy", () => ids.map(id => child.disconnect(id)))
+                parent.connect("destroy", () => ids.map((id) => child.disconnect(id)))
                 return
             }
 

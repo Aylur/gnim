@@ -2,17 +2,19 @@ import GObject from "gi://GObject"
 import Fragment from "./Fragment.js"
 import { Binding, sync } from "../state.js"
 
-type CC<T extends GObject.Object = GObject.Object> = { new(props: any): T }
-type FC<T extends GObject.Object = GObject.Object> = (props: any) => T
+type GObj = GObject.Object
+type CC<T extends GObj = GObj> = { new(props: any): T }
+type FC<T extends GObj = GObj> = (props: any) => T
+type Node = GObj | number | string | boolean | null | undefined
 
 export { Fragment }
 export { default as For } from "./For.js"
 export { default as With } from "./With.js"
 export { default as This } from "./This.js"
 
-type ChildFn = (parent: GObject.Object, child: GObject.Object, index?: number) => void
-type CssSetter = (object: GObject.Object, css: string | Binding<string>) => void
+type CssSetter = (object: GObj, css: string | Binding<string>) => void
 type InitProps = (props: any) => void
+type ChildFn = (parent: GObj, child: GObj | number | string, index?: number) => void
 
 export let addChild: ChildFn
 export let intrinsicElements: Record<string, CC | FC>
@@ -22,21 +24,19 @@ let setClass: CssSetter
 let initProps: InitProps
 
 export function configue(conf: {
-    addChild: ChildFn,
-    intrinsicElements: Record<string, CC | FC>,
-    setCss: CssSetter,
-    setClass: CssSetter,
+    addChild: ChildFn
+    intrinsicElements: Record<string, CC | FC>
+    setCss: CssSetter
+    setClass: CssSetter
     initProps?: InitProps
 }) {
     intrinsicElements = conf.intrinsicElements
     addChild = conf.addChild
     setCss = conf.setCss
     setClass = conf.setClass
-    initProps = conf.initProps ?? (props => props)
+    initProps = conf.initProps ?? ((props) => props)
     return conf
 }
-
-type Element = GObject.Object | "" | false | null | undefined
 
 /**
  * Function Component Properties
@@ -62,7 +62,7 @@ export type CCProps<Self, Props> = Partial<{
      * @internal children elements
      * its consumed internally and not actually passed to class component constructors
      */
-    children: Array<Element> | Element
+    children: Array<Node> | Node
     /**
      * Gtk.Builder type
      * its consumed internally and not actually passed to class component constructors
@@ -104,11 +104,11 @@ type JsxProps<C, Props> =
 
 export const gtkType = Symbol("gtk builder type")
 
-function isGObjectCtor<T extends GObject.Object>(ctor: any): ctor is CC<T> {
+function isGObjectCtor<T extends GObj>(ctor: any): ctor is CC<T> {
     return ctor.prototype instanceof GObject.Object
 }
 
-function isFunctionCtor<T extends GObject.Object>(ctor: any): ctor is FC<T> {
+function isFunctionCtor<T extends GObj>(ctor: any): ctor is FC<T> {
     return typeof ctor === "function" && !isGObjectCtor(ctor)
 }
 
@@ -134,19 +134,19 @@ const kebabify = (str: string) => str
     .replaceAll("_", "-")
     .toLowerCase()
 
-export function jsx<T extends ((props: any) => GObject.Object)>(
+export function jsx<T extends (props: any) => GObj>(
     ctor: T,
     props: JsxProps<T, Parameters<T>[0]>,
 ): ReturnType<T>
 
-export function jsx<T extends (new (props: any) => GObject.Object)>(
+export function jsx<T extends new (props: any) => GObj>(
     ctor: T,
     props: JsxProps<T, ConstructorParameters<T>[0]>,
 ): InstanceType<T>
 
-export function jsx<T extends GObject.Object>(
+export function jsx<T extends GObj>(
     ctor: keyof typeof intrinsicElements | (new (props: any) => T) | ((props: any) => T),
-    { $, _, _type, _constructor, children = [], ...props }: CCProps<T, any>
+    { $, _, _type, _constructor, children = [], ...props }: CCProps<T, any>,
 ): T {
     initProps(props)
 
@@ -193,12 +193,12 @@ export function jsx<T extends GObject.Object>(
     if (className) setClass(object, className)
 
     if (typeof addChild === "function" && isGObjectCtor(ctor)) {
-        if (Array.isArray(children)) {
-            for (const child of children) {
-                if (child) addChild(object, child, -1)
+        for (const child of Array.isArray(children) ? children : [children]) {
+            if (child === true) {
+                console.warn("Trying to add boolean value of `true` as a child.")
+                continue
             }
-        } else if (children) {
-            addChild(object, children, -1)
+            if (child) addChild(object, child, -1)
         }
     }
 
@@ -225,8 +225,8 @@ declare global {
     // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace JSX {
         type ElementType = keyof IntrinsicElements | FC | CC
-        type Element = GObject.Object
-        type ElementClass = GObject.Object
+        type Element = GObj
+        type ElementClass = GObj
 
         type LibraryManagedAttributes<C, Props> = JsxProps<C, Props>
         // FIXME: why does an intrinsic element always resolve as FC?
