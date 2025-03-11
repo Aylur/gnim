@@ -13,10 +13,14 @@ const kebabify = (str: string) => str
 
 class StateObject<T extends object> extends GObject.Object {
     static [GObject.properties] = {
-        value: GObject.ParamSpec.jsobject(
+        "value": GObject.ParamSpec.jsobject(
             "value", "", "",
             GObject.ParamFlags.READWRITE,
         ),
+    }
+
+    static [GObject.signals] = {
+        "destroy": { param_types: [] },
     }
 
     static {
@@ -111,12 +115,6 @@ export class State<T> extends Function {
                 ({ value }: StateObject<{ $: T }>) => callback(value.$),
             )
 
-            // @ts-expect-error ctor is typed as `Function`
-            const t = objOrCallback.constructor.$gtype as GObject.GType
-            if (GObject.signal_lookup("destroy", t)) {
-                objOrCallback.connect("destroy", unsub)
-            }
-
             return unsub
         }
     }
@@ -128,6 +126,10 @@ export class State<T> extends Function {
     [Symbol.toPrimitive]() {
         console.warn("State implicitly converted to a primitive value.")
         return this.toString()
+    }
+
+    destroy() {
+        this[_value].emit("destroy")
     }
 }
 
@@ -403,6 +405,12 @@ export function hook<T extends GObject.Object>(
         lifetime,
         GObject.ConnectFlags.DEFAULT,
     )
+
+    // @ts-expect-error ctor is typed as `Function`
+    const t = lifetime.constructor.$gtype as GObject.GType
+    if (GObject.signal_lookup("destroy", t)) {
+        lifetime.connect("destroy", () => object.disconnect(id))
+    }
 
     return () => object.disconnect(id)
 }
