@@ -396,7 +396,7 @@ export function hook<T extends GObject.Object>(
     lifetime: GObject.Object,
     object: T,
     signal: string,
-    callback: (emitter: T, ...args: unknown[]) => unknown,
+    callback: (emitter: T, ...args: any[]) => any,
 ): () => void {
     // @ts-expect-error missing types
     const id: number = object.connect_object(
