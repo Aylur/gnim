@@ -197,7 +197,7 @@ export class Binding<T> {
 
         const getter = `get_${prop.replaceAll("-", "_")}` as keyof typeof obj
 
-        if (Object.hasOwn(obj, getter) && typeof obj[getter] === "function") {
+        if (getter in obj && typeof obj[getter] === "function") {
             return fn((obj[getter] as () => unknown)())
         }
 
