@@ -24,6 +24,7 @@
           gjs
           typescript
           esbuild
+          libsoup_3
         ];
       };
     });
