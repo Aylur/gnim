@@ -10,6 +10,7 @@ export default defineConfig({
             { text: "GObject", link: "/gobject" },
             { text: "State", link: "/state" },
             { text: "JSX", link: "/jsx" },
+            { text: "Polyfills", link: "/polyfills" },
         ],
 
         socialLinks: [

@@ -3,13 +3,13 @@ import Gio from "gi://Gio"
 import Soup from "gi://Soup?version=3.0"
 
 type ResponseType = "basic" | "cors" | "default" | "error" | "opaque" | "opaqueredirect"
-type HeadersInit = Headers | Record<string, string> | [string, string][]
-type ResponseInit = {
+export type HeadersInit = Headers | Record<string, string> | [string, string][]
+export type ResponseInit = {
     headers?: HeadersInit
     status?: number
     statusText?: string
 }
-type RequestInit = {
+export type RequestInit = {
     body?: string
     headers?: HeadersInit
     method?: string
