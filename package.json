@@ -33,6 +33,7 @@
     "exports": {
         "./state": "./src/state.ts",
         "./gobject": "./src/gobject.ts",
+        "./fetch": "./src/fetch.ts",
         "./gtk4": "./src/gtk4/index.ts",
         "./gtk4/jsx-runtime": "./src/gtk4/jsx-runtime.ts",
         "./gtk4/style": "./src/gtk4/style.ts",
