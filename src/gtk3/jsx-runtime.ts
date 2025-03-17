@@ -111,7 +111,7 @@ export const { addChild, intrinsicElements } = configue({
     },
     addChild(parent, child, index = -1) {
         if (!(child instanceof GObject.Object)) {
-            child = Gtk.Label.new(String(child))
+            child = new Gtk.Label({ label: String(child), visible: true })
         }
 
         if (specialAdd(parent, child, index)) return
