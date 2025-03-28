@@ -7,10 +7,10 @@ you should read [gjs.guide](https://gjs.guide/) first.
 
 This library provides:
 
-* GObject [decorators](https://aylur.github.io/gjsx/gobject) for subclassing
-* state and binding utilities
-* [JSX](https://aylur.github.io/gjsx/jsx) for both Gtk and Gnome extensions
+- GObject [decorators](https://aylur.github.io/gjsx/gobject) for subclassing
+- state and binding utilities
+- [JSX](https://aylur.github.io/gjsx/jsx) for both Gtk and Gnome extensions
 
 ## Example apps using Gjsx
 
-* [icon-theme-browser](https://github.com/Aylur/icon-theme-browser)
+- [icon-theme-browser](https://github.com/Aylur/icon-theme-browser)

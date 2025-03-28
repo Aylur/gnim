@@ -10,10 +10,11 @@ function isGType(obj: any): obj is GObject.GType {
     return GObject.type_check_is_value_type(obj)
 }
 
-const kebabify = (str: string) => str
-    .replace(/([a-z])([A-Z])/g, "$1-$2")
-    .replaceAll("_", "-")
-    .toLowerCase()
+const kebabify = (str: string) =>
+    str
+        .replace(/([a-z])([A-Z])/g, "$1-$2")
+        .replaceAll("_", "-")
+        .toLowerCase()
 
 type SignalDeclaration = {
     flags?: GObject.SignalFlags
@@ -32,7 +33,7 @@ type GObjectConstructor = {
         Properties?: { [key: string]: GObject.ParamSpec }
         Signals?: { [key: string]: GObject.SignalDefinition }
     }
-    new(...args: any[]): any
+    new (...args: any[]): any
 }
 
 type MetaInfo = GObject.MetaInfo<never, Array<{ $gtype: GObject.GType }>, never>
@@ -44,11 +45,14 @@ export function register(options: MetaInfo = {}) {
             options.Template = new TextEncoder().encode(t)
         }
 
-        GObject.registerClass({
-            Signals: { ...cls[meta]?.Signals },
-            Properties: { ...cls[meta]?.Properties },
-            ...options,
-        }, cls)
+        GObject.registerClass(
+            {
+                Signals: { ...cls[meta]?.Signals },
+                Properties: { ...cls[meta]?.Properties },
+                ...options,
+            },
+            cls,
+        )
 
         delete cls[meta]
     }
@@ -100,11 +104,13 @@ export function property(declaration: PropertyDeclaration = Object) {
     }
 }
 
-export function signal(...params: Array<{ $gtype: GObject.GType } | GObject.GType>):
-    (target: any, signal: any, desc?: PropertyDescriptor) => void
+export function signal(
+    ...params: Array<{ $gtype: GObject.GType } | GObject.GType>
+): (target: any, signal: any, desc?: PropertyDescriptor) => void
 
-export function signal(declaration?: SignalDeclaration):
-    (target: any, signal: any, desc?: PropertyDescriptor) => void
+export function signal(
+    declaration?: SignalDeclaration,
+): (target: any, signal: any, desc?: PropertyDescriptor) => void
 
 export function signal(
     declaration?: SignalDeclaration | { $gtype: GObject.GType } | GObject.GType,
@@ -138,7 +144,7 @@ export function signal(
                 },
             })
         } else {
-            const og: ((...args: any[]) => unknown) = desc.value
+            const og: (...args: any[]) => unknown = desc.value
             desc.value = function (...args: any[]) {
                 // @ts-expect-error not typed
                 this.emit(name, ...args)
@@ -153,8 +159,7 @@ export function signal(
 }
 
 function pspec(name: string, flags: GObject.ParamFlags, declaration: PropertyDeclaration) {
-    if (declaration instanceof ParamSpec)
-        return declaration
+    if (declaration instanceof ParamSpec) return declaration
 
     if (declaration === Object || declaration === Function || declaration === Array) {
         return ParamSpec.jsobject(name, "", "", flags)

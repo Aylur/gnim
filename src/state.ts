@@ -6,21 +6,20 @@ const _transformFn = Symbol("binding transformFn")
 const _emitter = Symbol("binding emitter")
 const _prop = Symbol("binding prop")
 
-const kebabify = (str: string) => str
-    .replace(/([a-z])([A-Z])/g, "$1-$2")
-    .replaceAll("_", "-")
-    .toLowerCase()
+function kebabify(str: string) {
+    return str
+        .replace(/([a-z])([A-Z])/g, "$1-$2")
+        .replaceAll("_", "-")
+        .toLowerCase()
+}
 
 class StateObject<T extends object> extends GObject.Object {
     static [GObject.properties] = {
-        "value": GObject.ParamSpec.jsobject(
-            "value", "", "",
-            GObject.ParamFlags.READWRITE,
-        ),
+        value: GObject.ParamSpec.jsobject("value", "", "", GObject.ParamFlags.READWRITE),
     }
 
     static [GObject.signals] = {
-        "destroy": { param_types: [] },
+        destroy: { param_types: [] },
     }
 
     static {
@@ -61,14 +60,18 @@ export class State<T> extends Function {
     /**
      * @returns The current value.
      */
-    get() { return this.value }
+    get() {
+        return this.value
+    }
 
     /**
      * Set the current value.
      * *NOTE*: value is checked by reference.
      * @returns The current value.
      */
-    set(value: T) { return this.value = value }
+    set(value: T) {
+        return (this.value = value)
+    }
 
     /**
      * The current value.
@@ -98,10 +101,7 @@ export class State<T> extends Function {
      */
     subscribe(object: GObject.Object, callback: (value: T) => void): () => void
 
-    subscribe(
-        objOrCallback: GObject.Object | ((value: T) => void),
-        callback?: (value: T) => void,
-    ) {
+    subscribe(objOrCallback: GObject.Object | ((value: T) => void), callback?: (value: T) => void) {
         if (typeof objOrCallback === "function") {
             const id = this[_value].connect("notify::value", ({ value }) => objOrCallback(value.$))
             return () => this[_value].disconnect(id)
@@ -158,10 +158,10 @@ export class Binding<T> {
      * Create a `Binding` on a `GObject.Object`'s `property`.
      * @param object The `GObject.Object` to create the `Binding` on.
      */
-    static bind<
-        T extends GObject.Object,
-        P extends keyof T,
-    >(object: T, property: Extract<P, string>): Binding<T[P]>
+    static bind<T extends GObject.Object, P extends keyof T>(
+        object: T,
+        property: Extract<P, string>,
+    ): Binding<T[P]>
 
     /**
      * Create a `Binding` on a `Gio.Settings`'s `key`.
@@ -219,28 +219,21 @@ export class Binding<T> {
      */
     subscribe(object: GObject.Object, callback: (value: T) => void): () => void
 
-    subscribe(
-        objOrCallback: GObject.Object | ((value: T) => void),
-        callback?: (value: T) => void,
-    ) {
+    subscribe(objOrCallback: GObject.Object | ((value: T) => void), callback?: (value: T) => void) {
         const emitter = this[_emitter]
 
         const sig = emitter instanceof Gio.Settings ? "changed" : "notify"
 
         if (typeof objOrCallback === "function") {
-            const id = this[_emitter].connect(
-                `${sig}::${kebabify(this[_prop])}`,
-                () => objOrCallback(this.get()),
+            const id = this[_emitter].connect(`${sig}::${kebabify(this[_prop])}`, () =>
+                objOrCallback(this.get()),
             )
             return () => this[_emitter].disconnect(id)
         }
 
         if (objOrCallback instanceof GObject.Object && typeof callback === "function") {
-            return hook(
-                objOrCallback,
-                this[_emitter],
-                `${sig}::${kebabify(this[_prop])}`,
-                () => callback(this.get()),
+            return hook(objOrCallback, this[_emitter], `${sig}::${kebabify(this[_prop])}`, () =>
+                callback(this.get()),
             )
         }
     }
@@ -260,7 +253,7 @@ export const { bind } = Binding
 function set(obj: object, prop: string, value: any) {
     const setter = `set_${prop}` as keyof typeof obj
     if (setter in obj && typeof obj[setter] === "function") {
-        (obj[setter] as (v: any) => void)(value)
+        ;(obj[setter] as (v: any) => void)(value)
     } else {
         Object.assign(obj, { [prop]: value })
     }
@@ -274,16 +267,13 @@ function set(obj: object, prop: string, value: any) {
  * @param binding - The Binding the object will subscribe to.
  * @returns The disconnect function.
  */
-export function sync<
-    O extends GObject.Object,
-    P extends keyof O,
->(
+export function sync<O extends GObject.Object, P extends keyof O>(
     object: O,
     property: Extract<P, string>,
     binding: Binding<O[P]>,
 ): () => void {
     set(object, kebabify(property), binding.get())
-    return binding.subscribe(object, value => set(object, kebabify(property), value))
+    return binding.subscribe(object, (value) => set(object, kebabify(property), value))
 }
 
 /**
@@ -327,7 +317,6 @@ export function derive<
     V = Args,
 >(...args: [...Deps] | [...Deps, transform: (...args: Args) => V]): State<V>
 
-
 export function derive<T>(...args: any[]) {
     let deps: Array<Binding<unknown>>
     let fn: (...args: unknown[]) => T
@@ -343,11 +332,15 @@ export function derive<T>(...args: any[]) {
         fn = (...args: unknown[]) => args as T
     }
 
-    const get = () => fn(...deps.map(d => d.get()))
+    const get = () => fn(...deps.map((d) => d.get()))
     const state = new State(get())
 
     for (const dep of deps) {
-        sync(state[_value], "value", dep.as(() => ({ $: get() })))
+        sync(
+            state[_value],
+            "value",
+            dep.as(() => ({ $: get() })),
+        )
     }
 
     return state
@@ -369,20 +362,22 @@ export function derive<T>(...args: any[]) {
  */
 export function observe<T>(
     init: T,
-    ...signals: Array<[GObject.Object, string, /** Parameters are coming from the signal. @returns new value */ (...args: Array<any>) => T]>
+    ...signals: Array<
+        [
+            GObject.Object,
+            string,
+            /** Parameters are coming from the signal. @returns new value */ (
+                ...args: Array<any>
+            ) => T,
+        ]
+    >
 ) {
     const state = new State(init)
     for (const [obj, sig, callback] of signals) {
-        hook(
-            state[_value],
-            obj,
-            sig,
-            (_, ...args) => state.set(callback(...args)),
-        )
+        hook(state[_value], obj, sig, (_, ...args) => state.set(callback(...args)))
     }
     return state
 }
-
 
 /**
  * Connect to a signal and limit the connections lifetime to an object.

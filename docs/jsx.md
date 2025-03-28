@@ -84,9 +84,7 @@ you can define it with `_constructor`.
 > **after**. This means construct only properties like `css-name` can not be set.
 
 ```tsx
-<Gtk.DropDown
-    _constructor={() => Gtk.DropDown.new_from_strings(themes)}
-/>
+<Gtk.DropDown _constructor={() => Gtk.DropDown.new_from_strings(themes)} />
 ```
 
 ### Type string
@@ -127,9 +125,7 @@ It is run **after** properties are set, signals are connected and children are a
 **before** the `jsx` function returns.
 
 ```tsx
-<Gtk.Stack
-    $={self => print(self, "is about to be returned")}
-/>
+<Gtk.Stack $={(self) => print(self, "is about to be returned")} />
 ```
 
 ### Bindings
@@ -189,11 +185,10 @@ function MyComponent(props: FCProps<Gtk.Button, {}>) {
     )
 }
 
-<MyComponent $={self => print(self, "is a Button")} />
+;<MyComponent $={(self) => print(self, "is a Button")} />
 ```
 
-> [!NOTE]
-> `FCProps` is required for TypeScript to be aware of the `$` function.
+> [!NOTE] > `FCProps` is required for TypeScript to be aware of the `$` function.
 
 ### How children are passed to function components
 
@@ -206,12 +201,10 @@ interface MyButtonProps {
 }
 
 function MyButton({ children }: MyButtonProps) {
-    return (
-        <Gtk.Button label={children} />
-    )
+    return <Gtk.Button label={children} />
 }
 
-<MyButton>Click Me</MyButton>
+;<MyButton>Click Me</MyButton>
 ```
 
 When multiple children are passed in `children` is an `Array`.
@@ -224,16 +217,14 @@ interface MyBoxProps {
 function MyBox({ children }: MyBoxProps) {
     return (
         <Gtk.Box>
-            {children.map(item => item instanceof Gtk.Widget ? (
-                item
-            ) : (
-                <Gtk.Label label={item.toString()} />
-            ))}
+            {children.map((item) =>
+                item instanceof Gtk.Widget ? item : <Gtk.Label label={item.toString()} />,
+            )}
         </Gtk.Box>
     )
 }
 
-<MyBox>
+;<MyBox>
     Some Content
     <Gtk.Button />
 </MyBox>
@@ -251,12 +242,7 @@ interface MyWidgetProps {
 }
 
 function MyWidget({ label, onClicked }: MyWidgetProps) {
-    return (
-        <Gtk.Button
-            $clicked={onClicked}
-            label={label}
-        />
-    )
+    return <Gtk.Button $clicked={onClicked} label={label} />
 }
 ```
 
@@ -271,16 +257,10 @@ import { For } from "gjsx/gtk4"
 import { State } from "gjsx/state"
 
 const value = new State<{ member: string } | null>({
-    member: "hello"
+    member: "hello",
 })
 
-return (
-    <With value={value()}>
-        {value => value && (
-            <Gtk.Label label={value.member} />
-        )}
-    </With>
-)
+return <With value={value()}>{(value) => value && <Gtk.Label label={value.member} />}</With>
 ```
 
 > [!TIP]
@@ -305,11 +285,11 @@ import { For } from "gjsx/gtk4"
 
 let list: Binding<Array<object>>
 
-return <For each={list()}>
-    {(item, index: Binding<number>) => (
-        <Gtk.Label label={index(i => `${i}. ${item}`)} />
-    )}
-</For>
+return (
+    <For each={list()}>
+        {(item, index: Binding<number>) => <Gtk.Label label={index((i) => `${i}. ${item}`)} />}
+    </For>
+)
 ```
 
 > [!WARNING]
@@ -344,9 +324,12 @@ There are no intrinsic elements by default, but they can be set.
     import { FCProps } from "gjsx/gtk4"
     import { intrinsicElements } from "gjsx/gtk4/jsx-runtime"
 
-    type MyLabelProps = FCProps<Gtk.Label, {
-        someProp: string
-    }>
+    type MyLabelProps = FCProps<
+        Gtk.Label,
+        {
+            someProp: string
+        }
+    >
 
     function MyLabel({ someProp }: MyLabelProps) {
         return <Gtk.Label label={someProp} />
@@ -362,7 +345,7 @@ There are no intrinsic elements by default, but they can be set.
         }
     }
 
-    <my-label someProps="hello" />
+    ;<my-label someProps="hello" />
     ```
 
 - Class components
@@ -395,5 +378,5 @@ There are no intrinsic elements by default, but they can be set.
         }
     }
 
-    <my-widget someProps="hello" />
+    ;<my-widget someProps="hello" />
     ```

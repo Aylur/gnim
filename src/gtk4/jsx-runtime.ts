@@ -8,7 +8,7 @@ import { Binding, sync } from "../state.js"
 const dummyBuilder = new Gtk.Builder()
 
 function type(object: GObject.Object) {
-    return gtkType in object ? object[gtkType] as string : null
+    return gtkType in object ? (object[gtkType] as string) : null
 }
 
 function add(parent: Gtk.Buildable, child: GObject.Object, _: number) {
@@ -23,20 +23,20 @@ function specialRemove(_parent: GObject.Object, _child: GObject.Object) {
 function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
     // TODO: add any other special case
     if (
-        child instanceof Gtk.Adjustment
-        && "set_adjustment" in parent
-        && typeof parent.set_adjustment === "function"
+        child instanceof Gtk.Adjustment &&
+        "set_adjustment" in parent &&
+        typeof parent.set_adjustment === "function"
     ) {
         parent.set_adjustment(child)
         return true
     }
 
     if (
-        child instanceof Gtk.Widget
-        && parent instanceof Gtk.Stack
-        && child.name !== ""
-        && child.name !== null
-        && type(child) === "named"
+        child instanceof Gtk.Widget &&
+        parent instanceof Gtk.Stack &&
+        child.name !== "" &&
+        child.name !== null &&
+        type(child) === "named"
     ) {
         parent.add_named(child, child.name)
         return true
@@ -48,10 +48,8 @@ function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
     }
 
     if (
-        child instanceof Gio.MenuModel && (
-            parent instanceof Gtk.MenuButton
-            || parent instanceof Gtk.PopoverMenu
-        )
+        child instanceof Gio.MenuModel &&
+        (parent instanceof Gtk.MenuButton || parent instanceof Gtk.PopoverMenu)
     ) {
         parent.set_menu_model(child)
         return true
@@ -113,7 +111,11 @@ export const { addChild, intrinsicElements } = configue({
         }
 
         if (className instanceof Binding) {
-            sync(object, "cssClasses", className.as((cn) => cn.split(/\s+/)))
+            sync(
+                object,
+                "cssClasses",
+                className.as((cn) => cn.split(/\s+/)),
+            )
         } else {
             object.set_css_classes(className.split(/\s+/))
         }
@@ -153,7 +155,7 @@ export const { addChild, intrinsicElements } = configue({
                     }),
                 ]
 
-                parent.connect("destroy", () => ids.map(id => child.disconnect(id)))
+                parent.connect("destroy", () => ids.map((id) => child.disconnect(id)))
                 return
             }
 

@@ -54,24 +54,26 @@ class MyObj extends GObject.Object {
     }
 }
 
-GObject.registerClass({
-    GTypeName: "MyObj",
-    Properties: {
-        "my-prop": GObject.ParamSpec.string(
-            "my-prop",
-            "",
-            "",
-            GObject.ParamFlags.READWRITE,
-            "",
-        ),
+GObject.registerClass(
+    {
+        GTypeName: "MyObj",
+        Properties: {
+            "my-prop": GObject.ParamSpec.string(
+                "my-prop",
+                "",
+                "",
+                GObject.ParamFlags.READWRITE,
+                "",
+            ),
+        },
+        Signals: {
+            "my-si": {
+                param_types: [String.$gtype, GObject.TYPE_UINT],
+            },
+        },
     },
-    Signals: {
-        "my-si": {
-            param_types: [String.$gtype, GObject.TYPE_UINT]
-        }
-    },
-
-}, MyObj)
+    MyObj,
+)
 ```
 
 :::
@@ -89,31 +91,31 @@ function property(declaration: PropertyDeclaration)
 The `property` decorator takes one of
 
 - any class that has a registered `GType`. This includes the globally available `String`, `Number`, `Boolean` and `Object` JavaScript constructors which are mapped to their relative `GObject.ParamSpec`.
-  - `Object`: `ParamSpec.jsobject`
-  - `String`: `ParamSpec.string`
-  - `Number`: `ParamSpec.double`
-  - `Boolean`: `ParamSpec.boolean`
 
-  ```ts
-  @register()
-  class MyObj extends GObject.Object {
-      @property(String) declare myProp: string
-      @property(MyObj) declare myProp2: MyObj
-  }
-  ```
+    - `Object`: `ParamSpec.jsobject`
+    - `String`: `ParamSpec.string`
+    - `Number`: `ParamSpec.double`
+    - `Boolean`: `ParamSpec.boolean`
+
+    ```ts
+    @register()
+    class MyObj extends GObject.Object {
+        @property(String) declare myProp: string
+        @property(MyObj) declare myProp2: MyObj
+    }
+    ```
 
 - a function that produces a `ParamSpec`: the passed name is a kebab-cased name of the property, for example `myProp` -> `my-prop` and flags is either `ParamFlags.READABLE`, `ParamFlags.WRITABLE` or `ParamFlags.READWRITE`
 
-  ```ts
-  const Percent = (name: string, flags: GObject.ParamFlags) => (
-      GObject.ParamSpec.double(name, "", "", flags, 0, 1, 0)
-  )
+    ```ts
+    const Percent = (name: string, flags: GObject.ParamFlags) =>
+        GObject.ParamSpec.double(name, "", "", flags, 0, 1, 0)
 
-  @register()
-  class MyObj extends GObject.Object {
-      @property(Percent) declare percent: number
-  }
-  ```
+    @register()
+    class MyObj extends GObject.Object {
+        @property(Percent) declare percent: number
+    }
+    ```
 
 The property decorator can be applied in the following ways:
 
@@ -159,8 +161,7 @@ class MyObj extends GObject.Object {
 }
 ```
 
-> [!NOTE]
-> `super` is not correctly typed for this usecase however.
+> [!NOTE] > `super` is not correctly typed for this usecase however.
 > In most cases you can just set the property after to satisfy TypeScript
 > in which case you can also drop `declare`.
 >
@@ -169,7 +170,7 @@ class MyObj extends GObject.Object {
 > class MyObj extends GObject.Object {
 >     @property(String)
 >     myProp: string
-> 
+>
 >     constructor({ myProp = "default-value" }: { myProp: string }) {
 >         super()
 >         this.myProp = myProp
@@ -208,11 +209,11 @@ class MyObj extends GObject.Object {
     declare private _prop: string
 
     @property(String)
-    get myProp () {
+    get myProp() {
         return "value"
     }
 
-    set myProp (v: string) {
+    set myProp(v: string) {
         if (v !== this._prop) {
             this._prop = v
             this.notify("my-prop")
@@ -266,8 +267,7 @@ to this decorator as you would to `GObject.registerClass`
 
 ```ts
 @register({ GTypeName: "MyObj" })
-class MyObj extends GObject.Object {
-}
+class MyObj extends GObject.Object {}
 ```
 
 > [!TIP]

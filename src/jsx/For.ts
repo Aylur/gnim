@@ -14,7 +14,7 @@ export default function For<T extends object, E extends JSX.Element>({
     children: mkChild,
     cleanup,
 }: ForProps<T, E>): Fragment<E> {
-    const map = new Map<T, { child: E, index: State<number> }>()
+    const map = new Map<T, { child: E; index: State<number> }>()
     const fragment = new Fragment<E>()
 
     function callback(arr: T[]) {
@@ -22,7 +22,7 @@ export default function For<T extends object, E extends JSX.Element>({
         for (const [key, { child, index }] of map.entries()) {
             fragment.removeChild(child)
 
-            if (arr.findIndex(i => i === key) < 0) {
+            if (arr.findIndex((i) => i === key) < 0) {
                 cleanup?.(child, key, index.get())
                 map.delete(key)
             }

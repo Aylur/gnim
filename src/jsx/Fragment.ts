@@ -11,16 +11,12 @@ export default class Fragment<T = any> extends GObject.Object {
     }
 
     static [GObject.properties] = {
-        children: GObject.ParamSpec.jsobject(
-            "children", "", "",
-            GObject.ParamFlags.READABLE,
-        ),
+        children: GObject.ParamSpec.jsobject("children", "", "", GObject.ParamFlags.READABLE),
     }
 
     static {
         GObject.registerClass(this)
     }
-
 
     static new<T>(children: Array<T> = []) {
         return new Fragment({ children })
@@ -62,6 +58,6 @@ export default class Fragment<T = any> extends GObject.Object {
 
     constructor({ children = [] }: Partial<{ children: Array<T> | T }> = {}) {
         super()
-        this._children = Array.isArray(children) ? children.map($ => ({ $ })) : [{ $: children }]
+        this._children = Array.isArray(children) ? children.map(($) => ({ $ })) : [{ $: children }]
     }
 }

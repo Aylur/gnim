@@ -19,12 +19,7 @@ const binding: Binding<string> = bind(obj1, "label")
 sync(obj2, "label", binding)
 
 // the above two lines are essentially the same as
-obj1.bind_property(
-    "label",
-    obj2,
-    "label",
-    GObject.BindingFlags.SYNC_CREATE,
-)
+obj1.bind_property("label", obj2, "label", GObject.BindingFlags.SYNC_CREATE)
 ```
 
 ## Transformations
@@ -32,7 +27,11 @@ obj1.bind_property(
 Similarly to `bind_property_full` you can define transform function.
 
 ```ts
-sync(obj2, "label", bind(obj1, "label").as(label => `transformed ${label}`))
+sync(
+    obj2,
+    "label",
+    bind(obj1, "label").as((label) => `transformed ${label}`),
+)
 ```
 
 > [!TIP]
@@ -56,10 +55,10 @@ import { State, bind } from "gjsx/state"
 
 const state = new State<string>("0")
 
-bind(state).as(value => parseInt(value))
+bind(state).as((value) => parseInt(value))
 
 // shorthand for the above
-state(value => parseInt(value))
+state((value) => parseInt(value))
 
 // value getters
 state.get()
@@ -90,7 +89,7 @@ You can run any side effect by subscribing to a Binding or State.
 ```ts
 let observable: State<any> | Binding<any>
 
-const unsubscribe = observable.subscribe(someProp => {
+const unsubscribe = observable.subscribe((someProp) => {
     console.log(someProp)
 })
 
@@ -101,7 +100,7 @@ Optionally, it is possible to pass in another object to limit
 the lifetime of the subscription.
 
 ```ts
-observable.subscribe(otherobj, someProp => {
+observable.subscribe(otherobj, (someProp) => {
     console.log(someProp)
 })
 ```
@@ -122,9 +121,11 @@ const obj = Gtk.Label.new("hello")
 const state1 = new State(0)
 const state2 = new State({ member: "" })
 
-const derived: State<[string, number, { member: string }]> = derive(
-    [bind(obj, "label"), bind(state1), bind(state2)]
-)
+const derived: State<[string, number, { member: string }]> = derive([
+    bind(obj, "label"),
+    bind(state1),
+    bind(state2),
+])
 ```
 
 Optionally pass in a transform function:

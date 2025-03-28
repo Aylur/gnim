@@ -7,7 +7,7 @@ import { Binding } from "../state.js"
 const dummyBuilder = new Gtk.Builder()
 
 function type(object: GObject.Object) {
-    return gtkType in object ? object[gtkType] as string : null
+    return gtkType in object ? (object[gtkType] as string) : null
 }
 
 function add(parent: Gtk.Buildable, child: GObject.Object, _: number) {
@@ -22,20 +22,20 @@ function specialRemove(_parent: GObject.Object, _child: GObject.Object) {
 function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
     // TODO: add any other special case
     if (
-        child instanceof Gtk.Adjustment
-        && "set_adjustment" in parent
-        && typeof parent.set_adjustment === "function"
+        child instanceof Gtk.Adjustment &&
+        "set_adjustment" in parent &&
+        typeof parent.set_adjustment === "function"
     ) {
         parent.set_adjustment(child)
         return true
     }
 
     if (
-        child instanceof Gtk.Widget
-        && parent instanceof Gtk.Stack
-        && child.name !== ""
-        && child.name !== null
-        && type(child) === "named"
+        child instanceof Gtk.Widget &&
+        parent instanceof Gtk.Stack &&
+        child.name !== "" &&
+        child.name !== null &&
+        type(child) === "named"
     ) {
         parent.add_named(child, child.name)
         return true
@@ -68,15 +68,13 @@ export const { addChild, intrinsicElements } = configue({
         let provider: Gtk.CssProvider
 
         const setter = (css: string) => {
-            if (!css.includes('{') || !css.includes('}'))
-                css = `* { ${css} }`;
+            if (!css.includes("{") || !css.includes("}")) css = `* { ${css} }`
 
-            if (provider)
-                ctx.remove_provider(provider);
+            if (provider) ctx.remove_provider(provider)
 
-            provider = new Gtk.CssProvider();
-            provider.load_from_data(new TextEncoder().encode(css));
-            ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER);
+            provider = new Gtk.CssProvider()
+            provider.load_from_data(new TextEncoder().encode(css))
+            ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
         }
 
         if (css instanceof Binding) {
@@ -91,7 +89,7 @@ export const { addChild, intrinsicElements } = configue({
             return console.warn(Error(`cannot set className on ${object}`))
         }
 
-        const ctx = object.get_style_context();
+        const ctx = object.get_style_context()
         const setter = (names: string) => {
             for (const name of ctx.list_classes()) {
                 ctx.remove_class(name)
@@ -144,7 +142,7 @@ export const { addChild, intrinsicElements } = configue({
                     }),
                 ]
 
-                parent.connect("destroy", () => ids.map(id => child.disconnect(id)))
+                parent.connect("destroy", () => ids.map((id) => child.disconnect(id)))
                 return
             }
 

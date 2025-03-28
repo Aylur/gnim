@@ -18,7 +18,7 @@ const res = await fetch(url, {
     body: JSON.stringify({ hello: "world" }),
     headers: {
         "Content-Type": "application/json",
-    }
+    },
 })
 
 const json = await res.json()
