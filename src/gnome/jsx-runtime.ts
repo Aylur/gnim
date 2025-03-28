@@ -15,6 +15,9 @@ function add(parent: GObject.Object, child: GObject.Object, _: number) {
         if (child instanceof Clutter.Constraint) {
             return parent.add_constraint(child)
         }
+        if (child instanceof Clutter.LayoutManager) {
+            return parent.set_layout_manager(child)
+        }
         if (child instanceof Clutter.Actor) {
             return parent.add_child(child)
         }
