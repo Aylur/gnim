@@ -48,6 +48,14 @@
         "tabWidth": 4,
         "trailingComma": "all",
         "printWidth": 100,
-        "experimentalTernaries": true
+        "experimentalTernaries": false,
+        "overrides": [
+            {
+                "files": "**/*.md",
+                "options": {
+                    "printWidth": 80
+                }
+            }
+        ]
     }
 }

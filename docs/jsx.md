@@ -14,9 +14,13 @@ Consider the following example:
 ```ts
 function Box() {
     const button = new Gtk.Button()
-    const icon = new Gtk.Image({ iconName: "system-search-symbolic" })
+    const icon = new Gtk.Image({
+        iconName: "system-search-symbolic",
+    })
     const label = new Gtk.Label({ label: "hello world" })
-    const box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+    const box = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL,
+    })
 
     button.set_child(icon)
     box.append(button)
@@ -45,10 +49,10 @@ function Box() {
 ## JSX expressions and `jsx` function
 
 A JSX expression transpiles to a `jsx` function call. A JSX expression's type
-however is **always** the base `GObject.Object` type while the `jsx` return type
-is the instance type of the class or the return type of the function you pass to it.
-If you need the actual type of an object either use the `jsx` function directly
-or type assert the JSX expression.
+however is **always** the base `GObject.Object` type while the `jsx` return
+type is the instance type of the class or the return type of the function you
+pass to it. If you need the actual type of an object either use the `jsx`
+function directly or type assert the JSX expression.
 
 ```tsx
 import { jsx } from "gjsx/gtk4"
@@ -67,9 +71,9 @@ menubutton.popover = jsx(MyPopover, {}) // works as expected
 
 When defining custom components choosing between
 using classes vs functions is mostly down to preference.
-There are cases when one or the other is more convenient to use, but you are mostly
-be using class components that come from libraries such as Gtk and you will be
-defining function components for custom components.
+There are cases when one or the other is more convenient to use, but you are
+mostly be using class components that come from libraries such as Gtk and you
+will be defining function components for custom components.
 
 Using classes in JSX expressions let's you define some additional properties.
 
@@ -84,7 +88,9 @@ you can define it with `_constructor`.
 > **after**. This means construct only properties like `css-name` can not be set.
 
 ```tsx
-<Gtk.DropDown _constructor={() => Gtk.DropDown.new_from_strings(themes)} />
+<Gtk.DropDown
+    _constructor={() => Gtk.DropDown.new_from_strings(["item1", "item2"])}
+/>
 ```
 
 ### Type string
@@ -155,12 +161,15 @@ They are set through the [`Gtk.Buildable.add_child`](https://docs.gtk.org/gtk4/i
 ```ts
 @register({ Implements: [Gtk.Buildable] })
 class MyContainer extends Gtk.Widget {
-    vfunc_add_child(builder: Gtk.Builder, child: GObject.Object, type: string | null) {
+    vfunc_add_child(
+        builder: Gtk.Builder,
+        child: GObject.Object,
+        type?: string | null,
+    ): void {
         if (child instanceof Gtk.Widget) {
             // set children here
         } else {
             super.vfunc_add_child(builder, child, type)
-            // or you can also throw an error
         }
     }
 }
@@ -185,7 +194,7 @@ function MyComponent(props: FCProps<Gtk.Button, {}>) {
     )
 }
 
-;<MyComponent $={(self) => print(self, "is a Button")} />
+return <MyComponent $={(self) => print(self, "is a Button")} />
 ```
 
 > [!NOTE] > `FCProps` is required for TypeScript to be aware of the `$` function.
@@ -204,7 +213,7 @@ function MyButton({ children }: MyButtonProps) {
     return <Gtk.Button label={children} />
 }
 
-;<MyButton>Click Me</MyButton>
+return <MyButton>Click Me</MyButton>
 ```
 
 When multiple children are passed in `children` is an `Array`.
@@ -218,16 +227,22 @@ function MyBox({ children }: MyBoxProps) {
     return (
         <Gtk.Box>
             {children.map((item) =>
-                item instanceof Gtk.Widget ? item : <Gtk.Label label={item.toString()} />,
+                item instanceof Gtk.Widget ? (
+                    item
+                ) : (
+                    <Gtk.Label label={item.toString()} />
+                ),
             )}
         </Gtk.Box>
     )
 }
 
-;<MyBox>
-    Some Content
-    <Gtk.Button />
-</MyBox>
+return (
+    <MyBox>
+        Some Content
+        <Gtk.Button />
+    </MyBox>
+)
 ```
 
 ### Everything has to be handled explicitly in function components
@@ -260,7 +275,11 @@ const value = new State<{ member: string } | null>({
     member: "hello",
 })
 
-return <With value={value()}>{(value) => value && <Gtk.Label label={value.member} />}</With>
+return (
+    <With value={value()}>
+        {(value) => value && <Gtk.Label label={value.member} />}
+    </With>
+)
 ```
 
 > [!TIP]
@@ -287,7 +306,9 @@ let list: Binding<Array<object>>
 
 return (
     <For each={list()}>
-        {(item, index: Binding<number>) => <Gtk.Label label={index((i) => `${i}. ${item}`)} />}
+        {(item, index: Binding<number>) => (
+            <Gtk.Label label={index((i) => `${i}. ${item}`)} />
+        )}
     </For>
 )
 ```
@@ -345,7 +366,7 @@ There are no intrinsic elements by default, but they can be set.
         }
     }
 
-    ;<my-label someProps="hello" />
+    return <my-label someProps="hello" />
     ```
 
 - Class components
@@ -378,5 +399,5 @@ There are no intrinsic elements by default, but they can be set.
         }
     }
 
-    ;<my-widget someProps="hello" />
+    return <my-widget someProps="hello" />
     ```

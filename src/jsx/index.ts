@@ -41,67 +41,65 @@ export function configue(conf: {
 /**
  * Function Component Properties
  */
-export type FCProps<Self, Props> = Props &
-    Partial<{
-        /**
-         * Gtk.Builder type
-         * its consumed internally and not actually passed as a parameters
-         */
-        _type: string
-        /**
-         * setup function
-         * its consumed internally and not actually passed as a parameters
-         */
-        $(self: Self): void
-    }>
+export type FCProps<Self, Props> = Props & {
+    /**
+     * Gtk.Builder type
+     * its consumed internally and not actually passed as a parameters
+     */
+    _type?: string
+    /**
+     * setup function
+     * its consumed internally and not actually passed as a parameters
+     */
+    $?(self: Self): void
+}
 
 /**
  * Class Component Properties
  */
-export type CCProps<Self, Props> = Partial<
-    {
-        /**
-         * @internal children elements
-         * its consumed internally and not actually passed to class component constructors
-         */
-        children: Array<Node> | Node
-        /**
-         * Gtk.Builder type
-         * its consumed internally and not actually passed to class component constructors
-         */
-        _type: string
-        /**
-         * function to use as a constructor,
-         * its consumed internally and not actually passed to class component constructors
-         */
-        _constructor(props: Partial<Props>): Self
-        /**
-         * setup function,
-         * its consumed internally and not actually passed to class component constructors
-         */
-        $(self: Self): void
-        /**
-         * CSS class names
-         */
-        class?: string | Binding<string>
-        /**
-         * inline CSS
-         */
-        css?: string | Binding<string>
-    } & {
-        [Key in `$${string}`]: (self: Self, ...args: any[]) => any
-    } & {
-        [K in keyof Props]: Binding<NonNullable<Props[K]>> | Props[K]
-    }
->
+export type CCProps<Self, Props> = {
+    /**
+     * @internal children elements
+     * its consumed internally and not actually passed to class component constructors
+     */
+    children?: Array<Node> | Node
+    /**
+     * Gtk.Builder type
+     * its consumed internally and not actually passed to class component constructors
+     */
+    _type?: string
+    /**
+     * function to use as a constructor,
+     * its consumed internally and not actually passed to class component constructors
+     */
+    _constructor?(props: Partial<Props>): Self
+    /**
+     * setup function,
+     * its consumed internally and not actually passed to class component constructors
+     */
+    $?(self: Self): void
+    /**
+     * CSS class names
+     */
+    class?: string | Binding<string>
+    /**
+     * inline CSS
+     */
+    css?: string | Binding<string>
+} & {
+    [Key in `$${string}`]: (self: Self, ...args: any[]) => any
+} & {
+    [K in keyof Props]: Binding<NonNullable<Props[K]>> | Props[K]
+}
 
+// prettier-ignore
 type JsxProps<C, Props> =
-    C extends typeof Fragment ? Props & {}
-    : // intrinsicElements always resolve as FC
+    C extends typeof Fragment ? (Props & {})
+    // intrinsicElements always resolve as FC
     // so we can't narrow it down, and in some cases
     // the setup function is typed as a union of Object and actual type
     // as a fix users can and should use FCProps
-    C extends FC ? Props & Omit<FCProps<ReturnType<C>, Props>, "$">
+    : C extends FC ? Props & Omit<FCProps<ReturnType<C>, Props>, "$">
     : C extends CC ? CCProps<InstanceType<C>, Props>
     : never
 
@@ -132,11 +130,12 @@ function setup<T>(object: T, ...setups: unknown[]): T {
     return object
 }
 
-const kebabify = (str: string) =>
-    str
+function kebabify(str: string) {
+    return str
         .replace(/([a-z])([A-Z])/g, "$1-$2")
         .replaceAll("_", "-")
         .toLowerCase()
+}
 
 export function jsx<T extends (props: any) => GObj>(
     ctor: T,
