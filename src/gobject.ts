@@ -1,6 +1,10 @@
 import GObject from "gi://GObject"
-export { GObject, GObject as default }
 
+export { GObject as default }
+export { GObj as Object }
+
+type GObj = GObject.Object
+const GObj = GObject.Object
 const meta = Symbol("meta")
 const priv = Symbol("priv")
 
@@ -10,11 +14,12 @@ function isGType(obj: any): obj is GObject.GType {
     return GObject.type_check_is_value_type(obj)
 }
 
-const kebabify = (str: string) =>
-    str
+function kebabify(str: string) {
+    return str
         .replace(/([a-z])([A-Z])/g, "$1-$2")
         .replaceAll("_", "-")
         .toLowerCase()
+}
 
 type SignalDeclaration = {
     flags?: GObject.SignalFlags
@@ -69,19 +74,6 @@ export function property(declaration: PropertyDeclaration = Object) {
             const spec = pspec(name, ParamFlags.READWRITE, declaration)
             target.constructor[meta].Properties[name] = spec
 
-            Object.defineProperty(target, prop, {
-                get() {
-                    return this[priv]?.[prop] ?? spec.get_default_value()
-                },
-                set(v: any) {
-                    if (v !== this[prop]) {
-                        this[priv] ??= {}
-                        this[priv][prop] = v
-                        this.notify(name)
-                    }
-                },
-            })
-
             Object.defineProperty(target, `set_${name.replace("-", "_")}`, {
                 value(v: any) {
                     this[prop] = v
@@ -93,6 +85,21 @@ export function property(declaration: PropertyDeclaration = Object) {
                     return this[prop]
                 },
             })
+
+            const desc: PropertyDescriptor & ThisType<any> = {
+                get() {
+                    return this[priv]?.[prop] ?? spec.get_default_value()
+                },
+                set(v) {
+                    if (v !== this[prop]) {
+                        this[priv] ??= {}
+                        this[priv][prop] = v
+                        this.notify(name)
+                    }
+                },
+            }
+
+            return desc as any
         } else {
             let flags = 0
             if (desc.get) flags |= ParamFlags.READABLE
@@ -138,22 +145,20 @@ export function signal(
         }
 
         if (!desc) {
-            Object.defineProperty(target, signal, {
+            const desc: PropertyDescriptor & ThisType<GObject.Object> = {
                 value: function (...args: any[]) {
                     this.emit(name, ...args)
                 },
-            })
+            }
+            return desc as any
         } else {
-            const og: (...args: any[]) => unknown = desc.value
-            desc.value = function (...args: any[]) {
+            const og: (...args: unknown[]) => unknown = desc.value
+            desc.value = function (...args: unknown[]) {
+                const ret = og.apply(this, args)
                 // @ts-expect-error not typed
                 this.emit(name, ...args)
+                return ret
             }
-            Object.defineProperty(target, `on_${name.replace("-", "_")}`, {
-                value: function (...args: any[]) {
-                    return og.apply(this, args)
-                },
-            })
         }
     }
 }
