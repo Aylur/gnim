@@ -11,6 +11,7 @@ export default defineConfig({
             { text: "State", link: "/state" },
             { text: "JSX", link: "/jsx" },
             { text: "Polyfills", link: "/polyfills" },
+            { text: "DBus", link: "/dbus" },
         ],
 
         socialLinks: [

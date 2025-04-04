@@ -7,9 +7,10 @@ you should read [gjs.guide](https://gjs.guide/) first.
 
 This library provides:
 
-- GObject [decorators](https://aylur.github.io/gjsx/gobject) for subclassing
+- [GObject decorators](https://aylur.github.io/gjsx/gobject) for subclassing
 - state and binding utilities
 - [JSX](https://aylur.github.io/gjsx/jsx) for both Gtk and Gnome extensions
+- [DBus decorators](https://aylur.github.io/gjsx/dbus) for implementing services and proxies
 
 ## Example apps using Gjsx
 
