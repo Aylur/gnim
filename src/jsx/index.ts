@@ -41,7 +41,7 @@ export function configue(conf: {
 /**
  * Function Component Properties
  */
-export type FCProps<Self, Props> = Props & {
+export type FCProps<Self, Props> = Partial<Props> & {
     /**
      * Gtk.Builder type
      * its consumed internally and not actually passed as a parameters
@@ -89,7 +89,7 @@ export type CCProps<Self, Props> = {
 } & {
     [Key in `$${string}`]: (self: Self, ...args: any[]) => any
 } & {
-    [K in keyof Props]: Binding<NonNullable<Props[K]>> | Props[K]
+    [K in keyof Props]?: Binding<NonNullable<Props[K]>> | Props[K]
 }
 
 // prettier-ignore
