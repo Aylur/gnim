@@ -17,7 +17,17 @@ export default function With<T>({
     function callback(v: T) {
         for (const child of fragment.children) {
             fragment.removeChild(child)
-            cleanup?.(child)
+
+            if (typeof cleanup === "function") {
+                cleanup(child)
+            } else if (typeof cleanup === "string") {
+                const ch = child as any
+                if (typeof ch[cleanup] === "function") {
+                    ch[cleanup]()
+                } else {
+                    console.warn(`cleanup "${cleanup}" function is undefined on ${child}`)
+                }
+            }
         }
 
         const ch = mkChild(v)

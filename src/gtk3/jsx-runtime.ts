@@ -41,6 +41,11 @@ function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
         return true
     }
 
+    if (child instanceof Gtk.Window && parent instanceof Gtk.Application) {
+        parent.add_window(child)
+        return true
+    }
+
     return false
 }
 

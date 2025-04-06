@@ -4,7 +4,7 @@ import { Binding, State } from "../state.js"
 interface ForProps<T, E extends JSX.Element> {
     each: Binding<Array<T>>
     children: (item: T, index: Binding<number>) => E
-    cleanup?: (element: E, item: T, index: number) => void
+    cleanup: "destroy" | "run_dispose" | ((element: E, item: T, index: number) => void) | null
 }
 
 // TODO: support Gio.ListModel
@@ -23,7 +23,16 @@ export default function For<T extends object, E extends JSX.Element>({
             fragment.removeChild(child)
 
             if (arr.findIndex((i) => i === key) < 0) {
-                cleanup?.(child, key, index.get())
+                if (typeof cleanup === "function") {
+                    cleanup(child, key, index.get())
+                } else if (typeof cleanup === "string") {
+                    const ch = child as any
+                    if (typeof ch[cleanup] === "function") {
+                        ch[cleanup]()
+                    } else {
+                        console.warn(`cleanup "${cleanup}" function is undefined on ${child}`)
+                    }
+                }
                 map.delete(key)
             }
         }

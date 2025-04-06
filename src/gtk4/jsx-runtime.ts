@@ -56,7 +56,12 @@ function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
     }
 
     if (child instanceof Gio.MenuItem && parent instanceof Gio.Menu) {
-        // reutnr
+        // TODO:
+    }
+
+    if (child instanceof Gtk.Window && parent instanceof Gtk.Application) {
+        parent.add_window(child)
+        return true
     }
 
     return false
