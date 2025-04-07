@@ -276,7 +276,7 @@ const value = new State<{ member: string } | null>({
 })
 
 return (
-    <With value={value()}>
+    <With value={value()} cleanup={(label) => label.run_dispose()}>
         {(value) => value && <Gtk.Label label={value.member} />}
     </With>
 )
@@ -305,7 +305,7 @@ import { For } from "gjsx/gtk4"
 let list: Binding<Array<object>>
 
 return (
-    <For each={list()}>
+    <For each={list()} cleanup={(label) => label.run_dispose()}>
         {(item, index: Binding<number>) => (
             <Gtk.Label label={index((i) => `${i}. ${item}`)} />
         )}

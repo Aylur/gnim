@@ -83,6 +83,33 @@ function remove(parent: GObject.Object, child: GObject.Object) {
 
 export const { addChild, intrinsicElements } = configue({
     intrinsicElements: {},
+    initObject(object) {
+        // HACK: destroy method has been removed in gtk4
+        // but we rely on it for cleanup and binding disconnections
+        // usually this is going to be invoked from <When> and <For>
+        if (object instanceof Gtk.Widget && !(object instanceof Gtk.Window)) {
+            let unsub: (() => void) | null
+
+            const onParent = () => {
+                const parent = object.get_parent()
+                if (parent) {
+                    unsub?.()
+                    const id = parent.connect("destroy", () => {
+                        object.run_dispose()
+                    })
+                    unsub = () => {
+                        parent.disconnect(id)
+                        unsub = null
+                    }
+                } else {
+                    unsub?.()
+                }
+            }
+
+            object.connect("notify::parent", onParent)
+            onParent()
+        }
+    },
     setCss(object, css) {
         if (!(object instanceof Gtk.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))

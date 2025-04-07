@@ -13,8 +13,9 @@ export { default as With } from "./With.js"
 export { default as This } from "./This.js"
 
 type CssSetter = (object: GObj, css: string | Binding<string>) => void
-type InitProps = (props: any) => void
 type ChildFn = (parent: GObj, child: GObj | number | string, index?: number) => void
+type InitProps = (props: any) => void
+type InitObject = (object: GObj) => void
 
 export let addChild: ChildFn
 export let intrinsicElements: Record<string, CC | FC>
@@ -22,6 +23,7 @@ export let intrinsicElements: Record<string, CC | FC>
 let setCss: CssSetter
 let setClass: CssSetter
 let initProps: InitProps
+let initObject: InitObject
 
 export function configue(conf: {
     addChild: ChildFn
@@ -29,19 +31,21 @@ export function configue(conf: {
     setCss: CssSetter
     setClass: CssSetter
     initProps?: InitProps
+    initObject?: InitObject
 }) {
     intrinsicElements = conf.intrinsicElements
     addChild = conf.addChild
     setCss = conf.setCss
     setClass = conf.setClass
     initProps = conf.initProps ?? ((props) => props)
+    initObject = conf.initObject ?? (() => void 0)
     return conf
 }
 
 /**
  * Function Component Properties
  */
-export type FCProps<Self, Props> = Partial<Props> & {
+export type FCProps<Self, Props> = Props & {
     /**
      * Gtk.Builder type
      * its consumed internally and not actually passed as a parameters
@@ -164,7 +168,7 @@ export function jsx<T extends GObj>(
     if (isFunctionCtor(ctor)) {
         const object = ctor({ children, ...props })
         if (_type) setType(object, _type)
-        return setup(object, $, _)
+        return setup(object, $, _, initObject)
     }
 
     // collect css and className
@@ -219,7 +223,7 @@ export function jsx<T extends GObj>(
         sync(object, prop as any, binding)
     }
 
-    return setup(object, $, _)
+    return setup(object, $, _, initObject)
 }
 
 export const jsxs = jsx

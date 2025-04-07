@@ -393,10 +393,11 @@ export function hook<T extends GObject.Object>(
     signal: string,
     callback: (emitter: T, ...args: any[]) => any,
 ): () => void {
+    // gnome-shell overrides connect_object with a different signature
     if ("connectObject" in GObject.Object.prototype) {
-        // @ts-expect-error https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/8303
+        // @ts-expect-error missing types
         object.connectObject(signal, callback, lifetime)
-        // @ts-expect-error mistyped
+        // @ts-expect-error missing types
         const id = GObject.signal_handler_find(object, { func: callback })
         return () => object.disconnect(id as number)
     }

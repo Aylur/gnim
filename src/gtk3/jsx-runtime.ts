@@ -53,7 +53,7 @@ function remove(parent: GObject.Object, child: GObject.Object) {
     if (specialRemove(parent, child)) return
 
     if (parent instanceof Gtk.Container && child instanceof Gtk.Widget) {
-        parent.remove(child)
+        return parent.remove(child)
     }
 
     throw Error(`cannot remove ${child} from ${parent}`)
