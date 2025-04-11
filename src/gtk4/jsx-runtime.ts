@@ -170,24 +170,23 @@ export const { addChild, intrinsicElements } = configue({
                     add(parent, ch, index)
                 }
 
-                const ids = [
-                    child.connect("child-added", (_, ch: unknown, index: number) => {
-                        if (!(ch instanceof GObject.Object)) {
-                            console.error(TypeError(`cannot add ${ch} to ${parent}`))
-                            return
-                        }
-                        addChild(parent, ch, index)
-                    }),
-                    child.connect("child-removed", (_, ch: unknown) => {
-                        if (!(ch instanceof GObject.Object)) {
-                            console.error(TypeError(`cannot remove ${ch} from ${parent}`))
-                            return
-                        }
-                        remove(parent, ch)
-                    }),
-                ]
+                child.connect("child-added", (_, ch: unknown, index: number) => {
+                    if (!(ch instanceof GObject.Object)) {
+                        console.error(TypeError(`cannot add ${ch} to ${parent}`))
+                        return
+                    }
+                    addChild(parent, ch, index)
+                })
 
-                parent.connect("destroy", () => ids.map((id) => child.disconnect(id)))
+                child.connect("child-removed", (_, ch: unknown) => {
+                    if (!(ch instanceof GObject.Object)) {
+                        console.error(TypeError(`cannot remove ${ch} from ${parent}`))
+                        return
+                    }
+                    remove(parent, ch)
+                })
+
+                parent.connect("destroy", () => child.destroy())
                 return
             }
 

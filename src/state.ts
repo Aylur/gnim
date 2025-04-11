@@ -1,5 +1,6 @@
 import GObject from "gi://GObject"
 import Gio from "gi://Gio"
+import { registerDestroyableType } from "./gnome/signalTracker"
 
 const _value = Symbol("state value")
 const _transformFn = Symbol("binding transformFn")
@@ -24,6 +25,7 @@ class StateObject<T extends object> extends GObject.Object {
 
     static {
         GObject.registerClass(this)
+        registerDestroyableType(this)
     }
 
     declare value: T
