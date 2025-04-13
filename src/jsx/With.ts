@@ -5,7 +5,7 @@ import { env } from "./env.js"
 interface WithProps<T, E extends JSX.Element> {
     value: Binding<T>
     children: (value: T) => E | "" | false | null | undefined
-    cleanup?: (element: E) => void
+    cleanup?: null | ((element: E) => void)
 }
 
 export default function With<T, E extends JSX.Element>({
@@ -21,7 +21,7 @@ export default function With<T, E extends JSX.Element>({
 
             if (typeof cleanup === "function") {
                 cleanup(child)
-            } else {
+            } else if (cleanup !== null) {
                 env.defaultCleanup(child)
             }
         }

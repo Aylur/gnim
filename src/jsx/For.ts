@@ -5,7 +5,7 @@ import { env } from "./env.js"
 interface ForProps<T, E extends JSX.Element> {
     each: Binding<Array<T>>
     children: (item: T, index: Binding<number>) => E
-    cleanup?: (element: E, item: T, index: number) => void
+    cleanup?: null | ((element: E, item: T, index: number) => void)
 }
 
 // TODO: support Gio.ListModel
@@ -26,7 +26,7 @@ export default function For<T extends object, E extends JSX.Element>({
             if (arr.findIndex((i) => i === key) < 0) {
                 if (typeof cleanup === "function") {
                     cleanup(child, key, index.get())
-                } else {
+                } else if (cleanup !== null) {
                     env.defaultCleanup(child)
                 }
                 map.delete(key)
