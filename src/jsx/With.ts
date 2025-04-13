@@ -1,10 +1,11 @@
 import Fragment from "./Fragment.js"
 import { Binding } from "../state.js"
+import { env } from "./env.js"
 
 interface WithProps<T, E extends JSX.Element> {
     value: Binding<T>
     children: (value: T) => E | "" | false | null | undefined
-    cleanup: "destroy" | "run_dispose" | ((element: E) => void) | null
+    cleanup?: (element: E) => void
 }
 
 export default function With<T, E extends JSX.Element>({
@@ -20,13 +21,8 @@ export default function With<T, E extends JSX.Element>({
 
             if (typeof cleanup === "function") {
                 cleanup(child)
-            } else if (typeof cleanup === "string") {
-                const ch = child as any
-                if (typeof ch[cleanup] === "function") {
-                    ch[cleanup]()
-                } else {
-                    console.warn(`cleanup "${cleanup}" function is undefined on ${child}`)
-                }
+            } else {
+                env.defaultCleanup(child)
             }
         }
 

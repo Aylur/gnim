@@ -2,7 +2,7 @@ import Clutter from "gi://Clutter"
 import St from "gi://St"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
-import { configue } from "../jsx/index.js"
+import { configue } from "../jsx/env.js"
 import { Binding, sync } from "../state.js"
 
 // TODO: implement a clone of Gtk.Buildable interface
@@ -36,6 +36,8 @@ function remove(parent: GObject.Object, child: GObject.Object) {
 
 export const { addChild, intrinsicElements } = configue({
     intrinsicElements: {},
+    initObject: () => void 0,
+    initProps: (props) => props,
     setCss(object, css) {
         if (!(object instanceof St.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))
@@ -98,6 +100,13 @@ export const { addChild, intrinsicElements } = configue({
         }
 
         console.error(TypeError(`cannot add ${child} to ${parent}`))
+    },
+    defaultCleanup(object) {
+        if (object instanceof Clutter.Actor) {
+            object.run_dispose()
+        } else {
+            console.warn(`cannot cleanup after ${object}`)
+        }
     },
 })
 

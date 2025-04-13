@@ -1,8 +1,9 @@
 import Gtk from "gi://Gtk?version=3.0"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
-import { configue, gtkType } from "../jsx/index.js"
+import { gtkType } from "../jsx/index.js"
 import { Binding } from "../state.js"
+import { configue } from "../jsx/env.js"
 
 const dummyBuilder = new Gtk.Builder()
 
@@ -64,6 +65,7 @@ export const { addChild, intrinsicElements } = configue({
     initProps(props) {
         props.visible ??= true
     },
+    initObject: () => void 0,
     setCss(object, css) {
         if (!(object instanceof Gtk.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))
@@ -155,6 +157,13 @@ export const { addChild, intrinsicElements } = configue({
         }
 
         throw Error(`cannot add ${child} to ${parent}`)
+    },
+    defaultCleanup(object) {
+        if (object instanceof Gtk.Widget) {
+            object.destroy()
+        } else {
+            console.warn(`cannot cleanup after ${object}`)
+        }
     },
 })
 

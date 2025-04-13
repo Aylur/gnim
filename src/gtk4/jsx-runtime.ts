@@ -2,8 +2,9 @@ import Gtk from "gi://Gtk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
-import { configue, gtkType } from "../jsx/index.js"
+import { gtkType } from "../jsx/index.js"
 import { Binding, sync } from "../state.js"
+import { configue } from "../jsx/env.js"
 
 const dummyBuilder = new Gtk.Builder()
 
@@ -83,26 +84,33 @@ function remove(parent: GObject.Object, child: GObject.Object) {
 
 export const { addChild, intrinsicElements } = configue({
     intrinsicElements: {},
+    initProps: () => void 0,
     initObject(object) {
         // HACK: destroy method has been removed in gtk4
         // but we rely on it for cleanup and binding disconnections
         // usually this is going to be invoked from <When> and <For>
         if (object instanceof Gtk.Widget && !(object instanceof Gtk.Window)) {
-            let unsub: (() => void) | null
+            let firstParent: Gtk.Widget | null = null
 
             const onParent = () => {
                 const parent = object.get_parent()
                 if (parent) {
-                    unsub?.()
-                    const id = parent.connect("destroy", () => {
-                        object.run_dispose()
-                    })
-                    unsub = () => {
-                        parent.disconnect(id)
-                        unsub = null
+                    // widget is appended to a parent
+                    if (!firstParent) {
+                        firstParent = parent
+                        const id = parent.connect("destroy", () => {
+                            parent.disconnect(id)
+                            object.run_dispose()
+                            firstParent = null
+                        })
+                        return
+                    }
+                    // widget is appended to a different parent
+                    if (firstParent !== parent) {
+                        throw Error("children cannot be appended to a different parent")
                     }
                 } else {
-                    unsub?.()
+                    // this is usually only ever run when <For> removes children
                 }
             }
 
@@ -195,6 +203,13 @@ export const { addChild, intrinsicElements } = configue({
         }
 
         throw Error(`cannot add ${child} to ${parent}`)
+    },
+    defaultCleanup(object) {
+        if (object instanceof Gtk.Widget) {
+            object.run_dispose()
+        } else {
+            console.warn(`cannot cleanup after ${object}`)
+        }
     },
 })
 

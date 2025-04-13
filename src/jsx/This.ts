@@ -1,5 +1,5 @@
 import GObject from "gi://GObject"
-import { addChild } from "./index.js"
+import { env } from "./env.js"
 
 type Element = JSX.Element | "" | false | null | undefined
 
@@ -13,13 +13,13 @@ export default function This<T extends GObject.Object>({ this: self, children }:
     if (Array.isArray(children)) {
         for (const ch of children) {
             if (ch !== "" && ch !== false && ch !== null && ch !== undefined) {
-                addChild(self, ch, -1)
+                env.addChild(self, ch, -1)
             }
         }
     } else {
         const ch = children
         if (ch !== "" && ch !== false && ch !== null && ch !== undefined) {
-            addChild(self, ch, -1)
+            env.addChild(self, ch, -1)
         }
     }
 

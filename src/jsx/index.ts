@@ -1,46 +1,15 @@
 import GObject from "gi://GObject"
 import Fragment from "./Fragment.js"
 import { Binding, sync } from "../state.js"
+import { CC, FC, env } from "./env.js"
 
 type GObj = GObject.Object
-type CC<T extends GObj = GObj> = { new (props: any): T }
-type FC<T extends GObj = GObj> = (props: any) => T
 type Node = GObj | number | string | boolean | null | undefined
 
 export { Fragment }
 export { default as For } from "./For.js"
 export { default as With } from "./With.js"
 export { default as This } from "./This.js"
-
-type CssSetter = (object: GObj, css: string | Binding<string>) => void
-type ChildFn = (parent: GObj, child: GObj | number | string, index?: number) => void
-type InitProps = (props: any) => void
-type InitObject = (object: GObj) => void
-
-export let addChild: ChildFn
-export let intrinsicElements: Record<string, CC | FC>
-
-let setCss: CssSetter
-let setClass: CssSetter
-let initProps: InitProps
-let initObject: InitObject
-
-export function configue(conf: {
-    addChild: ChildFn
-    intrinsicElements: Record<string, CC | FC>
-    setCss: CssSetter
-    setClass: CssSetter
-    initProps?: InitProps
-    initObject?: InitObject
-}) {
-    intrinsicElements = conf.intrinsicElements
-    addChild = conf.addChild
-    setCss = conf.setCss
-    setClass = conf.setClass
-    initProps = conf.initProps ?? ((props) => props)
-    initObject = conf.initObject ?? (() => void 0)
-    return conf
-}
 
 /**
  * Function Component Properties
@@ -152,23 +121,23 @@ export function jsx<T extends new (props: any) => GObj>(
 ): InstanceType<T>
 
 export function jsx<T extends GObj>(
-    ctor: keyof typeof intrinsicElements | (new (props: any) => T) | ((props: any) => T),
+    ctor: keyof (typeof env)["intrinsicElements"] | (new (props: any) => T) | ((props: any) => T),
     { $, _, _type, _constructor, children = [], ...props }: CCProps<T, any>,
 ): T {
-    initProps(props)
+    env.initProps(props)
 
     for (const [key, value] of Object.entries(props)) {
         if (value === undefined) delete props[key]
     }
 
-    if (typeof ctor === "string" && ctor in intrinsicElements) {
-        ctor = intrinsicElements[ctor] as FC<T> | CC<T>
+    if (typeof ctor === "string" && ctor in env.intrinsicElements) {
+        ctor = env.intrinsicElements[ctor] as FC<T> | CC<T>
     }
 
     if (isFunctionCtor(ctor)) {
         const object = ctor({ children, ...props })
         if (_type) setType(object, _type)
-        return setup(object, $, _, initObject)
+        return setup(object, $, _, env.initObject)
     }
 
     // collect css and className
@@ -196,16 +165,16 @@ export function jsx<T extends GObj>(
     if (_constructor) Object.assign(object, props)
     if (_type) setType(object, _type)
 
-    if (css) setCss(object, css)
-    if (className) setClass(object, className)
+    if (css) env.setCss(object, css)
+    if (className) env.setClass(object, className)
 
-    if (typeof addChild === "function" && isGObjectCtor(ctor)) {
+    if (typeof env.addChild === "function" && isGObjectCtor(ctor)) {
         for (const child of Array.isArray(children) ? children : [children]) {
             if (child === true) {
                 console.warn("Trying to add boolean value of `true` as a child.")
                 continue
             }
-            if (child) addChild(object, child, -1)
+            if (child) env.addChild(object, child, -1)
         }
     }
 
@@ -223,7 +192,7 @@ export function jsx<T extends GObj>(
         sync(object, prop as any, binding)
     }
 
-    return setup(object, $, _, initObject)
+    return setup(object, $, _, env.initObject)
 }
 
 export const jsxs = jsx
