@@ -12,7 +12,9 @@ function type(object: GObject.Object) {
 }
 
 function add(parent: Gtk.Buildable, child: GObject.Object, _: number) {
-    parent.vfunc_add_child(dummyBuilder, child, type(child))
+    if (!specialAdd(parent, child, _)) {
+        parent.vfunc_add_child(dummyBuilder, child, type(child))
+    }
 }
 
 function specialRemove(_parent: GObject.Object, _child: GObject.Object) {
