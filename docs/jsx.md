@@ -80,8 +80,8 @@ Using classes in JSX expressions let's you define some additional properties.
 ### Constructor function
 
 By default classes are instantiated with the `new` keyword and initial values
-are passed in. In cases where you need to use a static constructor function instead
-you can define it with `_constructor`.
+are passed in. In cases where you need to use a static constructor function
+instead you can define it with `_constructor`.
 
 > [!WARNING]
 > Initial values this way can not be passed to the constructor and are set
@@ -95,7 +95,9 @@ you can define it with `_constructor`.
 
 ### Type string
 
-Under the hood the `jsx` function uses the [Gtk.Buildable](https://docs.gtk.org/gtk4/iface.Buildable.html) interface which lets you define a type string to specify the type of `child` it is meant to be.
+Under the hood the `jsx` function uses the
+[Gtk.Buildable](https://docs.gtk.org/gtk4/iface.Buildable.html) interface which
+lets you define a type string to specify the type of `child` it is meant to be.
 
 > [!NOTE]
 > When using Gjsx with Gnome extensions, this has no effect.
@@ -126,12 +128,26 @@ handlers can be defined with a `$$` prefix.
 
 ### Setup function
 
-It is possible to define an arbitrary function to do something with the instance imperatively.
-It is run **after** properties are set, signals are connected and children are appended and
-**before** the `jsx` function returns.
+It is possible to define an arbitrary function to do something with the
+instance imperatively. It is run **after** properties are set, signals are
+connected and children are appended and **before** the `jsx` function returns.
 
 ```tsx
 <Gtk.Stack $={(self) => print(self, "is about to be returned")} />
+```
+
+Most common usecase is to acquire a reference to the widget in the scope of the function.
+
+```tsx
+function MyWidget() {
+    let box: Gtk.Box
+
+    function someHandler() {
+        console.log(box)
+    }
+
+    return <Gtk.Box $={(self) => (box = self)} />
+}
 ```
 
 ### Bindings

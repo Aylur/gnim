@@ -90,22 +90,19 @@ function property(declaration: PropertyDeclaration)
 
 The `property` decorator takes one of
 
-- any class that has a registered `GType`. This includes the globally available `String`, `Number`, `Boolean` and `Object` JavaScript constructors which are mapped to their relative `GObject.ParamSpec`.
+- any class that has a registered `GType`. This includes the globally available
+  `String`, `Number`, `Boolean` and `Object` JavaScript constructors which are
+  mapped to their relative `GObject.ParamSpec`.
 
-    - `Object`: `ParamSpec.jsobject`
-    - `String`: `ParamSpec.string`
-    - `Number`: `ParamSpec.double`
-    - `Boolean`: `ParamSpec.boolean`
+  - `Object`: `ParamSpec.jsobject`
+  - `String`: `ParamSpec.string`
+  - `Number`: `ParamSpec.double`
+  - `Boolean`: `ParamSpec.boolean`
+  - `GObject.Object` and its subclasses
 
-    ```ts
-    @register()
-    class MyObj extends GObject.Object {
-        @property(String) declare myProp: string
-        @property(MyObj) declare myProp2: MyObj
-    }
-    ```
-
-- a function that produces a `ParamSpec`: the passed name is a kebab-cased name of the property, for example `myProp` -> `my-prop` and flags is either `ParamFlags.READABLE`, `ParamFlags.WRITABLE` or `ParamFlags.READWRITE`
+- a function that produces a `ParamSpec`: the passed name is a kebab-cased name
+  of the property, for example `myProp` -> `my-prop` and flags is either
+  `ParamFlags.READABLE`, `ParamFlags.WRITABLE` or `ParamFlags.READWRITE`
 
     ```ts
     const Percent = (name: string, flags: GObject.ParamFlags) =>
@@ -133,8 +130,10 @@ This will create a getter and setter for the property and will also
 emit the notify signal when the value is set to a new value.
 
 > [!TIP]
-> The `declare` keyword is required if the property is not set in the constructor.
-> or if its set with `super()`.
+> The `declare` keyword is required otherwise the default setter and getter
+> is not generated.
+
+<!---->
 
 > [!WARNING]
 > The value is checked by reference, this is important if your
@@ -147,7 +146,8 @@ emit the notify signal when the value is set to a new value.
 > obj.prop = { ...dict } // This will emit notify::prop
 > ```
 
-If you want to set a custom default value, you can do so in the `super` constructor of your class.
+If you want to set a custom default value, you can do so in the `super`
+constructor of your class.
 
 ```ts {7}
 @register()
@@ -162,16 +162,15 @@ class MyObj extends GObject.Object {
 ```
 
 > [!NOTE] > `super` is not correctly typed for this usecase however.
-> In most cases you can just set the property after to satisfy TypeScript
-> in which case you can also drop `declare`.
+> In most cases you can just set the property after to satisfy TypeScript.
 >
 > ```ts {6,7,8}
 > @register()
 > class MyObj extends GObject.Object {
 >     @property(String)
->     myProp: string
+>     declare myProp: string
 >
->     constructor({ myProp = "default-value" }: { myProp: string }) {
+>     constructor({ myProp = "default-value" }) {
 >         super()
 >         this.myProp = myProp
 >     }
