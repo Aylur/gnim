@@ -284,7 +284,7 @@ function MyWidget({ label, onClicked }: MyWidgetProps) {
 When you want to render based on a value, you can use the `<With>` component.
 
 ```tsx
-import { For } from "gjsx/gtk4"
+import { With } from "gjsx/gtk4"
 import { State } from "gjsx/state"
 
 const value = new State<{ member: string } | null>({
@@ -311,9 +311,9 @@ return (
 ### List rendering
 
 The `<For>` component let's you render based on an array dynamically.
-Each time the array is changed it is compared with its previous state
-and every widget associated with an item is removed and for every new item
-a new widget is inserted.
+Each time the array changes it is compared with its previous state.
+Widgets for new items are inserted while widgets associated with removed items
+are removed.
 
 ```tsx
 import { For } from "gjsx/gtk4"
@@ -321,9 +321,9 @@ import { For } from "gjsx/gtk4"
 let list: Binding<Array<object>>
 
 return (
-    <For each={list()} cleanup={(label) => label.run_dispose()}>
+    <For each={list} cleanup={(label) => label.run_dispose()}>
         {(item, index: Binding<number>) => (
-            <Gtk.Label label={index((i) => `${i}. ${item}`)} />
+            <Gtk.Label label={index.as((i) => `${i}. ${item}`)} />
         )}
     </For>
 )
