@@ -105,17 +105,12 @@ observable.subscribe(otherobj, (someProp) => {
 })
 ```
 
-> [!NOTE]
-> The lifetime is not limited to GObject ref count, but to the native
-> JavaScript object. This means that calling `otherobj.run_dispose()`
-> won't necessarily be enough to stop the subscription.
-
 ## Derived state
 
 It is possible to derive `Bindings` and capture their value into a `State`.
 
 ```ts
-import { State, derive, bind } from "./state"
+import { State, derive, bind } from "gjsx/state"
 
 const obj = Gtk.Label.new("hello")
 const state1 = new State(0)
