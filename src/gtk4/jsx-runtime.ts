@@ -6,6 +6,7 @@ import { gtkType } from "../jsx/index.js"
 import { Binding, sync } from "../state.js"
 import { configue } from "../jsx/env.js"
 
+const initMarker = Symbol("jsx initObject marker")
 const dummyBuilder = new Gtk.Builder()
 
 function type(object: GObject.Object) {
@@ -88,10 +89,14 @@ export const { addChild, intrinsicElements } = configue({
     intrinsicElements: {},
     initProps: () => void 0,
     initObject(object) {
+        if (initMarker in object) return
+
         // HACK: destroy method has been removed in gtk4
         // but we rely on it for cleanup and binding disconnections
         // usually this is going to be invoked from <When> and <For>
         if (object instanceof Gtk.Widget && !(object instanceof Gtk.Window)) {
+            Object.assign(object, { [initMarker]: true })
+
             let firstParent: Gtk.Widget | null = null
 
             const onParent = () => {
