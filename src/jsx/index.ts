@@ -204,9 +204,12 @@ declare global {
         type Element = GObj
         type ElementClass = GObj
 
-        type LibraryManagedAttributes<C, Props> = JsxProps<C, Props>
-        // FIXME: why does an intrinsic element always resolve as FC?
-        // __type?: C extends CC ? "CC" : C extends FC ? "FC" : never
+        type LibraryManagedAttributes<C, Props> = JsxProps<C, Props> & {
+            /* reserved prop name by the jsx transform, which is not used by gjsx */
+            key?: never
+            // FIXME: why does an intrinsic element always resolve as FC?
+            // __type?: C extends CC ? "CC" : C extends FC ? "FC" : never
+        }
 
         // eslint-disable-next-line @typescript-eslint/no-empty-object-type
         interface IntrinsicElements {
