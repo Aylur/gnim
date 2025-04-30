@@ -96,26 +96,24 @@ export const { addChild, intrinsicElements } = configue({
         // usually this is going to be invoked from <When> and <For>
         if (object instanceof Gtk.Widget && !(object instanceof Gtk.Window)) {
             Object.assign(object, { [initMarker]: true })
-
-            let firstParent: Gtk.Widget | null = null
+            
+            let parent: Gtk.Widget | null = null
+            let id: number | null = null
 
             const onParent = () => {
-                const parent = object.get_parent()
-                if (parent) {
-                    // widget is appended to a parent
-                    if (!firstParent) {
-                        firstParent = parent
-                        const id = parent.connect("destroy", () => {
-                            parent.disconnect(id)
-                            object.run_dispose()
-                            firstParent = null
-                        })
-                        return
+                const newParent = object.get_parent()
+
+                if (newParent) {
+                    if (parent && id) {
+                        parent.disconnect(id)
                     }
-                    // widget is appended to a different parent
-                    if (firstParent !== parent) {
-                        throw Error("children cannot be appended to a different parent")
-                    }
+
+                    parent = newParent
+                    id = parent.connect("destroy", () => {
+                        parent.disconnect(id)
+                        object.run_dispose()
+                        parent = null
+                    })  
                 } else {
                     // this is usually only ever run when <For> removes children
                 }
