@@ -82,10 +82,9 @@ export default class Fragment<T = any> extends GObject.Object {
     }
 
     destroy() {
+        this.emit("destroy")
         for (const id of this.connectionIds.values()) {
             super.disconnect(id)
         }
-
-        this.emit("destroy")
     }
 }
