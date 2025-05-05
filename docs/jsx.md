@@ -318,10 +318,10 @@ are removed.
 ```tsx
 import { For } from "gjsx/gtk4"
 
-let list: Binding<Array<object>>
+let list: Binding<Array<any>>
 
 return (
-    <For each={list} cleanup={(label) => label.run_dispose()}>
+    <For each={list}>
         {(item, index: Binding<number>) => (
             <Gtk.Label label={index.as((i) => `${i}. ${item}`)} />
         )}

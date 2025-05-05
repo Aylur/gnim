@@ -2,10 +2,34 @@ import Fragment from "./Fragment.js"
 import { Binding, State } from "../state.js"
 import { env } from "./env.js"
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type GObject from "gi://GObject"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type Clutter from "gi://Clutter"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type Gtk from "gi://Gtk?version=3.0"
+
 interface ForProps<Item, El extends JSX.Element, Key> {
     each: Binding<Array<Item>>
     children: (item: Item, index: Binding<number>) => El
+
+    /**
+     * Function to run for each removed element.
+     * The default value depends on the environment:
+     *
+     * - **Gtk4**: {@link GObject.Object.prototype.run_dispose}
+     * - **Gtk3**: {@link Gtk.Widget.prototype.destroy}
+     * - **Gnome**: {@link Clutter.Actor.prototype.destroy}
+     */
     cleanup?: null | ((element: El, item: Item, index: number) => void)
+
+    /**
+     * Function that generates the key for each item.
+     *
+     * By default items are mapped by:
+     * - value in case of primitive values
+     * - reference otherwise
+     */
     id?: (item: Item) => Key | Item
 }
 
