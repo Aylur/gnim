@@ -2,30 +2,32 @@ import Fragment from "./Fragment.js"
 import { Binding, State } from "../state.js"
 import { env } from "./env.js"
 
-interface ForProps<T, E extends JSX.Element> {
-    each: Binding<Array<T>>
-    children: (item: T, index: Binding<number>) => E
-    cleanup?: null | ((element: E, item: T, index: number) => void)
+interface ForProps<Item, El extends JSX.Element, Key> {
+    each: Binding<Array<Item>>
+    children: (item: Item, index: Binding<number>) => El
+    cleanup?: null | ((element: El, item: Item, index: number) => void)
+    id?: (item: Item) => Key | Item
 }
 
 // TODO: support Gio.ListModel
 
-export default function For<T extends object, E extends JSX.Element>({
+export default function For<Item, El extends JSX.Element, Key>({
     each,
     children: mkChild,
     cleanup,
-}: ForProps<T, E>): Fragment<E> {
-    const map = new Map<T, { child: E; index: State<number> }>()
-    const fragment = new Fragment<E>()
+    id = (item: Item) => item,
+}: ForProps<Item, El, Key>): Fragment<El> {
+    const map = new Map<Item | Key, { item: Item; child: El; index: State<number> }>()
+    const fragment = new Fragment<El>()
 
-    function callback(arr: T[]) {
+    function callback(items: Item[]) {
         // cleanup children missing from arr
-        for (const [key, { child, index }] of map.entries()) {
+        for (const [key, { item, child, index }] of map.entries()) {
             fragment.removeChild(child)
 
-            if (arr.findIndex((i) => i === key) < 0) {
+            if (items.findIndex((item) => id(item) === key) < 0) {
                 if (typeof cleanup === "function") {
-                    cleanup(child, key, index.get())
+                    cleanup(child, item, index.get())
                 } else if (cleanup !== null) {
                     env.defaultCleanup(child)
                 }
@@ -34,15 +36,20 @@ export default function For<T extends object, E extends JSX.Element>({
         }
 
         // update index and add new items
-        arr.map((key, i) => {
+        items.map((item, i) => {
+            const key = id(item)
             if (map.has(key)) {
                 const { index, child } = map.get(key)!
                 index.set(i)
-                fragment.addChild(child)
+                if (fragment.hasChild(child)) {
+                    console.warn(`duplicate keys found: ${key}`)
+                } else {
+                    fragment.addChild(child)
+                }
             } else {
                 const index = new State(i)
-                const child = mkChild(key, index())
-                map.set(key, { child, index })
+                const child = mkChild(item, index())
+                map.set(item, { item, child, index })
                 fragment.addChild(child)
             }
         })

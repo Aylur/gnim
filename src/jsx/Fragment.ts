@@ -33,7 +33,7 @@ export default class Fragment<T = any> extends GObject.Object {
         return [...this._children]
     }
 
-    addChild(child: T, index: number = -1) {
+    addChild(child: T, index: number = -1): void {
         if (child instanceof Fragment) {
             throw Error(`nesting Fragments not yet supported`)
         }
@@ -53,7 +53,11 @@ export default class Fragment<T = any> extends GObject.Object {
         this.notify("children")
     }
 
-    removeChild(child: T) {
+    hasChild(child: T): boolean {
+        return this._children.findIndex((ch) => ch === child) > -1
+    }
+
+    removeChild(child: T): void {
         const index = this._children.findIndex((i) => i === child)
         this._children.splice(index, 1)
 

@@ -390,7 +390,7 @@ export function observe<T>(
  * @returns The disconnect function.
  */
 export function hook<T extends GObject.Object>(
-    lifetime: GObject.Object,
+    lifetime: GObject.Object, // TODO: support GLib.Cancallable
     object: T,
     signal: string,
     callback: (emitter: T, ...args: any[]) => any,
