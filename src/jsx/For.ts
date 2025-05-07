@@ -45,11 +45,14 @@ export default function For<Item, El extends JSX.Element, Key>({
     const fragment = new Fragment<El>()
 
     function callback(items: Item[]) {
+        const ids = items.map(id)
+        const idSet = new Set(ids)
+
         // cleanup children missing from arr
         for (const [key, { item, child, index }] of map.entries()) {
             fragment.removeChild(child)
 
-            if (items.findIndex((item) => id(item) === key) < 0) {
+            if (idSet.has(key)) {
                 if (typeof cleanup === "function") {
                     cleanup(child, item, index.get())
                 } else if (cleanup !== null) {
@@ -61,7 +64,7 @@ export default function For<Item, El extends JSX.Element, Key>({
 
         // update index and add new items
         items.map((item, i) => {
-            const key = id(item)
+            const key = ids[i]
             if (map.has(key)) {
                 const { index, child } = map.get(key)!
                 index.set(i)
