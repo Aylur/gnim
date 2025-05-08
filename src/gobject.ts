@@ -147,7 +147,7 @@ export function signal(
         if (!desc) {
             const desc: PropertyDescriptor & ThisType<GObject.Object> = {
                 value: function (...args: any[]) {
-                    this.emit(name, ...args)
+                    return this.emit(name, ...args)
                 },
             }
             return desc as any
