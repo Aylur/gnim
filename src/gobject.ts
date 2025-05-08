@@ -10,10 +10,6 @@ const priv = Symbol("priv")
 
 const { ParamSpec, ParamFlags } = GObject
 
-function isGType(obj: any): obj is GObject.GType {
-    return GObject.type_check_is_value_type(obj)
-}
-
 function kebabify(str: string) {
     return str
         .replace(/([a-z])([A-Z])/g, "$1-$2")
@@ -129,18 +125,18 @@ export function signal(
 
         const name = kebabify(signal)
 
-        if (declaration || params.length > 0) {
-            const arr = [declaration, ...params].map((v) => {
-                if (isGType(v)) return v
-                throw Error(`${v} is not a valid GType`)
-            })
+        const isDeclaration =
+            declaration &&
+            ("return_type" in declaration ||
+                "param_types" in declaration ||
+                "accumulator" in declaration ||
+                "flags" in declaration)
 
-            target.constructor[meta].Signals[name] = {
-                param_types: arr,
-            }
+        if (isDeclaration) {
+            target.constructor[meta].Signals[name] = declaration
         } else {
-            target.constructor[meta].Signals[name] = declaration || {
-                param_types: [],
+            target.constructor[meta].Signals[name] = {
+                param_types: declaration ? [declaration, ...params] : [],
             }
         }
 
