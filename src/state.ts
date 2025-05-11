@@ -194,7 +194,7 @@ export class Binding<T> {
         const prop = this[_prop] as keyof typeof obj
 
         if (obj instanceof Gio.Settings) {
-            return fn(obj.get_value(prop).deepUnpack())
+            return fn(obj.get_value(prop).recursiveUnpack())
         }
 
         const getter = `get_${prop.replaceAll("-", "_")}` as keyof typeof obj
