@@ -252,6 +252,9 @@ export class Binding<T> {
 
 export const { bind } = Binding
 
+export type BindingValue<B> = B extends Binding<infer T> ? T : never
+export type StateValue<S> = S extends State<infer T> ? T : never
+
 function set(obj: object, prop: string, value: any) {
     const setter = `set_${prop}` as keyof typeof obj
     if (setter in obj && typeof obj[setter] === "function") {
