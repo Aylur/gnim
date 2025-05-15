@@ -50,9 +50,11 @@ export default function For<Item, El extends JSX.Element, Key>({
 
         // cleanup children missing from arr
         for (const [key, { item, child, index }] of map.entries()) {
+            // gtk and gnome does not have a generic way to insert child at index
+            // so we sort by removing every child and reappending in order
             fragment.removeChild(child)
 
-            if (idSet.has(key)) {
+            if (!idSet.has(key)) {
                 if (typeof cleanup === "function") {
                     cleanup(child, item, index.get())
                 } else if (cleanup !== null) {
@@ -76,7 +78,7 @@ export default function For<Item, El extends JSX.Element, Key>({
             } else {
                 const index = new State(i)
                 const child = mkChild(item, index())
-                map.set(item, { item, child, index })
+                map.set(key, { item, child, index })
                 fragment.addChild(child)
             }
         })
