@@ -68,6 +68,11 @@ function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
         return true
     }
 
+    if (child instanceof Gtk.TextBuffer && parent instanceof Gtk.TextView) {
+        parent.set_buffer(child)
+        return true
+    }
+
     return false
 }
 
