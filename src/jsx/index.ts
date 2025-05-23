@@ -2,14 +2,23 @@ import GObject from "gi://GObject"
 import Fragment from "./Fragment.js"
 import { Binding, sync } from "../state.js"
 import { CC, FC, env } from "./env.js"
+import { kebabify } from "../util.js"
 
-type GObj = GObject.Object
-type Node = GObj | number | string | boolean | null | undefined
+type Node = GObject.Object | number | string | boolean | null | undefined
 
 export { Fragment }
 export { default as For } from "./For.js"
 export { default as With } from "./With.js"
 export { default as This } from "./This.js"
+
+const gtkType = Symbol("gtk builder type")
+
+/**
+ * Get the type of the object specified through the `_type` property
+ */
+export function getType(object: GObject.Object) {
+    return gtkType in object ? (object[gtkType] as string) : null
+}
 
 /**
  * Function Component Properties
@@ -76,13 +85,11 @@ type JsxProps<C, Props> =
     : C extends CC ? CCProps<InstanceType<C>, Props>
     : never
 
-export const gtkType = Symbol("gtk builder type")
-
-function isGObjectCtor<T extends GObj>(ctor: any): ctor is CC<T> {
+function isGObjectCtor<T extends GObject.Object>(ctor: any): ctor is CC<T> {
     return ctor.prototype instanceof GObject.Object
 }
 
-function isFunctionCtor<T extends GObj>(ctor: any): ctor is FC<T> {
+function isFunctionCtor<T extends GObject.Object>(ctor: any): ctor is FC<T> {
     return typeof ctor === "function" && !isGObjectCtor(ctor)
 }
 
@@ -103,24 +110,17 @@ function setup<T>(object: T, ...setups: unknown[]): T {
     return object
 }
 
-function kebabify(str: string) {
-    return str
-        .replace(/([a-z])([A-Z])/g, "$1-$2")
-        .replaceAll("_", "-")
-        .toLowerCase()
-}
-
-export function jsx<T extends (props: any) => GObj>(
+export function jsx<T extends (props: any) => GObject.Object>(
     ctor: T,
     props: JsxProps<T, Parameters<T>[0]>,
 ): ReturnType<T>
 
-export function jsx<T extends new (props: any) => GObj>(
+export function jsx<T extends new (props: any) => GObject.Object>(
     ctor: T,
     props: JsxProps<T, ConstructorParameters<T>[0]>,
 ): InstanceType<T>
 
-export function jsx<T extends GObj>(
+export function jsx<T extends GObject.Object>(
     ctor: keyof (typeof env)["intrinsicElements"] | (new (props: any) => T) | ((props: any) => T),
     { $, _, _type, _constructor, children = [], ...props }: CCProps<T, any>,
 ): T {
@@ -189,7 +189,7 @@ export function jsx<T extends GObj>(
 
     // handle bindings
     for (const [prop, binding] of bindings) {
-        sync(object, prop as any, binding)
+        sync(object, prop as Extract<keyof T, string>, binding as Binding<T[keyof T]>)
     }
 
     return setup(object, $, _, env.initObject)
@@ -201,8 +201,8 @@ declare global {
     // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace JSX {
         type ElementType = keyof IntrinsicElements | FC | CC
-        type Element = GObj
-        type ElementClass = GObj
+        type Element = GObject.Object
+        type ElementClass = GObject.Object
 
         type LibraryManagedAttributes<C, Props> = JsxProps<C, Props> & {
             /* reserved prop name by the jsx transform, which is not used by gjsx */

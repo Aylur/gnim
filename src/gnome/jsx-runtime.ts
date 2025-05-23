@@ -5,8 +5,6 @@ import Fragment from "../jsx/Fragment.js"
 import { configue } from "../jsx/env.js"
 import { Binding, sync } from "../state.js"
 
-// TODO: implement a clone of Gtk.Buildable interface
-
 function add(parent: GObject.Object, child: GObject.Object, _: number) {
     if (parent instanceof Clutter.Actor) {
         if (child instanceof Clutter.Action) {

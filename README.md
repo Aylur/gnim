@@ -14,3 +14,8 @@ This library provides:
 ## Example apps using Gjsx
 
 - [icon-theme-browser](https://github.com/Aylur/icon-theme-browser)
+
+## Planned Features
+
+- upgrade to use stage 3 decorators
+- dbus decorators with async method support

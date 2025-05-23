@@ -1,18 +1,12 @@
 import GObject from "gi://GObject"
 import Gio from "gi://Gio"
-import { registerDestroyableType } from "./gnome/signalTracker"
+import { kebabify } from "./util.js"
+import { registerDestroyableType } from "./gnome/signalTracker.js"
 
 const _value = Symbol("state value")
 const _transformFn = Symbol("binding transformFn")
 const _emitter = Symbol("binding emitter")
 const _prop = Symbol("binding prop")
-
-function kebabify(str: string) {
-    return str
-        .replace(/([a-z])([A-Z])/g, "$1-$2")
-        .replaceAll("_", "-")
-        .toLowerCase()
-}
 
 class StateObject<T extends object> extends GObject.Object {
     static [GObject.properties] = {

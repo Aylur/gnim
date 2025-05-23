@@ -3,7 +3,7 @@ import { registerDestroyableType } from "../gnome/signalTracker"
 
 export default class Fragment<T = any> extends GObject.Object {
     static [GObject.signals] = {
-        destroy: {},
+        "destroy": {},
 
         "child-added": {
             param_types: [GObject.TYPE_OBJECT, GObject.TYPE_UINT],

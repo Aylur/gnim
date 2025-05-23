@@ -1,19 +1,15 @@
 import Gtk from "gi://Gtk?version=3.0"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
-import { gtkType } from "../jsx/index.js"
+import { getType } from "../jsx/index.js"
 import { Binding } from "../state.js"
 import { configue } from "../jsx/env.js"
 
 const dummyBuilder = new Gtk.Builder()
 
-function type(object: GObject.Object) {
-    return gtkType in object ? (object[gtkType] as string) : null
-}
-
 function add(parent: Gtk.Buildable, child: GObject.Object, _: number) {
     if (!specialAdd(parent, child, _)) {
-        parent.vfunc_add_child(dummyBuilder, child, type(child))
+        parent.vfunc_add_child(dummyBuilder, child, getType(child))
     }
 }
 
@@ -38,7 +34,7 @@ function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
         parent instanceof Gtk.Stack &&
         child.name !== "" &&
         child.name !== null &&
-        type(child) === "named"
+        getType(child) === "named"
     ) {
         parent.add_named(child, child.name)
         return true
