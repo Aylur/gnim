@@ -1,6 +1,7 @@
 import Fragment from "./Fragment.js"
 import { Binding, State } from "../state.js"
 import { env } from "./env.js"
+import { Scope } from "./context.js"
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type GObject from "gi://GObject"
@@ -43,6 +44,7 @@ export default function For<Item, El extends JSX.Element, Key>({
 }: ForProps<Item, El, Key>): Fragment<El> {
     const map = new Map<Item | Key, { item: Item; child: El; index: State<number> }>()
     const fragment = new Fragment<El>()
+    const scope = Scope.current
 
     function callback(items: Item[]) {
         const ids = items.map(id)
@@ -77,7 +79,7 @@ export default function For<Item, El extends JSX.Element, Key>({
                 }
             } else {
                 const index = new State(i)
-                const child = mkChild(item, index())
+                const child = Scope.with(() => mkChild(item, index()), scope)
                 map.set(key, { item, child, index })
                 fragment.addChild(child)
             }

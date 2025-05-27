@@ -10,6 +10,7 @@ export { Fragment }
 export { default as For } from "./For.js"
 export { default as With } from "./With.js"
 export { default as This } from "./This.js"
+export { createContext } from "./context.js"
 
 const gtkType = Symbol("gtk builder type")
 

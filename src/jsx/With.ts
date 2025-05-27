@@ -1,6 +1,7 @@
 import Fragment from "./Fragment.js"
 import { Binding } from "../state.js"
 import { env } from "./env.js"
+import { Scope } from "./context.js"
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type GObject from "gi://GObject"
@@ -30,6 +31,7 @@ export default function With<T, E extends JSX.Element>({
     cleanup,
 }: WithProps<T, E>): Fragment<E> {
     const fragment = new Fragment<E>()
+    const scope = Scope.current
 
     function callback(v: T) {
         for (const child of fragment.children) {
@@ -42,7 +44,7 @@ export default function With<T, E extends JSX.Element>({
             }
         }
 
-        const ch = mkChild(v)
+        const ch = Scope.with(() => mkChild(v), scope)
         if (ch !== "" && ch !== false && ch !== null && ch !== undefined) {
             fragment.addChild(ch)
         }
