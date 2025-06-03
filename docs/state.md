@@ -5,9 +5,9 @@
 While in GJS you can use the `GObject.Object.bind_property` and
 `GObject.Object.bind_property_full` APIs, they are not statically checked.
 
-Gjsx provides a `Binding` object which holds information about
-how to bind an object's property to another. A `Binding` itself
-only holds information, it is meant to be consumed by other things.
+Gjsx provides a `Binding` object which holds information about how to bind an
+object's property to another. A `Binding` itself only holds information, it is
+meant to be consumed by other things.
 
 ```ts
 import { type Binding, bind, sync } from "gjsx/state"
@@ -35,20 +35,21 @@ sync(
 ```
 
 > [!TIP]
+>
 > Bindings are immutable: `.as` always returns a new instance.
 
 If you want a two way binding `sync` will have to be called twice.
 
 > [!WARNING]
-> Make sure the transform function you pass to it
-> is pure as it can be called at any time internally.
+>
+> Make sure the transform function you pass to it is pure as it can be called at
+> any time internally.
 
 ## State
 
-`State` is an object that works just like any other
-`GObject.Object` but has only a single value and no properties.
-It's main purpose is to substitute class properties and
-hold state in [Function Components](./jsx#function-components).
+`State` is an object that works just like any other `GObject.Object` but has
+only a single value and no properties. It's main purpose is to substitute class
+properties and hold state in [Function Components](./jsx#function-components).
 
 ```ts
 import { State, bind } from "gjsx/state"
@@ -70,8 +71,9 @@ state.value = "new value"
 ```
 
 > [!WARNING]
-> New values are checked by reference and are not deeply reactive.
-> This means mutating the value will not notify subscribers.
+>
+> New values are checked by reference and are not deeply reactive. This means
+> mutating the value will not notify subscribers.
 >
 > ```ts
 > const state = new State({ a: 0, b: "", c: false })
@@ -96,8 +98,8 @@ const unsubscribe = observable.subscribe((someProp) => {
 unsubscribe()
 ```
 
-Optionally, it is possible to pass in another object to limit
-the lifetime of the subscription.
+Optionally, it is possible to pass in another object to limit the lifetime of
+the subscription.
 
 ```ts
 observable.subscribe(otherobj, (someProp) => {
@@ -131,6 +133,21 @@ const derived: State<string> = derive(
     (label, number, { member }) => `${label} ${number} ${member}`,
 )
 ```
+
+> [!IMPORTANT]
+>
+> State objects are regular observable objects and _not_ signals like in web
+> frameworks. This means that State is _not_ scoped to an execution context and
+> _derived_ state will not be freed automatically, so don't forget to limit
+> their lifetime to widgets when they are created in a function closure.
+>
+> ```tsx
+> function MyWidget() {
+>     const state = derived(dep1(), dep2())
+>
+>     return <Gtk.Widget $destroy={() => state.destroy()} />
+> }
+> ```
 
 ## Observing signals
 

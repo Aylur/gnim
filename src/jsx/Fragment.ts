@@ -1,5 +1,5 @@
 import GObject from "gi://GObject"
-import { registerDestroyableType } from "../gnome/signalTracker"
+import { registerDestroyableType } from "../gnome/signalTracker.js"
 
 export default class Fragment<T = any> extends GObject.Object {
     static [GObject.signals] = {

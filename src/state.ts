@@ -1,3 +1,11 @@
+/**
+ * State management solution following the observable pattern.
+ *
+ * In a future version I might go for signals instead to avoid
+ * manual cleanup from the user, but currently I think it is easier
+ * for beginners to reason about observables especially because
+ * that's how GObject works to begin with.
+ */
 import GObject from "gi://GObject"
 import Gio from "gi://Gio"
 import { kebabify } from "./util.js"
@@ -217,20 +225,17 @@ export class Binding<T> {
 
     subscribe(objOrCallback: GObject.Object | ((value: T) => void), callback?: (value: T) => void) {
         const emitter = this[_emitter]
+        const prop = this[_prop]
 
         const sig = emitter instanceof Gio.Settings ? "changed" : "notify"
 
         if (typeof objOrCallback === "function") {
-            const id = this[_emitter].connect(`${sig}::${kebabify(this[_prop])}`, () =>
-                objOrCallback(this.get()),
-            )
-            return () => this[_emitter].disconnect(id)
+            const id = emitter.connect(`${sig}::${prop}`, () => objOrCallback(this.get()))
+            return () => emitter.disconnect(id)
         }
 
         if (objOrCallback instanceof GObject.Object && typeof callback === "function") {
-            return hook(objOrCallback, this[_emitter], `${sig}::${kebabify(this[_prop])}`, () =>
-                callback(this.get()),
-            )
+            return hook(objOrCallback, emitter, `${sig}::${prop}`, () => callback(this.get()))
         }
     }
 

@@ -1,120 +1,257 @@
 # DBus decorators
 
-> [!WARNING]
-> This is an experimental feature.
+Read more about using DBus in GJS on
+[gjs.guide](https://gjs.guide/guides/gio/dbus.html).
 
-Decorators that make it possible to generate interface definitions from classes.
+Use classes to define an interface.
 
-Read more about using DBus in GJS on [gjs.guide](https://gjs.guide/guides/gio/dbus.html).
+```ts
+import { Service, iface, methodAsync, signal, property } from "gjsx/dbus"
 
-## Example client usage
+@iface("example.gjsx.MyService")
+export class MyService extends Service {
+    @property("s") MyProperty = ""
 
-```ts client.ts
-import * as dbus from "gjsx/dbus"
-
-@dbus.iface("my.service.interface")
-class MyService {
-    @dbus.method("s", { type: "s", direction: "out" })
-    declare MyMethod: (param1: string) => void
-
-    // proxy.MyMethod is undefined at runtime
-    // gjs binds a sync and async version with suffixes
-    declare MyMethodSync: (param1: string) => void
-    declare MyMethodAsync: (param1: string) => Promise<void>
-
-    @dbus.signal("s", "i")
-    declare MySignal: (param1: string, param2: number) => void
-
-    @dbus.property("s", "readwrite")
-    declare MyProp: string
-}
-
-const proxy = await dbus.proxyAsync(MyService, {
-    name: "my.service.domain",
-    path: "/my/service/object",
-})
-
-proxy.connect("g-signal", (_, _name, signal, params) => {
-    if (signal === "MySignal") {
-        const [param1, param2] = params.deepUnpack() as [string, number]
-        print(param1, param2)
+    @methodAsync(["s"], ["s"])
+    async MyMethod(str: string): Promise<[string]> {
+        this.MySignal(str)
+        return [str]
     }
-})
 
-proxy.connect("g-properties-changed", (_, changed) => {
-    print(changed.deepUnpack())
-})
-
-print(proxy.MyMethodSync("hello"))
-print(await proxy.MyMethodAsync("hello"))
-proxy.MyProp = "new value"
+    @signal("s")
+    MySignal(str: string) {}
+}
 ```
 
-## Example service implementation
+> [!NOTE]
+>
+> Optionally, you can declare the name of the arguments for DBus inspection by
+> passing a `{ name: string, type: string }` object as the parameter to the
+> decorators instead of just the type string.
 
-It is possible to use these decorators in combination with [gobject decorators](./gobject).
+Use them as servers
 
-```ts service.ts
-import * as g from "gjsx/gobject"
-import * as dbus from "gjsx/dbus"
+```ts
+const service = await new MyService().serve()
 
-@g.register({ GTypeName: "MyService" })
-@dbus.iface("my.service.interface")
-class MyService extends g.Object {
-    declare private _myProp: string
+service.connect("my-signal", (_, str: string) => {
+    console.log(`MySignal invoked with argument: "${str}"`)
+})
 
-    // will be available after construction with `dbus.serve`
-    declare dbusObject: dbus.DBusObject
+service.connect("notify::my-property", () => {
+    console.log(`MyProperty set to ${service.MyProperty}`)
+})
+```
 
-    @dbus.method("s", { type: "s", direction: "out" })
-    MyMethod(param1: string) {
-        print("MyMethod called")
-        return param1
-    }
+Use them as proxies
 
-    @g.signal(String, Number)
-    @dbus.signal("s", "i")
-    MySignal(param1: string, param2: number) {
-        print("MySignal", param1, param2)
-    }
+```ts
+const proxy = await new MyService().proxy()
 
-    @g.property(String)
-    @dbus.property("s")
-    set MyProp(value: string) {
-        // when using both dbus and gobject decorators
-        // prop notification has to be done explicitly
-        if (this.MyProp !== value) {
-            this._myProp = value
+proxy.MyProperty = "new value"
 
-            // notify gobject instance
-            this.notify("my-prop")
+const value = await proxy.MyMethod("hello")
+console.log(value) // "hello"
+```
 
-            // notify dbus
-            this.dbusObject.emit_property_changed(
-                "MyProp",
-                new dbus.Variant("s", value),
-            )
-        }
-    }
+## `Service`
 
-    get MyProp(): string {
-        return this._myProp ?? ""
+Base class of every DBus service for both proxies and exported objects. Derived
+from `GObject.Object`. DBus signals are also GObject signals and DBus properties
+are also GObject properties.
+
+```ts
+import { Service, iface } from "gjsx/dbus"
+
+@iface("example.gjsx.MyService")
+class MyService extends Service {}
+```
+
+### `serve`
+
+Attempt to own `name` and export this object at `objectPath` on `busType`.
+
+```ts
+class Service {
+    async serve(props: {
+        busType?: Gio.BusType
+        name?: string
+        objectPath?: string
+        flags?: Gio.BusNameOwnerFlags
+        timeout?: number
+    }): Promise<this>
+}
+```
+
+### `proxy`
+
+Attempt to proxy `name`'s object at `objectPath` on `busType`.
+
+```ts
+class Service {
+    async proxy(props: {
+        bus?: Gio.DBusConnection
+        name?: string
+        objectPath?: string
+        flags?: Gio.DBusProxyFlags
+        timeout?: number
+    }): Promise<this>
+}
+```
+
+Method, signal and property access implementations are ignored. When acting as a
+proxy they work over the remote object.
+
+Exmaple
+
+```ts
+@iface("some.dbus.interface")
+class MyProxy extends Service {
+    @method()
+    Method() {
+        console.log("this is never invoked when working as a proxy")
     }
 }
 
-const service = await dbus.serveAsync(MyService, {
-    name: "my.service.domain",
-    path: "/my/service/object",
-})
+const proxy = await new MyProxy().proxy()
 
-service.connect("my-signal", (_, param1: string, param2: number) => {
-    print(param1, param2)
-})
+proxy.Method()
+```
 
-service.connect("notify::my-prop", ({ MyProp }: MyService) => {
-    print(MyProp)
-})
+## `method`
 
-service.MySignal("hello", 1234)
-service.MyProp = "new value"
+Registers a DBus method.
+
+```ts
+type Arg = string | { name: string; type: string }
+
+function method(inArgs: Arg[], outArgs: Arg[])
+
+function method(...inArgs: Arg[])
+```
+
+Example
+
+```ts
+class {
+    @method("s", "i")
+    Simple(arg0: string, arg1: number): void {}
+
+    @method(["s", "i"], ["s"])
+    SimpleReturn(arg0: string, arg1: number): [string] {
+        return ["return valule"]
+    }
+}
+```
+
+> [!TIP]
+>
+> When writing an interface to be used as a proxy prefer using
+> [methodAsync](./dbus#methodAsync) instead as it does not block IO.
+
+## `methodAsync`
+
+Async version of the `method` decorator which is useful for proxies.
+
+```ts
+type Arg = string | { name: string; type: string }
+
+function methodAsync(inArgs: Arg[], outArgs: Arg[])
+
+function methodAsync(...inArgs: Arg[])
+```
+
+Example
+
+```ts
+class {
+    @methodAsync("s", "i")
+    async Simple(arg0: string, arg1: number): Promise<void> {}
+
+    @methodAsync(["s", "i"], ["s"])
+    async SimpleReturn(arg0: string, arg1: number): Promise<[string]> {
+        return ["return valule"]
+    }
+}
+```
+
+> [!NOTE]
+>
+> On exported objects this is functionally the same as [method](./dbus#method)
+
+## `property`
+
+Registers a property, similarly to the
+[gobject property](./gobject#property-decorator) decorator. Except that it works
+over `Variant` types.
+
+```ts
+function property(type: string)
+```
+
+```ts
+class {
+    @property("s") Value = "value"
+}
+```
+
+## `getter`
+
+Registers a read-only property, similarly to the
+[gobject](./gobject#property-decorator) getter decorator.
+
+```ts
+function getter(type: string)
+```
+
+```ts
+class {
+    @getter("s")
+    get Value() { return "" }
+}
+```
+
+> [!TIP]
+>
+> Can be used in combination with the `setter` decorator to define read-write
+> properties
+
+## `setter`
+
+Registers a write-only property, similarly to the
+[gobject](./gobject#property-decorator) setter decorator.
+
+```ts
+function setter(type: string)
+```
+
+```ts
+class {
+    @setter("s")
+    set Value(value: string) { }
+}
+```
+
+> [!TIP]
+>
+> Can be used in combination with the `getter` decorator to define read-write
+> properties
+
+## `signal`
+
+Registers a DBus signal.
+
+```ts
+type Param = string | { name: string; type: string }
+
+function method(...parameters: Param[])
+```
+
+Example
+
+```ts
+class {
+    @signal("s", "i")
+    MySignal(arg0: string, arg1: number) {}
+}
 ```

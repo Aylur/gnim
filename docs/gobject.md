@@ -1,6 +1,7 @@
 # GObject decorators
 
-Decorators that wrap [`GObject.registerClass`](https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Overrides.md?ref_type=heads#gobjectregisterclassmetainfo-klass).
+Decorators that wrap
+[`GObject.registerClass`](https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Overrides.md?ref_type=heads#gobjectregisterclassmetainfo-klass).
 
 ## Example Usage
 
@@ -9,48 +10,46 @@ import GObject, { register, property, signal } from "gjsx/gobject"
 
 @register({ GTypeName: "MyObj" })
 class MyObj extends GObject.Object {
-    @property(String)
-    declare myProp: string
+    @property(String) myProp = ""
 
     @signal(String, GObject.TYPE_UINT)
-    declare mySignal: (a: string, b: number) => void
+    mySignal(a: string, b: number) {
+        // default handler
+    }
 }
 ```
 
-::: details What it transpiles to
+::: details What it (roughly) transpiles to
 
 ```js
-const props = Symbol("private props")
+const priv = Symbol("private props")
 
 class MyObj extends GObject.Object {
-    [props] = { myProp: "" }
+    [priv] = { "my-prop": "" }
 
-    get myProp() {
-        return this[props].myProp
-    }
-
-    set myProp(value) {
-        if (this.myProp !== value) {
-            this[props].myProp = value
-            this.notify("my-prop")
-        }
-    }
-
-    get_my_prop() {
-        return this.myProp
-    }
-
-    set_my_prop() {
-        return this.myProp
+    constructors() {
+        super()
+        Object.defineProperty(this, "myProp", {
+            enumerable: true,
+            configurable: false,
+            set(value) {
+                if (this[priv]["my-prop"] !== value) {
+                    this[priv]["my-prop"] = v
+                    this.notify("my-prop")
+                }
+            },
+            get() {
+                return this[priv]["my-prop"]
+            },
+        })
     }
 
     mySignal(a, b) {
-        this.emit("my-signal", a, b)
+        return this.emit("my-signal", a, b)
     }
 
     on_my_signal(a, b) {
-        // default handler would go here
-        // which is then hooked up with registerClass
+        // default handler
     }
 }
 
@@ -67,7 +66,7 @@ GObject.registerClass(
             ),
         },
         Signals: {
-            "my-si": {
+            "my-signal": {
                 param_types: [String.$gtype, GObject.TYPE_UINT],
             },
         },
@@ -76,19 +75,32 @@ GObject.registerClass(
 )
 ```
 
+> [!NOTE]
+>
+> Property accessors are defined on the object instance and not the prototype.
+> This might change in the future. Stage 3 decorators are adding a new keyword
+> [`accessor`](https://github.com/tc39/proposal-decorators?tab=readme-ov-file#class-auto-accessors)
+> for declaring properties, which marks properties to expand as `get` and `set`
+> methods on the prototype. The `accessor` keyword is currently not supported by
+> these decorators.
+
 :::
 
 ## Property decorator
 
-```ts
-type PropertyDeclaration =
-    | { $gtype: GObject.GType }
-    | ((name: string, flags: GObject.ParamFlags) => GObject.ParamSpec)
+Declaring properties are split into three decorators:
 
-function property(declaration: PropertyDeclaration)
+```ts
+type PropertyTypeDeclaration<T> =
+    | ((name: string, flags: ParamFlags) => ParamSpec<T>)
+    | { $gtype: GType<T> }
+
+function property<T>(typeDeclaration: PropertyTypeDeclaration<T>): void
+function setter<T>(typeDeclaration: PropertyTypeDeclaration<T>): void
+function getter<T>(typeDeclaration: PropertyTypeDeclaration<T>): void
 ```
 
-The `property` decorator takes one of
+These decorators take a single parameter which defines the type:
 
 - any class that has a registered `GType`. This includes the globally available
   `String`, `Number`, `Boolean` and `Object` JavaScript constructors which are
@@ -100,44 +112,36 @@ The `property` decorator takes one of
   - `Boolean`: `ParamSpec.boolean`
   - `GObject.Object` and its subclasses
 
-- a function that produces a `ParamSpec`: the passed name is a kebab-cased name
-  of the property, for example `myProp` -> `my-prop` and flags is either
-  `ParamFlags.READABLE`, `ParamFlags.WRITABLE` or `ParamFlags.READWRITE`
+- a function that produces a `ParamSpec` where the passed name is a kebab-cased
+  name of the property (for example `myProp` -> `my-prop`), and flags is one of:
+  `ParamFlags.READABLE`, `ParamFlags.WRITABLE`, `ParamFlags.READWRITE`.
 
     ```ts
-    const Percent = (name: string, flags: GObject.ParamFlags) =>
+    const Percent = (name: string, flags: ParamFlags) =>
         GObject.ParamSpec.double(name, "", "", flags, 0, 1, 0)
 
     @register()
     class MyObj extends GObject.Object {
-        @property(Percent) declare percent: number
+        @property(Percent) percent = 0
     }
     ```
 
-The property decorator can be applied in the following ways:
+The `property` decorator lets you declare a read-write property.
 
-1. On a property declaration
-
-```ts {3,4}
+```ts {3}
 @register()
 class MyObj extends GObject.Object {
-    @property(String)
-    declare myProp: string
+    @property(String) myProp = ""
 }
 ```
 
-This will create a getter and setter for the property and will also
-emit the notify signal when the value is set to a new value.
-
-> [!TIP]
-> The `declare` keyword is required otherwise the default setter and getter
-> is not generated.
-
-<!---->
+This will create a getter and setter for the property and will also emit the
+notify signal when the value is set to a new value.
 
 > [!WARNING]
-> The value is checked by reference, this is important if your
-> property is an object type.
+>
+> The value is checked by reference, this is important if your property is an
+> object type.
 >
 > ```ts
 > const dict = obj.prop
@@ -146,104 +150,76 @@ emit the notify signal when the value is set to a new value.
 > obj.prop = { ...dict } // This will emit notify::prop
 > ```
 
-If you want to set a custom default value, you can do so in the `super`
-constructor of your class.
+The `getter` decorator lets you declare a read-only property.
 
-```ts {7}
+```ts {3}
 @register()
 class MyObj extends GObject.Object {
-    @property(String)
-    declare myProp: string
-
-    constructor() {
-        super({ myProp: "default-value" } as any)
-    }
-}
-```
-
-> [!NOTE] > `super` is not correctly typed for this usecase however.
-> In most cases you can just set the property after to satisfy TypeScript.
->
-> ```ts {6,7,8}
-> @register()
-> class MyObj extends GObject.Object {
->     @property(String)
->     declare myProp: string
->
->     constructor({ myProp = "default-value" }) {
->         super()
->         this.myProp = myProp
->     }
-> }
-> ```
-
-2. On a single getter or a single setter
-
-```ts {3,4}
-@register()
-class MyObj extends GObject.Object {
-    @property(String)
+    @getter(String)
     get readOnly() {
         return "readonly value"
     }
-
-    @property(String)
-    get writeOnly(value: string) {
-        // setter logic
-        this.notify("write-only")
-    }
 }
 ```
 
-This will create a read-only / write-only property.
+The `setter` decorator lets you declare a write-only property.
 
-> [!TIP]
-> When defining setters, `notify` signal emission has to be done explicitly.
-
-3. On a getter and setter
-
-```ts {5,6,10}
+```ts {5}
 @register()
 class MyObj extends GObject.Object {
-    declare private _prop: string
+    #prop = ""
 
-    @property(String)
-    get myProp() {
-        return "value"
-    }
-
-    set myProp(v: string) {
-        if (v !== this._prop) {
-            this._prop = v
+    @setter(String)
+    set myProp(value: string) {
+        if (value !== this.#prop) {
+            this.#prop = value
             this.notify("my-prop")
         }
     }
 }
 ```
 
-This will create a read-write property.
+> [!NOTE]
+>
+> When using `setter` you will have to explicitly emit the notify signal.
+
+<!--  -->
 
 > [!TIP]
-> The decorator has to be used on either the setter or getter, but **not both**.
+>
+> You can use the `setter` and `getter` decorators in combination to declare a
+> read-write property.
 
 ## Signal decorator
 
 ```ts
-function signal(...params: Array<{ $gtype: GObject.GType } | GObject.GType>)
+function signal(
+    params: Array<GType>,
+    returnType?: GType,
+    options?: {
+        flags?: SignalFlags
+        accumulator?: AccumulatorType
+    },
+)
 
-function signal(declaration?: SignalDeclaration) // Object you would pass to GObject.registerClass
+function signal(...params: Array<GType>)
 ```
 
-You can apply the signal decorator to either a property declaration or a method.
+You can apply the signal decorator to a method where the method is the default
+handler of the signal.
 
-```ts {3,4,6,7}
+```ts {3,4,5,10}
 @register()
 class MyObj extends GObject.Object {
-    @signal(GObject.TYPE_STRING, GObject.TYPE_STRING)
-    declare mySig: (a: String, b: String) => void
+    @signal([String, Number], Boolean, {
+        accumulator: GObject.AccumulatorType.FIRST_WINS,
+    })
+    myFirstHandledSignal(str: string, n: number): boolean {
+        return false
+    }
 
-    @signal(String, String)
-    mySig(a: string, b: string) {
+    @signal(String, GObject.TYPE_STRING)
+    mySignal(a: String, b: String): void {
         // default signal handler
     }
 }
@@ -253,22 +229,22 @@ You can emit the signal by calling the signal method or using `emit`.
 
 ```ts
 const obj = new MyObj()
-obj.connect("my-sig", (obj, a: string, b: string) => {})
+obj.connect("my-signal", (obj, a: string, b: string) => {})
 
 obj.mySig("a", "b")
-obj.emit("my-sig", "a", "b")
+obj.emit("my-signal", "a", "b")
 ```
 
 ## Register decorator
 
-Every GObject subclass has to be registered. You can pass the same options
-to this decorator as you would to `GObject.registerClass`
+Every `GObject.Object` subclass has to be registered. You can pass the same
+options to this decorator as you would to `GObject.registerClass`
 
 ```ts
 @register({ GTypeName: "MyObj" })
 class MyObj extends GObject.Object {}
 ```
 
-> [!TIP]
-> This decorator registers properties and signals defined with decorators,
-> so make sure to use this and **not** `GObject.registerClass` if you define any.
+> [!TIP] This decorator registers properties and signals defined with
+> decorators, so make sure to use this and **not** `GObject.registerClass` if
+> you define any.

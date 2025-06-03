@@ -20,6 +20,7 @@
           markdownlint-cli2
           blueprint-compiler
           libadwaita
+          gtk3
           gtk4
           gjs
           typescript

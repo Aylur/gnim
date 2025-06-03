@@ -1,7 +1,8 @@
 # Polyfills
 
-GJS does not implement some common APIs that you would expect from a JavaScript runtime.
-See this [gjs issue](https://gitlab.gnome.org/GNOME/gjs/-/issues/265) for context.
+GJS does not implement some common APIs that you would expect from a JavaScript
+runtime. See this [gjs issue](https://gitlab.gnome.org/GNOME/gjs/-/issues/265)
+for context.
 
 ## fetch
 

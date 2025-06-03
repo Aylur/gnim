@@ -1,85 +1,522 @@
+/**
+ * A {@link Service} currently only allows interfacing with a single interface of a remote object.
+ * In the future I want to come up with an API to be able to create Service objects for multiple
+ * interfaces of an object at the same time. Example usage would be for example combining
+ * "org.mpris.MediaPlayer2" and "org.mpris.MediaPlayer2.Player" into a single object.
+ */
 import Gio from "gi://Gio"
 import GLib from "gi://GLib"
+import GObject from "gi://GObject"
+import { getterWorkaround, kebabify, xml } from "./util.js"
 
-export { Gio as default }
-export const Variant = GLib.Variant
-export type Variant = GLib.Variant
-export type DBusObject = Gio.DBusExportedObject
+const DEFAULT_TIMEOUT = 10_000
 
-const meta = Symbol("dbus interface metadata")
-const priv = Symbol("dbus priv properties")
-const nodeXml = Symbol("dbus interface xml")
+const info = Symbol("dbus interface info")
+const internals = Symbol("dbus interface internals")
+const remoteMethod = Symbol("proxy remoteMethod")
+const remoteMethodAsync = Symbol("proxy remoteMethodAsync")
+const remotePropertySet = Symbol("proxy remotePropertySet")
 
-type MethodArg = {
-    name?: string
-    type: string
-    direction: "in" | "out"
-}
+// TODO: consider making some parts public
+// - remoteMethod, remoteMethodAsync, remotePropertySet
+// - info, proxy, dbusObject
 
-type SignalArg = {
-    name?: string
-    type: string
-}
+/**
+ * Base type for DBus services and proxies. Interface name is set with
+ * the {@link iface} decorator which also register it as a GObject type.
+ */
+export class Service extends GObject.Object {
+    static [info]?: Gio.DBusInterfaceInfo
 
-type Property = {
-    name?: string
-    type: string
-    access: "read" | "write" | "readwrite"
-}
+    static {
+        GObject.registerClass(this)
+    }
 
-type InterfaceMetadata = {
-    name: string
-    methods: Record<string, Array<MethodArg>>
-    signals: Record<string, Array<SignalArg>>
-    properties: Array<Property>
-}
+    [internals]: {
+        dbusObject?: Gio.DBusExportedObject
+        proxy?: Gio.DBusProxy
+        priv: Record<string | symbol, unknown>
+        onStop: Set<() => void>
+    } = {
+        priv: {},
+        onStop: new Set<() => void>(),
+    }
 
-type XmlNode = {
-    name: string
-    attributes?: Record<string, string>
-    children?: Array<XmlNode>
-}
+    #info: Gio.DBusInterfaceInfo
 
-function xml({ name, attributes, children }: XmlNode) {
-    let builder = `<${name}`
-    const attrs = Object.entries(attributes ?? [])
-    if (attrs.length > 0) {
-        for (const [key, value] of attrs) {
-            builder += ` ${key}="${value}"`
+    constructor() {
+        super()
+        const service = this.constructor as unknown as typeof Service
+        if (!service[info]) throw Error("missing interface info")
+        this.#info = service[info]
+    }
+
+    notify(propertyName: Extract<keyof this, string> | (string & {})): void {
+        const prop = this.#info.lookup_property(propertyName)
+
+        if (prop && this[internals].dbusObject) {
+            this[internals].dbusObject.emit_property_changed(
+                propertyName,
+                new GLib.Variant(prop.signature, this[propertyName as keyof this]),
+            )
+        }
+
+        super.notify(prop ? kebabify(propertyName) : propertyName)
+    }
+
+    emit(name: string, ...params: unknown[]): void {
+        const signal = this.#info.lookup_signal(name)
+
+        if (signal && this[internals].dbusObject) {
+            const signature = `(${signal.args.map((a) => a.signature).join("")})`
+            this[internals].dbusObject.emit_signal(name, new GLib.Variant(signature, params))
+        }
+
+        return super.emit(signal ? kebabify(name) : name, ...params)
+    }
+
+    // server
+    #handlePropertyGet(_: Gio.DBusExportedObject, propertyName: Extract<keyof this, string>) {
+        const prop = this.#info.lookup_property(propertyName)
+
+        if (!prop) {
+            throw Error(`${this.constructor.name} has no exported property: "${propertyName}"`)
+        }
+
+        const value = this[propertyName]
+        if (typeof value !== "undefined") {
+            return new GLib.Variant(prop.signature, value)
+        } else {
+            return null
         }
     }
-    if (children && children.length > 0) {
-        builder += ">"
-        for (const node of children) {
-            builder += xml(node)
+
+    // server
+    #handlePropertySet(
+        _: Gio.DBusExportedObject,
+        propertyName: Extract<keyof this, string>,
+        value: GLib.Variant,
+    ) {
+        const newValue = value.deepUnpack()
+        const prop = this.#info.lookup_property(propertyName)
+
+        if (!prop) {
+            throw Error(`${this.constructor.name} has no property: "${propertyName}"`)
         }
-        builder += `</${name}>`
-    } else {
-        builder += " />"
+
+        if (this[propertyName] !== newValue) {
+            this[propertyName] = value.deepUnpack()
+        }
     }
-    return builder
+
+    // server
+    #returnError(error: unknown, invocation: Gio.DBusMethodInvocation) {
+        console.error(error)
+        if (error instanceof GLib.Error) {
+            return invocation.return_gerror(error)
+        }
+        if (error instanceof Error) {
+            return invocation.return_dbus_error(
+                error.name.includes(".") ? error.name : `gjs.JSError.${error.name}`,
+                error.message,
+            )
+        }
+        invocation.return_dbus_error("gjs.DBusService.UnknownError", `${error}`)
+    }
+
+    // server
+    #returnValue(value: unknown, methodName: string, invocation: Gio.DBusMethodInvocation) {
+        if (value === null || value === undefined) {
+            return invocation.return_value(new GLib.Variant("()", []))
+        }
+
+        const args = this.#info.lookup_method(methodName)?.out_args ?? []
+        const signature = `(${args.map((arg) => arg.signature).join("")})`
+        if (!Array.isArray(value)) throw Error("value has to be a tuple")
+        invocation.return_value(new GLib.Variant(signature, value))
+    }
+
+    // server
+    #handleMethodCall(
+        _: Gio.DBusExportedObject,
+        methodName: Extract<keyof this, string>,
+        parameters: GLib.Variant,
+        invocation: Gio.DBusMethodInvocation,
+    ): void {
+        try {
+            const value = (this[methodName] as (...args: unknown[]) => unknown)(
+                ...parameters.deepUnpack<Array<unknown>>(),
+            )
+
+            if (value instanceof GLib.Variant) {
+                invocation.return_value(value)
+            } else if (value instanceof Promise) {
+                value
+                    .then((value) => this.#returnValue(value, methodName, invocation))
+                    .catch((error) => this.#returnError(error, invocation))
+            } else {
+                this.#returnValue(value, methodName, invocation)
+            }
+        } catch (error) {
+            this.#returnError(error, invocation)
+        }
+    }
+
+    // server
+    async serve({
+        busType = Gio.BusType.SESSION,
+        name = this.#info.name,
+        objectPath = "/" + this.#info.name.split(".").join("/"),
+        flags = Gio.BusNameOwnerFlags.NONE,
+        timeout = DEFAULT_TIMEOUT,
+    }: {
+        busType?: Gio.BusType
+        name?: string
+        objectPath?: string
+        flags?: Gio.BusNameOwnerFlags
+        timeout?: number
+    } = {}): Promise<this> {
+        const impl = new Gio.DBusExportedObject(
+            // @ts-expect-error missing constructor type
+            { g_interface_info: this.#info },
+        )
+
+        // @ts-expect-error missing types
+        impl.connect("handle-method-call", this.#handleMethodCall.bind(this))
+        // @ts-expect-error missing types
+        impl.connect("handle-property-get", this.#handlePropertyGet.bind(this))
+        // @ts-expect-error missing types
+        impl.connect("handle-property-set", this.#handlePropertySet.bind(this))
+
+        this.#info.cache_build()
+
+        return new Promise((resolve, reject) => {
+            let source =
+                timeout > 0
+                    ? setTimeout(() => {
+                          reject(Error(`serve timed out`))
+                          source = null
+                      }, timeout)
+                    : null
+
+            const clear = () => {
+                if (source) {
+                    clearTimeout(source)
+                    source = null
+                }
+            }
+
+            const busId = Gio.bus_own_name(
+                busType,
+                name,
+                flags,
+                (conn: Gio.DBusConnection) => {
+                    try {
+                        impl.export(conn, objectPath)
+                        this[internals].dbusObject = impl
+                        this[internals].onStop.add(() => {
+                            Gio.bus_unown_name(busId)
+                            impl.unexport()
+                            this.#info.cache_release()
+                            delete this[internals].dbusObject
+                        })
+
+                        resolve(this)
+                    } catch (error) {
+                        reject(error)
+                    }
+                },
+                clear,
+                clear,
+            )
+        })
+    }
+
+    // proxy
+    #handlePropertiesChanged(_: Gio.DBusProxy, changed: GLib.Variant, invalidated: string[]) {
+        const set = new Set([...Object.keys(changed.deepUnpack()), ...invalidated])
+        for (const prop of set.values()) {
+            this.notify(prop as Extract<keyof this, string>)
+        }
+    }
+
+    // proxy
+    #handleSignal(
+        _: Gio.DBusProxy,
+        _sender: string | null,
+        signal: string,
+        parameters: GLib.Variant,
+    ) {
+        this.emit(kebabify(signal), ...parameters.deepUnpack<Array<unknown>>())
+    }
+
+    // proxy
+    #remoteMethodParams(
+        methodName: string,
+        args: unknown[],
+    ): Parameters<Gio.DBusProxy["call_sync"]> {
+        const { proxy } = this[internals]
+        if (!proxy) throw Error("invalid remoteMethod invocation: not a proxy")
+
+        const method = this.#info.lookup_method(methodName)
+        if (!method) throw Error("method not found")
+
+        const signature = `(${method.in_args.map((a) => a.signature).join("")})`
+
+        return [
+            methodName,
+            new GLib.Variant(signature, args),
+            Gio.DBusCallFlags.NONE,
+            DEFAULT_TIMEOUT,
+            null,
+        ]
+    }
+
+    // proxy
+    [remoteMethod](methodName: string, args: unknown[]): GLib.Variant {
+        const params = this.#remoteMethodParams(methodName, args)
+        return this[internals].proxy!.call_sync(...params)
+    }
+
+    // proxy
+    [remoteMethodAsync](methodName: string, args: unknown[]): Promise<GLib.Variant> {
+        return new Promise((resolve, reject) => {
+            try {
+                const params = this.#remoteMethodParams(methodName, args)
+                this[internals].proxy!.call(...params, (_, res) => {
+                    try {
+                        resolve(this[internals].proxy!.call_finish(res))
+                    } catch (error) {
+                        reject(error)
+                    }
+                })
+            } catch (error) {
+                reject(error)
+            }
+        })
+    }
+
+    // proxy
+    [remotePropertySet](name: string, value: unknown) {
+        const proxy = this[internals].proxy!
+        const prop = this.#info.lookup_property(name)!
+
+        const variant = new GLib.Variant(prop.signature, value)
+        proxy.set_cached_property(name, variant)
+
+        proxy.call(
+            "org.freedesktop.DBus.Properties.Set",
+            new GLib.Variant("(ssv)", [proxy.gInterfaceName, name, variant]),
+            Gio.DBusCallFlags.NONE,
+            -1,
+            null,
+            (_, res) => {
+                try {
+                    proxy.call_finish(res)
+                } catch (e) {
+                    console.error(e)
+                }
+            },
+        )
+    }
+
+    // proxy
+    async proxy({
+        bus = Gio.DBus.session,
+        name = this.#info.name,
+        objectPath = "/" + this.#info.name.split(".").join("/"),
+        flags = Gio.DBusProxyFlags.NONE,
+        timeout = DEFAULT_TIMEOUT,
+    }: {
+        bus?: Gio.DBusConnection
+        name?: string
+        objectPath?: string
+        flags?: Gio.DBusProxyFlags
+        timeout?: number
+    } = {}): Promise<this> {
+        const proxy = new Gio.DBusProxy({
+            gConnection: bus,
+            gInterfaceName: this.#info.name,
+            gInterfaceInfo: this.#info,
+            gName: name,
+            gFlags: flags,
+            gObjectPath: objectPath,
+        })
+
+        return new Promise((resolve, reject) => {
+            const cancallable = new Gio.Cancellable()
+
+            let source =
+                timeout > 0
+                    ? setTimeout(() => {
+                          reject(Error(`proxy timed out`))
+                          source = null
+                          cancallable.cancel()
+                      }, timeout)
+                    : null
+
+            proxy.init_async(GLib.PRIORITY_DEFAULT, cancallable, (_, res) => {
+                try {
+                    if (source) {
+                        clearTimeout(source)
+                        source = null
+                    }
+
+                    proxy.init_finish(res)
+                    this[internals].proxy = proxy
+
+                    const ids = [
+                        proxy.connect("g-signal", this.#handleSignal.bind(this)),
+                        proxy.connect(
+                            "g-properties-changed",
+                            this.#handlePropertiesChanged.bind(this),
+                        ),
+                    ]
+
+                    this[internals].onStop.add(() => {
+                        ids.forEach((id) => proxy.disconnect(id))
+                        delete this[internals].proxy
+                    })
+
+                    resolve(this)
+                } catch (error) {
+                    reject(error)
+                }
+            })
+        })
+    }
+
+    stop() {
+        const { onStop } = this[internals]
+        for (const cb of onStop.values()) {
+            onStop.delete(cb)
+            cb()
+        }
+    }
 }
 
-interface InterfaceInstance {
-    dbusObject?: DBusObject
-    [priv]?: Record<string, unknown>
+type InterfaceMeta = {
+    methods?: Record<
+        string,
+        Array<{
+            name?: string
+            type: string
+            direction: "in" | "out"
+        }>
+    >
+    signals?: Record<
+        string,
+        Array<{
+            name?: string
+            type: string
+        }>
+    >
+    properties?: Record<
+        string,
+        {
+            name: string
+            type: string
+            read?: true
+            write?: true
+        }
+    >
 }
 
-interface InterfaceConstructor {
-    [meta]?: InterfaceMetadata
-    [nodeXml]?: string
+function paramSpecFromVariant(
+    type: string,
+    name: string,
+    { read, write }: { read?: boolean; write?: boolean },
+): GObject.ParamSpec {
+    let flags = 0
+    if (read) flags |= GObject.ParamFlags.READABLE
+    if (write) flags |= GObject.ParamFlags.WRITABLE
 
-    new (): any
+    if (type.startsWith("a") || type.startsWith("(") || type === "v") {
+        return GObject.ParamSpec.jsobject(name, name, name, flags)
+    }
+
+    switch (type) {
+        case "b":
+            return GObject.ParamSpec.boolean(name, name, name, flags, false)
+        case "y":
+        case "n":
+        case "q":
+        case "i":
+        case "u":
+        case "x":
+        case "t":
+        case "h":
+        case "d":
+            // TODO: be more specific about number types
+            return GObject.ParamSpec.double(
+                name,
+                name,
+                name,
+                flags,
+                Number.MIN_SAFE_INTEGER,
+                Number.MIN_SAFE_INTEGER,
+                0,
+            )
+        case "s":
+        case "g":
+        case "o":
+            return GObject.ParamSpec.string(name, name, name, flags, "")
+        default:
+            break
+    }
+
+    throw Error(`cannot infer ParamSpec from variant "${type}"`)
 }
 
-export function iface(name: string) {
-    return function (cls: InterfaceConstructor) {
-        const metadata = cls[meta]
-        if (!metadata) throw Error(`${cls} is not an interface`)
-        const { methods = {}, signals = {}, properties = [] } = metadata
+function inferGTypeFromVariant(type: string): GObject.GType<unknown> {
+    if (type.startsWith("a") || type.startsWith("(")) {
+        return GObject.TYPE_JSOBJECT
+    }
 
-        metadata.name = name
-        cls[nodeXml] = xml({
+    switch (type) {
+        case "v":
+            return GObject.TYPE_VARIANT
+        case "b":
+            return GObject.TYPE_BOOLEAN
+        case "y":
+        case "n":
+        case "q":
+        case "i":
+        case "u":
+        case "x":
+        case "t":
+        case "h":
+        case "d":
+            // TODO: be more specific about number types
+            return GObject.TYPE_DOUBLE
+        case "s":
+        case "g":
+        case "o":
+            return GObject.TYPE_STRING
+        default:
+            break
+    }
+
+    throw Error(`cannot infer GType from variant "${type}"`)
+}
+
+/**
+ * Registers a {@link Service} as a dbus interface.
+ *
+ * @param name Interface name of the object. For example "org.gnome.Shell.SearchProvider2"
+ * @param gobjectMetaInfo optional properties to pass to {@link GObject.registerClass}
+ */
+export function iface(
+    name: string,
+    gobjectMetaInfo?: GObject.MetaInfo<never, Array<{ $gtype: GObject.GType }>, never>,
+) {
+    return function (cls: { new (...args: any[]): Service }, ctx: ClassDecoratorContext) {
+        const meta = ctx.metadata
+        if (!meta) throw Error(`${cls.name} is not an interface`)
+
+        const { methods = {}, signals = {}, properties = {} } = meta as InterfaceMeta
+
+        const infoXml = xml({
             name: "node",
             children: [
                 {
@@ -96,248 +533,427 @@ export function iface(name: string) {
                             attributes: { name },
                             children: args.map((arg) => ({ name: "arg", attributes: arg })),
                         })),
-                        ...properties.map((prop) => ({
+                        ...Object.values(properties).map(({ name, type, read, write }) => ({
                             name: "property",
-                            attributes: prop,
+                            attributes: {
+                                ...(name && { name }),
+                                type,
+                                access: (read ? "read" : "") + (write ? "write" : ""),
+                            },
                         })),
                     ],
                 },
             ],
         })
-    }
-}
 
-export function method(...args: Array<string | MethodArg>) {
-    return function (target: any, name: string, _desc?: PropertyDescriptor) {
-        target.constructor[meta] ??= {}
+        Object.assign(cls, { [info]: Gio.DBusInterfaceInfo.new_for_xml(infoXml) })
 
-        const metadata = target.constructor[meta] as InterfaceMetadata
-        metadata.methods ??= {}
-        metadata.methods[name] = args.map((arg) =>
-            typeof arg === "string" ? { type: arg, direction: "in" } : arg,
+        GObject.registerClass(
+            {
+                Properties: Object.fromEntries(
+                    Object.values(properties).map(({ type, name, read, write }) => {
+                        const key = kebabify(name)
+                        return [key, paramSpecFromVariant(type, key, { read, write })]
+                    }),
+                ),
+                Signals: Object.fromEntries(
+                    Object.entries(signals).map(([name, args]) => {
+                        return [
+                            kebabify(name),
+                            {
+                                param_types: args.map((a) =>
+                                    inferGTypeFromVariant(typeof a === "string" ? a : a.type),
+                                ),
+                            },
+                        ]
+                    }),
+                ),
+                ...(gobjectMetaInfo ?? {}),
+            },
+            cls,
         )
     }
 }
 
-export function signal(...args: Array<string | SignalArg>) {
-    return function (target: any, name: string, desc?: PropertyDescriptor) {
-        target.constructor[meta] ??= {}
+type DBusType = string | { type: string; name: string }
 
-        const signalArgs = args.map((arg) => (typeof arg === "string" ? { type: arg } : arg))
+// TODO: InferVar<TokenizeVariant<NestedVariant>>
+type InferVariantTuple<NestedVariant extends string> = NestedVariant extends string
+    ? Array<any>
+    : never
 
-        const metadata = target.constructor[meta] as InterfaceMetadata
-        metadata.signals ??= {}
-        metadata.signals[name] = signalArgs
+// prettier-ignore
+/**
+ * Infer the runtime JavaScript type of a Variant type
+ */
+export type InferVariantType<T extends string> =
+    T extends "v" ? Variant<any> :
+    T extends "b" ? boolean :
+    T extends "y" | "n" | "q" | "i" | "u" | "x" | "t" | "h" | "d" ? number :
+    T extends "s" | "g" ? string :
+    T extends "o" ? `/${string}` :
+    T extends `a{${infer K}${infer S}}` ?
+        S extends string ?
+        K extends string ?
+            Record<Extract<InferVariantType<K>, string | number>, InferVariantType<S>>
+            : never : never :
+    T extends `a${infer S}` ? S extends string ? Array<InferVariantType<S>> : never :
+    T extends `(${infer S})` ? S extends string ? InferVariantTuple<S> : never :
+    never
 
-        const signature = `(${signalArgs.map(({ type }) => type).join("")})`
+type InferVariantTypes<T extends Array<DBusType>> = {
+    [K in keyof T]: T[K] extends string
+        ? InferVariantType<T[K]>
+        : T[K] extends { type: infer S }
+          ? S extends string
+              ? InferVariantType<S>
+              : never
+          : unknown
+}
 
-        const emitFn: PropertyDescriptor & ThisType<InterfaceInstance> = {
-            value: function (...args: unknown[]) {
-                const { dbusObject } = this
-                if (dbusObject) {
-                    dbusObject.emit_signal(name, new GLib.Variant(signature, args))
-                }
-            },
-        }
+function installMethod<Args extends Array<DBusType>>(
+    args: Args | [Args, Args?],
+    method: (...args: any[]) => unknown,
+    ctx: ClassMethodDecoratorContext<Service, typeof method>,
+) {
+    const name = ctx.name
+    const meta = ctx.metadata! as InterfaceMeta
+    const methods = (meta.methods ??= {})
 
-        if (!desc) {
-            return emitFn as any
-        } else {
-            const og: (...args: unknown[]) => unknown = desc.value
-            desc.value = function (...args: unknown[]) {
-                const ret = og.apply(this, args)
-                emitFn.value.apply(this, args)
-                return ret
-            }
-        }
+    if (typeof name !== "string") {
+        throw Error("only string named methods are allowed")
     }
+
+    const [inArgs, outArgs = []] = (Array.isArray(args[0]) ? args : [args]) as [Args, Args]
+
+    methods[name] = [
+        ...inArgs.map((arg) => ({
+            direction: "in" as const,
+            ...(typeof arg === "string" ? { type: arg } : arg),
+        })),
+        ...outArgs.map((arg) => ({
+            direction: "out" as const,
+            ...(typeof arg === "string" ? { type: arg } : arg),
+        })),
+    ]
+
+    return name
 }
 
-export function property(type: Property["type"], access: Property["access"] = "readwrite") {
-    return function (target: any, name: string, desc?: PropertyDescriptor) {
-        target.constructor[meta] ??= {}
+function installProperty<T extends string>(
+    type: T,
+    ctx: ClassFieldDecoratorContext | ClassGetterDecoratorContext | ClassSetterDecoratorContext,
+) {
+    const kind = ctx.kind
+    const name = ctx.name
+    const meta = ctx.metadata! as InterfaceMeta
+    const properties = (meta.properties ??= {})
 
-        const metadata = target.constructor[meta] as InterfaceMetadata
-        metadata.properties ??= []
-
-        if (!desc) {
-            const desc: PropertyDescriptor & ThisType<InterfaceInstance> = {
-                ...((access === "read" || access === "readwrite") && {
-                    get() {
-                        return this[priv]?.[name]
-                    },
-                }),
-                ...((access === "write" || access === "readwrite") && {
-                    set(v: unknown) {
-                        if (v !== this[priv]?.[name]) {
-                            this[priv] ??= {}
-                            this[priv][name] = v
-                            this.dbusObject?.emit_property_changed(name, new GLib.Variant(type, v))
-                        }
-                    },
-                }),
-            }
-
-            metadata.properties.push({ name, type, access })
-            return desc as any
-        } else {
-            if (desc.get && desc.set) access = "readwrite"
-            if (desc.get && !desc.set) access = "read"
-            if (!desc.get && desc.set) access = "write"
-            metadata.properties.push({ name, type, access })
-        }
+    if (typeof name !== "string") {
+        throw Error("only string named properties are allowed")
     }
-}
 
-type ServiceProps = {
-    busType: Gio.BusType
-    name: string
-    path: string
-    flags: Gio.BusNameOwnerFlags
-    onBusAcquired: (conn: Gio.DBusConnection) => void
-    onNameAcquired: (conn: Gio.DBusConnection) => void
-    onNameLost: (conn: Gio.DBusConnection) => void
-}
+    const read = kind === "field" || kind === "getter"
+    const write = kind === "field" || kind === "setter"
 
-export type Service<T> = T & {
-    dbusObject: Gio.DBusExportedObject
-    unown(): void
-}
-
-export function serve<T extends InterfaceConstructor>(
-    iface: T,
-    props: Partial<ServiceProps> = {},
-): Service<InstanceType<T>> {
-    const info = iface[nodeXml]
-    if (!info) throw Error(`${iface} not an interface`)
-
-    const instance = new iface()
-    const dbusObject = Gio.DBusExportedObject.wrapJSObject(info, instance)
-
-    const {
-        busType = Gio.BusType.SESSION,
-        name = iface[meta]!.name,
-        path = "/" + name.split(".").join("/"),
-        flags = Gio.BusNameOwnerFlags.NONE,
-    } = props
-
-    const id = Gio.bus_own_name(
-        busType,
-        name,
-        flags,
-        (conn: Gio.DBusConnection) => {
-            dbusObject.export(conn, path)
-            props.onNameAcquired?.(conn)
-        },
-        props.onNameAcquired ?? null,
-        props.onNameLost ?? null,
-    )
-
-    return Object.assign(instance, {
-        dbusObject,
-        unown: () => {
-            Gio.bus_unown_name(id)
-        },
-    })
-}
-
-export function serveAsync<T extends InterfaceConstructor>(
-    iface: T,
-    props: Partial<ServiceProps & { timeout: number }> = {},
-): Promise<Service<InstanceType<T>>> {
-    return new Promise((resolve, reject) => {
-        const { timeout = 10_000, ...rest } = props
-
-        const source =
-            timeout > 0
-                ? setTimeout(() => {
-                      reject(Error(`serveAsync timed out`))
-                  }, timeout)
-                : null
-
-        try {
-            const instance = serve(iface, {
-                ...rest,
-                onNameAcquired: (conn) => {
-                    if (source) clearTimeout(source)
-                    resolve(instance)
-                    rest.onNameAcquired?.(conn)
-                },
-            })
-        } catch (error) {
-            reject(error)
-        } finally {
-            if (source) clearTimeout(source)
-        }
-    })
-}
-
-type ProxyProps = {
-    connection: Gio.DBusConnection
-    name: string
-    path: string
-}
-
-type AsyncProxyProps = ProxyProps & {
-    flags: Gio.DBusProxyFlags
-    timeout: number
-}
-
-export type Proxy<T> = T & Gio.DBusProxy
-
-export function proxy<T extends InterfaceConstructor>(
-    iface: T,
-    props: Partial<ProxyProps> = {},
-): Proxy<InstanceType<T>> {
-    const info = iface[nodeXml]
-    if (!info) throw Error(`${iface} is not an interface`)
-
-    const {
-        connection = Gio.DBus.session,
-        name = iface[meta]?.name || "",
-        path = "/" + name.split(".").join("/"),
-    } = props
-
-    const Proxy = Gio.DBusProxy.makeProxyWrapper(info)
-    return Proxy(connection, name, path) as Proxy<InstanceType<T>>
-}
-
-export function proxyAsync<T extends InterfaceConstructor>(
-    iface: T,
-    props: Partial<AsyncProxyProps> = {},
-): Promise<Proxy<InstanceType<T>>> {
-    return new Promise((resolve, reject) => {
-        const info = iface[nodeXml]
-        if (!info) reject(Error(`${iface} is not an interface`))
-
-        const {
-            connection = Gio.DBus.session,
-            name = iface[meta]?.name || "",
-            path = "/" + name.split(".").join("/"),
-            timeout = 10_000,
-            flags = Gio.DBusProxyFlags.NONE,
-        } = props
-
-        const source =
-            timeout > 0
-                ? setTimeout(() => {
-                      reject(Error(`serveAsync timed out`))
-                  }, timeout)
-                : null
-
-        const Proxy = Gio.DBusProxy.makeProxyWrapper(info)
-
-        Proxy(
-            connection,
+    if (name in properties) {
+        if (write) properties[name].write = true
+        if (read) properties[name].read = true
+    } else {
+        properties[name] = {
             name,
-            path,
-            (proxy, error) => {
-                if (source) clearTimeout(source)
-                if (error !== null) reject(error)
-                resolve(proxy as Proxy<InstanceType<T>>)
-            },
-            null,
-            flags,
-        )
-    })
+            type,
+            ...(read && { read }),
+            ...(write && { write }),
+        }
+    }
+
+    return name
 }
+
+function installSignal<Params extends Array<DBusType>>(
+    params: Params,
+    ctx: ClassMethodDecoratorContext<Service>,
+) {
+    const name = ctx.name
+    const meta = ctx.metadata! as InterfaceMeta
+    const signals = (meta.signals ??= {})
+
+    if (typeof name === "symbol") {
+        throw Error("symbols are not valid signals")
+    }
+
+    signals[name] = params.map((arg) => (typeof arg === "string" ? { type: arg } : arg))
+
+    return name
+}
+
+/**
+ * Registers a method.
+ * You should prefer using {@link methodAsync} when proxying, due to IO blocking.
+ * Note that this is functionally the same as {@link methodAsync} on exported objects.
+ * ```
+ */
+export function method<const InArgs extends Array<DBusType>, const OutArgs extends Array<DBusType>>(
+    inArgs: InArgs,
+    outArgs: OutArgs,
+): (
+    method: (this: Service, ...args: InferVariantTypes<InArgs>) => InferVariantTypes<OutArgs>,
+    ctx: ClassMethodDecoratorContext<Service, typeof method>,
+) => void
+
+/**
+ * Registers a method.
+ * You should prefer using {@link methodAsync} when proxying, due to IO blocking.
+ * Note that this is functionally the same as {@link methodAsync} on exported objects.
+ * ```
+ */
+export function method<const InArgs extends Array<DBusType>>(
+    ...inArgs: InArgs
+): (
+    method: (this: Service, ...args: InferVariantTypes<InArgs>) => void,
+    ctx: ClassMethodDecoratorContext<Service, typeof method>,
+) => void
+
+export function method<const InArgs extends Array<DBusType>, const OutArgs extends Array<DBusType>>(
+    ...args: InArgs | [inArgs: InArgs, outArgs?: OutArgs]
+) {
+    return function (
+        method: (
+            this: Service,
+            ...args: InferVariantTypes<InArgs>
+        ) => InferVariantTypes<OutArgs> | void,
+        ctx: ClassMethodDecoratorContext<Service, typeof method>,
+    ): typeof method {
+        const name = installMethod(args, method, ctx)
+
+        return function (...args: InferVariantTypes<InArgs>) {
+            if (this[internals].proxy) {
+                const value = this[remoteMethod](name, args)
+                return value.deepUnpack<InferVariantTypes<OutArgs>>()
+            } else {
+                return method.apply(this, args)
+            }
+        }
+    }
+}
+
+/**
+ * Registers a method.
+ * You should prefer using this over {@link method} when proxying, since this does not block IO.
+ * Note that this is functionally the same as {@link method} on exported objects.
+ * ```
+ */
+export function methodAsync<
+    const InArgs extends Array<DBusType>,
+    const OutArgs extends Array<DBusType>,
+>(
+    inArgs: InArgs,
+    outArgs: OutArgs,
+): (
+    method: (
+        this: Service,
+        ...args: InferVariantTypes<InArgs>
+    ) => Promise<InferVariantTypes<OutArgs>>,
+    ctx: ClassMethodDecoratorContext<Service, typeof method>,
+) => void
+
+/**
+ * Registers a method.
+ * You should prefer using this over {@link method} when proxying, since this does not block IO.
+ * Note that this is functionally the same as {@link method} on exported objects.
+ * ```
+ */
+export function methodAsync<const InArgs extends Array<DBusType>>(
+    ...inArgs: InArgs
+): (
+    method: (this: Service, ...args: InferVariantTypes<InArgs>) => Promise<void>,
+    ctx: ClassMethodDecoratorContext<Service, typeof method>,
+) => void
+
+export function methodAsync<
+    const InArgs extends Array<DBusType>,
+    const OutArgs extends Array<DBusType>,
+>(...args: InArgs | [inArgs: InArgs, outArgs?: OutArgs]) {
+    return function (
+        method: (
+            this: Service,
+            ...args: InferVariantTypes<InArgs>
+        ) => Promise<InferVariantTypes<OutArgs> | void>,
+        ctx: ClassMethodDecoratorContext<Service, typeof method>,
+    ): typeof method {
+        const name = installMethod(args, method, ctx)
+
+        return async function (...args: InferVariantTypes<InArgs>) {
+            if (this[internals].proxy) {
+                const value = await this[remoteMethodAsync](name, args)
+                return value.deepUnpack<InferVariantTypes<OutArgs>>()
+            } else {
+                return method.apply(this, args)
+            }
+        }
+    }
+}
+
+/**
+ * Registers a read-write property. When a new value is assigned the notify signal
+ * is automatically emitted on the local and exported object.
+ *
+ * Note that new values are checked by reference so assigning the same object will
+ * not emit the notify signal.
+ * ```
+ */
+export function property<T extends string>(type: T) {
+    return function (
+        _: void,
+        ctx: ClassFieldDecoratorContext<Service, InferVariantType<T>>,
+    ): (this: Service, init: InferVariantType<T>) => InferVariantType<T> {
+        const name = installProperty(type, ctx)
+
+        ctx.addInitializer(function () {
+            getterWorkaround(this, name as Extract<keyof Service, string>)
+
+            Object.defineProperty(this, name, {
+                configurable: false,
+                enumerable: true,
+                set(value: InferVariantType<T>) {
+                    const { proxy, priv } = this[internals]
+
+                    if (proxy) {
+                        this[remotePropertySet](name, value)
+                        return
+                    }
+
+                    if (priv[name] !== value) {
+                        priv[name] = value
+                        this.notify(name as Extract<keyof Service, string>)
+                    }
+                },
+                get(): InferVariantType<T> {
+                    const { proxy, priv } = this[internals]
+
+                    return proxy
+                        ? proxy.get_cached_property(name)!.deepUnpack<InferVariantType<T>>()
+                        : (priv[name] as InferVariantType<T>)
+                },
+            } satisfies ThisType<Service>)
+        })
+
+        return function (init) {
+            const priv = this[internals].priv
+            priv[name] = init
+            // we don't need to store the value on the object
+            return void 0 as unknown as InferVariantType<T>
+        }
+    }
+}
+
+/**
+ * Registers a read-only property. Can be used in conjuction with {@link setter} to define
+ * read-write properties as accessors.
+ *
+ * Note that you will need to explicitly emit the notify signal.
+ */
+export function getter<T extends string>(type: T) {
+    return function (
+        getter: (this: Service) => InferVariantType<T>,
+        ctx: ClassGetterDecoratorContext<Service, InferVariantType<T>>,
+    ): (this: Service) => InferVariantType<T> {
+        const name = installProperty(type, ctx)
+
+        ctx.addInitializer(function () {
+            getterWorkaround(this, name as Extract<keyof Service, string>)
+        })
+
+        return function () {
+            const { proxy } = this[internals]
+            return proxy
+                ? proxy.get_cached_property(name)!.deepUnpack<InferVariantType<T>>()
+                : getter.call(this)
+        }
+    }
+}
+
+/**
+ * Registers a write-only property. Can be used in conjuction with {@link getter} to define
+ * read-write properties as accessors.
+ *
+ * Note that you will need to explicitly emit the notify signal.
+ */
+export function setter<T extends string>(type: T) {
+    return function (
+        setter: (this: Service, value: InferVariantType<T>) => void,
+        ctx: ClassSetterDecoratorContext<Service, InferVariantType<T>>,
+    ): (this: Service, value: InferVariantType<T>) => void {
+        const name = installProperty(type, ctx)
+
+        return function (value: InferVariantType<T>) {
+            const { proxy } = this[internals]
+
+            if (proxy) {
+                this[remotePropertySet](name, value)
+            } else {
+                setter.call(this, value)
+            }
+        }
+    }
+}
+
+/**
+ * Registers a signal which when invoked will emit the signal
+ * on the local object and the exported object.
+ *
+ * Note that its not possible to emit signals on remote objects through proxies.
+ */
+export function signal<const Params extends Array<DBusType>>(...params: Params) {
+    return function (
+        method: (this: Service, ...params: InferVariantTypes<Params>) => void,
+        ctx: ClassMethodDecoratorContext<Service, typeof method>,
+    ): typeof method {
+        const name = installSignal(params, ctx)
+
+        return function (...params: InferVariantTypes<Params>) {
+            if (this[internals].proxy) {
+                console.warn(`cannot emit signal "${name}" on remote object`)
+            }
+
+            if (this[internals].dbusObject || !this[internals].proxy) {
+                method.apply(this, params)
+            }
+
+            return this.emit(name, ...params)
+        }
+    }
+}
+
+// HACK: how do I augment it globally?
+class GLibVariant<T extends string = any> extends GLib.Variant<T> {
+    static new<T extends string>(signature: T, value: InferVariantType<T>): GLib.Variant<T> {
+        return GLib.Variant.new(signature, value)
+    }
+
+    constructor(signature: T, value: InferVariantType<T>) {
+        super(signature, value)
+    }
+
+    deepUnpack<V = InferVariantType<T>>(): V {
+        return super.deepUnpack()
+    }
+
+    deep_unpack<V = InferVariantType<T>>(): V {
+        return super.deepUnpack()
+    }
+}
+
+export const Variant = GLib.Variant as typeof GLibVariant
+export type Variant<T extends string = any> = GLibVariant<T>
+
+// FIXME: should be augmented globally
+// declare module "gi://GLib?version=2.0" {
+//     export namespace GLib {
+//         export interface Variant<T extends string = string> {
+//             deepUnpack<V = InferVariantType<T>>(): V
+//             deep_unpack<V = InferVariantType<T>>(): V
+//         }
+//     }
+// }

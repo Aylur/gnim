@@ -2,8 +2,8 @@
 
 Convenience libraries for GNOME JavaScript (GJS).
 
-If you are not already familiar with GJS and GObject,
-you should read [gjs.guide](https://gjs.guide/) first.
+If you are not already familiar with GJS and GObject, you should read
+[gjs.guide](https://gjs.guide/) first.
 
 This library provides:
 
@@ -15,7 +15,7 @@ This library provides:
 
 - [icon-theme-browser](https://github.com/Aylur/icon-theme-browser)
 
-## Planned Features
+## TODO
 
-- upgrade to use stage 3 decorators
-- dbus decorators with async method support
+- [ ] gtk4 template
+- [ ] extension template

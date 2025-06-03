@@ -320,7 +320,7 @@ export class Response {
         this.ok = this.status >= 200 && this.status < 300
     }
 
-    async blob(): Promise<Blob> {
+    async blob(): Promise<never> {
         throw Error("Not implemented")
     }
 
@@ -349,7 +349,7 @@ export class Response {
         return outputStream.steal_as_bytes()
     }
 
-    async formData(): Promise<FormData> {
+    async formData(): Promise<never> {
         throw Error("Not yet implemented")
     }
 

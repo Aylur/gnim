@@ -2,15 +2,16 @@
 
 Convenience libraries for GNOME JavaScript (GJS).
 
-If you are not already familiar with GJS and GObject,
-you should read [gjs.guide](https://gjs.guide/) first.
+If you are not already familiar with GJS and GObject, you should read
+[gjs.guide](https://gjs.guide/) first.
 
 This library provides:
 
 - [GObject decorators](https://aylur.github.io/gjsx/gobject) for subclassing
-- state and binding utilities
+- [State and Binding](https://aylur.github.io/gjsx/state) utilities
 - [JSX](https://aylur.github.io/gjsx/jsx) for both Gtk and Gnome extensions
-- [DBus decorators](https://aylur.github.io/gjsx/dbus) for implementing services and proxies
+- [DBus decorators](https://aylur.github.io/gjsx/dbus) for implementing services
+  and proxies
 
 ## Example apps using Gjsx
 

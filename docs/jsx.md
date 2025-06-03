@@ -1,13 +1,11 @@
 # JSX
 
 Syntactic sugar for creating objects declaratively.
-In GJS building UIs connecting signals,
-binding properties between objects is done mostly imperatively.
 
 > [!WARNING]
-> This is not React.js
-> This works nothing like React.js and has nothing in common with React.js
-> other than the XML syntax.
+>
+> This is not React.js This works nothing like React.js and has nothing in
+> common with React.js other than the XML syntax.
 
 Consider the following example:
 
@@ -49,10 +47,10 @@ function Box() {
 ## JSX expressions and `jsx` function
 
 A JSX expression transpiles to a `jsx` function call. A JSX expression's type
-however is **always** the base `GObject.Object` type while the `jsx` return
-type is the instance type of the class or the return type of the function you
-pass to it. If you need the actual type of an object either use the `jsx`
-function directly or type assert the JSX expression.
+however is **always** the base `GObject.Object` type while the `jsx` return type
+is the instance type of the class or the return type of the function you pass to
+it. If you need the actual type of an object either use the `jsx` function
+directly or type assert the JSX expression.
 
 ```tsx
 import { jsx } from "gjsx/gtk4"
@@ -69,11 +67,11 @@ menubutton.popover = jsx(MyPopover, {}) // works as expected
 
 ## Class components
 
-When defining custom components choosing between
-using classes vs functions is mostly down to preference.
-There are cases when one or the other is more convenient to use, but you are
-mostly be using class components that come from libraries such as Gtk and you
-will be defining function components for custom components.
+When defining custom components choosing between using classes vs functions is
+mostly down to preference. There are cases when one or the other is more
+convenient to use, but you are mostly be using class components that come from
+libraries such as Gtk and you will be defining function components for custom
+components.
 
 Using classes in JSX expressions let's you define some additional properties.
 
@@ -84,8 +82,10 @@ are passed in. In cases where you need to use a static constructor function
 instead you can define it with `_constructor`.
 
 > [!WARNING]
+>
 > Initial values this way can not be passed to the constructor and are set
-> **after**. This means construct only properties like `css-name` can not be set.
+> **after**. This means construct only properties like `css-name` can not be
+> set.
 
 ```tsx
 <Gtk.DropDown
@@ -99,8 +99,7 @@ Under the hood the `jsx` function uses the
 [Gtk.Buildable](https://docs.gtk.org/gtk4/iface.Buildable.html) interface which
 lets you define a type string to specify the type of `child` it is meant to be.
 
-> [!NOTE]
-> When using Gjsx with Gnome extensions, this has no effect.
+> [!NOTE] When using Gjsx with Gnome extensions, this has no effect.
 
 ```tsx
 <Gtk.CenterBox>
@@ -112,12 +111,14 @@ lets you define a type string to specify the type of `child` it is meant to be.
 
 ### Signal handlers
 
-Signal handlers can be defined with a `$` prefix and `notify::` signal
-handlers can be defined with a `$$` prefix.
+Signal handlers can be defined with a `$` prefix and `notify::` signal handlers
+can be defined with a `$$` prefix.
 
 > [!NOTE]
+>
 > Passed arguments by signals are not typed because of TypeScript limitations.
-> Both properties and signals can be in either `camelCase`, `kebab-case` or `snake_case`.
+> Both properties and signals can be in either `camelCase`, `kebab-case` or
+> `snake_case`.
 
 ```tsx
 <Gtk.Revealer
@@ -128,15 +129,16 @@ handlers can be defined with a `$$` prefix.
 
 ### Setup function
 
-It is possible to define an arbitrary function to do something with the
-instance imperatively. It is run **after** properties are set, signals are
-connected and children are appended and **before** the `jsx` function returns.
+It is possible to define an arbitrary function to do something with the instance
+imperatively. It is run **after** properties are set, signals are connected and
+children are appended and **before** the `jsx` function returns.
 
 ```tsx
 <Gtk.Stack $={(self) => print(self, "is about to be returned")} />
 ```
 
-Most common usecase is to acquire a reference to the widget in the scope of the function.
+Most common use case is to acquire a reference to the widget in the scope of the
+function.
 
 ```tsx
 function MyWidget() {
@@ -147,6 +149,26 @@ function MyWidget() {
     }
 
     return <Gtk.Box $={(self) => (box = self)} />
+}
+```
+
+Another common use case is to initialize relations between widgets in the tree.
+
+```tsx
+function MyWidget() {
+    let searchbar: Gtk.SearchBar
+
+    function init(win: Gtk.Window) {
+        searchbar.set_key_capture_widget(win)
+    }
+
+    return (
+        <Gtk.Window $={init}>
+            <Gtk.SearchBar $={(self) => (searchbar = self)}>
+                <Gtk.SearchEntry />
+            </Gtk.SearchBar>
+        </Gtk.Window>
+    )
 }
 ```
 
@@ -168,10 +190,12 @@ return (
 
 ### How children are passed to class components
 
-Class components can only take `GObject.Object` instances as children.
-They are set through the [`Gtk.Buildable.add_child`](https://docs.gtk.org/gtk4/iface.Buildable.html).
+Class components can only take `GObject.Object` instances as children. They are
+set through the
+[`Gtk.Buildable.add_child`](https://docs.gtk.org/gtk4/iface.Buildable.html).
 
 > [!NOTE]
+>
 > In Gnome extensions they are set with `Clutter.Actor.add_child`
 
 ```ts
@@ -213,12 +237,14 @@ function MyComponent(props: FCProps<Gtk.Button, {}>) {
 return <MyComponent $={(self) => print(self, "is a Button")} />
 ```
 
-> [!NOTE] > `FCProps` is required for TypeScript to be aware of the `$` function.
+> [!NOTE]
+>
+> `FCProps` is required for TypeScript to be aware of the `$` function.
 
 ### How children are passed to function components
 
-They are passed in as `children` property. They can be of any type
-and is statically checked by TypeScript.
+They are passed in as `children` property. They can be of any type and is
+statically checked by TypeScript.
 
 ```tsx
 interface MyButtonProps {
@@ -263,8 +289,8 @@ return (
 
 ### Everything has to be handled explicitly in function components
 
-There is no builtin way to define signal handlers or bindings automatically
-with function components, they have to be explicitly declared and handled.
+There is no builtin way to define signal handlers or bindings automatically with
+function components, they have to be explicitly declared and handled.
 
 ```tsx
 interface MyWidgetProps {
@@ -299,21 +325,23 @@ return (
 ```
 
 > [!TIP]
+>
 > In a lot of cases it is better to always render the component and set its
 > `visible` property instead because `<With>` will destroy/recreate the widget
 > each time the passed `value` changes.
 
 > [!WARNING]
-> When the value changes and the widget is re-rendered the previous one is removed
-> from the parent component and the new one is **appended**. Order of widgets are
-> not kept so make sure to wrap `<With>` in a container to avoid this.
+>
+> When the value changes and the widget is re-rendered the previous one is
+> removed from the parent component and the new one is **appended**. Order of
+> widgets are not kept so make sure to wrap `<With>` in a container to avoid
+> this.
 
 ### List rendering
 
-The `<For>` component let's you render based on an array dynamically.
-Each time the array changes it is compared with its previous state.
-Widgets for new items are inserted while widgets associated with removed items
-are removed.
+The `<For>` component let's you render based on an array dynamically. Each time
+the array changes it is compared with its previous state. Widgets for new items
+are inserted while widgets associated with removed items are removed.
 
 ```tsx
 import { For } from "gjsx/gtk4"
@@ -330,16 +358,17 @@ return (
 ```
 
 > [!WARNING]
-> Similarly to `<With>`, when the list changes and a new item
-> is added it is simply **appended** to the parent. Order of widgets
-> are not kept so make sure to wrap `<For>` in a container to avoid this.
+>
+> Similarly to `<With>`, when the list changes and a new item is added it is
+> simply **appended** to the parent. Order of widgets are not kept so make sure
+> to wrap `<For>` in a container to avoid this.
 
 ### Fragments
 
 Both `<When>` and `<For>` are `Fragment`s. A `Fragment` is a collection of
 children. Whenever the children array changes it is reflected on the parent
-widget the `Fragment` was assigned to. When implementing custom widgets
-you need to take into consideration the API being used for child insertion and removing.
+widget the `Fragment` was assigned to. When implementing custom widgets you need
+to take into consideration the API being used for child insertion and removing.
 
 - Both Gtk3 and Gtk4 uses the `Gtk.Buildable` interface to append children.
 - Gtk3 uses the `Gtk.Container` interface to remove children.
@@ -348,11 +377,12 @@ you need to take into consideration the API being used for child insertion and r
 
 ## Intrinsic Elements
 
-Intrinsic elements are globally available components which in
-web frameworks are usually HTMLElements such as `<div>` `<span>` `<p>`.
-There are no intrinsic elements by default, but they can be set.
+Intrinsic elements are globally available components which in web frameworks are
+usually HTMLElements such as `<div>` `<span>` `<p>`. There are no intrinsic
+elements by default, but they can be set.
 
 > [!TIP]
+>
 > It should always be preferred to just export/import components.
 
 - Function components
