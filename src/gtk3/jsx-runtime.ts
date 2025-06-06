@@ -2,7 +2,7 @@ import Gtk from "gi://Gtk?version=3.0"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
 import { getType } from "../jsx/index.js"
-import { Binding } from "../state.js"
+import { Accessor, hook } from "../state.js"
 import { configue } from "../jsx/env.js"
 
 const dummyBuilder = new Gtk.Builder()
@@ -87,8 +87,8 @@ export const { addChild, intrinsicElements } = configue({
             ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
         }
 
-        if (css instanceof Binding) {
-            css.subscribe(object, setter)
+        if (css instanceof Accessor) {
+            hook(object, css, () => setter(css.get()))
             setter(css.get())
         } else {
             setter(css)
@@ -110,8 +110,8 @@ export const { addChild, intrinsicElements } = configue({
             }
         }
 
-        if (className instanceof Binding) {
-            className.subscribe(object, setter)
+        if (className instanceof Accessor) {
+            hook(object, className, () => setter(className.get()))
             setter(className.get())
         } else {
             setter(className)

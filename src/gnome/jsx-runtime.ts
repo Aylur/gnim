@@ -3,7 +3,7 @@ import St from "gi://St"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
 import { configue } from "../jsx/env.js"
-import { Binding, sync } from "../state.js"
+import { Accessor, sync } from "../state.js"
 
 function add(parent: GObject.Object, child: GObject.Object, _: number) {
     if (parent instanceof Clutter.Actor) {
@@ -41,7 +41,7 @@ export const { addChild, intrinsicElements } = configue({
             return console.warn(Error(`cannot set css on ${object}`))
         }
 
-        if (css instanceof Binding) {
+        if (css instanceof Accessor) {
             sync(object, "style", css)
         } else {
             object.set_style(css)
@@ -52,7 +52,7 @@ export const { addChild, intrinsicElements } = configue({
             return console.warn(Error(`cannot set className on ${object}`))
         }
 
-        if (className instanceof Binding) {
+        if (className instanceof Accessor) {
             sync(object, "style_class", className)
         } else {
             object.set_style_class_name(className)

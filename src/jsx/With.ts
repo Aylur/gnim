@@ -1,5 +1,5 @@
 import Fragment from "./Fragment.js"
-import { Binding } from "../state.js"
+import { Accessor, hook } from "../state.js"
 import { env } from "./env.js"
 import { Scope } from "./context.js"
 
@@ -11,7 +11,7 @@ import type Clutter from "gi://Clutter"
 import type Gtk from "gi://Gtk?version=3.0"
 
 interface WithProps<T, E extends JSX.Element> {
-    value: Binding<T>
+    value: Accessor<T>
     children: (value: T) => E | "" | false | null | undefined
 
     /**
@@ -50,7 +50,7 @@ export default function With<T, E extends JSX.Element>({
         }
     }
 
-    value.subscribe(fragment, callback)
+    hook(fragment, value, () => callback(value.get()))
     callback(value.get())
 
     return fragment

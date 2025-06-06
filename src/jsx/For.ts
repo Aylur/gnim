@@ -1,5 +1,5 @@
 import Fragment from "./Fragment.js"
-import { Binding, State } from "../state.js"
+import { Accessor, hook, State } from "../state.js"
 import { env } from "./env.js"
 import { Scope } from "./context.js"
 
@@ -11,8 +11,8 @@ import type Clutter from "gi://Clutter"
 import type Gtk from "gi://Gtk?version=3.0"
 
 interface ForProps<Item, El extends JSX.Element, Key> {
-    each: Binding<Array<Item>>
-    children: (item: Item, index: Binding<number>) => El
+    each: Accessor<Iterable<Item>>
+    children: (item: Item, index: Accessor<number>) => El
 
     /**
      * Function to run for each removed element.
@@ -46,7 +46,8 @@ export default function For<Item, El extends JSX.Element, Key>({
     const fragment = new Fragment<El>()
     const scope = Scope.current
 
-    function callback(items: Item[]) {
+    function callback(itareable: Iterable<Item>) {
+        const items = [...itareable]
         const ids = items.map(id)
         const idSet = new Set(ids)
 
@@ -79,15 +80,16 @@ export default function For<Item, El extends JSX.Element, Key>({
                 }
             } else {
                 const index = new State(i)
-                const child = Scope.with(() => mkChild(item, index()), scope)
+                const indexAccess = new Accessor(index.get.bind(index), index.subscribe.bind(index))
+                const child = Scope.with(() => mkChild(item, indexAccess), scope)
                 map.set(key, { item, child, index })
                 fragment.addChild(child)
             }
         })
     }
 
-    if (each instanceof Binding) {
-        each.subscribe(fragment, callback)
+    if (each instanceof Accessor) {
+        hook(fragment, each, () => callback(each.get()))
         callback(each.get())
     }
 

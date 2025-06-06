@@ -1,11 +1,11 @@
 import type GObject from "gi://GObject"
-import { type Binding } from "../state.js"
+import { type Accessor } from "../state.js"
 
 type GObj = GObject.Object
 export type CC<T extends GObj = GObj> = { new (props: any): T }
 export type FC<T extends GObj = GObj> = (props: any) => T
 
-type CssSetter = (object: GObj, css: string | Binding<string>) => void
+type CssSetter = (object: GObj, css: string | Accessor<string>) => void
 type ChildFn = (parent: GObj, child: GObj | number | string, index?: number) => void
 
 export function configue(conf: JsxEnv) {

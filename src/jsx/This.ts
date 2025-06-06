@@ -1,6 +1,6 @@
 import GObject from "gi://GObject"
 import { env } from "./env.js"
-import { Binding, sync } from "../state.js"
+import { Accessor, hook, sync } from "../state.js"
 import { kebabify } from "../util.js"
 
 type Element = JSX.Element | "" | false | null | undefined
@@ -11,13 +11,13 @@ type ThisProps<Self extends GObject.Object> = {
     /**
      * CSS class names
      */
-    class?: string | Binding<string>
+    class?: string | Accessor<string>
     /**
      * inline CSS
      */
-    css?: string | Binding<string>
+    css?: string | Accessor<string>
 } & {
-    [K in keyof Self]?: Self[K] | Binding<NonNullable<Self[K]>>
+    [K in keyof Self]?: Self[K] | Accessor<NonNullable<Self[K]>>
 } & {
     [Key in `$${string}`]: (self: Self, ...args: any[]) => any
 }
@@ -30,15 +30,15 @@ export default function This<T extends GObject.Object>({
 }: ThisProps<T>) {
     for (const [key, value] of Object.entries(props)) {
         if (key === "css") {
-            if (value instanceof Binding) {
-                value.subscribe(self, (css) => env.setCss(self, css))
+            if (value instanceof Accessor) {
+                hook(self, value, () => env.setCss(self, value.get()))
                 env.setCss(self, value.get())
             } else if (typeof value === "string") {
                 env.setCss(self, value)
             }
         } else if (key === "class") {
-            if (value instanceof Binding) {
-                value.subscribe(self, (classes) => env.setClass(self, classes))
+            if (value instanceof Accessor) {
+                hook(self, value, () => env.setClass(self, value.get()))
                 env.setClass(self, value.get())
             } else if (typeof value === "string") {
                 env.setClass(self, value)
@@ -49,7 +49,7 @@ export default function This<T extends GObject.Object>({
             } else {
                 self.connect(kebabify(key.slice(1)), value)
             }
-        } else if (value instanceof Binding) {
+        } else if (value instanceof Accessor) {
             sync(self, key as Extract<keyof T, string>, value)
         } else {
             self[key as keyof T] = value

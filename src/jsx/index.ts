@@ -1,6 +1,6 @@
 import GObject from "gi://GObject"
 import Fragment from "./Fragment.js"
-import { Binding, sync } from "../state.js"
+import { Accessor, sync } from "../state.js"
 import { CC, FC, env } from "./env.js"
 import { kebabify } from "../util.js"
 
@@ -64,15 +64,15 @@ export type CCProps<Self, Props> = {
     /**
      * CSS class names
      */
-    class?: string | Binding<string>
+    class?: string | Accessor<string>
     /**
      * inline CSS
      */
-    css?: string | Binding<string>
+    css?: string | Accessor<string>
 } & {
     [Key in `$${string}`]: (self: Self, ...args: any[]) => any
 } & {
-    [K in keyof Props]?: Binding<NonNullable<Props[K]>> | Props[K]
+    [K in keyof Props]?: Accessor<NonNullable<Props[K]>> | Props[K]
 }
 
 // prettier-ignore
@@ -147,7 +147,7 @@ export function jsx<T extends GObject.Object>(
     delete props.class
 
     const signals: Array<[string, (...props: unknown[]) => unknown]> = []
-    const bindings: Array<[string, Binding<unknown>]> = []
+    const bindings: Array<[string, Accessor<unknown>]> = []
 
     // collect signals and bindings
     for (const [key, value] of Object.entries(props)) {
@@ -155,7 +155,7 @@ export function jsx<T extends GObject.Object>(
             signals.push([key.slice(1), value as () => unknown])
             delete props[key]
         }
-        if (value instanceof Binding) {
+        if (value instanceof Accessor) {
             bindings.push([key, value])
             props[key] = value.get()
         }
@@ -190,7 +190,7 @@ export function jsx<T extends GObject.Object>(
 
     // handle bindings
     for (const [prop, binding] of bindings) {
-        sync(object, prop as Extract<keyof T, string>, binding as Binding<T[keyof T]>)
+        sync(object, prop as Extract<keyof T, string>, binding as Accessor<T[keyof T]>)
     }
 
     return setup(object, $, _, env.initObject)

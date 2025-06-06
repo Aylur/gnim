@@ -3,7 +3,7 @@ import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
 import { getType } from "../jsx/index.js"
-import { Binding, sync } from "../state.js"
+import { Accessor, hook, sync } from "../state.js"
 import { configue } from "../jsx/env.js"
 
 const initMarker = Symbol("jsx initObject marker")
@@ -146,8 +146,8 @@ export const { addChild, intrinsicElements } = configue({
             ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
         }
 
-        if (css instanceof Binding) {
-            css.subscribe(object, setter)
+        if (css instanceof Accessor) {
+            hook(object, css, () => setter(css.get()))
             setter(css.get())
         } else {
             setter(css)
@@ -158,11 +158,11 @@ export const { addChild, intrinsicElements } = configue({
             return console.warn(Error(`cannot set className on ${object}`))
         }
 
-        if (className instanceof Binding) {
+        if (className instanceof Accessor) {
             sync(
                 object,
                 "cssClasses",
-                className.as((cn) => cn.split(/\s+/)),
+                className((cn) => cn.split(/\s+/)),
             )
         } else {
             object.set_css_classes(className.split(/\s+/))
