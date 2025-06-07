@@ -1,6 +1,8 @@
 import GObject from "gi://GObject"
 import { registerDestroyableType } from "../gnome/signalTracker.js"
 
+// TODO: Fragment should implement Gio.ListModel
+
 export default class Fragment<T = any> extends GObject.Object {
     static [GObject.signals] = {
         "destroy": {},

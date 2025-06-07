@@ -3,7 +3,8 @@ import St from "gi://St"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
 import { configue } from "../jsx/env.js"
-import { Accessor, sync } from "../state.js"
+import { Accessor } from "../state.js"
+import { onCleanup } from "../jsx/index.js"
 
 function add(parent: GObject.Object, child: GObject.Object, _: number) {
     if (parent instanceof Clutter.Actor) {
@@ -33,16 +34,15 @@ function remove(parent: GObject.Object, child: GObject.Object) {
 }
 
 export const { addChild, intrinsicElements } = configue({
-    intrinsicElements: {},
-    initObject: () => void 0,
-    initProps: (props) => props,
     setCss(object, css) {
         if (!(object instanceof St.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))
         }
 
         if (css instanceof Accessor) {
-            sync(object, "style", css)
+            object.style = css.get()
+            const dispose = css.subscribe(() => (object.style = css.get()))
+            onCleanup(dispose)
         } else {
             object.set_style(css)
         }
@@ -53,7 +53,9 @@ export const { addChild, intrinsicElements } = configue({
         }
 
         if (className instanceof Accessor) {
-            sync(object, "style_class", className)
+            object.styleClass = className.get()
+            const dispose = className.subscribe(() => (object.styleClass = className.get()))
+            onCleanup(dispose)
         } else {
             object.set_style_class_name(className)
         }
@@ -101,12 +103,10 @@ export const { addChild, intrinsicElements } = configue({
     },
     defaultCleanup(object) {
         if (object instanceof Clutter.Actor) {
-            object.run_dispose()
-        } else {
-            console.warn(`cannot cleanup after ${object}`)
+            object.destroy()
         }
     },
 })
 
 export { Fragment }
-export { jsx, jsxs } from "../jsx/index.js"
+export { jsx, jsxs } from "../jsx/jsx.js"

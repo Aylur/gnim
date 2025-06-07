@@ -1,12 +1,10 @@
 import Fragment from "./Fragment.js"
-import { Accessor, hook } from "../state.js"
+import { Accessor } from "../state.js"
 import { env } from "./env.js"
-import { Scope } from "./context.js"
+import { onCleanup, Scope } from "./scope.js"
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type GObject from "gi://GObject"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type Clutter from "gi://Clutter"
+import Clutter from "gi://Clutter"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type Gtk from "gi://Gtk?version=3.0"
 
@@ -18,7 +16,7 @@ interface WithProps<T, E extends JSX.Element> {
      * Function to run for each removed element.
      * The default value depends on the environment:
      *
-     * - **Gtk4**: {@link GObject.Object.prototype.run_dispose}
+     * - **Gtk4**: null
      * - **Gtk3**: {@link Gtk.Widget.prototype.destroy}
      * - **Gnome**: {@link Clutter.Actor.prototype.destroy}
      */
@@ -31,7 +29,8 @@ export default function With<T, E extends JSX.Element>({
     cleanup,
 }: WithProps<T, E>): Fragment<E> {
     const fragment = new Fragment<E>()
-    const scope = Scope.current
+
+    let scope: Scope
 
     function callback(v: T) {
         for (const child of fragment.children) {
@@ -42,16 +41,26 @@ export default function With<T, E extends JSX.Element>({
             } else if (cleanup !== null) {
                 env.defaultCleanup(child)
             }
+
+            if (scope) scope.dispose()
         }
 
-        const ch = Scope.with(() => mkChild(v), scope)
+        scope = new Scope(Scope.current)
+        const ch = scope.run(() => mkChild(v))
         if (ch !== "" && ch !== false && ch !== null && ch !== undefined) {
             fragment.addChild(ch)
         }
     }
 
-    hook(fragment, value, () => callback(value.get()))
+    const dispose = value.subscribe(() => {
+        callback(value.get())
+    })
     callback(value.get())
+
+    onCleanup(() => {
+        scope.dispose()
+        dispose()
+    })
 
     return fragment
 }

@@ -1,8 +1,8 @@
 import Gtk from "gi://Gtk?version=3.0"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
-import { getType } from "../jsx/index.js"
-import { Accessor, hook } from "../state.js"
+import { getType, onCleanup } from "../jsx/index.js"
+import { Accessor } from "../state.js"
 import { configue } from "../jsx/env.js"
 
 const dummyBuilder = new Gtk.Builder()
@@ -64,11 +64,9 @@ function remove(parent: GObject.Object, child: GObject.Object) {
 }
 
 export const { addChild, intrinsicElements } = configue({
-    intrinsicElements: {},
     initProps(props) {
         props.visible ??= true
     },
-    initObject: () => void 0,
     setCss(object, css) {
         if (!(object instanceof Gtk.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))
@@ -88,8 +86,9 @@ export const { addChild, intrinsicElements } = configue({
         }
 
         if (css instanceof Accessor) {
-            hook(object, css, () => setter(css.get()))
             setter(css.get())
+            const dispose = css.subscribe(() => setter(css.get()))
+            onCleanup(dispose)
         } else {
             setter(css)
         }
@@ -111,8 +110,9 @@ export const { addChild, intrinsicElements } = configue({
         }
 
         if (className instanceof Accessor) {
-            hook(object, className, () => setter(className.get()))
             setter(className.get())
+            const dispose = className.subscribe(() => setter(className.get()))
+            onCleanup(dispose)
         } else {
             setter(className)
         }
@@ -164,11 +164,9 @@ export const { addChild, intrinsicElements } = configue({
     defaultCleanup(object) {
         if (object instanceof Gtk.Widget) {
             object.destroy()
-        } else {
-            console.warn(`cannot cleanup after ${object}`)
         }
     },
 })
 
 export { Fragment }
-export { jsx, jsxs } from "../jsx/index.js"
+export { jsx, jsxs } from "../jsx/jsx.js"

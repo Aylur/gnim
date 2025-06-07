@@ -1,10 +1,8 @@
 import Fragment from "./Fragment.js"
-import { Accessor, hook, State } from "../state.js"
+import { Accessor, State } from "../state.js"
 import { env } from "./env.js"
-import { Scope } from "./context.js"
+import { onCleanup, Scope } from "./scope.js"
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type GObject from "gi://GObject"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type Clutter from "gi://Clutter"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -18,7 +16,7 @@ interface ForProps<Item, El extends JSX.Element, Key> {
      * Function to run for each removed element.
      * The default value depends on the environment:
      *
-     * - **Gtk4**: {@link GObject.Object.prototype.run_dispose}
+     * - **Gtk4**: null
      * - **Gtk3**: {@link Gtk.Widget.prototype.destroy}
      * - **Gnome**: {@link Clutter.Actor.prototype.destroy}
      */
@@ -42,9 +40,19 @@ export default function For<Item, El extends JSX.Element, Key>({
     cleanup,
     id = (item: Item) => item,
 }: ForProps<Item, El, Key>): Fragment<El> {
-    const map = new Map<Item | Key, { item: Item; child: El; index: State<number> }>()
+    type MapItem = { item: Item; child: El; index: State<number>; scope: Scope }
+
+    const map = new Map<Item | Key, MapItem>()
     const fragment = new Fragment<El>()
-    const scope = Scope.current
+
+    function remove({ item, child, index, scope }: MapItem) {
+        if (typeof cleanup === "function") {
+            cleanup(child, item, index.get())
+        } else if (cleanup !== null) {
+            env.defaultCleanup(child)
+        }
+        scope.dispose()
+    }
 
     function callback(itareable: Iterable<Item>) {
         const items = [...itareable]
@@ -52,17 +60,13 @@ export default function For<Item, El extends JSX.Element, Key>({
         const idSet = new Set(ids)
 
         // cleanup children missing from arr
-        for (const [key, { item, child, index }] of map.entries()) {
-            // gtk and gnome does not have a generic way to insert child at index
+        for (const [key, value] of map.entries()) {
+            // there is no generic way to insert child at index
             // so we sort by removing every child and reappending in order
-            fragment.removeChild(child)
+            fragment.removeChild(value.child)
 
             if (!idSet.has(key)) {
-                if (typeof cleanup === "function") {
-                    cleanup(child, item, index.get())
-                } else if (cleanup !== null) {
-                    env.defaultCleanup(child)
-                }
+                remove(value)
                 map.delete(key)
             }
         }
@@ -80,18 +84,29 @@ export default function For<Item, El extends JSX.Element, Key>({
                 }
             } else {
                 const index = new State(i)
+                const scope = new Scope(Scope.current)
                 const indexAccess = new Accessor(index.get.bind(index), index.subscribe.bind(index))
-                const child = Scope.with(() => mkChild(item, indexAccess), scope)
-                map.set(key, { item, child, index })
+                const child = scope.run(() => mkChild(item, indexAccess))
+                map.set(key, { item, child, index, scope })
                 fragment.addChild(child)
             }
         })
     }
 
-    if (each instanceof Accessor) {
-        hook(fragment, each, () => callback(each.get()))
+    callback(each.get())
+    const dispose = each.subscribe(() => {
         callback(each.get())
-    }
+    })
+
+    onCleanup(() => {
+        dispose()
+
+        for (const value of map.values()) {
+            remove(value)
+        }
+
+        map.clear()
+    })
 
     return fragment
 }

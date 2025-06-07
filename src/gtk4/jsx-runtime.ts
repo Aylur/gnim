@@ -2,11 +2,10 @@ import Gtk from "gi://Gtk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject"
 import Fragment from "../jsx/Fragment.js"
-import { getType } from "../jsx/index.js"
-import { Accessor, hook, sync } from "../state.js"
+import { getType, onCleanup } from "../jsx/index.js"
+import { Accessor } from "../state.js"
 import { configue } from "../jsx/env.js"
 
-const initMarker = Symbol("jsx initObject marker")
 const dummyBuilder = new Gtk.Builder()
 
 function add(parent: Gtk.Buildable, child: GObject.Object, _: number) {
@@ -87,45 +86,6 @@ function remove(parent: GObject.Object, child: GObject.Object) {
 }
 
 export const { addChild, intrinsicElements } = configue({
-    intrinsicElements: {},
-    initProps: () => void 0,
-    initObject(object) {
-        if (initMarker in object) return
-
-        // HACK: destroy method has been removed in gtk4
-        // but we rely on it for cleanup and binding disconnections
-        // usually this is going to be invoked from <When> and <For>
-        if (object instanceof Gtk.Widget && !(object instanceof Gtk.Window)) {
-            Object.assign(object, { [initMarker]: true })
-
-            let firstParent: Gtk.Widget | null = null
-
-            const onParent = () => {
-                const parent = object.get_parent()
-                if (parent) {
-                    // widget is appended to a parent
-                    if (!firstParent) {
-                        firstParent = parent
-                        const id = parent.connect("destroy", () => {
-                            parent.disconnect(id)
-                            object.run_dispose()
-                            firstParent = null
-                        })
-                        return
-                    }
-                    // widget is appended to a different parent
-                    if (firstParent !== parent) {
-                        throw Error("children cannot be appended to a different parent")
-                    }
-                } else {
-                    // this is usually only ever run when <For> removes children
-                }
-            }
-
-            object.connect("notify::parent", onParent)
-            onParent()
-        }
-    },
     setCss(object, css) {
         if (!(object instanceof Gtk.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))
@@ -147,8 +107,9 @@ export const { addChild, intrinsicElements } = configue({
         }
 
         if (css instanceof Accessor) {
-            hook(object, css, () => setter(css.get()))
             setter(css.get())
+            const dispose = css.subscribe(() => setter(css.get()))
+            onCleanup(dispose)
         } else {
             setter(css)
         }
@@ -159,11 +120,11 @@ export const { addChild, intrinsicElements } = configue({
         }
 
         if (className instanceof Accessor) {
-            sync(
-                object,
-                "cssClasses",
-                className((cn) => cn.split(/\s+/)),
+            object.cssClasses = className.get().split(/\s+/)
+            const dispose = className.subscribe(
+                () => (object.cssClasses = className.get().split(/\s+/)),
             )
+            onCleanup(dispose)
         } else {
             object.set_css_classes(className.split(/\s+/))
         }
@@ -212,14 +173,7 @@ export const { addChild, intrinsicElements } = configue({
 
         throw Error(`cannot add ${child} to ${parent}`)
     },
-    defaultCleanup(object) {
-        if (object instanceof Gtk.Widget) {
-            object.run_dispose()
-        } else {
-            console.warn(`cannot cleanup after ${object}`)
-        }
-    },
 })
 
 export { Fragment }
-export { jsx, jsxs } from "../jsx/index.js"
+export { jsx, jsxs } from "../jsx/jsx.js"
