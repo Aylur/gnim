@@ -7,6 +7,14 @@ export function kebabify(str: string) {
         .toLowerCase()
 }
 
+export type Kebabify<S> = S extends string
+    ? S extends `${infer First}${infer Rest}`
+        ? Rest extends Uncapitalize<Rest>
+            ? `${Lowercase<First>}${Kebabify<Rest>}`
+            : `${Lowercase<First>}-${Kebabify<Rest>}`
+        : S
+    : string
+
 export function snakeify(str: string) {
     return str
         .replace(/([a-z])([A-Z])/g, "$1-$2")

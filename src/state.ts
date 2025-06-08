@@ -6,15 +6,14 @@ type SubscribeCallback = () => void
 type DisposeFunction = () => void
 type SubscrubeFunction = (callback: SubscribeCallback) => DisposeFunction
 
+export type Accessed<T> = T extends Accessor<infer V> ? V : never
+
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class Accessor<T = unknown> extends Function {
     static $gtype = GObject.TYPE_JSOBJECT as unknown as GObject.GType<Accessor>
 
-    static [Symbol.hasInstance](instance: unknown) {
-        return (
-            instance instanceof State || Function.prototype[Symbol.hasInstance].call(this, instance)
-        )
-    }
+    /** @experimental */
+    static evaluating?: Set<Accessor<unknown>>
 
     #get: () => T
     #subscribe: SubscrubeFunction
@@ -38,23 +37,16 @@ export class Accessor<T = unknown> extends Function {
      * @returns The current value.
      */
     get(): T {
+        Accessor.evaluating?.add(this)
         return this.#get()
     }
 
-    /**
-     * Create a new `Accessor` that applies a transformation on its value.
-     * @param transform The transformation to apply. Should be a pure function.
-     */
-    as<R = T>(transform: (value: T) => R): Accessor<R> {
-        return new Accessor(() => transform(this.get()), this.subscribe.bind(this))
-    }
-
-    protected _call<R = T>(transform: (value: T) => R): Accessor<R> {
-        return new Accessor(() => transform(this.get()), this.subscribe.bind(this))
+    protected _call<R = T>(transform: (value: T) => R): Accessor<R> | T {
+        return new Accessor(() => transform(this.#get()), this.#subscribe)
     }
 
     toString(): string {
-        return `Accessor<${typeof this.get()}>`
+        return `Accessor<${this.get()}>`
     }
 
     [Symbol.toPrimitive]() {
@@ -64,68 +56,71 @@ export class Accessor<T = unknown> extends Function {
 }
 
 export interface Accessor<T> {
+    /**
+     * Create a new `Accessor` that applies a transformation on its value.
+     * @param transform The transformation to apply. Should be a pure function.
+     */
     <R = T>(transform: (value: T) => R): Accessor<R>
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-export class State<T = unknown> extends Function implements Accessor<T> {
-    static $gtype = GObject.TYPE_JSOBJECT as unknown as GObject.GType<State>
+export type Setter<T> = {
+    (value: T): void
+    (value: (prev: T) => T): void
+}
 
-    private subscribers: Set<SubscribeCallback>
-    protected value: T
+export type State<T> = [Accessor<T>, Setter<T>]
 
-    constructor(init: T) {
-        super("return arguments.callee._call.apply(arguments.callee, arguments)")
-        this.value = init
-        this.subscribers = new Set()
+export function createState<T>(init: T): State<T> {
+    let currentValue = init
+    const subscribers = new Set<SubscribeCallback>()
+
+    const subscribe: SubscrubeFunction = (callback) => {
+        subscribers.add(callback)
+        return () => subscribers.delete(callback)
     }
 
-    subscribe(callback: SubscribeCallback): DisposeFunction {
-        this.subscribers.add(callback)
-        return () => this.subscribers.delete(callback)
-    }
-
-    get(): T {
-        return this.value
-    }
-
-    /**
-     * Set the value of this `State`
-     */
-    set(value: T) {
-        if (this.value !== value) {
-            this.value = value
-            this.subscribers.forEach((cb) => cb())
+    const set = (newValue: unknown) => {
+        const value: T = typeof newValue === "function" ? newValue(currentValue) : newValue
+        if (currentValue !== value) {
+            currentValue = value
+            subscribers.forEach((cb) => cb())
         }
     }
 
-    protected _call<R = T>(transform: (value: T) => R): Accessor<R> {
-        return new Accessor(() => transform(this.get()), this.subscribe.bind(this))
-    }
-}
-
-export interface State<T> extends Accessor<T> {
-    <R = T>(transform: (value: T) => R): Accessor<R>
+    return [new Accessor(() => currentValue, subscribe), set as Setter<T>]
 }
 
 /**
  * Create an `Accessor` on a `GObject.Object`'s `property`.
  * @param object The `GObject.Object` to create the `Accessor` on.
- * @param property One of its registered property
+ * @param property One of its registered properties.
  */
-export function bind<T extends GObject.Object, P extends keyof T>(
+export function createBinding<T extends GObject.Object, P extends keyof T>(
     object: T,
     property: Extract<P, string>,
 ): Accessor<T[P]>
 
+// TODO: nested bindings
+// export function createBinding<
+//     T extends GObject.Object,
+//     P1 extends keyof T,
+//     P2 extends keyof NonNullable<T[P1]>,
+// >(
+//     object: T,
+//     property1: Extract<P1, string>,
+//     property2: Extract<P2, string>,
+// ): Accessor<NonNullable<T[P1]>[P2]>
+
 /**
  * Create an `Accessor` on a `Gio.Settings`'s `key`.
+ * Values are recursively unpacked.
+ *
  * @param object The `Gio.Settings` to create the `Accessor` on.
  * @param key The settings key
  */
-export function bind<T>(settings: Gio.Settings, key: string): Accessor<T>
+export function createBinding<T>(settings: Gio.Settings, key: string): Accessor<T>
 
-export function bind<T>(object: GObject.Object | Gio.Settings, key: string): Accessor<T> {
+export function createBinding<T>(object: GObject.Object | Gio.Settings, key: string): Accessor<T> {
     const prop = kebabify(key) as keyof typeof object
 
     const subscribe: SubscrubeFunction = (callback) => {
@@ -158,8 +153,8 @@ export function bind<T>(object: GObject.Object | Gio.Settings, key: string): Acc
  * ```ts Example
  * let a: Accessor<number>
  * let b: Accessor<string>
- * const c: Accessor<[number, string]> = computed([a, b])
- * const d: Accessor<string> = computed([a, b], (a: number, b: string) => `${a} ${b}`)
+ * const c: Accessor<[number, string]> = createComputed([a, b])
+ * const d: Accessor<string> = createComputed([a, b], (a: number, b: string) => `${a} ${b}`)
  * ```
  *
  * Create an `Accessor` which is computed from a list of `Accessor`s.
@@ -167,24 +162,40 @@ export function bind<T>(object: GObject.Object | Gio.Settings, key: string): Acc
  * @param transform An optional transform function.
  * @returns The computed `Accessor`.
  */
-export function compute<
+export function createComputed<
     const Deps extends Array<Accessor<any>>,
     Args extends {
         [K in keyof Deps]: Deps[K] extends Accessor<infer T> ? T : never
     },
     V = Args,
 >(deps: Deps, transform?: (...args: Args) => V): Accessor<V> {
+    let dispose: Array<DisposeFunction>
+    const subscribers = new Set<SubscribeCallback>()
     const cache = new Array<unknown>(deps.length)
 
     const subscribe: SubscrubeFunction = (callback) => {
-        const dispose = deps.map((dep, i) =>
-            dep.subscribe(() => {
-                cache[i] = dep.get()
-                callback()
-            }),
-        )
+        if (subscribers.size === 0) {
+            dispose = deps.map((dep, i) =>
+                dep.subscribe(() => {
+                    const value = dep.get()
+                    if (cache[i] !== value) {
+                        cache[i] = dep.get()
+                        subscribers.forEach((cb) => cb())
+                    }
+                }),
+            )
+        }
 
-        return () => dispose.forEach((cb) => cb())
+        subscribers.add(callback)
+
+        return () => {
+            subscribers.delete(callback)
+            if (subscribers.size === 0) {
+                dispose.map((cb) => cb())
+                dispose.length = 0
+                cache.length = 0
+            }
+        }
     }
 
     const get = (): V => {
@@ -204,18 +215,18 @@ export function compute<
 
 /**
  * ```ts Example
- * const value: Accessor<string> = observe(
+ * const value: Accessor<string> = createConnection(
  *   "initial value",
  *   [obj1, "sig-name", (...args) => "str"],
  *   [obj2, "sig-name", (...args) => "str"]
  * )
  * ```
  *
- * Create an `Accessor` which observes a list of `GObject.Object` signals.
+ * Create an `Accessor` which sets up a list of `GObject.Object` signal connections.
  * @param init The initial value
- * @param signals A list of `GObject.Object`, signal name and callback pairs to observe.
+ * @param signals A list of `GObject.Object`, signal name and callback pairs to connect.
  */
-export function observe<T>(
+export function createConnection<T>(
     init: T,
     ...signals: Array<
         [
@@ -231,7 +242,6 @@ export function observe<T>(
 ) {
     let value = init
     let dispose: Array<DisposeFunction>
-
     const subscribers = new Set<SubscribeCallback>()
 
     const subscribe: SubscrubeFunction = (callback) => {
@@ -251,6 +261,38 @@ export function observe<T>(
             if (subscribers.size === 0) {
                 dispose.map((cb) => cb())
                 dispose.length = 0
+            }
+        }
+    }
+
+    return new Accessor(() => value, subscribe)
+}
+
+/** @experimental */
+export function createExternal<T>(
+    init: T,
+    producer: (set: (value: T) => void) => DisposeFunction,
+): Accessor<T> {
+    let value = init
+    let dispose: DisposeFunction
+    const subscribers = new Set<SubscribeCallback>()
+
+    const subscribe: SubscrubeFunction = (callback) => {
+        if (subscribers.size === 0) {
+            dispose = producer((newValue) => {
+                if (newValue !== value) {
+                    value = newValue
+                    subscribers.forEach((cb) => cb())
+                }
+            })
+        }
+
+        subscribers.add(callback)
+
+        return () => {
+            subscribers.delete(callback)
+            if (subscribers.size === 0) {
+                dispose()
             }
         }
     }

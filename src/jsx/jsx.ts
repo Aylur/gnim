@@ -2,10 +2,10 @@ import GObject from "gi://GObject"
 import Fragment from "./Fragment.js"
 import { Accessor } from "../state.js"
 import { CC, FC, env } from "./env.js"
-import { kebabify, set } from "../util.js"
+import { Kebabify, kebabify, set } from "../util.js"
 import { onCleanup } from "./scope.js"
 
-type Node = GObject.Object | number | string | boolean | null | undefined
+type Node = Array<GObject.Object> | GObject.Object | number | string | boolean | null | undefined
 
 const gtkType = Symbol("gtk builder type")
 
@@ -35,7 +35,8 @@ export type FCProps<Self, Props> = Props & {
 /**
  * Class Component Properties
  */
-export type CCProps<Self, Props> = {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type CCProps<Self, Props, _Signals = any> = {
     /**
      * @internal children elements
      * its consumed internally and not actually passed to class component constructors
@@ -65,27 +66,34 @@ export type CCProps<Self, Props> = {
      */
     css?: string | Accessor<string>
 } & {
-    [Key in `$${string}`]: (self: Self, ...args: any[]) => any
+    [K in keyof Props as K extends string ? `$$${Kebabify<K> | K}` : never]?: (self: Self) => void
+} & {
+    [K in `$${string}`]: (self: Self, ...args: unknown[]) => any
+    // [K in keyof Signals as K extends string ? `$${K}` : never]?: Signals[K] extends (
+    //     ...args: infer Args
+    // ) => infer R
+    //     ? (self: Self, ...args: Args) => R
+    //     : (self: Self, ...args: any[]) => any
 } & {
     [K in keyof Props]?: Accessor<NonNullable<Props[K]>> | Props[K]
 }
 
 // prettier-ignore
-type JsxProps<C, Props> =
+type JsxProps<C, Props, Signals> =
     C extends typeof Fragment ? (Props & {})
     // intrinsicElements always resolve as FC
     // so we can't narrow it down, and in some cases
     // the setup function is typed as a union of Object and actual type
     // as a fix users can and should use FCProps
     : C extends FC ? Props & Omit<FCProps<ReturnType<C>, Props>, "$">
-    : C extends CC ? CCProps<InstanceType<C>, Props>
+    : C extends CC ? CCProps<InstanceType<C>, Props, Signals>
     : never
 
-function isGObjectCtor<T extends GObject.Object>(ctor: any): ctor is CC<T> {
+function isGObjectCtor(ctor: any): ctor is CC {
     return ctor.prototype instanceof GObject.Object
 }
 
-function isFunctionCtor<T extends GObject.Object>(ctor: any): ctor is FC<T> {
+function isFunctionCtor(ctor: any): ctor is FC {
     return typeof ctor === "function" && !isGObjectCtor(ctor)
 }
 
@@ -108,18 +116,27 @@ function setup<T>(object: T, ...setups: unknown[]): T {
 
 export function jsx<T extends (props: any) => GObject.Object>(
     ctor: T,
-    props: JsxProps<T, Parameters<T>[0]>,
+    props: JsxProps<T, Parameters<T>[0], any>,
 ): ReturnType<T>
 
 export function jsx<T extends new (props: any) => GObject.Object>(
     ctor: T,
-    props: JsxProps<T, ConstructorParameters<T>[0]>,
+    props: JsxProps<T, ConstructorParameters<T>[0], any>,
 ): InstanceType<T>
 
 export function jsx<T extends GObject.Object>(
     ctor: keyof (typeof env)["intrinsicElements"] | (new (props: any) => T) | ((props: any) => T),
-    { $, _, _type, _constructor, children = [], ...props }: CCProps<T, any>,
+    inprops: any,
 ): T {
+    const {
+        $,
+        _,
+        _type,
+        _constructor,
+        children = [],
+        ...props
+    } = inprops as CCProps<T, any, unknown>
+
     env.initProps(props)
 
     for (const [key, value] of Object.entries(props)) {
@@ -164,13 +181,19 @@ export function jsx<T extends GObject.Object>(
     if (css) env.setCss(object, css)
     if (className) env.setClass(object, className)
 
-    if (typeof env.addChild === "function" && isGObjectCtor(ctor)) {
-        for (const child of Array.isArray(children) ? children : [children]) {
-            if (child === true) {
-                console.warn("Trying to add boolean value of `true` as a child.")
-                continue
+    // add children
+    for (const child of Array.isArray(children) ? children : [children]) {
+        if (child === true) {
+            console.warn("Trying to add boolean value of `true` as a child.")
+            continue
+        }
+
+        if (Array.isArray(child)) {
+            for (const ch of child) {
+                env.addChild(object, ch, -1)
             }
-            if (child) env.addChild(object, child, -1)
+        } else if (child) {
+            env.addChild(object, child, -1)
         }
     }
 
@@ -185,9 +208,11 @@ export function jsx<T extends GObject.Object>(
 
     // handle bindings
     const disposeBindings = bindings.map(([prop, binding]) => {
-        return binding.subscribe(() => {
+        const dispose = binding.subscribe(() => {
             set(object, prop, binding.get())
         })
+        set(object, prop, binding.get())
+        return dispose
     })
 
     // cleanup
@@ -210,7 +235,7 @@ declare global {
         type Element = GObject.Object
         type ElementClass = GObject.Object
 
-        type LibraryManagedAttributes<C, Props> = JsxProps<C, Props> & {
+        type LibraryManagedAttributes<C, Props> = JsxProps<C, Props, any> & {
             /* reserved prop name by the jsx transform, which is not used by gjsx */
             key?: never
             // FIXME: why does an intrinsic element always resolve as FC?

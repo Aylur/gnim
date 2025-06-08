@@ -37,7 +37,7 @@ export default class Fragment<T = any> extends GObject.Object {
 
     addChild(child: T, index: number = -1): void {
         if (child instanceof Fragment) {
-            throw Error(`nesting Fragments not yet supported`)
+            throw Error(`nesting Fragments are not yet supported`)
         }
 
         if (index > 0) {

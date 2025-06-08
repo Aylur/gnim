@@ -57,11 +57,11 @@ import { jsx } from "gjsx/gtk4"
 
 const menubutton = new Gtk.MenuButton()
 
-menubutton.popover = <Gtk.Popover /> // can not assign Object to Popover // [!code error]
+menubutton.popover = <Gtk.Popover /> // cannot assign Object to Popover // [!code error]
 menubutton.popover = jsx(Gtk.Popover, {}) // works as expected
 
 function MyPopover(): Gtk.Popover
-menubutton.popover = <MyPopover /> // can not assign Object to Popover // [!code error]
+menubutton.popover = <MyPopover /> // cannot assign Object to Popover // [!code error]
 menubutton.popover = jsx(MyPopover, {}) // works as expected
 ```
 
@@ -83,9 +83,8 @@ instead you can define it with `_constructor`.
 
 > [!WARNING]
 >
-> Initial values this way can not be passed to the constructor and are set
-> **after**. This means construct only properties like `css-name` can not be
-> set.
+> Initial values this way cannot be passed to the constructor and are set
+> **after**. This means construct only properties like `css-name` cannot be set.
 
 ```tsx
 <Gtk.DropDown

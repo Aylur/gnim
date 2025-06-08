@@ -2,20 +2,12 @@ export class Scope {
     static current: Scope | null
 
     parent?: Scope | null
+    context?: any
 
-    private contexts = new Map<Context, any>()
     private cleanups = new Set<() => void>()
 
     constructor(parent: Scope | null) {
         this.parent = parent
-    }
-
-    setContext<T>(ctx: Context<T>, value: T) {
-        this.contexts.set(ctx, value)
-    }
-
-    getContext<T>(ctx: Context<T>): T | undefined {
-        return this.contexts?.get(ctx)
     }
 
     onCleanup(callback: () => void) {
@@ -34,9 +26,9 @@ export class Scope {
 
     dispose() {
         this.cleanups.forEach((cb) => cb())
-        this.contexts.clear()
         this.cleanups.clear()
-        this.parent = null
+        delete this.parent
+        delete this.context
     }
 }
 
@@ -45,6 +37,10 @@ export type Context<T = any> = {
     provide<R>(value: T, fn: () => R): R
     (props: { value: T; children: () => JSX.Element }): JSX.Element
 }
+
+// Root
+//  Context
+//
 
 /**
  * Example Usage:
@@ -69,13 +65,13 @@ export type Context<T = any> = {
  * ```
  */
 export function createContext<T>(defaultValue: T): Context<T> {
-    let ctx: Context<T>
-
     function provide<R>(value: T, fn: () => R): R {
         const scope = new Scope(Scope.current)
 
+        onCleanup(() => scope.dispose())
+
         Scope.current = scope
-        scope.setContext(ctx, value)
+        scope.context = value
         try {
             return fn()
         } finally {
@@ -86,7 +82,7 @@ export function createContext<T>(defaultValue: T): Context<T> {
     function use(): T {
         let scope = Scope.current
         while (scope) {
-            const value = scope.getContext(ctx)
+            const value = scope.context
             if (value) return value
             scope = scope.parent ?? null
         }
@@ -94,15 +90,13 @@ export function createContext<T>(defaultValue: T): Context<T> {
     }
 
     function context({ value, children }: { value: T; children: () => JSX.Element }) {
-        return provide(value, () => {
-            return children()
-        })
+        return provide(value, children)
     }
 
-    return (ctx = Object.assign(context, {
+    return Object.assign(context, {
         provide,
         use,
-    }))
+    })
 }
 
 /**
@@ -126,7 +120,7 @@ export function createContext<T>(defaultValue: T): Context<T> {
 export function getScope(): Scope {
     const scope = Scope.current
     if (!scope) {
-        throw Error("current scope is null")
+        throw Error("cannot get scope: out of tracking context")
     }
 
     return scope
@@ -137,7 +131,7 @@ export function getScope(): Scope {
  */
 export function onCleanup(cleanup: () => void) {
     if (!Scope.current) {
-        console.warn(Error("current scope is null: will not be able to cleanup"))
+        console.error(Error("out of tracking context: will not be able to cleanup"))
     }
 
     Scope.current?.onCleanup(cleanup)

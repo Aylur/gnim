@@ -1,5 +1,5 @@
 import Fragment from "./Fragment.js"
-import { Accessor, State } from "../state.js"
+import { Accessor, State, createState } from "../state.js"
 import { env } from "./env.js"
 import { onCleanup, Scope } from "./scope.js"
 
@@ -45,7 +45,7 @@ export default function For<Item, El extends JSX.Element, Key>({
     const map = new Map<Item | Key, MapItem>()
     const fragment = new Fragment<El>()
 
-    function remove({ item, child, index, scope }: MapItem) {
+    function remove({ item, child, index: [index], scope }: MapItem) {
         if (typeof cleanup === "function") {
             cleanup(child, item, index.get())
         } else if (cleanup !== null) {
@@ -75,19 +75,21 @@ export default function For<Item, El extends JSX.Element, Key>({
         items.map((item, i) => {
             const key = ids[i]
             if (map.has(key)) {
-                const { index, child } = map.get(key)!
-                index.set(i)
+                const {
+                    index: [, setIndex],
+                    child,
+                } = map.get(key)!
+                setIndex(i)
                 if (fragment.hasChild(child)) {
                     console.warn(`duplicate keys found: ${key}`)
                 } else {
                     fragment.addChild(child)
                 }
             } else {
-                const index = new State(i)
+                const [index, setIndex] = createState(i)
                 const scope = new Scope(Scope.current)
-                const indexAccess = new Accessor(index.get.bind(index), index.subscribe.bind(index))
-                const child = scope.run(() => mkChild(item, indexAccess))
-                map.set(key, { item, child, index, scope })
+                const child = scope.run(() => mkChild(item, index))
+                map.set(key, { item, child, index: [index, setIndex], scope })
                 fragment.addChild(child)
             }
         })

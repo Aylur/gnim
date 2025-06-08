@@ -163,7 +163,7 @@ export const { addChild, intrinsicElements } = configue({
                     remove(parent, ch)
                 })
 
-                parent.connect("destroy", () => child.destroy())
+                onCleanup(() => child.destroy())
                 return
             }
 
