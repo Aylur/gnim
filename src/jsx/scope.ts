@@ -5,6 +5,7 @@ export class Scope {
     context?: any
 
     private cleanups = new Set<() => void>()
+    private mounts = new Set<() => void>()
 
     constructor(parent: Scope | null) {
         this.parent = parent
@@ -14,12 +15,18 @@ export class Scope {
         this.cleanups?.add(callback)
     }
 
+    onMount(callback: () => void) {
+        this.mounts.add(callback)
+    }
+
     run<T>(fn: () => T) {
         const prev = Scope.current
         Scope.current = this
         try {
             return fn()
         } finally {
+            this.mounts.forEach((cb) => cb())
+            this.mounts.clear()
             Scope.current = prev
         }
     }
@@ -67,16 +74,9 @@ export type Context<T = any> = {
 export function createContext<T>(defaultValue: T): Context<T> {
     function provide<R>(value: T, fn: () => R): R {
         const scope = new Scope(Scope.current)
-
         onCleanup(() => scope.dispose())
-
-        Scope.current = scope
         scope.context = value
-        try {
-            return fn()
-        } finally {
-            Scope.current = scope.parent ?? null
-        }
+        return scope.run(fn)
     }
 
     function use(): T {
@@ -135,6 +135,17 @@ export function onCleanup(cleanup: () => void) {
     }
 
     Scope.current?.onCleanup(cleanup)
+}
+
+/**
+ * Attach a callback to run when the currently running {@link Scope} returns.
+ */
+export function onMount(cleanup: () => void) {
+    if (!Scope.current) {
+        console.error(Error("cannout attach onMount: out of tracking context"))
+    }
+
+    Scope.current?.onMount(cleanup)
 }
 
 /**
