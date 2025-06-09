@@ -1,6 +1,6 @@
 import GObject from "gi://GObject"
-import Fragment from "./Fragment.js"
-import { Accessor } from "../state.js"
+import { Fragment } from "./Fragment.js"
+import { Accessor } from "./state.js"
 import { CC, FC, env } from "./env.js"
 import { Kebabify, kebabify, set } from "../util.js"
 import { onCleanup } from "./scope.js"

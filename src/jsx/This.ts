@@ -1,6 +1,6 @@
 import GObject from "gi://GObject"
 import { env } from "./env.js"
-import { Accessor } from "../state.js"
+import { Accessor } from "./state.js"
 import { kebabify, set } from "../util.js"
 import { onCleanup } from "./scope.js"
 
@@ -28,11 +28,7 @@ type ThisProps<Self extends GObject.Object> = {
 // disposing the scope using a destroy signal
 
 /** @experimental */
-export default function This<T extends GObject.Object>({
-    this: self,
-    children,
-    ...props
-}: ThisProps<T>) {
+export function This<T extends GObject.Object>({ this: self, children, ...props }: ThisProps<T>) {
     const cleanup = new Array<() => void>()
 
     for (const [key, value] of Object.entries(props)) {

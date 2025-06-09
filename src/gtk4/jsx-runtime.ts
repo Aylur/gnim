@@ -1,9 +1,7 @@
 import Gtk from "gi://Gtk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject"
-import Fragment from "../jsx/Fragment.js"
-import { getType, onCleanup } from "../jsx/index.js"
-import { Accessor } from "../state.js"
+import { getType, onCleanup, Accessor, Fragment } from "../jsx/index.js"
 import { configue } from "../jsx/env.js"
 
 const dummyBuilder = new Gtk.Builder()
@@ -85,7 +83,7 @@ function remove(parent: GObject.Object, child: GObject.Object) {
     throw Error(`cannot remove ${child} from ${parent}`)
 }
 
-export const { addChild, intrinsicElements } = configue({
+const { addChild, intrinsicElements } = configue({
     setCss(object, css) {
         if (!(object instanceof Gtk.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))
@@ -175,5 +173,5 @@ export const { addChild, intrinsicElements } = configue({
     },
 })
 
-export { Fragment }
+export { Fragment, intrinsicElements }
 export { jsx, jsxs } from "../jsx/jsx.js"

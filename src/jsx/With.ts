@@ -1,5 +1,5 @@
-import Fragment from "./Fragment.js"
-import { Accessor } from "../state.js"
+import { Fragment } from "./Fragment.js"
+import { Accessor } from "./state.js"
 import { env } from "./env.js"
 import { onCleanup, Scope } from "./scope.js"
 
@@ -23,7 +23,7 @@ interface WithProps<T, E extends JSX.Element> {
     cleanup?: null | ((element: E) => void)
 }
 
-export default function With<T, E extends JSX.Element>({
+export function With<T, E extends JSX.Element>({
     value,
     children: mkChild,
     cleanup,

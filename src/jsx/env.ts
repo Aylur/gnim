@@ -1,5 +1,5 @@
 import type GObject from "gi://GObject"
-import { type Accessor } from "../state.js"
+import { type Accessor } from "./state.js"
 
 type GObj = GObject.Object
 export type CC<T extends GObj = GObj> = { new (props: any): T }

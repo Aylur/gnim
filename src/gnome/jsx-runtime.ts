@@ -1,10 +1,8 @@
 import Clutter from "gi://Clutter"
 import St from "gi://St"
 import GObject from "gi://GObject"
-import Fragment from "../jsx/Fragment.js"
 import { configue } from "../jsx/env.js"
-import { Accessor } from "../state.js"
-import { onCleanup } from "../jsx/index.js"
+import { onCleanup, Accessor, Fragment } from "../jsx/index.js"
 
 function add(parent: GObject.Object, child: GObject.Object, _: number) {
     if (parent instanceof Clutter.Actor) {
@@ -33,7 +31,7 @@ function remove(parent: GObject.Object, child: GObject.Object) {
     throw Error(`cannot remove ${child} from ${parent}`)
 }
 
-export const { addChild, intrinsicElements } = configue({
+const { intrinsicElements, addChild } = configue({
     setCss(object, css) {
         if (!(object instanceof St.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))
@@ -108,5 +106,5 @@ export const { addChild, intrinsicElements } = configue({
     },
 })
 
-export { Fragment }
+export { Fragment, intrinsicElements }
 export { jsx, jsxs } from "../jsx/jsx.js"

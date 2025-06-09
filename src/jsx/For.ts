@@ -1,5 +1,5 @@
-import Fragment from "./Fragment.js"
-import { Accessor, State, createState } from "../state.js"
+import { Fragment } from "./Fragment.js"
+import { Accessor, State, createState } from "./state.js"
 import { env } from "./env.js"
 import { onCleanup, Scope } from "./scope.js"
 
@@ -34,7 +34,7 @@ interface ForProps<Item, El extends JSX.Element, Key> {
 
 // TODO: support Gio.ListModel
 
-export default function For<Item, El extends JSX.Element, Key>({
+export function For<Item, El extends JSX.Element, Key>({
     each,
     children: mkChild,
     cleanup,

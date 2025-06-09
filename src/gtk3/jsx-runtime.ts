@@ -1,9 +1,7 @@
 import Gtk from "gi://Gtk?version=3.0"
 import GObject from "gi://GObject"
-import Fragment from "../jsx/Fragment.js"
-import { getType, onCleanup } from "../jsx/index.js"
-import { Accessor } from "../state.js"
 import { configue } from "../jsx/env.js"
+import { getType, onCleanup, Accessor, Fragment } from "../jsx/index.js"
 
 const dummyBuilder = new Gtk.Builder()
 
@@ -63,7 +61,7 @@ function remove(parent: GObject.Object, child: GObject.Object) {
     throw Error(`cannot remove ${child} from ${parent}`)
 }
 
-export const { addChild, intrinsicElements } = configue({
+const { addChild, intrinsicElements } = configue({
     initProps(props) {
         props.visible ??= true
     },
@@ -168,5 +166,5 @@ export const { addChild, intrinsicElements } = configue({
     },
 })
 
-export { Fragment }
+export { Fragment, intrinsicElements }
 export { jsx, jsxs } from "../jsx/jsx.js"

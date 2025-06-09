@@ -1,6 +1,6 @@
 import GObject from "gi://GObject"
 import Gio from "gi://Gio"
-import { kebabify } from "./util"
+import { kebabify } from "../util"
 
 type SubscribeCallback = () => void
 type DisposeFunction = () => void
