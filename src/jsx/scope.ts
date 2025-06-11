@@ -6,6 +6,7 @@ export class Scope {
 
     private cleanups = new Set<() => void>()
     private mounts = new Set<() => void>()
+    private mounted = false
 
     constructor(parent: Scope | null) {
         this.parent = parent
@@ -16,17 +17,23 @@ export class Scope {
     }
 
     onMount(callback: () => void) {
-        this.mounts.add(callback)
+        if (this.parent && !this.parent.mounted) {
+            this.parent.onMount(callback)
+        } else {
+            this.mounts.add(callback)
+        }
     }
 
     run<T>(fn: () => T) {
         const prev = Scope.current
         Scope.current = this
+
         try {
             return fn()
         } finally {
             this.mounts.forEach((cb) => cb())
             this.mounts.clear()
+            this.mounted = true
             Scope.current = prev
         }
     }
@@ -44,10 +51,6 @@ export type Context<T = any> = {
     provide<R>(value: T, fn: () => R): R
     (props: { value: T; children: () => JSX.Element }): JSX.Element
 }
-
-// Root
-//  Context
-//
 
 /**
  * Example Usage:

@@ -41,7 +41,7 @@ export class Accessor<T = unknown> extends Function {
         return this.#get()
     }
 
-    protected _call<R = T>(transform: (value: T) => R): Accessor<R> | T {
+    protected _call<R = T>(transform: (value: T) => R): Accessor<R> {
         return new Accessor(() => transform(this.#get()), this.#subscribe)
     }
 
@@ -70,6 +70,12 @@ export type Setter<T> = {
 
 export type State<T> = [Accessor<T>, Setter<T>]
 
+/**
+ * Create a writable signal.
+ *
+ * @param init The intial value of the signal
+ * @returns An `Accessor` and a setter function
+ */
 export function createState<T>(init: T): State<T> {
     let currentValue = init
     const subscribers = new Set<SubscribeCallback>()
@@ -91,7 +97,72 @@ export function createState<T>(init: T): State<T> {
 }
 
 /**
+ * ```ts Example
+ * let a: Accessor<number>
+ * let b: Accessor<string>
+ *
+ * const c: Accessor<[number, string]> = createComputed([a, b])
+ *
+ * const d: Accessor<string> = createComputed([a, b], (a: number, b: string) => `${a} ${b}`)
+ * ```
+ *
+ * Create an `Accessor` which is computed from a list of `Accessor`s.
+ * @param deps List of `Accessors`.
+ * @param transform An optional transform function.
+ * @returns The computed `Accessor`.
+ */
+export function createComputed<
+    const Deps extends Array<Accessor<any>>,
+    Args extends { [K in keyof Deps]: Accessed<Deps[K]> },
+    V = Args,
+>(deps: Deps, transform?: (...args: Args) => V): Accessor<V> {
+    let dispose: Array<DisposeFunction>
+    const subscribers = new Set<SubscribeCallback>()
+    const cache = new Array<unknown>(deps.length)
+
+    const subscribe: SubscrubeFunction = (callback) => {
+        if (subscribers.size === 0) {
+            dispose = deps.map((dep, i) =>
+                dep.subscribe(() => {
+                    const value = dep.get()
+                    if (cache[i] !== value) {
+                        cache[i] = dep.get()
+                        subscribers.forEach((cb) => cb())
+                    }
+                }),
+            )
+        }
+
+        subscribers.add(callback)
+
+        return () => {
+            subscribers.delete(callback)
+            if (subscribers.size === 0) {
+                dispose.map((cb) => cb())
+                dispose.length = 0
+                cache.length = 0
+            }
+        }
+    }
+
+    const get = (): V => {
+        const args = deps.map((dep, i) => {
+            if (!cache[i]) {
+                cache[i] = dep.get()
+            }
+
+            return cache[i]
+        })
+
+        return transform ? transform(...(args as Args)) : (args as V)
+    }
+
+    return new Accessor(get, subscribe)
+}
+
+/**
  * Create an `Accessor` on a `GObject.Object`'s `property`.
+ *
  * @param object The `GObject.Object` to create the `Accessor` on.
  * @param property One of its registered properties.
  */
@@ -100,7 +171,7 @@ export function createBinding<T extends GObject.Object, P extends keyof T>(
     property: Extract<P, string>,
 ): Accessor<T[P]>
 
-// TODO: nested bindings
+// TODO: support nested bindings
 // export function createBinding<
 //     T extends GObject.Object,
 //     P1 extends keyof T,
@@ -150,70 +221,8 @@ export function createBinding<T>(object: GObject.Object | Gio.Settings, key: str
 }
 
 /**
- * ```ts Example
- * let a: Accessor<number>
- * let b: Accessor<string>
- * const c: Accessor<[number, string]> = createComputed([a, b])
- * const d: Accessor<string> = createComputed([a, b], (a: number, b: string) => `${a} ${b}`)
- * ```
+ * @experimental
  *
- * Create an `Accessor` which is computed from a list of `Accessor`s.
- * @param deps List of `Accessors`.
- * @param transform An optional transform function.
- * @returns The computed `Accessor`.
- */
-export function createComputed<
-    const Deps extends Array<Accessor<any>>,
-    Args extends {
-        [K in keyof Deps]: Deps[K] extends Accessor<infer T> ? T : never
-    },
-    V = Args,
->(deps: Deps, transform?: (...args: Args) => V): Accessor<V> {
-    let dispose: Array<DisposeFunction>
-    const subscribers = new Set<SubscribeCallback>()
-    const cache = new Array<unknown>(deps.length)
-
-    const subscribe: SubscrubeFunction = (callback) => {
-        if (subscribers.size === 0) {
-            dispose = deps.map((dep, i) =>
-                dep.subscribe(() => {
-                    const value = dep.get()
-                    if (cache[i] !== value) {
-                        cache[i] = dep.get()
-                        subscribers.forEach((cb) => cb())
-                    }
-                }),
-            )
-        }
-
-        subscribers.add(callback)
-
-        return () => {
-            subscribers.delete(callback)
-            if (subscribers.size === 0) {
-                dispose.map((cb) => cb())
-                dispose.length = 0
-                cache.length = 0
-            }
-        }
-    }
-
-    const get = (): V => {
-        const args = deps.map((dep, i) => {
-            if (!cache[i]) {
-                cache[i] = dep.get()
-            }
-
-            return cache[i]
-        })
-
-        return transform ? transform(...(args as Args)) : (args as V)
-    }
-
-    return new Accessor(get, subscribe)
-}
-
-/**
  * ```ts Example
  * const value: Accessor<string> = createConnection(
  *   "initial value",
@@ -268,20 +277,39 @@ export function createConnection<T>(
     return new Accessor(() => value, subscribe)
 }
 
-/** @experimental */
+/**
+ * @experimental
+ *
+ * Create a signal from a provier function.
+ * The provider is called when the first subscriber appears and the returned dispose
+ * function from the provider will be called when the number of subscribers drop to zero.
+ *
+ * Example:
+ *
+ * ```ts
+ * const value = createExternal(0, (set) => {
+ *   const interval = setInterval(() => set((v) => v + 1))
+ *   return () => clearInterval(interval)
+ * })
+ * ```
+ *
+ * @param init The initial value
+ * @param producer The producer function which should return a cleanup function
+ */
 export function createExternal<T>(
     init: T,
-    producer: (set: (value: T) => void) => DisposeFunction,
+    producer: (set: Setter<T>) => DisposeFunction,
 ): Accessor<T> {
-    let value = init
+    let currentValue = init
     let dispose: DisposeFunction
     const subscribers = new Set<SubscribeCallback>()
 
     const subscribe: SubscrubeFunction = (callback) => {
         if (subscribers.size === 0) {
-            dispose = producer((newValue) => {
-                if (newValue !== value) {
-                    value = newValue
+            dispose = producer((v: unknown) => {
+                const newValue: T = typeof v === "function" ? v(currentValue) : v
+                if (newValue !== currentValue) {
+                    currentValue = newValue
                     subscribers.forEach((cb) => cb())
                 }
             })
@@ -297,5 +325,5 @@ export function createExternal<T>(
         }
     }
 
-    return new Accessor(() => value, subscribe)
+    return new Accessor(() => currentValue, subscribe)
 }

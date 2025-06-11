@@ -68,7 +68,7 @@ export type CCProps<Self, Props, _Signals = any> = {
 } & {
     [K in keyof Props as K extends string ? `$$${Kebabify<K> | K}` : never]?: (self: Self) => void
 } & {
-    [K in `$${string}`]: (self: Self, ...args: unknown[]) => any
+    [K in `$${string}`]: (self: Self, ...args: any[]) => any
     // [K in keyof Signals as K extends string ? `$${K}` : never]?: Signals[K] extends (
     //     ...args: infer Args
     // ) => infer R
