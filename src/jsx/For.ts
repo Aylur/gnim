@@ -1,24 +1,22 @@
-import Fragment from "./Fragment.js"
-import { Binding, State } from "../state.js"
+import { Fragment } from "./Fragment.js"
+import { Accessor, State, createState } from "./state.js"
 import { env } from "./env.js"
-import { Scope } from "./context.js"
+import { onCleanup, Scope } from "./scope.js"
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type GObject from "gi://GObject"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type Clutter from "gi://Clutter"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type Gtk from "gi://Gtk?version=3.0"
 
 interface ForProps<Item, El extends JSX.Element, Key> {
-    each: Binding<Array<Item>>
-    children: (item: Item, index: Binding<number>) => El
+    each: Accessor<Iterable<Item>>
+    children: (item: Item, index: Accessor<number>) => El
 
     /**
      * Function to run for each removed element.
      * The default value depends on the environment:
      *
-     * - **Gtk4**: {@link GObject.Object.prototype.run_dispose}
+     * - **Gtk4**: null
      * - **Gtk3**: {@link Gtk.Widget.prototype.destroy}
      * - **Gnome**: {@link Clutter.Actor.prototype.destroy}
      */
@@ -36,32 +34,39 @@ interface ForProps<Item, El extends JSX.Element, Key> {
 
 // TODO: support Gio.ListModel
 
-export default function For<Item, El extends JSX.Element, Key>({
+export function For<Item, El extends JSX.Element, Key>({
     each,
     children: mkChild,
     cleanup,
     id = (item: Item) => item,
 }: ForProps<Item, El, Key>): Fragment<El> {
-    const map = new Map<Item | Key, { item: Item; child: El; index: State<number> }>()
-    const fragment = new Fragment<El>()
-    const scope = Scope.current
+    type MapItem = { item: Item; child: El; index: State<number>; scope: Scope }
 
-    function callback(items: Item[]) {
+    const map = new Map<Item | Key, MapItem>()
+    const fragment = new Fragment<El>()
+
+    function remove({ item, child, index: [index], scope }: MapItem) {
+        if (typeof cleanup === "function") {
+            cleanup(child, item, index.get())
+        } else if (cleanup !== null) {
+            env.defaultCleanup(child)
+        }
+        scope.dispose()
+    }
+
+    function callback(itareable: Iterable<Item>) {
+        const items = [...itareable]
         const ids = items.map(id)
         const idSet = new Set(ids)
 
         // cleanup children missing from arr
-        for (const [key, { item, child, index }] of map.entries()) {
-            // gtk and gnome does not have a generic way to insert child at index
+        for (const [key, value] of map.entries()) {
+            // there is no generic way to insert child at index
             // so we sort by removing every child and reappending in order
-            fragment.removeChild(child)
+            fragment.removeChild(value.child)
 
             if (!idSet.has(key)) {
-                if (typeof cleanup === "function") {
-                    cleanup(child, item, index.get())
-                } else if (cleanup !== null) {
-                    env.defaultCleanup(child)
-                }
+                remove(value)
                 map.delete(key)
             }
         }
@@ -70,26 +75,40 @@ export default function For<Item, El extends JSX.Element, Key>({
         items.map((item, i) => {
             const key = ids[i]
             if (map.has(key)) {
-                const { index, child } = map.get(key)!
-                index.set(i)
+                const {
+                    index: [, setIndex],
+                    child,
+                } = map.get(key)!
+                setIndex(i)
                 if (fragment.hasChild(child)) {
                     console.warn(`duplicate keys found: ${key}`)
                 } else {
                     fragment.addChild(child)
                 }
             } else {
-                const index = new State(i)
-                const child = Scope.with(() => mkChild(item, index()), scope)
-                map.set(key, { item, child, index })
+                const [index, setIndex] = createState(i)
+                const scope = new Scope(Scope.current)
+                const child = scope.run(() => mkChild(item, index))
+                map.set(key, { item, child, index: [index, setIndex], scope })
                 fragment.addChild(child)
             }
         })
     }
 
-    if (each instanceof Binding) {
-        each.subscribe(fragment, callback)
+    callback(each.get())
+    const dispose = each.subscribe(() => {
         callback(each.get())
-    }
+    })
+
+    onCleanup(() => {
+        dispose()
+
+        for (const value of map.values()) {
+            remove(value)
+        }
+
+        map.clear()
+    })
 
     return fragment
 }

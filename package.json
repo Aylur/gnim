@@ -32,17 +32,14 @@
         "vitepress": "latest"
     },
     "exports": {
-        "./state": "./src/state.ts",
+        ".": "./src/jsx/index.ts",
         "./gobject": "./src/gobject.ts",
         "./dbus": "./src/dbus.ts",
         "./fetch": "./src/fetch.ts",
-        "./gtk3": "./src/gtk3/index.ts",
         "./gtk3/jsx-runtime": "./src/gtk3/jsx-runtime.ts",
         "./gtk3/style": "./src/gtk3/index.ts",
-        "./gtk4": "./src/gtk4/index.ts",
         "./gtk4/jsx-runtime": "./src/gtk4/jsx-runtime.ts",
         "./gtk4/style": "./src/gtk4/style.ts",
-        "./gnome": "./src/gnome/index.ts",
         "./gnome/jsx-runtime": "./src/gnome/jsx-runtime.ts"
     },
     "engines": {

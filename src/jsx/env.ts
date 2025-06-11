@@ -1,24 +1,23 @@
 import type GObject from "gi://GObject"
-import { type Binding } from "../state.js"
+import { type Accessor } from "./state.js"
 
 type GObj = GObject.Object
 export type CC<T extends GObj = GObj> = { new (props: any): T }
 export type FC<T extends GObj = GObj> = (props: any) => T
 
-type CssSetter = (object: GObj, css: string | Binding<string>) => void
+type CssSetter = (object: GObj, css: string | Accessor<string>) => void
 type ChildFn = (parent: GObj, child: GObj | number | string, index?: number) => void
 
-export function configue(conf: JsxEnv) {
+export function configue(conf: Partial<JsxEnv>) {
     return Object.assign(env, conf)
 }
 
 type JsxEnv = {
-    addChild: ChildFn
     intrinsicElements: Record<string, CC | FC>
+    addChild: ChildFn
     setCss: CssSetter
     setClass: CssSetter
     initProps: (props: any) => void
-    initObject: (object: GObj) => void
     defaultCleanup: (object: GObj) => void
 }
 
@@ -27,11 +26,10 @@ function missingImpl() {
 }
 
 export const env: JsxEnv = {
-    addChild: missingImpl,
     intrinsicElements: {},
+    addChild: missingImpl,
     setCss: missingImpl,
     setClass: missingImpl,
-    initProps: (props) => props,
-    initObject: () => void 0,
-    defaultCleanup: missingImpl,
+    initProps: () => void 0,
+    defaultCleanup: () => void 0,
 }

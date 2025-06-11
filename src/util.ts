@@ -1,7 +1,24 @@
+import type GObject from "gi://GObject"
+
 export function kebabify(str: string) {
     return str
         .replace(/([a-z])([A-Z])/g, "$1-$2")
         .replaceAll("_", "-")
+        .toLowerCase()
+}
+
+export type Kebabify<S> = S extends string
+    ? S extends `${infer First}${infer Rest}`
+        ? Rest extends Uncapitalize<Rest>
+            ? `${Lowercase<First>}${Kebabify<Rest>}`
+            : `${Lowercase<First>}-${Kebabify<Rest>}`
+        : S
+    : string
+
+export function snakeify(str: string) {
+    return str
+        .replace(/([a-z])([A-Z])/g, "$1-$2")
+        .replaceAll("-", "_")
         .toLowerCase()
 }
 
@@ -45,4 +62,27 @@ export function getterWorkaround<T extends object>(object: T, prop: Extract<keyo
         enumerable: true,
         value: () => object[prop],
     })
+}
+
+// attempt setting a property of GObject.Object
+export function set(obj: GObject.Object, prop: string, value: any) {
+    const key = snakeify(prop)
+    const getter = `get_${key}` as keyof typeof obj
+    const setter = `set_${key}` as keyof typeof obj
+
+    let current: unknown
+
+    if (getter in obj && typeof obj[getter] === "function") {
+        current = (obj[getter] as () => unknown)()
+    } else {
+        current = obj[prop as keyof typeof obj]
+    }
+
+    if (current !== value) {
+        if (setter in obj && typeof obj[setter] === "function") {
+            ;(obj[setter] as (v: any) => void)(value)
+        } else {
+            Object.assign(obj, { [prop]: value })
+        }
+    }
 }

@@ -1,9 +1,8 @@
 import Clutter from "gi://Clutter"
 import St from "gi://St"
 import GObject from "gi://GObject"
-import Fragment from "../jsx/Fragment.js"
 import { configue } from "../jsx/env.js"
-import { Binding, sync } from "../state.js"
+import { onCleanup, Accessor, Fragment } from "../jsx/index.js"
 
 function add(parent: GObject.Object, child: GObject.Object, _: number) {
     if (parent instanceof Clutter.Actor) {
@@ -32,17 +31,16 @@ function remove(parent: GObject.Object, child: GObject.Object) {
     throw Error(`cannot remove ${child} from ${parent}`)
 }
 
-export const { addChild, intrinsicElements } = configue({
-    intrinsicElements: {},
-    initObject: () => void 0,
-    initProps: (props) => props,
+const { intrinsicElements, addChild } = configue({
     setCss(object, css) {
         if (!(object instanceof St.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))
         }
 
-        if (css instanceof Binding) {
-            sync(object, "style", css)
+        if (css instanceof Accessor) {
+            object.style = css.get()
+            const dispose = css.subscribe(() => (object.style = css.get()))
+            onCleanup(dispose)
         } else {
             object.set_style(css)
         }
@@ -52,8 +50,10 @@ export const { addChild, intrinsicElements } = configue({
             return console.warn(Error(`cannot set className on ${object}`))
         }
 
-        if (className instanceof Binding) {
-            sync(object, "style_class", className)
+        if (className instanceof Accessor) {
+            object.styleClass = className.get()
+            const dispose = className.subscribe(() => (object.styleClass = className.get()))
+            onCleanup(dispose)
         } else {
             object.set_style_class_name(className)
         }
@@ -101,12 +101,10 @@ export const { addChild, intrinsicElements } = configue({
     },
     defaultCleanup(object) {
         if (object instanceof Clutter.Actor) {
-            object.run_dispose()
-        } else {
-            console.warn(`cannot cleanup after ${object}`)
+            object.destroy()
         }
     },
 })
 
-export { Fragment }
-export { jsx, jsxs } from "../jsx/index.js"
+export { Fragment, intrinsicElements }
+export { jsx, jsxs } from "../jsx/jsx.js"

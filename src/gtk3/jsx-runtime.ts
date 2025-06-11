@@ -1,9 +1,7 @@
 import Gtk from "gi://Gtk?version=3.0"
 import GObject from "gi://GObject"
-import Fragment from "../jsx/Fragment.js"
-import { getType } from "../jsx/index.js"
-import { Binding } from "../state.js"
 import { configue } from "../jsx/env.js"
+import { getType, onCleanup, Accessor, Fragment } from "../jsx/index.js"
 
 const dummyBuilder = new Gtk.Builder()
 
@@ -63,12 +61,10 @@ function remove(parent: GObject.Object, child: GObject.Object) {
     throw Error(`cannot remove ${child} from ${parent}`)
 }
 
-export const { addChild, intrinsicElements } = configue({
-    intrinsicElements: {},
+const { addChild, intrinsicElements } = configue({
     initProps(props) {
         props.visible ??= true
     },
-    initObject: () => void 0,
     setCss(object, css) {
         if (!(object instanceof Gtk.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))
@@ -87,9 +83,10 @@ export const { addChild, intrinsicElements } = configue({
             ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
         }
 
-        if (css instanceof Binding) {
-            css.subscribe(object, setter)
+        if (css instanceof Accessor) {
             setter(css.get())
+            const dispose = css.subscribe(() => setter(css.get()))
+            onCleanup(dispose)
         } else {
             setter(css)
         }
@@ -110,9 +107,10 @@ export const { addChild, intrinsicElements } = configue({
             }
         }
 
-        if (className instanceof Binding) {
-            className.subscribe(object, setter)
+        if (className instanceof Accessor) {
             setter(className.get())
+            const dispose = className.subscribe(() => setter(className.get()))
+            onCleanup(dispose)
         } else {
             setter(className)
         }
@@ -151,7 +149,7 @@ export const { addChild, intrinsicElements } = configue({
                     remove(parent, ch)
                 })
 
-                parent.connect("destroy", () => child.destroy())
+                onCleanup(() => child.destroy())
                 return
             }
 
@@ -164,11 +162,9 @@ export const { addChild, intrinsicElements } = configue({
     defaultCleanup(object) {
         if (object instanceof Gtk.Widget) {
             object.destroy()
-        } else {
-            console.warn(`cannot cleanup after ${object}`)
         }
     },
 })
 
-export { Fragment }
-export { jsx, jsxs } from "../jsx/index.js"
+export { Fragment, intrinsicElements }
+export { jsx, jsxs } from "../jsx/jsx.js"

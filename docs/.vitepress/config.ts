@@ -7,11 +7,10 @@ export default defineConfig({
         outline: "deep",
 
         sidebar: [
-            { text: "GObject", link: "/gobject" },
-            { text: "State", link: "/state" },
             { text: "JSX", link: "/jsx" },
-            { text: "Polyfills", link: "/polyfills" },
+            { text: "GObject", link: "/gobject" },
             { text: "DBus", link: "/dbus" },
+            { text: "Polyfills", link: "/polyfills" },
         ],
 
         socialLinks: [
