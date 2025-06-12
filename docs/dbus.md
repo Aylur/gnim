@@ -10,16 +10,16 @@ import { Service, iface, methodAsync, signal, property } from "gjsx/dbus"
 
 @iface("example.gjsx.MyService")
 export class MyService extends Service {
-    @property("s") MyProperty = ""
+  @property("s") MyProperty = ""
 
-    @methodAsync(["s"], ["s"])
-    async MyMethod(str: string): Promise<[string]> {
-        this.MySignal(str)
-        return [str]
-    }
+  @methodAsync(["s"], ["s"])
+  async MyMethod(str: string): Promise<[string]> {
+    this.MySignal(str)
+    return [str]
+  }
 
-    @signal("s")
-    MySignal(str: string) {}
+  @signal("s")
+  MySignal(str: string) {}
 }
 ```
 
@@ -35,11 +35,11 @@ Use them as servers
 const service = await new MyService().serve()
 
 service.connect("my-signal", (_, str: string) => {
-    console.log(`MySignal invoked with argument: "${str}"`)
+  console.log(`MySignal invoked with argument: "${str}"`)
 })
 
 service.connect("notify::my-property", () => {
-    console.log(`MyProperty set to ${service.MyProperty}`)
+  console.log(`MyProperty set to ${service.MyProperty}`)
 })
 ```
 
@@ -73,13 +73,13 @@ Attempt to own `name` and export this object at `objectPath` on `busType`.
 
 ```ts
 class Service {
-    async serve(props: {
-        busType?: Gio.BusType
-        name?: string
-        objectPath?: string
-        flags?: Gio.BusNameOwnerFlags
-        timeout?: number
-    }): Promise<this>
+  async serve(props: {
+    busType?: Gio.BusType
+    name?: string
+    objectPath?: string
+    flags?: Gio.BusNameOwnerFlags
+    timeout?: number
+  }): Promise<this>
 }
 ```
 
@@ -89,13 +89,13 @@ Attempt to proxy `name`'s object at `objectPath` on `busType`.
 
 ```ts
 class Service {
-    async proxy(props: {
-        bus?: Gio.DBusConnection
-        name?: string
-        objectPath?: string
-        flags?: Gio.DBusProxyFlags
-        timeout?: number
-    }): Promise<this>
+  async proxy(props: {
+    bus?: Gio.DBusConnection
+    name?: string
+    objectPath?: string
+    flags?: Gio.DBusProxyFlags
+    timeout?: number
+  }): Promise<this>
 }
 ```
 
@@ -107,10 +107,10 @@ Exmaple
 ```ts
 @iface("some.dbus.interface")
 class MyProxy extends Service {
-    @method()
-    Method() {
-        console.log("this is never invoked when working as a proxy")
-    }
+  @method()
+  Method() {
+    console.log("this is never invoked when working as a proxy")
+  }
 }
 
 const proxy = await new MyProxy().proxy()

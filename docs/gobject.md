@@ -10,12 +10,12 @@ import GObject, { register, property, signal } from "gjsx/gobject"
 
 @register({ GTypeName: "MyObj" })
 class MyObj extends GObject.Object {
-    @property(String) myProp = ""
+  @property(String) myProp = ""
 
-    @signal(String, GObject.TYPE_UINT)
-    mySignal(a: string, b: number) {
-        // default handler
-    }
+  @signal(String, GObject.TYPE_UINT)
+  mySignal(a: string, b: number) {
+    // default handler
+  }
 }
 ```
 
@@ -25,53 +25,53 @@ class MyObj extends GObject.Object {
 const priv = Symbol("private props")
 
 class MyObj extends GObject.Object {
-    [priv] = { "my-prop": "" }
+  [priv] = { "my-prop": "" }
 
-    constructors() {
-        super()
-        Object.defineProperty(this, "myProp", {
-            enumerable: true,
-            configurable: false,
-            set(value) {
-                if (this[priv]["my-prop"] !== value) {
-                    this[priv]["my-prop"] = v
-                    this.notify("my-prop")
-                }
-            },
-            get() {
-                return this[priv]["my-prop"]
-            },
-        })
-    }
+  constructors() {
+    super()
+    Object.defineProperty(this, "myProp", {
+      enumerable: true,
+      configurable: false,
+      set(value) {
+        if (this[priv]["my-prop"] !== value) {
+          this[priv]["my-prop"] = v
+          this.notify("my-prop")
+        }
+      },
+      get() {
+        return this[priv]["my-prop"]
+      },
+    })
+  }
 
-    mySignal(a, b) {
-        return this.emit("my-signal", a, b)
-    }
+  mySignal(a, b) {
+    return this.emit("my-signal", a, b)
+  }
 
-    on_my_signal(a, b) {
-        // default handler
-    }
+  on_my_signal(a, b) {
+    // default handler
+  }
 }
 
 GObject.registerClass(
-    {
-        GTypeName: "MyObj",
-        Properties: {
-            "my-prop": GObject.ParamSpec.string(
-                "my-prop",
-                "",
-                "",
-                GObject.ParamFlags.READWRITE,
-                "",
-            ),
-        },
-        Signals: {
-            "my-signal": {
-                param_types: [String.$gtype, GObject.TYPE_UINT],
-            },
-        },
+  {
+    GTypeName: "MyObj",
+    Properties: {
+      "my-prop": GObject.ParamSpec.string(
+        "my-prop",
+        "",
+        "",
+        GObject.ParamFlags.READWRITE,
+        "",
+      ),
     },
-    MyObj,
+    Signals: {
+      "my-signal": {
+        param_types: [String.$gtype, GObject.TYPE_UINT],
+      },
+    },
+  },
+  MyObj,
 )
 ```
 
@@ -92,8 +92,8 @@ Declaring properties are split into three decorators:
 
 ```ts
 type PropertyTypeDeclaration<T> =
-    | ((name: string, flags: ParamFlags) => ParamSpec<T>)
-    | { $gtype: GType<T> }
+  | ((name: string, flags: ParamFlags) => ParamSpec<T>)
+  | { $gtype: GType<T> }
 
 function property<T>(typeDeclaration: PropertyTypeDeclaration<T>): void
 function setter<T>(typeDeclaration: PropertyTypeDeclaration<T>): void
@@ -116,22 +116,22 @@ These decorators take a single parameter which defines the type:
   name of the property (for example `myProp` -> `my-prop`), and flags is one of:
   `ParamFlags.READABLE`, `ParamFlags.WRITABLE`, `ParamFlags.READWRITE`.
 
-    ```ts
-    const Percent = (name: string, flags: ParamFlags) =>
-        GObject.ParamSpec.double(name, "", "", flags, 0, 1, 0)
+  ```ts
+  const Percent = (name: string, flags: ParamFlags) =>
+    GObject.ParamSpec.double(name, "", "", flags, 0, 1, 0)
 
-    @register()
-    class MyObj extends GObject.Object {
-        @property(Percent) percent = 0
-    }
-    ```
+  @register()
+  class MyObj extends GObject.Object {
+    @property(Percent) percent = 0
+  }
+  ```
 
 The `property` decorator lets you declare a read-write property.
 
 ```ts {3}
 @register()
 class MyObj extends GObject.Object {
-    @property(String) myProp = ""
+  @property(String) myProp = ""
 }
 ```
 
@@ -155,10 +155,10 @@ The `getter` decorator lets you declare a read-only property.
 ```ts {3}
 @register()
 class MyObj extends GObject.Object {
-    @getter(String)
-    get readOnly() {
-        return "readonly value"
-    }
+  @getter(String)
+  get readOnly() {
+    return "readonly value"
+  }
 }
 ```
 
@@ -167,15 +167,15 @@ The `setter` decorator lets you declare a write-only property.
 ```ts {5}
 @register()
 class MyObj extends GObject.Object {
-    #prop = ""
+  #prop = ""
 
-    @setter(String)
-    set myProp(value: string) {
-        if (value !== this.#prop) {
-            this.#prop = value
-            this.notify("my-prop")
-        }
+  @setter(String)
+  set myProp(value: string) {
+    if (value !== this.#prop) {
+      this.#prop = value
+      this.notify("my-prop")
     }
+  }
 }
 ```
 
@@ -194,12 +194,12 @@ class MyObj extends GObject.Object {
 
 ```ts
 function signal(
-    params: Array<GType>,
-    returnType?: GType,
-    options?: {
-        flags?: SignalFlags
-        accumulator?: AccumulatorType
-    },
+  params: Array<GType>,
+  returnType?: GType,
+  options?: {
+    flags?: SignalFlags
+    accumulator?: AccumulatorType
+  },
 )
 
 function signal(...params: Array<GType>)
@@ -211,17 +211,17 @@ handler of the signal.
 ```ts {3,4,5,10}
 @register()
 class MyObj extends GObject.Object {
-    @signal([String, Number], Boolean, {
-        accumulator: GObject.AccumulatorType.FIRST_WINS,
-    })
-    myFirstHandledSignal(str: string, n: number): boolean {
-        return false
-    }
+  @signal([String, Number], Boolean, {
+    accumulator: GObject.AccumulatorType.FIRST_WINS,
+  })
+  myFirstHandledSignal(str: string, n: number): boolean {
+    return false
+  }
 
-    @signal(String, GObject.TYPE_STRING)
-    mySignal(a: String, b: String): void {
-        // default signal handler
-    }
+  @signal(String, GObject.TYPE_STRING)
+  mySignal(a: String, b: String): void {
+    // default signal handler
+  }
 }
 ```
 

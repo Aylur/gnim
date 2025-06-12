@@ -11,28 +11,28 @@ Consider the following example:
 
 ```ts
 function Box() {
-    let counter = 0
+  let counter = 0
 
-    const button = new Gtk.Button()
-    const icon = new Gtk.Image({
-        iconName: "system-search-symbolic",
-    })
-    const label = new Gtk.Label({
-        label: `clicked ${counter} times`,
-    })
-    const box = new Gtk.Box({
-        orientation: Gtk.Orientation.VERTICAL,
-    })
+  const button = new Gtk.Button()
+  const icon = new Gtk.Image({
+    iconName: "system-search-symbolic",
+  })
+  const label = new Gtk.Label({
+    label: `clicked ${counter} times`,
+  })
+  const box = new Gtk.Box({
+    orientation: Gtk.Orientation.VERTICAL,
+  })
 
-    function onClicked() {
-        label.label = `clicked ${counter} times`
-    }
+  function onClicked() {
+    label.label = `clicked ${counter} times`
+  }
 
-    button.set_child(icon)
-    box.append(button)
-    box.append(label)
-    button.connect("clicked", onClicked)
-    return box
+  button.set_child(icon)
+  box.append(button)
+  box.append(label)
+  button.connect("clicked", onClicked)
+  return box
 }
 ```
 
@@ -40,21 +40,21 @@ Can be written as
 
 ```tsx
 function Box() {
-    const [counter, setCounter] = createState(0)
-    const label = createComputed([counter], (c) => `clicked ${c} times`)
+  const [counter, setCounter] = createState(0)
+  const label = createComputed([counter], (c) => `clicked ${c} times`)
 
-    function onClicked() {
-        setCounter((c) => c + 1)
-    }
+  function onClicked() {
+    setCounter((c) => c + 1)
+  }
 
-    return (
-        <Gtk.Box orientation={Gtk.Orientation.VERTICAL}>
-            <Gtk.Button $clicked={onClicked}>
-                <Gtk.Image iconName="system-search-symbolic" />
-            </Gtk.Button>
-            <Gtk.Label label={label} />
-        </Gtk.Box>
-    )
+  return (
+    <Gtk.Box orientation={Gtk.Orientation.VERTICAL}>
+      <Gtk.Button $clicked={onClicked}>
+        <Gtk.Image iconName="system-search-symbolic" />
+      </Gtk.Button>
+      <Gtk.Label label={label} />
+    </Gtk.Box>
+  )
 }
 ```
 
@@ -103,7 +103,7 @@ instead you can specify it with `_constructor`.
 
 ```tsx
 <Gtk.DropDown
-    _constructor={() => Gtk.DropDown.new_from_strings(["item1", "item2"])}
+  _constructor={() => Gtk.DropDown.new_from_strings(["item1", "item2"])}
 />
 ```
 
@@ -117,9 +117,9 @@ lets you specify a type string to specify the type of `child` it is meant to be.
 
 ```tsx
 <Gtk.CenterBox>
-    <Gtk.Box _type="start" />
-    <Gtk.Box _type="center" />
-    <Gtk.Box _type="end" />
+  <Gtk.Box _type="start" />
+  <Gtk.Box _type="center" />
+  <Gtk.Box _type="end" />
 </Gtk.CenterBox>
 ```
 
@@ -137,8 +137,8 @@ can be defined with a `$$` prefix.
 
 ```tsx
 <Gtk.Revealer
-    $$childRevealed={(self) => print(self, "child-revealed")}
-    $destroy={(self) => print(self, "destroyed")}
+  $$childRevealed={(self) => print(self, "child-revealed")}
+  $destroy={(self) => print(self, "destroyed")}
 />
 ```
 
@@ -157,13 +157,13 @@ function.
 
 ```tsx
 function MyWidget() {
-    let box: Gtk.Box
+  let box: Gtk.Box
 
-    function someHandler() {
-        console.log(box)
-    }
+  function someHandler() {
+    console.log(box)
+  }
 
-    return <Gtk.Box $={(self) => (box = self)} />
+  return <Gtk.Box $={(self) => (box = self)} />
 }
 ```
 
@@ -171,19 +171,19 @@ Another common use case is to initialize relations between widgets in the tree.
 
 ```tsx
 function MyWidget() {
-    let searchbar: Gtk.SearchBar
+  let searchbar: Gtk.SearchBar
 
-    function init(win: Gtk.Window) {
-        searchbar.set_key_capture_widget(win)
-    }
+  function init(win: Gtk.Window) {
+    searchbar.set_key_capture_widget(win)
+  }
 
-    return (
-        <Gtk.Window $={init}>
-            <Gtk.SearchBar $={(self) => (searchbar = self)}>
-                <Gtk.SearchEntry />
-            </Gtk.SearchBar>
-        </Gtk.Window>
-    )
+  return (
+    <Gtk.Window $={init}>
+      <Gtk.SearchBar $={(self) => (searchbar = self)}>
+        <Gtk.SearchEntry />
+      </Gtk.SearchBar>
+    </Gtk.Window>
+  )
 }
 ```
 
@@ -197,11 +197,11 @@ reflected on the widget
 const [revealed, setRevealed] = createState(false)
 
 return (
-    <Gtk.Button $clicked={() => setRevealed((v) => !v)}>
-        <Gtk.Revealer revealChild={revealed}>
-            <Gtk.Label label="content" />
-        </Gtk.Revealer>
-    </Gtk.Button>
+  <Gtk.Button $clicked={() => setRevealed((v) => !v)}>
+    <Gtk.Revealer revealChild={revealed}>
+      <Gtk.Label label="content" />
+    </Gtk.Revealer>
+  </Gtk.Button>
 )
 ```
 
@@ -218,17 +218,17 @@ set through the
 ```ts
 @register({ Implements: [Gtk.Buildable] })
 class MyContainer extends Gtk.Widget {
-    vfunc_add_child(
-        builder: Gtk.Builder,
-        child: GObject.Object,
-        type?: string | null,
-    ): void {
-        if (child instanceof Gtk.Widget) {
-            // set children here
-        } else {
-            super.vfunc_add_child(builder, child, type)
-        }
+  vfunc_add_child(
+    builder: Gtk.Builder,
+    child: GObject.Object,
+    type?: string | null,
+  ): void {
+    if (child instanceof Gtk.Widget) {
+      // set children here
+    } else {
+      super.vfunc_add_child(builder, child, type)
     }
+  }
 }
 ```
 
@@ -242,11 +242,11 @@ Just like class components, function components can also have a setup function.
 import { FCProps } from "gjsx"
 
 function MyComponent(props: FCProps<Gtk.Button, {}>) {
-    return (
-        <Gtk.Button>
-            <Gtk.Label />
-        </Gtk.Button>
-    )
+  return (
+    <Gtk.Button>
+      <Gtk.Label />
+    </Gtk.Button>
+  )
 }
 
 return <MyComponent $={(self) => print(self, "is a Button")} />
@@ -262,11 +262,11 @@ They are passed in as `children` property. They can be of any type.
 
 ```tsx
 interface MyButtonProps {
-    children: string
+  children: string
 }
 
 function MyButton({ children }: MyButtonProps) {
-    return <Gtk.Button label={children} />
+  return <Gtk.Button label={children} />
 }
 
 return <MyButton>Click Me</MyButton>
@@ -276,28 +276,28 @@ When multiple children are passed in `children` is an `Array`.
 
 ```tsx
 interface MyBoxProps {
-    children: Array<GObject.Object | string>
+  children: Array<GObject.Object | string>
 }
 
 function MyBox({ children }: MyBoxProps) {
-    return (
-        <Gtk.Box>
-            {children.map((item) =>
-                item instanceof Gtk.Widget ? (
-                    item
-                ) : (
-                    <Gtk.Label label={item.toString()} />
-                ),
-            )}
-        </Gtk.Box>
-    )
+  return (
+    <Gtk.Box>
+      {children.map((item) =>
+        item instanceof Gtk.Widget ? (
+          item
+        ) : (
+          <Gtk.Label label={item.toString()} />
+        ),
+      )}
+    </Gtk.Box>
+  )
 }
 
 return (
-    <MyBox>
-        Some Content
-        <Gtk.Button />
-    </MyBox>
+  <MyBox>
+    Some Content
+    <Gtk.Button />
+  </MyBox>
 )
 ```
 
@@ -308,12 +308,12 @@ With function components, they have to be explicitly declared and handled.
 
 ```tsx
 interface MyWidgetProps {
-    label: Accessor<string> | string
-    onClicked: (self: Gtk.Button) => void
+  label: Accessor<string> | string
+  onClicked: (self: Gtk.Button) => void
 }
 
 function MyWidget({ label, onClicked }: MyWidgetProps) {
-    return <Gtk.Button $clicked={onClicked} label={label} />
+  return <Gtk.Button $clicked={onClicked} label={label} />
 }
 ```
 
@@ -327,9 +327,9 @@ When you want to render based on a value, you can use the `<With>` component.
 let value: Accessor<{ member: string } | null>
 
 return (
-    <With value={value}>
-        {(value) => value && <Gtk.Label label={value.member} />}
-    </With>
+  <With value={value}>
+    {(value) => value && <Gtk.Label label={value.member} />}
+  </With>
 )
 ```
 
@@ -356,11 +356,11 @@ are inserted while widgets associated with removed items are removed.
 let list: Accessor<Iterable<any>>
 
 return (
-    <For each={list}>
-        {(item, index: Accessor<number>) => (
-            <Gtk.Label label={index((i) => `${i}. ${item}`)} />
-        )}
-    </For>
+  <For each={list}>
+    {(item, index: Accessor<number>) => (
+      <Gtk.Label label={index((i) => `${i}. ${item}`)} />
+    )}
+  </For>
 )
 ```
 
@@ -388,15 +388,15 @@ There is a single primitive called `Accessor` which is a read-only signal.
 
 ```ts
 export interface Accessor<T> {
-    get(): T
-    subscribe(callback: () => void): () => void
-    <R = T>(transform: (value: T) => R): Accessor<R>
+  get(): T
+  subscribe(callback: () => void): () => void
+  <R = T>(transform: (value: T) => R): Accessor<R>
 }
 
 let accessor: Accessor<any>
 
 const unsubscribe = accessor.subscribe(() => {
-    console.log("value of accessor changed to", accessor.get())
+  console.log("value of accessor changed to", accessor.get())
 })
 
 unsubscribe()
@@ -427,8 +427,8 @@ when the Accessor's value is accessed. The function should be pure.
 
 ```ts
 function createComputed<
-    Deps extends Array<Accessor<any>>,
-    Values extends { [K in keyof Deps]: Accessed<Deps[K]> },
+  Deps extends Array<Accessor<any>>,
+  Values extends { [K in keyof Deps]: Accessed<Deps[K]> },
 >(deps: Deps, transform: (...values: Values) => V): Accessor<V>
 ```
 
@@ -457,8 +457,8 @@ Creates an `Accessor` on a `GObject.Object`'s `property` or a `Gio.Settings`'s
 
 ```ts
 function createBinding<T extends GObject.Object, P extends keyof T>(
-    object: T,
-    property: Extract<P, string>,
+  object: T,
+  property: Extract<P, string>,
 ): Accessor<T[P]>
 
 function createBinding<T>(settings: Gio.Settings, key: string): Accessor<T>
@@ -480,9 +480,9 @@ Example:
 
 ```ts
 const value = createConnection(
-    "initial value",
-    [obj1, "sig-name", (...args) => "str"],
-    [obj2, "sig-name", (...args) => "str"],
+  "initial value",
+  [obj1, "sig-name", (...args) => "str"],
+  [obj2, "sig-name", (...args) => "str"],
 )
 ```
 
@@ -508,8 +508,8 @@ Example:
 
 ```ts
 const counter = createExternal(0, (set) => {
-    const interval = setInterval(() => set((v) => v + 1))
-    return () => clearInterval(interval)
+  const interval = setInterval(() => set((v) => v + 1))
+  return () => clearInterval(interval)
 })
 ```
 
@@ -543,7 +543,7 @@ Example:
 
 ```tsx
 createRoot((dipose) => {
-    return <Gtk.Window $close-request={dispose}></Gtk.Window>
+  return <Gtk.Window $close-request={dispose}></Gtk.Window>
 })
 ```
 
@@ -557,14 +557,14 @@ Example:
 ```ts
 const scope = getScope()
 setTimeout(() => {
-    // This callback gets run without an owner scope.
-    // Restore owner via scope.run:
-    scope.run(() => {
-        const foo = FooContext.use()
-        onCleanup(() => {
-            print("some cleanup")
-        })
+  // This callback gets run without an owner scope.
+  // Restore owner via scope.run:
+  scope.run(() => {
+    const foo = FooContext.use()
+    onCleanup(() => {
+      print("some cleanup")
     })
+  })
 }, 1000)
 ```
 
@@ -576,13 +576,13 @@ Example:
 
 ```tsx
 function MyComponent() {
-    const dispose = signal.subscribe(() => {})
+  const dispose = signal.subscribe(() => {})
 
-    onCleanup(() => {
-        dispose()
-    })
+  onCleanup(() => {
+    dispose()
+  })
 
-    return <></>
+  return <></>
 }
 ```
 
@@ -594,11 +594,11 @@ Example:
 
 ```tsx
 function MyComponent() {
-    onMount(() => {
-        console.log("root scope returned")
-    })
+  onMount(() => {
+    console.log("root scope returned")
+  })
 
-    return <></>
+  return <></>
 }
 ```
 
@@ -614,19 +614,17 @@ Example:
 const MyContext = createContext("fallback-value")
 
 function ConsumerComponent() {
-    const value = MyContext.use()
+  const value = MyContext.use()
 
-    return <Gtk.Label label={value} />
+  return <Gtk.Label label={value} />
 }
 
 function ProviderComponent() {
-    return (
-        <Gtk.Box>
-            <MyContext value="my-value">
-                {() => <ConsumerComponent />}
-            </MyContext>
-        </Gtk.Box>
-    )
+  return (
+    <Gtk.Box>
+      <MyContext value="my-value">{() => <ConsumerComponent />}</MyContext>
+    </Gtk.Box>
+  )
 }
 ```
 
@@ -642,63 +640,63 @@ elements by default, but they can be set.
 
 - Function components
 
-    ```tsx
-    import { FCProps } from "gjsx"
-    import { intrinsicElements } from "gjsx/gtk4/jsx-runtime"
+  ```tsx
+  import { FCProps } from "gjsx"
+  import { intrinsicElements } from "gjsx/gtk4/jsx-runtime"
 
-    type MyLabelProps = FCProps<
-        Gtk.Label,
-        {
-            someProp: string
-        }
-    >
-
-    function MyLabel({ someProp }: MyLabelProps) {
-        return <Gtk.Label label={someProp} />
+  type MyLabelProps = FCProps<
+    Gtk.Label,
+    {
+      someProp: string
     }
+  >
 
-    intrinsicElements["my-label"] = MyLabel
+  function MyLabel({ someProp }: MyLabelProps) {
+    return <Gtk.Label label={someProp} />
+  }
 
-    declare global {
-        namespace JSX {
-            interface IntrinsicElements {
-                "my-label": MyLabelProps
-            }
-        }
+  intrinsicElements["my-label"] = MyLabel
+
+  declare global {
+    namespace JSX {
+      interface IntrinsicElements {
+        "my-label": MyLabelProps
+      }
     }
+  }
 
-    return <my-label someProps="hello" />
-    ```
+  return <my-label someProps="hello" />
+  ```
 
 - Class components
 
-    ```tsx
-    import { CCProps } from "gjsx"
-    import { intrinsicElements } from "gjsx/gtk4/jsx-runtime"
-    import { property, register } from "gjsx/gobject"
+  ```tsx
+  import { CCProps } from "gjsx"
+  import { intrinsicElements } from "gjsx/gtk4/jsx-runtime"
+  import { property, register } from "gjsx/gobject"
 
-    interface MyWidgetProps extends Gtk.Widget.ConstructorProps {
-        someProp: string
+  interface MyWidgetProps extends Gtk.Widget.ConstructorProps {
+    someProp: string
+  }
+
+  @register()
+  class MyWidget extends Gtk.Widget {
+    @property(String) declare someProp: string
+
+    constructor(props: Partial<MyWidgetProps>) {
+      super(props)
     }
+  }
 
-    @register()
-    class MyWidget extends Gtk.Widget {
-        @property(String) declare someProp: string
+  intrinsicElements["my-widget"] = MyWidget
 
-        constructor(props: Partial<MyWidgetProps>) {
-            super(props)
-        }
+  declare global {
+    namespace JSX {
+      interface IntrinsicElements {
+        "my-widget": CCProps<MyWidget, MyWidgetProps>
+      }
     }
+  }
 
-    intrinsicElements["my-widget"] = MyWidget
-
-    declare global {
-        namespace JSX {
-            interface IntrinsicElements {
-                "my-widget": CCProps<MyWidget, MyWidgetProps>
-            }
-        }
-    }
-
-    return <my-widget someProps="hello" />
-    ```
+  return <my-widget someProps="hello" />
+  ```

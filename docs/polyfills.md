@@ -15,11 +15,11 @@ const url = new URL("https://some-site.com/api")
 url.searchParams.set("hello", "world")
 
 const res = await fetch(url, {
-    method: "POST",
-    body: JSON.stringify({ hello: "world" }),
-    headers: {
-        "Content-Type": "application/json",
-    },
+  method: "POST",
+  body: JSON.stringify({ hello: "world" }),
+  headers: {
+    "Content-Type": "application/json",
+  },
 })
 
 const json = await res.json()

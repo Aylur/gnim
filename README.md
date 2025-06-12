@@ -18,18 +18,18 @@ This library provides:
 
 ```tsx
 function Counter() {
-    const [counter, setCounter] = createState(0)
+  const [counter, setCounter] = createState(0)
 
-    function increment() {
-        setCounter((v) => v + 1)
-    }
+  function increment() {
+    setCounter((v) => v + 1)
+  }
 
-    return (
-        <Gtk.Box spacing={8}>
-            <Gtk.Label label={counter.as((c) => c.toString())} />
-            <Gtk.Button $clicked={increment}>Increment</Gtk.Button>
-        </Gtk.Box>
-    )
+  return (
+    <Gtk.Box spacing={8}>
+      <Gtk.Label label={counter((c) => c.toString())} />
+      <Gtk.Button $clicked={increment}>Increment</Gtk.Button>
+    </Gtk.Box>
+  )
 }
 ```
 
