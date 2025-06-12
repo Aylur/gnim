@@ -145,7 +145,7 @@ export function onCleanup(cleanup: () => void) {
  */
 export function onMount(cleanup: () => void) {
     if (!Scope.current) {
-        console.error(Error("cannout attach onMount: out of tracking context"))
+        console.error(Error("cannot attach onMount: out of tracking context"))
     }
 
     Scope.current?.onMount(cleanup)
@@ -160,7 +160,7 @@ export function onMount(cleanup: () => void) {
  * createRoot((dispose) => {
  *   let root: Gtk.Window
  *
- *   const state = new State("value")
+ *   const [state] = createState("value")
  *
  *   const remove = () => {
  *     root.destroy()
