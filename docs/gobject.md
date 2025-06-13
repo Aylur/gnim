@@ -6,7 +6,7 @@ Decorators that wrap
 ## Example Usage
 
 ```ts
-import GObject, { register, property, signal } from "gjsx/gobject"
+import GObject, { register, property, signal } from "gnim/gobject"
 
 @register({ GTypeName: "MyObj" })
 class MyObj extends GObject.Object {

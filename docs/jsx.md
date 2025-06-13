@@ -67,7 +67,7 @@ it. If you need the actual type of an object either use the `jsx` function
 directly or type assert the JSX expression.
 
 ```tsx
-import { jsx } from "gjsx"
+import { jsx } from "gnim"
 
 const menubutton = new Gtk.MenuButton()
 
@@ -113,7 +113,7 @@ Under the hood the `jsx` function uses the
 [Gtk.Buildable](https://docs.gtk.org/gtk4/iface.Buildable.html) interface which
 lets you specify a type string to specify the type of `child` it is meant to be.
 
-> [!NOTE] When using Gjsx with Gnome extensions, this has no effect.
+> [!NOTE] In Gnome extensions, it has no effect.
 
 ```tsx
 <Gtk.CenterBox>
@@ -239,7 +239,7 @@ class MyContainer extends Gtk.Widget {
 Just like class components, function components can also have a setup function.
 
 ```tsx
-import { FCProps } from "gjsx"
+import { FCProps } from "gnim"
 
 function MyComponent(props: FCProps<Gtk.Button, {}>) {
   return (
@@ -641,8 +641,8 @@ elements by default, but they can be set.
 - Function components
 
   ```tsx
-  import { FCProps } from "gjsx"
-  import { intrinsicElements } from "gjsx/gtk4/jsx-runtime"
+  import { FCProps } from "gnim"
+  import { intrinsicElements } from "gnim/gtk4/jsx-runtime"
 
   type MyLabelProps = FCProps<
     Gtk.Label,
@@ -671,9 +671,9 @@ elements by default, but they can be set.
 - Class components
 
   ```tsx
-  import { CCProps } from "gjsx"
-  import { intrinsicElements } from "gjsx/gtk4/jsx-runtime"
-  import { property, register } from "gjsx/gobject"
+  import { CCProps } from "gnim"
+  import { intrinsicElements } from "gnim/gtk4/jsx-runtime"
+  import { property, register } from "gnim/gobject"
 
   interface MyWidgetProps extends Gtk.Widget.ConstructorProps {
     someProp: string

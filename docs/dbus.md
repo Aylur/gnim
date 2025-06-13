@@ -6,9 +6,9 @@ Read more about using DBus in GJS on
 Use classes to define an interface.
 
 ```ts
-import { Service, iface, methodAsync, signal, property } from "gjsx/dbus"
+import { Service, iface, methodAsync, signal, property } from "gnim/dbus"
 
-@iface("example.gjsx.MyService")
+@iface("example.gjs.MyService")
 export class MyService extends Service {
   @property("s") MyProperty = ""
 
@@ -61,9 +61,9 @@ from `GObject.Object`. DBus signals are also GObject signals and DBus properties
 are also GObject properties.
 
 ```ts
-import { Service, iface } from "gjsx/dbus"
+import { Service, iface } from "gnim/dbus"
 
-@iface("example.gjsx.MyService")
+@iface("example.gjs.MyService")
 class MyService extends Service {}
 ```
 

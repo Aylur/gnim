@@ -236,7 +236,7 @@ declare global {
         type ElementClass = GObject.Object
 
         type LibraryManagedAttributes<C, Props> = JsxProps<C, Props, any> & {
-            /* reserved prop name by the jsx transform, which is not used by gjsx */
+            /* reserved prop name by the jsx transform, which is not used */
             key?: never
             // FIXME: why does an intrinsic element always resolve as FC?
             // __type?: C extends CC ? "CC" : C extends FC ? "FC" : never

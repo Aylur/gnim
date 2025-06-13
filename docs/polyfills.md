@@ -6,10 +6,10 @@ for context.
 
 ## fetch
 
-Gjsx provides a basic implementation for the `fetch` API.
+Gnim provides a basic implementation for the `fetch` API.
 
 ```ts
-import { fetch, URL } from "gjsx/fetch"
+import { fetch, URL } from "gnim/fetch"
 
 const url = new URL("https://some-site.com/api")
 url.searchParams.set("hello", "world")

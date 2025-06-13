@@ -1,4 +1,4 @@
-# Gjsx
+# Gnim
 
 Library which brings JSX and reactivity to GNOME JavaScript.
 
@@ -7,11 +7,11 @@ If you are not already familiar with GJS and GObject, you should read
 
 This library provides:
 
-- [JSX and reactivity](https://aylur.github.io/gjsx/jsx) for both Gtk
+- [JSX and reactivity](https://aylur.github.io/gnim/jsx) for both Gtk
   Applications and Gnome extensions
-- [GObject decorators](https://aylur.github.io/gjsx/gobject) for a convenient
+- [GObject decorators](https://aylur.github.io/gnim/gobject) for a convenient
   and type safe way for subclassing GObjects
-- [DBus decorators](https://aylur.github.io/gjsx/dbus) for a convenient and type
+- [DBus decorators](https://aylur.github.io/gnim/dbus) for a convenient and type
   safe way for implementing DBus services and proxies.
 
 ## Obligatory Counter Example
@@ -33,6 +33,6 @@ function Counter() {
 }
 ```
 
-## Example apps using Gjsx
+## Example apps using Gnim
 
 - [icon-theme-browser](https://github.com/Aylur/icon-theme-browser)
