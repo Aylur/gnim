@@ -14,7 +14,7 @@ export default defineConfig({
         ],
 
         socialLinks: [
-            { icon: "github", link: "https://github.com/aylur/gjsx/" },
+            { icon: "github", link: "https://github.com/aylur/gnim/" },
             { icon: "discord", link: "https://discord.gg/CXQpHwDuhY" },
             {
                 link: "https://ko-fi.com/aylur",
