@@ -24,5 +24,9 @@ export default defineConfig({
                 },
             },
         ],
+
+        search: {
+            provider: "local",
+        },
     },
 })
