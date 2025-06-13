@@ -41,8 +41,16 @@ export class Accessor<T = unknown> extends Function {
         return this.#get()
     }
 
-    protected _call<R = T>(transform: (value: T) => R): Accessor<R> {
+    /**
+     * Create a new `Accessor` that applies a transformation on its value.
+     * @param transform The transformation to apply. Should be a pure function.
+     */
+    as<R = T>(transform: (value: T) => R): Accessor<R> {
         return new Accessor(() => transform(this.#get()), this.#subscribe)
+    }
+
+    protected _call<R = T>(transform: (value: T) => R): Accessor<R> {
+        return this.as(transform)
     }
 
     toString(): string {
