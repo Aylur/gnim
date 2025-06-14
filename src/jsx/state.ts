@@ -265,7 +265,11 @@ export function createConnection<T>(
         if (subscribers.size === 0) {
             dispose = signals.map(([object, signal, callback]) => {
                 const id = object.connect(signal, (_, ...args: unknown[]) => {
-                    value = callback(...args)
+                    const newValue = callback(...args)
+                    if (value !== newValue) {
+                        value = newValue
+                        subscribers.forEach((cb) => cb())
+                    }
                 })
                 return () => object.disconnect(id)
             })
