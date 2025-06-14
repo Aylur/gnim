@@ -681,7 +681,7 @@ elements by default, but they can be set.
 
   @register()
   class MyWidget extends Gtk.Widget {
-    @property(String) declare someProp: string
+    @property(String) someProp = ""
 
     constructor(props: Partial<MyWidgetProps>) {
       super(props)
