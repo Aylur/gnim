@@ -49,7 +49,7 @@ function Box() {
 
   return (
     <Gtk.Box orientation={Gtk.Orientation.VERTICAL}>
-      <Gtk.Button $clicked={onClicked}>
+      <Gtk.Button onClicked={onClicked}>
         <Gtk.Image iconName="system-search-symbolic" />
       </Gtk.Button>
       <Gtk.Label label={label} />
@@ -93,7 +93,7 @@ Using classes in JSX expressions let's you set some additional properties.
 
 By default classes are instantiated with the `new` keyword and initial values
 are passed in. In cases where you need to use a static constructor function
-instead you can specify it with `_constructor`.
+instead you can specify it with `$constructor`.
 
 > [!WARNING]
 >
@@ -103,7 +103,7 @@ instead you can specify it with `_constructor`.
 
 ```tsx
 <Gtk.DropDown
-  _constructor={() => Gtk.DropDown.new_from_strings(["item1", "item2"])}
+  $constructor={() => Gtk.DropDown.new_from_strings(["item1", "item2"])}
 />
 ```
 
@@ -117,28 +117,26 @@ lets you specify a type string to specify the type of `child` it is meant to be.
 
 ```tsx
 <Gtk.CenterBox>
-  <Gtk.Box _type="start" />
-  <Gtk.Box _type="center" />
-  <Gtk.Box _type="end" />
+  <Gtk.Box $type="start" />
+  <Gtk.Box $type="center" />
+  <Gtk.Box $type="end" />
 </Gtk.CenterBox>
 ```
 
 ### Signal handlers
 
-Signal handlers can be defined with a `$` prefix and `notify::` signal handlers
-can be defined with a `$$` prefix.
+Signal handlers can be defined with an `on` prefix and `notify::` signal
+handlers can be defined with an `onNotify` prefix.
 
 > [!NOTE]
 >
 > Signals are currently not typed. See
 > [this issue](https://github.com/gjsify/ts-for-gir/issues/259) for context.
-> Both properties and signals can be in either `camelCase`, `kebab-case` or
-> `snake_case`.
 
 ```tsx
 <Gtk.Revealer
-  $$childRevealed={(self) => print(self, "child-revealed")}
-  $destroy={(self) => print(self, "destroyed")}
+  onNotifyChildRevealed={(self) => print(self, "child-revealed")}
+  onDestroy={(self) => print(self, "destroyed")}
 />
 ```
 
@@ -146,7 +144,7 @@ can be defined with a `$$` prefix.
 
 It is possible to define an arbitrary function to do something with the instance
 imperatively. It is run **after** properties are set, signals are connected and
-children are appended and **before** the `jsx` function returns.
+children are appended but **before** the `jsx` function returns.
 
 ```tsx
 <Gtk.Stack $={(self) => print(self, "is about to be returned")} />
@@ -197,7 +195,7 @@ reflected on the widget
 const [revealed, setRevealed] = createState(false)
 
 return (
-  <Gtk.Button $clicked={() => setRevealed((v) => !v)}>
+  <Gtk.Button onClicked={() => setRevealed((v) => !v)}>
     <Gtk.Revealer revealChild={revealed}>
       <Gtk.Label label="content" />
     </Gtk.Revealer>
@@ -241,20 +239,23 @@ Just like class components, function components can also have a setup function.
 ```tsx
 import { FCProps } from "gnim"
 
-function MyComponent(props: FCProps<Gtk.Button, {}>) {
-  return (
-    <Gtk.Button>
-      <Gtk.Label />
-    </Gtk.Button>
-  )
+type MyComponentProps = FCProps<
+  Gtk.Button,
+  {
+    prop?: string
+  }
+>
+
+function MyComponent({ prop }: MyComponentProps) {
+  return <Gtk.Button label={prop} />
 }
 
-return <MyComponent $={(self) => print(self, "is a Button")} />
+return <MyComponent $={(self) => print(self, "is a Button")} prop="hello" />
 ```
 
 > [!NOTE]
 >
-> `FCProps` is required for TypeScript to be aware of the `$` function.
+> `FCProps` is required for TypeScript to be aware of the `$` prop.
 
 ### How children are passed to function components
 
@@ -313,7 +314,7 @@ interface MyWidgetProps {
 }
 
 function MyWidget({ label, onClicked }: MyWidgetProps) {
-  return <Gtk.Button $clicked={onClicked} label={label} />
+  return <Gtk.Button onClicked={onClicked} label={label} />
 }
 ```
 
@@ -543,7 +544,7 @@ Example:
 
 ```tsx
 createRoot((dipose) => {
-  return <Gtk.Window $close-request={dispose}></Gtk.Window>
+  return <Gtk.Window onCloseRequest={dispose}></Gtk.Window>
 })
 ```
 
@@ -636,7 +637,7 @@ elements by default, but they can be set.
 
 > [!TIP]
 >
-> It should always be preferred to just export/import components.
+> It should always be preferred to use function/class components directly.
 
 - Function components
 
@@ -665,7 +666,7 @@ elements by default, but they can be set.
     }
   }
 
-  return <my-label someProps="hello" />
+  return <my-label someProp="hello" />
   ```
 
 - Class components
@@ -698,5 +699,5 @@ elements by default, but they can be set.
     }
   }
 
-  return <my-widget someProps="hello" />
+  return <my-widget someProp="hello" />
   ```

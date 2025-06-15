@@ -7,13 +7,9 @@ export function kebabify(str: string) {
         .toLowerCase()
 }
 
-export type Kebabify<S> = S extends string
-    ? S extends `${infer First}${infer Rest}`
-        ? Rest extends Uncapitalize<Rest>
-            ? `${Lowercase<First>}${Kebabify<Rest>}`
-            : `${Lowercase<First>}-${Kebabify<Rest>}`
-        : S
-    : string
+export type Pascalify<S extends string> = S extends `${infer Head}-${infer Tail}`
+    ? `${Capitalize<Head>}${Pascalify<Tail>}`
+    : Capitalize<S>
 
 export function snakeify(str: string) {
     return str

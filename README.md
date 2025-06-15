@@ -27,7 +27,7 @@ function Counter() {
   return (
     <Gtk.Box spacing={8}>
       <Gtk.Label label={counter((c) => c.toString())} />
-      <Gtk.Button $clicked={increment}>Increment</Gtk.Button>
+      <Gtk.Button onClicked={increment}>Increment</Gtk.Button>
     </Gtk.Box>
   )
 }
@@ -40,4 +40,5 @@ function Counter() {
 ## Credits
 
 - [JU12000](https://github.com/JU12000) for suggesting the name Gnim
-- [Azazel-Woodwind](https://github.com/Azazel-Woodwind) for a lot of early testing
+- [Azazel-Woodwind](https://github.com/Azazel-Woodwind) for a lot of early
+  testing

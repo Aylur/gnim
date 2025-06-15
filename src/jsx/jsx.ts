@@ -2,12 +2,12 @@ import GObject from "gi://GObject"
 import { Fragment } from "./Fragment.js"
 import { Accessor } from "./state.js"
 import { CC, FC, env } from "./env.js"
-import { Kebabify, kebabify, set } from "../util.js"
+import { kebabify, set } from "../util.js"
 import { onCleanup } from "./scope.js"
 
 type Node = Array<GObject.Object> | GObject.Object | number | string | boolean | null | undefined
 
-const gtkType = Symbol("gtk builder type")
+export const gtkType = Symbol("gtk builder type")
 
 /**
  * Get the type of the object specified through the `_type` property
@@ -24,7 +24,7 @@ export type FCProps<Self, Props> = Props & {
      * Gtk.Builder type
      * its consumed internally and not actually passed as a parameters
      */
-    _type?: string
+    $type?: string
     /**
      * setup function
      * its consumed internally and not actually passed as a parameters
@@ -35,8 +35,7 @@ export type FCProps<Self, Props> = Props & {
 /**
  * Class Component Properties
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type CCProps<Self, Props, _Signals = any> = {
+export type CCProps<Self extends GObject.Object, Props> = {
     /**
      * @internal children elements
      * its consumed internally and not actually passed to class component constructors
@@ -46,12 +45,12 @@ export type CCProps<Self, Props, _Signals = any> = {
      * Gtk.Builder type
      * its consumed internally and not actually passed to class component constructors
      */
-    _type?: string
+    $type?: string
     /**
      * function to use as a constructor,
      * its consumed internally and not actually passed to class component constructors
      */
-    _constructor?(props: Partial<Props>): Self
+    $constructor?(props: Partial<Props>): Self
     /**
      * setup function,
      * its consumed internally and not actually passed to class component constructors
@@ -66,27 +65,26 @@ export type CCProps<Self, Props, _Signals = any> = {
      */
     css?: string | Accessor<string>
 } & {
-    [K in keyof Props as K extends string ? `$$${Kebabify<K> | K}` : never]?: (self: Self) => void
-} & {
-    [K in `$${string}`]: (self: Self, ...args: any[]) => any
-    // [K in keyof Signals as K extends string ? `$${K}` : never]?: Signals[K] extends (
-    //     ...args: infer Args
-    // ) => infer R
-    //     ? (self: Self, ...args: Args) => R
-    //     : (self: Self, ...args: any[]) => any
-} & {
     [K in keyof Props]?: Accessor<NonNullable<Props[K]>> | Props[K]
+} & {
+    [K in `on${string}`]?: (self: Self, ...args: unknown[]) => any
+    // TODO: https://github.com/gjsify/ts-for-gir/pull/263
+    // [S in keyof Self["$signals"] as S extends `notify::${infer P}`
+    //     ? `onNotify${Pascalify<P>}`
+    //     : S extends string
+    //       ? `on${Pascalify<S>}`
+    //       : never]?: GObject.SignalCallback<Self, Self["$signals"][S]>
 }
 
 // prettier-ignore
-type JsxProps<C, Props, Signals> =
+type JsxProps<C, Props> =
     C extends typeof Fragment ? (Props & {})
     // intrinsicElements always resolve as FC
     // so we can't narrow it down, and in some cases
     // the setup function is typed as a union of Object and actual type
     // as a fix users can and should use FCProps
     : C extends FC ? Props & Omit<FCProps<ReturnType<C>, Props>, "$">
-    : C extends CC ? CCProps<InstanceType<C>, Props, Signals>
+    : C extends CC ? CCProps<InstanceType<C>, Props>
     : never
 
 function isGObjectCtor(ctor: any): ctor is CC {
@@ -97,7 +95,8 @@ function isFunctionCtor(ctor: any): ctor is FC {
     return typeof ctor === "function" && !isGObjectCtor(ctor)
 }
 
-function setType(object: object, type: string) {
+/** @internal */
+export function setType(object: object, type: string) {
     if (gtkType in object && object[gtkType] !== "") {
         console.warn(`type overriden from ${object[gtkType]} to ${type} on ${object}`)
     }
@@ -105,52 +104,45 @@ function setType(object: object, type: string) {
     Object.assign(object, { [gtkType]: type })
 }
 
-function setup<T>(object: T, ...setups: unknown[]): T {
-    for (const setup of setups) {
-        if (typeof setup === "function") {
-            setup(object)
-        }
-    }
-    return object
-}
-
 export function jsx<T extends (props: any) => GObject.Object>(
     ctor: T,
-    props: JsxProps<T, Parameters<T>[0], any>,
+    props: JsxProps<T, Parameters<T>[0]>,
 ): ReturnType<T>
 
 export function jsx<T extends new (props: any) => GObject.Object>(
     ctor: T,
-    props: JsxProps<T, ConstructorParameters<T>[0], any>,
+    props: JsxProps<T, ConstructorParameters<T>[0]>,
 ): InstanceType<T>
 
 export function jsx<T extends GObject.Object>(
     ctor: keyof (typeof env)["intrinsicElements"] | (new (props: any) => T) | ((props: any) => T),
     inprops: any,
+    // key is a special prop in jsx which is passed as a third argument and not in props
+    key?: string,
 ): T {
-    const {
-        $,
-        _,
-        _type,
-        _constructor,
-        children = [],
-        ...props
-    } = inprops as CCProps<T, any, unknown>
+    const { $, $type, $constructor, children = [], ...rest } = inprops as CCProps<T, any>
+    const props = rest as Record<string, any>
 
+    if (key) Object.assign(props, { key })
     env.initProps(props)
 
     for (const [key, value] of Object.entries(props)) {
         if (value === undefined) delete props[key]
     }
 
-    if (typeof ctor === "string" && ctor in env.intrinsicElements) {
-        ctor = env.intrinsicElements[ctor] as FC<T> | CC<T>
+    if (typeof ctor === "string") {
+        if (ctor in env.intrinsicElements) {
+            ctor = env.intrinsicElements[ctor] as FC<T> | CC<T>
+        } else {
+            throw Error(`unknown intrinsic element "${ctor}"`)
+        }
     }
 
     if (isFunctionCtor(ctor)) {
         const object = ctor({ children, ...props })
-        if (_type) setType(object, _type)
-        return setup(object, $, _)
+        if ($type) setType(object, $type)
+        $?.(object)
+        return object
     }
 
     // collect css and className
@@ -163,8 +155,8 @@ export function jsx<T extends GObject.Object>(
 
     // collect signals and bindings
     for (const [key, value] of Object.entries(props)) {
-        if (key.startsWith("$")) {
-            signals.push([key.slice(1), value as () => unknown])
+        if (key.startsWith("on")) {
+            signals.push([key.slice(2), value as () => unknown])
             delete props[key]
         }
         if (value instanceof Accessor) {
@@ -174,9 +166,9 @@ export function jsx<T extends GObject.Object>(
     }
 
     // construct
-    const object = _constructor ? _constructor(props) : new (ctor as CC<T>)(props)
-    if (_constructor) Object.assign(object, props)
-    if (_type) setType(object, _type)
+    const object = $constructor ? $constructor(props) : new (ctor as CC<T>)(props)
+    if ($constructor) Object.assign(object, props)
+    if ($type) setType(object, $type)
 
     if (css) env.setCss(object, css)
     if (className) env.setClass(object, className)
@@ -199,8 +191,9 @@ export function jsx<T extends GObject.Object>(
 
     // handle signals
     const disposeHandlers = signals.map(([sig, handler]) => {
-        const id = sig.startsWith("$")
-            ? object.connect(`notify::${kebabify(sig.slice(1))}`, handler)
+        const name = kebabify(sig)
+        const id = name.startsWith("notify-")
+            ? object.connect(`notify::${name.slice(7)}`, handler)
             : object.connect(kebabify(sig), handler)
 
         return () => object.disconnect(id)
@@ -223,7 +216,8 @@ export function jsx<T extends GObject.Object>(
         })
     }
 
-    return setup(object, $, _)
+    $?.(object)
+    return object
 }
 
 export const jsxs = jsx
@@ -235,16 +229,14 @@ declare global {
         type Element = GObject.Object
         type ElementClass = GObject.Object
 
-        type LibraryManagedAttributes<C, Props> = JsxProps<C, Props, any> & {
-            /* reserved prop name by the jsx transform, which is not used */
-            key?: never
+        type LibraryManagedAttributes<C, Props> = JsxProps<C, Props> & {
             // FIXME: why does an intrinsic element always resolve as FC?
             // __type?: C extends CC ? "CC" : C extends FC ? "FC" : never
         }
 
         // eslint-disable-next-line @typescript-eslint/no-empty-object-type
         interface IntrinsicElements {
-            // cc: CCProps<Gtk.Box, Gtk.Box.ConstructorProps>
+            // cc: CCProps<Gtk.Box, Gtk.Box.ConstructorProps, Gtk.Box.SignalSignatures>
             // fc: FCProps<Gtk.Widget, FnProps>
         }
 

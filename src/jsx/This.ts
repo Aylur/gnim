@@ -3,11 +3,18 @@ import { env } from "./env.js"
 import { Accessor } from "./state.js"
 import { kebabify, set } from "../util.js"
 import { onCleanup } from "./scope.js"
+import { setType } from "./jsx.js"
 
 type Element = JSX.Element | "" | false | null | undefined
 
 type ThisProps<Self extends GObject.Object> = {
     this: Self
+    /**
+     * Gtk.Builder type
+     * its consumed internally and not actually passed to class component constructors
+     */
+    $type?: string
+
     children?: Element | Array<Element>
     /**
      * CSS class names
@@ -20,7 +27,13 @@ type ThisProps<Self extends GObject.Object> = {
 } & {
     [K in keyof Self]?: Self[K] | Accessor<NonNullable<Self[K]>>
 } & {
-    [Key in `$${string}`]: (self: Self, ...args: any[]) => any
+    [K in `on${string}`]?: (self: Self, ...args: unknown[]) => any
+    // TODO: https://github.com/gjsify/ts-for-gir/pull/263
+    // [S in keyof Self["$signals"] as S extends `notify::${infer P}`
+    //     ? `onNotify${Pascalify<P>}`
+    //     : S extends string
+    //       ? `on${Pascalify<S>}`
+    //       : never]?: GObject.SignalCallback<Self, Self["$signals"][S]>
 }
 
 // TODO:
@@ -28,8 +41,15 @@ type ThisProps<Self extends GObject.Object> = {
 // disposing the scope using a destroy signal
 
 /** @experimental */
-export function This<T extends GObject.Object>({ this: self, children, ...props }: ThisProps<T>) {
+export function This<T extends GObject.Object>({
+    this: self,
+    children,
+    $type,
+    ...props
+}: ThisProps<T>) {
     const cleanup = new Array<() => void>()
+
+    if ($type) setType(self, $type)
 
     for (const [key, value] of Object.entries(props)) {
         if (key === "css") {
@@ -46,10 +66,10 @@ export function This<T extends GObject.Object>({ this: self, children, ...props 
             } else if (typeof value === "string") {
                 env.setClass(self, value)
             }
-        } else if (key.startsWith("$")) {
-            const id = key.startsWith("$$")
-                ? self.connect(`notify::${kebabify(key.slice(2))}`, value)
-                : self.connect(kebabify(key.slice(1)), value)
+        } else if (key.startsWith("on")) {
+            const id = key.startsWith("onNotify")
+                ? self.connect(`notify::${kebabify(key.slice(8))}`, value)
+                : self.connect(kebabify(key.slice(2)), value)
 
             cleanup.push(() => self.disconnect(id))
         } else if (value instanceof Accessor) {
