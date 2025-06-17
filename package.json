@@ -13,6 +13,7 @@
         "url": "https://ko-fi.com/aylur"
     },
     "scripts": {
+        "build": "tsc",
         "lint": "eslint . --fix",
         "docs:dev": "vitepress dev docs",
         "docs:build": "vitepress build docs",
@@ -32,19 +33,55 @@
         "vitepress": "latest"
     },
     "exports": {
-        ".": "./src/jsx/index.ts",
-        "./gobject": "./src/gobject.ts",
-        "./dbus": "./src/dbus.ts",
-        "./fetch": "./src/fetch.ts",
-        "./gtk3/jsx-runtime": "./src/gtk3/jsx-runtime.ts",
-        "./gtk3/style": "./src/gtk3/index.ts",
-        "./gtk4/jsx-runtime": "./src/gtk4/jsx-runtime.ts",
-        "./gtk4/style": "./src/gtk4/style.ts",
-        "./gnome/jsx-runtime": "./src/gnome/jsx-runtime.ts"
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "./gobject": {
+            "import": "./dist/gobject.js",
+            "types": "./dist/gobject.d.ts"
+        },
+        "./dbus": {
+            "import": "./dist/dbus.js",
+            "types": "./dist/dbus.d.ts"
+        },
+        "./fetch": {
+            "import": "./dist/fetch.js",
+            "types": "./dist/fetch.d.ts"
+        },
+        "./gtk3/jsx-runtime": {
+            "import": "./dist/gtk3/jsx-runtime.js",
+            "types": "./dist/gtk3/jsx-runtime.d.ts"
+        },
+        "./gtk3/style": {
+            "import": "./dist/gtk3/style.js",
+            "types": "./dist/gtk3/style.d.ts"
+        },
+        "./gtk4/jsx-runtime": {
+            "import": "./dist/gtk4/jsx-runtime.js",
+            "types": "./dist/gtk4/jsx-runtime.d.ts"
+        },
+        "./gtk4/style": {
+            "import": "./dist/gtk4/style.js",
+            "types": "./dist/gtk4/style.d.ts"
+        },
+        "./gnome/jsx-runtime": {
+            "import": "./dist/gnome/jsx-runtime.js",
+            "types": "./dist/gnome/jsx-runtime.d.ts"
+        }
     },
+    "files": [
+        "dist"
+    ],
     "engines": {
         "gjs": ">=1.79.0"
     },
+    "keywords": [
+        "GJS",
+        "Gnome",
+        "GTK",
+        "JSX"
+    ],
     "prettier": {
         "semi": false,
         "tabWidth": 4,

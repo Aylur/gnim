@@ -10,7 +10,7 @@ type Node = Array<GObject.Object> | GObject.Object | number | string | boolean |
 export const gtkType = Symbol("gtk builder type")
 
 /**
- * Get the type of the object specified through the `_type` property
+ * Get the type of the object specified through the `$type` property
  */
 export function getType(object: GObject.Object) {
     return gtkType in object ? (object[gtkType] as string) : null
