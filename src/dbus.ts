@@ -181,11 +181,8 @@ export class Service extends GObject.Object {
             { g_interface_info: this.#info },
         )
 
-        // @ts-expect-error missing types
         impl.connect("handle-method-call", this.#handleMethodCall.bind(this))
-        // @ts-expect-error missing types
         impl.connect("handle-property-get", this.#handlePropertyGet.bind(this))
-        // @ts-expect-error missing types
         impl.connect("handle-property-set", this.#handlePropertySet.bind(this))
 
         this.#info.cache_build()

@@ -219,7 +219,7 @@ class MyObj extends GObject.Object {
   }
 
   @signal(String, GObject.TYPE_STRING)
-  mySignal(a: String, b: String): void {
+  mySignal(a: string, b: string): void {
     // default signal handler
   }
 }
@@ -234,6 +234,28 @@ obj.connect("my-signal", (obj, a: string, b: string) => {})
 obj.mySig("a", "b")
 obj.emit("my-signal", "a", "b")
 ```
+
+> [!TIP]
+>
+> To make the `connect` method aware of signals you can override it
+>
+> ```ts
+> interface MyObjSignals extends GObject.Object.SignalSignatures {
+>   "my-signal": MyObj["mySignal"]
+> }
+>
+> @register()
+> class MyObj extends GObject.Object {
+>   declare $signals: MyObjSignals // this makes signals inferable in JSX
+>
+>   override connect<S extends keyof MyObjSignals>(
+>     signal: S,
+>     callback: GObject.SignalCallback<this, MyObjSignals[S]>,
+>   ): number {
+>     return super.connect(signal, callback)
+>   }
+> }
+> ```
 
 ## Register decorator
 

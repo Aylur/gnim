@@ -228,9 +228,17 @@ export function createBinding<T>(object: GObject.Object | Gio.Settings, key: str
     return new Accessor(get, subscribe)
 }
 
+type ConnectionHandler<
+    O extends GObject.Object,
+    S extends keyof O["$signals"],
+    Return,
+> = O["$signals"][S] extends (...args: any[]) => infer R
+    ? void extends R
+        ? (...args: Parameters<O["$signals"][S]>) => Return
+        : never
+    : never
+
 /**
- * @experimental
- *
  * ```ts Example
  * const value: Accessor<string> = createConnection(
  *   "initial value",
@@ -243,28 +251,47 @@ export function createBinding<T>(object: GObject.Object | Gio.Settings, key: str
  * @param init The initial value
  * @param signals A list of `GObject.Object`, signal name and callback pairs to connect.
  */
-export function createConnection<T>(
+export function createConnection<
+    T,
+    O1 extends GObject.Object,
+    S1 extends keyof O1["$signals"],
+    O2 extends GObject.Object,
+    S2 extends keyof O2["$signals"],
+    O3 extends GObject.Object,
+    S3 extends keyof O3["$signals"],
+    O4 extends GObject.Object,
+    S4 extends keyof O4["$signals"],
+    O5 extends GObject.Object,
+    S5 extends keyof O5["$signals"],
+    O6 extends GObject.Object,
+    S6 extends keyof O6["$signals"],
+    O7 extends GObject.Object,
+    S7 extends keyof O7["$signals"],
+    O8 extends GObject.Object,
+    S8 extends keyof O8["$signals"],
+    O9 extends GObject.Object,
+    S9 extends keyof O9["$signals"],
+>(
     init: T,
-    ...signals: Array<
-        [
-            GObject.Object,
-            string,
-            /**
-             * @param args Parameters coming from the signal, emitting object not included.
-             * @returns new value
-             */
-            (...args: Array<any>) => T,
-        ]
-    >
+    h1: [O1, S1, ConnectionHandler<O1, S1, T>],
+    h2?: [O2, S2, ConnectionHandler<O2, S2, T>],
+    h3?: [O3, S3, ConnectionHandler<O3, S3, T>],
+    h4?: [O4, S4, ConnectionHandler<O4, S4, T>],
+    h5?: [O5, S5, ConnectionHandler<O5, S5, T>],
+    h6?: [O6, S6, ConnectionHandler<O6, S6, T>],
+    h7?: [O7, S7, ConnectionHandler<O7, S7, T>],
+    h8?: [O8, S8, ConnectionHandler<O8, S8, T>],
+    h9?: [O9, S9, ConnectionHandler<O9, S9, T>],
 ) {
     let value = init
     let dispose: Array<DisposeFunction>
     const subscribers = new Set<SubscribeCallback>()
+    const signals = [h1, h2, h3, h4, h5, h6, h7, h8, h9].filter((h) => h !== undefined)
 
     const subscribe: SubscrubeFunction = (callback) => {
         if (subscribers.size === 0) {
             dispose = signals.map(([object, signal, callback]) => {
-                const id = object.connect(signal, (_, ...args: unknown[]) => {
+                const id = object.connect(signal as string, (_, ...args) => {
                     const newValue = callback(...args)
                     if (value !== newValue) {
                         value = newValue
@@ -290,8 +317,6 @@ export function createConnection<T>(
 }
 
 /**
- * @experimental
- *
  * Create a signal from a provier function.
  * The provider is called when the first subscriber appears and the returned dispose
  * function from the provider will be called when the number of subscribers drop to zero.

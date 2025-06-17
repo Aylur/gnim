@@ -2,7 +2,7 @@ import GObject from "gi://GObject"
 import { Fragment } from "./Fragment.js"
 import { Accessor } from "./state.js"
 import { CC, FC, env } from "./env.js"
-import { kebabify, set } from "../util.js"
+import { kebabify, Pascalify, set } from "../util.js"
 import { onCleanup } from "./scope.js"
 
 type Node = Array<GObject.Object> | GObject.Object | number | string | boolean | null | undefined
@@ -67,13 +67,11 @@ export type CCProps<Self extends GObject.Object, Props> = {
 } & {
     [K in keyof Props]?: Accessor<NonNullable<Props[K]>> | Props[K]
 } & {
-    [K in `on${string}`]?: (self: Self, ...args: unknown[]) => any
-    // TODO: https://github.com/gjsify/ts-for-gir/pull/263
-    // [S in keyof Self["$signals"] as S extends `notify::${infer P}`
-    //     ? `onNotify${Pascalify<P>}`
-    //     : S extends string
-    //       ? `on${Pascalify<S>}`
-    //       : never]?: GObject.SignalCallback<Self, Self["$signals"][S]>
+    [S in keyof Self["$signals"] as S extends `notify::${infer P}`
+        ? `onNotify${Pascalify<P>}`
+        : S extends string
+          ? `on${Pascalify<S>}`
+          : never]?: GObject.SignalCallback<Self, Self["$signals"][S]>
 }
 
 // prettier-ignore
