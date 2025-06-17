@@ -1,6 +1,6 @@
 {
     "name": "gnim",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
@@ -34,8 +34,8 @@
     },
     "exports": {
         ".": {
-            "import": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+            "import": "./dist/jsx/index.js",
+            "types": "./dist/jsx/index.d.ts"
         },
         "./gobject": {
             "import": "./dist/gobject.js",
