@@ -7,7 +7,14 @@
 import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import GObject from "gi://GObject"
-import { getterWorkaround, kebabify, xml } from "./util.js"
+import { definePropertyGetter, kebabify, xml } from "./util.js"
+import {
+    register,
+    property as gproperty,
+    signal as gsignal,
+    getter as ggetter,
+    setter as gsetter,
+} from "./gobject.js"
 
 const DEFAULT_TIMEOUT = 10_000
 
@@ -393,7 +400,7 @@ export class Service extends GObject.Object {
 }
 
 type InterfaceMeta = {
-    methods?: Record<
+    dbusMethods?: Record<
         string,
         Array<{
             name?: string
@@ -401,14 +408,14 @@ type InterfaceMeta = {
             direction: "in" | "out"
         }>
     >
-    signals?: Record<
+    dbusSignals?: Record<
         string,
         Array<{
             name?: string
             type: string
         }>
     >
-    properties?: Record<
+    dbusProperties?: Record<
         string,
         {
             name: string
@@ -419,99 +426,18 @@ type InterfaceMeta = {
     >
 }
 
-function paramSpecFromVariant(
-    type: string,
-    name: string,
-    { read, write }: { read?: boolean; write?: boolean },
-): GObject.ParamSpec {
-    let flags = 0
-    if (read) flags |= GObject.ParamFlags.READABLE
-    if (write) flags |= GObject.ParamFlags.WRITABLE
-
-    if (type.startsWith("a") || type.startsWith("(") || type === "v") {
-        return GObject.ParamSpec.jsobject(name, name, name, flags)
-    }
-
-    switch (type) {
-        case "b":
-            return GObject.ParamSpec.boolean(name, name, name, flags, false)
-        case "y":
-        case "n":
-        case "q":
-        case "i":
-        case "u":
-        case "x":
-        case "t":
-        case "h":
-        case "d":
-            // TODO: be more specific about number types
-            return GObject.ParamSpec.double(
-                name,
-                name,
-                name,
-                flags,
-                Number.MIN_SAFE_INTEGER,
-                Number.MIN_SAFE_INTEGER,
-                0,
-            )
-        case "s":
-        case "g":
-        case "o":
-            return GObject.ParamSpec.string(name, name, name, flags, "")
-        default:
-            break
-    }
-
-    throw Error(`cannot infer ParamSpec from variant "${type}"`)
-}
-
-function inferGTypeFromVariant(type: string): GObject.GType<unknown> {
-    if (type.startsWith("a") || type.startsWith("(")) {
-        return GObject.TYPE_JSOBJECT
-    }
-
-    switch (type) {
-        case "v":
-            return GObject.TYPE_VARIANT
-        case "b":
-            return GObject.TYPE_BOOLEAN
-        case "y":
-        case "n":
-        case "q":
-        case "i":
-        case "u":
-        case "x":
-        case "t":
-        case "h":
-        case "d":
-            // TODO: be more specific about number types
-            return GObject.TYPE_DOUBLE
-        case "s":
-        case "g":
-        case "o":
-            return GObject.TYPE_STRING
-        default:
-            break
-    }
-
-    throw Error(`cannot infer GType from variant "${type}"`)
-}
-
 /**
  * Registers a {@link Service} as a dbus interface.
  *
  * @param name Interface name of the object. For example "org.gnome.Shell.SearchProvider2"
- * @param gobjectMetaInfo optional properties to pass to {@link GObject.registerClass}
+ * @param options optional properties to pass to {@link register}
  */
-export function iface(
-    name: string,
-    gobjectMetaInfo?: GObject.MetaInfo<never, Array<{ $gtype: GObject.GType }>, never>,
-) {
+export function iface(name: string, options?: Parameters<typeof register>[0]) {
     return function (cls: { new (...args: any[]): Service }, ctx: ClassDecoratorContext) {
         const meta = ctx.metadata
         if (!meta) throw Error(`${cls.name} is not an interface`)
 
-        const { methods = {}, signals = {}, properties = {} } = meta as InterfaceMeta
+        const { dbusMethods = {}, dbusSignals = {}, dbusProperties = {} } = meta as InterfaceMeta
 
         const infoXml = xml({
             name: "node",
@@ -520,17 +446,17 @@ export function iface(
                     name: "interface",
                     attributes: { name },
                     children: [
-                        ...Object.entries(methods).map(([name, args]) => ({
+                        ...Object.entries(dbusMethods).map(([name, args]) => ({
                             name: "method",
                             attributes: { name },
                             children: args.map((arg) => ({ name: "arg", attributes: arg })),
                         })),
-                        ...Object.entries(signals).map(([name, args]) => ({
+                        ...Object.entries(dbusSignals).map(([name, args]) => ({
                             name: "signal",
                             attributes: { name },
                             children: args.map((arg) => ({ name: "arg", attributes: arg })),
                         })),
-                        ...Object.values(properties).map(({ name, type, read, write }) => ({
+                        ...Object.values(dbusProperties).map(({ name, type, read, write }) => ({
                             name: "property",
                             attributes: {
                                 ...(name && { name }),
@@ -544,31 +470,7 @@ export function iface(
         })
 
         Object.assign(cls, { [info]: Gio.DBusInterfaceInfo.new_for_xml(infoXml) })
-
-        GObject.registerClass(
-            {
-                Properties: Object.fromEntries(
-                    Object.values(properties).map(({ type, name, read, write }) => {
-                        const key = kebabify(name)
-                        return [key, paramSpecFromVariant(type, key, { read, write })]
-                    }),
-                ),
-                Signals: Object.fromEntries(
-                    Object.entries(signals).map(([name, args]) => {
-                        return [
-                            kebabify(name),
-                            {
-                                param_types: args.map((a) =>
-                                    inferGTypeFromVariant(typeof a === "string" ? a : a.type),
-                                ),
-                            },
-                        ]
-                    }),
-                ),
-                ...(gobjectMetaInfo ?? {}),
-            },
-            cls,
-        )
+        register(options)(cls, ctx)
     }
 }
 
@@ -615,7 +517,7 @@ function installMethod<Args extends Array<DBusType>>(
 ) {
     const name = ctx.name
     const meta = ctx.metadata! as InterfaceMeta
-    const methods = (meta.methods ??= {})
+    const methods = (meta.dbusMethods ??= {})
 
     if (typeof name !== "string") {
         throw Error("only string named methods are allowed")
@@ -644,7 +546,7 @@ function installProperty<T extends string>(
     const kind = ctx.kind
     const name = ctx.name
     const meta = ctx.metadata! as InterfaceMeta
-    const properties = (meta.properties ??= {})
+    const properties = (meta.dbusProperties ??= {})
 
     if (typeof name !== "string") {
         throw Error("only string named properties are allowed")
@@ -674,7 +576,7 @@ function installSignal<Params extends Array<DBusType>>(
 ) {
     const name = ctx.name
     const meta = ctx.metadata! as InterfaceMeta
-    const signals = (meta.signals ??= {})
+    const signals = (meta.dbusSignals ??= {})
 
     if (typeof name === "symbol") {
         throw Error("symbols are not valid signals")
@@ -683,6 +585,47 @@ function installSignal<Params extends Array<DBusType>>(
     signals[name] = params.map((arg) => (typeof arg === "string" ? { type: arg } : arg))
 
     return name
+}
+
+function inferGTypeFromVariant(type: DBusType): GObject.GType<any> {
+    if (typeof type !== "string") return inferGTypeFromVariant(type.type)
+
+    if (type.startsWith("a") || type.startsWith("(")) {
+        return GObject.TYPE_JSOBJECT
+    }
+
+    switch (type) {
+        case "v":
+            return GObject.TYPE_VARIANT
+        case "b":
+            return GObject.TYPE_BOOLEAN
+        case "y":
+            return GObject.TYPE_UINT
+        case "n":
+            return GObject.TYPE_INT
+        case "q":
+            return GObject.TYPE_UINT
+        case "i":
+            return GObject.TYPE_INT
+        case "u":
+            return GObject.TYPE_UINT
+        case "x":
+            return GObject.TYPE_INT64
+        case "t":
+            return GObject.TYPE_UINT64
+        case "h":
+            return GObject.TYPE_INT
+        case "d":
+            return GObject.TYPE_DOUBLE
+        case "s":
+        case "g":
+        case "o":
+            return GObject.TYPE_STRING
+        default:
+            break
+    }
+
+    throw Error(`cannot infer GType from variant "${type}"`)
 }
 
 /**
@@ -807,9 +750,13 @@ export function property<T extends string>(type: T) {
     ): (this: Service, init: InferVariantType<T>) => InferVariantType<T> {
         const name = installProperty(type, ctx)
 
-        ctx.addInitializer(function () {
-            getterWorkaround(this, name as Extract<keyof Service, string>)
+        void gproperty({ $gtype: inferGTypeFromVariant(type) })(
+            _,
+            ctx as ClassFieldDecoratorContext<GObject.Object>,
+            { metaOnly: true },
+        )
 
+        ctx.addInitializer(function () {
             Object.defineProperty(this, name, {
                 configurable: false,
                 enumerable: true,
@@ -859,8 +806,13 @@ export function getter<T extends string>(type: T) {
         const name = installProperty(type, ctx)
 
         ctx.addInitializer(function () {
-            getterWorkaround(this, name as Extract<keyof Service, string>)
+            definePropertyGetter(this, name as Extract<keyof Service, string>)
         })
+
+        void ggetter({ $gtype: inferGTypeFromVariant(type) })(
+            () => {},
+            ctx as ClassGetterDecoratorContext<GObject.Object>,
+        )
 
         return function () {
             const { proxy } = this[internals]
@@ -884,6 +836,11 @@ export function setter<T extends string>(type: T) {
     ): (this: Service, value: InferVariantType<T>) => void {
         const name = installProperty(type, ctx)
 
+        void gsetter({ $gtype: inferGTypeFromVariant(type) })(
+            () => {},
+            ctx as ClassSetterDecoratorContext<GObject.Object>,
+        )
+
         return function (value: InferVariantType<T>) {
             const { proxy } = this[internals]
 
@@ -900,7 +857,7 @@ export function setter<T extends string>(type: T) {
  * Registers a signal which when invoked will emit the signal
  * on the local object and the exported object.
  *
- * Note that its not possible to emit signals on remote objects through proxies.
+ * **Note**: its not possible to emit signals on remote objects through proxies.
  */
 export function signal<const Params extends Array<DBusType>>(...params: Params) {
     return function (
@@ -908,6 +865,11 @@ export function signal<const Params extends Array<DBusType>>(...params: Params) 
         ctx: ClassMethodDecoratorContext<Service, typeof method>,
     ): typeof method {
         const name = installSignal(params, ctx)
+
+        void gsignal(...params.map(inferGTypeFromVariant))(
+            () => {},
+            ctx as ClassMethodDecoratorContext<GObject.Object>,
+        )
 
         return function (...params: InferVariantTypes<Params>) {
             if (this[internals].proxy) {

@@ -51,8 +51,8 @@ export function xml({ name, attributes, children }: XmlNode) {
 // Bindings work over properties in kebab-case because thats the convention of gobject
 // however in js its either snake_case or camelCase
 // also on DBus interfaces its PascalCase by convention
-// so as a workaround we use get_property_name as a workaround
-export function getterWorkaround<T extends object>(object: T, prop: Extract<keyof T, string>) {
+// so as a workaround we use get_property_name and only use the property field as a fallback
+export function definePropertyGetter<T extends object>(object: T, prop: Extract<keyof T, string>) {
     Object.defineProperty(object, `get_${kebabify(prop).replaceAll("-", "_")}`, {
         configurable: false,
         enumerable: true,

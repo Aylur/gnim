@@ -10,7 +10,8 @@
  */
 
 import GObject from "gi://GObject"
-import { getterWorkaround, kebabify } from "./util.js"
+import GLib from "gi://GLib"
+import { definePropertyGetter, kebabify } from "./util.js"
 
 const priv = Symbol("gobject private")
 const { defineProperty, fromEntries, entries } = Object
@@ -89,6 +90,7 @@ export function property<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
     return function (
         _: void,
         ctx: ClassFieldDecoratorContext<GObj, T>,
+        options?: { metaOnly: true },
     ): (this: GObj, init: T) => T {
         const fieldName = assertField(ctx)
         const key = kebabify(fieldName)
@@ -98,7 +100,9 @@ export function property<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
         meta.properties[fieldName] = { flags: ParamFlags.READWRITE, type: typeDeclaration }
 
         ctx.addInitializer(function () {
-            getterWorkaround(this, fieldName as Extract<keyof GObj, string>)
+            definePropertyGetter(this, fieldName as Extract<keyof GObj, string>)
+
+            if (options && options.metaOnly) return
 
             defineProperty(this, fieldName, {
                 enumerable: true,
@@ -250,7 +254,7 @@ export function signal<
 export function signal<Params extends Array<{ $gtype: GType } | GType>>(
     ...params: Params
 ): (
-    method: (this: GObj, ...args: ParamTypes<Params>) => void,
+    method: (this: GObject.Object, ...args: ParamTypes<Params>) => void,
     ctx: ClassMethodDecoratorContext<GObj, typeof method>,
 ) => typeof method
 
@@ -320,12 +324,51 @@ export function signal<
         }
     }
 }
+const MAXINT = 2 ** 31 - 1
+const MININT = -(2 ** 31)
+const MAXUINT = 2 ** 32 - 1
+const MAXFLOAT = 3.4028235e38
+const MINFLOAT = -3.4028235e38
+const MININT64 = Number.MIN_SAFE_INTEGER
+const MAXINT64 = Number.MAX_SAFE_INTEGER
+
+function pspecFromGType(type: GType<unknown>, name: string, flags: ParamFlags) {
+    switch (type) {
+        case GObject.TYPE_BOOLEAN:
+            return ParamSpec.boolean(name, "", "", flags, false)
+        case GObject.TYPE_STRING:
+            return ParamSpec.string(name, "", "", flags, "")
+        case GObject.TYPE_INT:
+            return ParamSpec.int(name, "", "", flags, MININT, MAXINT, 0)
+        case GObject.TYPE_UINT:
+            return ParamSpec.uint(name, "", "", flags, 0, MAXUINT, 0)
+        case GObject.TYPE_INT64:
+            return ParamSpec.int64(name, "", "", flags, MININT64, MAXINT64, 0)
+        case GObject.TYPE_UINT64:
+            return ParamSpec.uint64(name, "", "", flags, 0, Number.MAX_SAFE_INTEGER, 0)
+        case GObject.type_from_name("gfloat"):
+            return ParamSpec.float(name, "", "", flags, MINFLOAT, MAXFLOAT, 0)
+        case GObject.TYPE_DOUBLE:
+            return ParamSpec.double(name, "", "", flags, Number.MIN_VALUE, Number.MIN_VALUE, 0)
+        case GObject.TYPE_JSOBJECT:
+            return ParamSpec.jsobject(name, "", "", flags)
+        case GObject.TYPE_VARIANT:
+            return ParamSpec.object(name, "", "", flags as any, GLib.Variant)
+
+        case GObject.TYPE_ENUM:
+        case GObject.TYPE_INTERFACE:
+        case GObject.TYPE_BOXED:
+        case GObject.TYPE_POINTER:
+        case GObject.TYPE_PARAM:
+        case GObject.type_from_name("GType"):
+            throw Error(`cannot guess ParamSpec from GType "${type}"`)
+        case GObject.TYPE_OBJECT:
+        default:
+            return ParamSpec.object(name, "", "", flags as any, type)
+    }
+}
 
 function pspec(name: string, flags: ParamFlags, declaration: PropertyTypeDeclaration<unknown>) {
-    if (declaration === undefined) {
-        throw Error(`undefined ${name}`)
-    }
-
     if (declaration instanceof ParamSpec) return declaration
 
     if (declaration === Object || declaration === Function || declaration === Array) {
@@ -345,7 +388,7 @@ function pspec(name: string, flags: ParamFlags, declaration: PropertyTypeDeclara
     }
 
     if ("$gtype" in declaration) {
-        return ParamSpec.object(name, "", "", flags as any, declaration.$gtype)
+        return pspecFromGType(declaration.$gtype, name, flags)
     }
 
     if (typeof declaration === "function") {
