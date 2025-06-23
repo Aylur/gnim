@@ -230,6 +230,42 @@ class MyContainer extends Gtk.Widget {
 }
 ```
 
+### Class names and inline CSS
+
+JSX supports setting `class` and `css` properties. `css` is mostly meant to be
+used as a debugging tool e.g with `css="border: 1px solid red;"`. `class` is a
+space separated list of class names.
+
+```tsx
+<Gtk.Button class="flat" css="border: 1px solid red;" />
+```
+
+> [!NOTE]
+>
+> In Gtk4 `class` you can also still use `css-classes` and in Gnome
+> `style-class`.
+
+### This component
+
+In most cases you will use JSX to instantiate objects. However there are cases
+when you have a reference to an instance that you would like to use in a JSX
+expression for example in subclasses.
+
+```tsx
+@register()
+class Row extends Gtk.ListBoxRow {
+  constructor(props: Partial<Gtk.ListBoxRow.ConstructorProps>) {
+    super(props)
+
+    void (
+      <This this={this as Row} onActivate={() => print("activated")}>
+        <Gtk.Label label="content" />
+      </This>
+    )
+  }
+}
+```
+
 ## Function components
 
 ### Setup function
