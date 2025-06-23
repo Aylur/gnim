@@ -4,7 +4,7 @@ import { kebabify } from "../util"
 
 type SubscribeCallback = () => void
 type DisposeFunction = () => void
-type SubscrubeFunction = (callback: SubscribeCallback) => DisposeFunction
+type SubscribeFunction = (callback: SubscribeCallback) => DisposeFunction
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 
@@ -16,9 +16,9 @@ export class Accessor<T = unknown> extends Function {
     static evaluating?: Set<Accessor<unknown>>
 
     #get: () => T
-    #subscribe: SubscrubeFunction
+    #subscribe: SubscribeFunction
 
-    constructor(get: () => T, subscribe?: SubscrubeFunction) {
+    constructor(get: () => T, subscribe?: SubscribeFunction) {
         super("return arguments.callee._call.apply(arguments.callee, arguments)")
         this.#subscribe = subscribe ?? (() => () => void 0)
         this.#get = get
@@ -88,7 +88,7 @@ export function createState<T>(init: T): State<T> {
     let currentValue = init
     const subscribers = new Set<SubscribeCallback>()
 
-    const subscribe: SubscrubeFunction = (callback) => {
+    const subscribe: SubscribeFunction = (callback) => {
         subscribers.add(callback)
         return () => subscribers.delete(callback)
     }
@@ -128,7 +128,7 @@ export function createComputed<
     const subscribers = new Set<SubscribeCallback>()
     const cache = new Array<unknown>(deps.length)
 
-    const subscribe: SubscrubeFunction = (callback) => {
+    const subscribe: SubscribeFunction = (callback) => {
         if (subscribers.size === 0) {
             dispose = deps.map((dep, i) =>
                 dep.subscribe(() => {
@@ -202,7 +202,7 @@ export function createBinding<T>(settings: Gio.Settings, key: string): Accessor<
 export function createBinding<T>(object: GObject.Object | Gio.Settings, key: string): Accessor<T> {
     const prop = kebabify(key) as keyof typeof object
 
-    const subscribe: SubscrubeFunction = (callback) => {
+    const subscribe: SubscribeFunction = (callback) => {
         const sig = object instanceof Gio.Settings ? "changed" : "notify"
         const id = object.connect(`${sig}::${prop}`, () => callback())
         return () => object.disconnect(id)
@@ -288,7 +288,7 @@ export function createConnection<
     const subscribers = new Set<SubscribeCallback>()
     const signals = [h1, h2, h3, h4, h5, h6, h7, h8, h9].filter((h) => h !== undefined)
 
-    const subscribe: SubscrubeFunction = (callback) => {
+    const subscribe: SubscribeFunction = (callback) => {
         if (subscribers.size === 0) {
             dispose = signals.map(([object, signal, callback]) => {
                 const id = object.connect(signal as string, (_, ...args) => {
@@ -341,7 +341,7 @@ export function createExternal<T>(
     let dispose: DisposeFunction
     const subscribers = new Set<SubscribeCallback>()
 
-    const subscribe: SubscrubeFunction = (callback) => {
+    const subscribe: SubscribeFunction = (callback) => {
         if (subscribers.size === 0) {
             dispose = producer((v: unknown) => {
                 const newValue: T = typeof v === "function" ? v(currentValue) : v
