@@ -1,3 +1,4 @@
+import type GLib from "gi://GLib"
 import type GObject from "gi://GObject"
 
 export function kebabify(str: string) {
@@ -7,16 +8,22 @@ export function kebabify(str: string) {
         .toLowerCase()
 }
 
-export type Pascalify<S extends string> = S extends `${infer Head}-${infer Tail}`
-    ? `${Capitalize<Head>}${Pascalify<Tail>}`
-    : Capitalize<S>
-
 export function snakeify(str: string) {
     return str
         .replace(/([a-z])([A-Z])/g, "$1-$2")
         .replaceAll("-", "_")
         .toLowerCase()
 }
+
+export function camelify(str: string) {
+    return str.replace(/[-_](.)/g, (_, char) => char.toUpperCase())
+}
+
+export type Pascalify<S> = S extends `${infer Head}${"-" | "_"}${infer Tail}`
+    ? `${Capitalize<Head>}${Pascalify<Tail>}`
+    : S extends string
+      ? Capitalize<S>
+      : never
 
 export type XmlNode = {
     name: string
@@ -82,3 +89,44 @@ export function set(obj: GObject.Object, prop: string, value: any) {
         }
     }
 }
+
+type Simple = "v" | "b" | "y" | "n" | "q" | "i" | "u" | "x" | "t" | "h" | "d" | "s" | "g" | "o"
+
+type KV<T extends string> = T extends `${infer K}${infer S}`
+    ? K extends string
+        ? S extends string
+            ? Record<Extract<InferVariant<K>, string | number>, InferVariant<S>>
+            : never
+        : never
+    : never
+
+// FIXME: this is a *very* naive implementation
+// does not support nesting and only supports Simple arrays
+// prettier-ignore
+type Tuple<T extends string, Acc extends Array<unknown> = []> =
+    T extends "" ? Acc :
+    // simple
+    T extends `${infer Head}${infer Tail}` ? Head extends Simple
+        ? Tuple<Tail, [...Acc, InferVariant<Head>]> :
+    // record
+    T extends `a{${infer S}}${infer Tail}`
+        ? Tuple<Tail, [...Acc, KV<S>]> :
+    // array
+    T extends `a${infer S}${infer Tail}`
+        ? Tuple<Tail, [...Acc, Array<InferVariant<S>>]> :
+    // tuple
+    T extends `(${infer S})${infer Tail}`
+        ? Tuple<Tail, [...Acc, Tuple<S>]> :
+    any : any
+
+// prettier-ignore
+export type InferVariant<T extends string> =
+    T extends "v" ? GLib.Variant<any> :
+    T extends "b" ? boolean :
+    T extends "y" | "n" | "q" | "i" | "u" | "x" | "t" | "h" | "d" ? number :
+    T extends "s" | "g" ? string :
+    T extends "o" ? `/${string}` :
+    T extends `a{${infer S}}` ? KV<S> :
+    T extends `a${infer S}` ? S extends string ? Array<InferVariant<S>> : never :
+    T extends `(${infer S})` ? S extends string ? Tuple<S> : never :
+    never

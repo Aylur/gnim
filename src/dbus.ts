@@ -7,7 +7,7 @@
 import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import GObject from "gi://GObject"
-import { definePropertyGetter, kebabify, xml } from "./util.js"
+import { type InferVariant, definePropertyGetter, kebabify, xml } from "./util.js"
 import {
     register,
     property as gproperty,
@@ -476,36 +476,12 @@ export function iface(name: string, options?: Parameters<typeof register>[0]) {
 
 type DBusType = string | { type: string; name: string }
 
-// TODO: InferVar<TokenizeVariant<NestedVariant>>
-type InferVariantTuple<NestedVariant extends string> = NestedVariant extends string
-    ? Array<any>
-    : never
-
-// prettier-ignore
-/**
- * Infer the runtime JavaScript type of a Variant type
- */
-export type InferVariantType<T extends string> =
-    T extends "v" ? Variant<any> :
-    T extends "b" ? boolean :
-    T extends "y" | "n" | "q" | "i" | "u" | "x" | "t" | "h" | "d" ? number :
-    T extends "s" | "g" ? string :
-    T extends "o" ? `/${string}` :
-    T extends `a{${infer K}${infer S}}` ?
-        S extends string ?
-        K extends string ?
-            Record<Extract<InferVariantType<K>, string | number>, InferVariantType<S>>
-            : never : never :
-    T extends `a${infer S}` ? S extends string ? Array<InferVariantType<S>> : never :
-    T extends `(${infer S})` ? S extends string ? InferVariantTuple<S> : never :
-    never
-
 type InferVariantTypes<T extends Array<DBusType>> = {
     [K in keyof T]: T[K] extends string
-        ? InferVariantType<T[K]>
+        ? InferVariant<T[K]>
         : T[K] extends { type: infer S }
           ? S extends string
-              ? InferVariantType<S>
+              ? InferVariant<S>
               : never
           : unknown
 }
@@ -746,8 +722,8 @@ export function methodAsync<
 export function property<T extends string>(type: T) {
     return function (
         _: void,
-        ctx: ClassFieldDecoratorContext<Service, InferVariantType<T>>,
-    ): (this: Service, init: InferVariantType<T>) => InferVariantType<T> {
+        ctx: ClassFieldDecoratorContext<Service, InferVariant<T>>,
+    ): (this: Service, init: InferVariant<T>) => InferVariant<T> {
         const name = installProperty(type, ctx)
 
         void gproperty({ $gtype: inferGTypeFromVariant(type) })(
@@ -760,7 +736,7 @@ export function property<T extends string>(type: T) {
             Object.defineProperty(this, name, {
                 configurable: false,
                 enumerable: true,
-                set(value: InferVariantType<T>) {
+                set(value: InferVariant<T>) {
                     const { proxy, priv } = this[internals]
 
                     if (proxy) {
@@ -773,12 +749,12 @@ export function property<T extends string>(type: T) {
                         this.notify(name as Extract<keyof Service, string>)
                     }
                 },
-                get(): InferVariantType<T> {
+                get(): InferVariant<T> {
                     const { proxy, priv } = this[internals]
 
                     return proxy
-                        ? proxy.get_cached_property(name)!.deepUnpack<InferVariantType<T>>()
-                        : (priv[name] as InferVariantType<T>)
+                        ? proxy.get_cached_property(name)!.deepUnpack<InferVariant<T>>()
+                        : (priv[name] as InferVariant<T>)
                 },
             } satisfies ThisType<Service>)
         })
@@ -787,7 +763,7 @@ export function property<T extends string>(type: T) {
             const priv = this[internals].priv
             priv[name] = init
             // we don't need to store the value on the object
-            return void 0 as unknown as InferVariantType<T>
+            return void 0 as unknown as InferVariant<T>
         }
     }
 }
@@ -800,9 +776,9 @@ export function property<T extends string>(type: T) {
  */
 export function getter<T extends string>(type: T) {
     return function (
-        getter: (this: Service) => InferVariantType<T>,
-        ctx: ClassGetterDecoratorContext<Service, InferVariantType<T>>,
-    ): (this: Service) => InferVariantType<T> {
+        getter: (this: Service) => InferVariant<T>,
+        ctx: ClassGetterDecoratorContext<Service, InferVariant<T>>,
+    ): (this: Service) => InferVariant<T> {
         const name = installProperty(type, ctx)
 
         ctx.addInitializer(function () {
@@ -817,7 +793,7 @@ export function getter<T extends string>(type: T) {
         return function () {
             const { proxy } = this[internals]
             return proxy
-                ? proxy.get_cached_property(name)!.deepUnpack<InferVariantType<T>>()
+                ? proxy.get_cached_property(name)!.deepUnpack<InferVariant<T>>()
                 : getter.call(this)
         }
     }
@@ -831,9 +807,9 @@ export function getter<T extends string>(type: T) {
  */
 export function setter<T extends string>(type: T) {
     return function (
-        setter: (this: Service, value: InferVariantType<T>) => void,
-        ctx: ClassSetterDecoratorContext<Service, InferVariantType<T>>,
-    ): (this: Service, value: InferVariantType<T>) => void {
+        setter: (this: Service, value: InferVariant<T>) => void,
+        ctx: ClassSetterDecoratorContext<Service, InferVariant<T>>,
+    ): (this: Service, value: InferVariant<T>) => void {
         const name = installProperty(type, ctx)
 
         void gsetter({ $gtype: inferGTypeFromVariant(type) })(
@@ -841,7 +817,7 @@ export function setter<T extends string>(type: T) {
             ctx as ClassSetterDecoratorContext<GObject.Object>,
         )
 
-        return function (value: InferVariantType<T>) {
+        return function (value: InferVariant<T>) {
             const { proxy } = this[internals]
 
             if (proxy) {
@@ -887,23 +863,27 @@ export function signal<const Params extends Array<DBusType>>(...params: Params) 
 
 // HACK: how do I augment it globally?
 class GLibVariant<T extends string = any> extends GLib.Variant<T> {
-    static new<T extends string>(signature: T, value: InferVariantType<T>): GLib.Variant<T> {
+    static new<T extends string>(signature: T, value: InferVariant<T>): GLib.Variant<T> {
         return GLib.Variant.new(signature, value)
     }
 
-    constructor(signature: T, value: InferVariantType<T>) {
+    constructor(signature: T, value: InferVariant<T>) {
         super(signature, value)
     }
 
-    deepUnpack<V = InferVariantType<T>>(): V {
+    deepUnpack<V = InferVariant<T>>(): V {
         return super.deepUnpack()
     }
 
-    deep_unpack<V = InferVariantType<T>>(): V {
+    deep_unpack<V = InferVariant<T>>(): V {
         return super.deepUnpack()
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export namespace Variant {
+    export type Infer<S extends string> = InferVariant<S>
+}
 export const Variant = GLib.Variant as typeof GLibVariant
 export type Variant<T extends string = any> = GLibVariant<T>
 

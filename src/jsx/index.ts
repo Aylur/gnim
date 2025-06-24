@@ -14,4 +14,5 @@ export {
     createBinding,
     createConnection,
     createExternal,
+    createSettings,
 } from "./state.js"

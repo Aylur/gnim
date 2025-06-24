@@ -1,6 +1,7 @@
 import GObject from "gi://GObject"
 import Gio from "gi://Gio"
-import { kebabify } from "../util"
+import GLib from "gi://GLib"
+import { type InferVariant, type Pascalify, camelify, kebabify } from "../util.js"
 
 type SubscribeCallback = () => void
 type DisposeFunction = () => void
@@ -105,16 +106,15 @@ export function createState<T>(init: T): State<T> {
 }
 
 /**
+ * Create an `Accessor` which is computed from a list of `Accessor`s.
+ *
  * ```ts Example
  * let a: Accessor<number>
  * let b: Accessor<string>
- *
  * const c: Accessor<[number, string]> = createComputed([a, b])
- *
  * const d: Accessor<string> = createComputed([a, b], (a: number, b: string) => `${a} ${b}`)
  * ```
  *
- * Create an `Accessor` which is computed from a list of `Accessor`s.
  * @param deps List of `Accessors`.
  * @param transform An optional transform function.
  * @returns The computed `Accessor`.
@@ -239,6 +239,8 @@ type ConnectionHandler<
     : never
 
 /**
+ * Create an `Accessor` which sets up a list of `GObject.Object` signal connections.
+ *
  * ```ts Example
  * const value: Accessor<string> = createConnection(
  *   "initial value",
@@ -247,7 +249,6 @@ type ConnectionHandler<
  * )
  * ```
  *
- * Create an `Accessor` which sets up a list of `GObject.Object` signal connections.
  * @param init The initial value
  * @param signals A list of `GObject.Object`, signal name and callback pairs to connect.
  */
@@ -363,4 +364,57 @@ export function createExternal<T>(
     }
 
     return new Accessor(() => currentValue, subscribe)
+}
+
+/** @experimental */
+type Settings<T extends Record<string, string>> = {
+    [K in keyof T as Uncapitalize<Pascalify<K>>]: Accessor<InferVariant<T[K]>>
+} & {
+    [K in keyof T as `set${Pascalify<K>}`]: Setter<InferVariant<T[K]>>
+}
+
+/**
+ * @experimental
+ *
+ * Wrap a {@link Gio.Settings} into a collection of setters and accessors.
+ *
+ * Example:
+ *
+ * ```ts
+ * const s = createSettings(settings, {
+ *   "complex-key": "a{sa{ss}}",
+ *   "simple-key": "s",
+ * })
+ *
+ * s.complexKey.subscribe(() => {
+ *   print(s.complexKey.get())
+ * })
+ *
+ * s.setComplexKey((prev) => ({
+ *   ...prev,
+ *   neyKey: { nested: "" },
+ * }))
+ * ```
+ */
+export function createSettings<const T extends Record<string, string>>(
+    settings: Gio.Settings,
+    keys: T,
+): Settings<T> {
+    return Object.fromEntries(
+        Object.entries(keys).flatMap(([key, type]) => [
+            [camelify(key), createBinding(settings, key)],
+            [
+                `set${key[0].toUpperCase() + camelify(key).slice(1)}`,
+                (v: unknown) => {
+                    settings.set_value(
+                        key,
+                        new GLib.Variant(
+                            type,
+                            typeof v === "function" ? v(settings.get_value(key).deepUnpack()) : v,
+                        ),
+                    )
+                },
+            ],
+        ]),
+    )
 }

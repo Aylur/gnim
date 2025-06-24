@@ -2,10 +2,10 @@
 
 Syntactic sugar for creating objects declaratively.
 
-> [!WARNING]
+> [!WARNING] This is not React
 >
-> This is not React.js This works nothing like React.js and has nothing in
-> common with React.js other than the XML syntax.
+> This works nothing like React and has nothing in common with React other than
+> the XML syntax.
 
 Consider the following example:
 
@@ -459,8 +459,8 @@ setValue((prev) => prev + 1)
 
 ### `createComputed`
 
-Create a computed signal from a list of Accessors. The provided transform is run
-when the Accessor's value is accessed. The function should be pure.
+Creates a computed signal from a list of Accessors. The provided transform is
+run when the Accessor's value is accessed. The function should be pure.
 
 ```ts
 function createComputed<
@@ -510,7 +510,7 @@ const style = createBinding(styleManager, "colorScheme")
 
 ### `createConnection`
 
-Create an `Accessor` which sets up a list of `GObject.Object` signal
+Creates an `Accessor` which sets up a list of `GObject.Object` signal
 connections.
 
 Example:
@@ -528,6 +528,35 @@ const value = createConnection(
 > The connection will only get attached when the first subscriber appears and is
 > dropped when the last one disappears.
 
+### `createSettings`
+
+Wraps a `Gio.Settings` into a collection of setters and accessors.
+
+```ts
+function createSettings<const T extends Record<string, string>>(
+  settings: Gio.Settings,
+  keys: T,
+): Settings<T>
+```
+
+Example:
+
+```ts
+const s = createSettings(settings, {
+  "complex-key": "a{sa{ss}}",
+  "simple-key": "s",
+})
+
+s.complexKey.subscribe(() => {
+  print(s.complexKey.get())
+})
+
+s.setComplexKey((prev) => ({
+  ...prev,
+  neyKey: { nested: "" },
+}))
+```
+
 ### `createExternal`
 
 Creates a signal from a `provier` function. The provider is called when the
@@ -536,9 +565,9 @@ will be called when the number of subscribers drop to zero.
 
 ```ts
 function createExternal<T>(
-    init: T,
-    producer: (set: Setter<T>) => DisposeFunction,
-): Accessor<T> {
+  init: T,
+  producer: (set: Setter<T>) => DisposeFunction,
+): Accessor<T>
 ```
 
 Example:
