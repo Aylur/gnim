@@ -65,7 +65,7 @@ export type CCProps<Self extends GObject.Object, Props> = {
      */
     css?: string | Accessor<string>
 } & {
-    [K in keyof Props]?: Accessor<NonNullable<Props[K]>> | Props[K]
+    [K in keyof Props]: Accessor<NonNullable<Props[K]>> | Props[K]
 } & {
     [S in keyof Self["$signals"] as S extends `notify::${infer P}`
         ? `onNotify${Pascalify<P>}`
