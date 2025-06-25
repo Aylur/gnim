@@ -1,7 +1,8 @@
 import GObject from "gi://GObject"
 import Gio from "gi://Gio"
 import GLib from "gi://GLib"
-import { type InferVariant, type Pascalify, camelify, kebabify } from "../util.js"
+import { type Pascalify, camelify, kebabify } from "../util.js"
+import { type InferVariant } from "../variant.js"
 
 type SubscribeCallback = () => void
 type DisposeFunction = () => void

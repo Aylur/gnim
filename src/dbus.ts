@@ -7,7 +7,8 @@
 import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import GObject from "gi://GObject"
-import { type InferVariant, definePropertyGetter, kebabify, xml } from "./util.js"
+import { definePropertyGetter, kebabify, xml } from "./util.js"
+import { type InferVariant } from "./variant.js"
 import {
     register,
     property as gproperty,
