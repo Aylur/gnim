@@ -200,6 +200,16 @@ type $ParseRecursiveVariantValue<State extends string> =
     : VariantTypeError<`$ParseRecursiveVariantValue encountered an invalid variant string: ${State} (2)`>;
 
 // prettier-ignore
+type $ParseRecursiveVariant<T extends string> =
+    $ParseRecursiveVariantValue<T> extends infer Result
+    ? Result extends [infer Value, string]
+    ? Value
+    : Result extends VariantTypeError<any>
+    ? Result
+    : never
+    : never;
+
+// prettier-ignore
 type $ParseVariantDict<State extends string, Memo extends Record<string, any> = {}> =
     string extends State
     ? VariantTypeError<"$ParseVariantDict: 'string' is not a supported type.">
@@ -336,3 +346,4 @@ type $ParseVariant<T extends string> =
     : never;
 
 export type InferVariant<S extends string> = $ParseDeepVariant<S>
+export type InferVariantRec<S extends string> = $ParseRecursiveVariant<S>

@@ -2,7 +2,7 @@ import GObject from "gi://GObject"
 import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import { type Pascalify, camelify, kebabify } from "../util.js"
-import { type InferVariant } from "../variant.js"
+import { type InferVariantRec, type InferVariant } from "../variant.js"
 
 type SubscribeCallback = () => void
 type DisposeFunction = () => void
@@ -369,7 +369,7 @@ export function createExternal<T>(
 
 /** @experimental */
 type Settings<T extends Record<string, string>> = {
-    [K in keyof T as Uncapitalize<Pascalify<K>>]: Accessor<InferVariant<T[K]>>
+    [K in keyof T as Uncapitalize<Pascalify<K>>]: Accessor<InferVariantRec<T[K]>>
 } & {
     [K in keyof T as `set${Pascalify<K>}`]: Setter<InferVariant<T[K]>>
 }
@@ -393,17 +393,29 @@ type Settings<T extends Record<string, string>> = {
  *
  * s.setComplexKey((prev) => ({
  *   ...prev,
- *   neyKey: { nested: "" },
+ *   key: { nested: "" },
  * }))
  * ```
  */
+// TODO: come up with an API
+// - to manually annotate Variant typed setters/getters
+// - to set recursive vs deep unpack per key
 export function createSettings<const T extends Record<string, string>>(
     settings: Gio.Settings,
     keys: T,
 ): Settings<T> {
     return Object.fromEntries(
         Object.entries(keys).flatMap(([key, type]) => [
-            [camelify(key), createBinding(settings, key)],
+            [
+                camelify(key),
+                new Accessor(
+                    () => settings.get_value(key).recursiveUnpack(),
+                    (callback) => {
+                        const id = settings.connect(`changed::${key}`, callback)
+                        return () => settings.disconnect(id)
+                    },
+                ),
+            ],
             [
                 `set${key[0].toUpperCase() + camelify(key).slice(1)}`,
                 (v: unknown) => {
