@@ -33,12 +33,7 @@ function Counter() {
 }
 ```
 
-## Example apps using Gnim
+## Templates
 
-- [icon-theme-browser](https://github.com/Aylur/icon-theme-browser)
-
-## Credits
-
-- [JU12000](https://github.com/JU12000) for suggesting the name Gnim
-- [Azazel-Woodwind](https://github.com/Azazel-Woodwind) for a lot of early
-  testing
+- [gnome-extension](https://github.com/Aylur/gnome-shell-extension-template/)
+- [gtk4](https://github.com/Aylur/gnim-gtk4-template/)
