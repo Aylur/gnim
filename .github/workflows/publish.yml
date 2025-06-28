@@ -6,7 +6,7 @@ on:
             - "v*"
 
 jobs:
-    publish:
+    publish-to-npm:
         needs: lint
         runs-on: ubuntu-latest
 

@@ -293,14 +293,19 @@ export function createConnection<
     const subscribe: SubscribeFunction = (callback) => {
         if (subscribers.size === 0) {
             dispose = signals.map(([object, signal, callback]) => {
-                const id = object.connect(signal as string, (_, ...args) => {
-                    const newValue = callback(...args)
-                    if (value !== newValue) {
-                        value = newValue
-                        subscribers.forEach((cb) => cb())
-                    }
-                })
-                return () => object.disconnect(id)
+                const id = GObject.Object.prototype.connect.call(
+                    object,
+                    signal as string,
+                    (_, ...args) => {
+                        const newValue = callback(...args)
+                        if (value !== newValue) {
+                            value = newValue
+                            subscribers.forEach((cb) => cb())
+                        }
+                    },
+                )
+
+                return () => GObject.Object.prototype.disconnect.call(object, id)
             })
         }
 
