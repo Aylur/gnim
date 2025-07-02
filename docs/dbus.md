@@ -1,9 +1,24 @@
 # DBus decorators
 
+These decorators let you use classes to define a DBus interface and use them as
+proxies or servers.
+
 Read more about using DBus in GJS on
 [gjs.guide](https://gjs.guide/guides/gio/dbus.html).
 
-Use classes to define an interface.
+> [!INFO] Required TypeScript settings
+>
+> Make sure `experimentalDecorators` is set to `false` and `target` is _less
+> than or equal_ to `ES2020` in `tsconfig.json`.
+>
+> ```json
+> {
+>   "compilerOptions": {
+>     "experimentalDecorators": false,
+>     "target": "ES2020"
+>   }
+> }
+> ```
 
 ```ts
 import { Service, iface, methodAsync, signal, property } from "gnim/dbus"

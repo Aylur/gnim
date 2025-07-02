@@ -3,6 +3,20 @@
 Decorators that wrap
 [`GObject.registerClass`](https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Overrides.md?ref_type=heads#gobjectregisterclassmetainfo-klass).
 
+> [!INFO] Required TypeScript settings
+>
+> Make sure `experimentalDecorators` is set to `false` and `target` is _less
+> than or equal_ to `ES2020` in `tsconfig.json`.
+>
+> ```json
+> {
+>   "compilerOptions": {
+>     "experimentalDecorators": false,
+>     "target": "ES2020"
+>   }
+> }
+> ```
+
 ## Example Usage
 
 ```ts
