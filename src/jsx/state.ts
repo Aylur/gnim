@@ -2,7 +2,6 @@ import GObject from "gi://GObject"
 import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import { type Pascalify, camelify, kebabify } from "../util.js"
-import { type InferVariantRec, type InferVariant } from "../variant.js"
 
 type SubscribeCallback = () => void
 type DisposeFunction = () => void
@@ -211,7 +210,7 @@ export function createBinding<T>(object: GObject.Object | Gio.Settings, key: str
 
     const get = (): T => {
         if (object instanceof Gio.Settings) {
-            return object.get_value(key).recursiveUnpack()
+            return object.get_value(key).recursiveUnpack() as T
         } else {
             const getter = `get_${prop.replaceAll("-", "_")}` as keyof typeof object
 
@@ -372,11 +371,14 @@ export function createExternal<T>(
     return new Accessor(() => currentValue, subscribe)
 }
 
+type DeepInfer<T extends string> = ReturnType<GLib.Variant<T>["deepUnpack"]>
+type RecursiveInfer<T extends string> = ReturnType<GLib.Variant<T>["recursiveUnpack"]>
+
 /** @experimental */
 type Settings<T extends Record<string, string>> = {
-    [K in keyof T as Uncapitalize<Pascalify<K>>]: Accessor<InferVariantRec<T[K]>>
+    [K in keyof T as Uncapitalize<Pascalify<K>>]: Accessor<RecursiveInfer<T[K]>>
 } & {
-    [K in keyof T as `set${Pascalify<K>}`]: Setter<InferVariant<T[K]>>
+    [K in keyof T as `set${Pascalify<K>}`]: Setter<DeepInfer<T[K]>>
 }
 
 /**
