@@ -1,7 +1,7 @@
 import { Fragment } from "./Fragment.js"
 import { Accessor } from "./state.js"
 import { env } from "./env.js"
-import { onCleanup, Scope } from "./scope.js"
+import { getScope, onCleanup, Scope } from "./scope.js"
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Clutter from "gi://Clutter"
@@ -28,6 +28,7 @@ export function With<T, E extends JSX.Element>({
     children: mkChild,
     cleanup,
 }: WithProps<T, E>): Fragment<E> {
+    const currentScope = getScope()
     const fragment = new Fragment<E>()
 
     let scope: Scope
@@ -45,7 +46,7 @@ export function With<T, E extends JSX.Element>({
             if (scope) scope.dispose()
         }
 
-        scope = new Scope(Scope.current)
+        scope = new Scope(currentScope)
         const ch = scope.run(() => mkChild(v))
         if (ch !== "" && ch !== false && ch !== null && ch !== undefined) {
             fragment.addChild(ch)

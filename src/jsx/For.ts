@@ -1,7 +1,7 @@
 import { Fragment } from "./Fragment.js"
 import { Accessor, State, createState } from "./state.js"
 import { env } from "./env.js"
-import { onCleanup, Scope } from "./scope.js"
+import { getScope, onCleanup, Scope } from "./scope.js"
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type Clutter from "gi://Clutter"
@@ -42,6 +42,7 @@ export function For<Item, El extends JSX.Element, Key>({
 }: ForProps<Item, El, Key>): Fragment<El> {
     type MapItem = { item: Item; child: El; index: State<number>; scope: Scope }
 
+    const currentScope = getScope()
     const map = new Map<Item | Key, MapItem>()
     const fragment = new Fragment<El>()
 
@@ -87,7 +88,7 @@ export function For<Item, El extends JSX.Element, Key>({
                 }
             } else {
                 const [index, setIndex] = createState(i)
-                const scope = new Scope(Scope.current)
+                const scope = new Scope(currentScope)
                 const child = scope.run(() => mkChild(item, index))
                 map.set(key, { item, child, index: [index, setIndex], scope })
                 fragment.addChild(child)
@@ -95,10 +96,10 @@ export function For<Item, El extends JSX.Element, Key>({
         })
     }
 
-    callback(each.get())
     const dispose = each.subscribe(() => {
         callback(each.get())
     })
+    callback(each.get())
 
     onCleanup(() => {
         dispose()
