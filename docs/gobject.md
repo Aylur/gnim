@@ -102,7 +102,7 @@ GObject.registerClass(
 
 ## Property decorator
 
-Declaring properties are split into three decorators:
+Property declarations are split into three decorators:
 
 ```ts
 type PropertyTypeDeclaration<T> =
@@ -114,10 +114,10 @@ function setter<T>(typeDeclaration: PropertyTypeDeclaration<T>): void
 function getter<T>(typeDeclaration: PropertyTypeDeclaration<T>): void
 ```
 
-These decorators take a single parameter which defines the type:
+These decorators take a single parameter that defines the type:
 
 - any class that has a registered `GType`. This includes the globally available
-  `String`, `Number`, `Boolean` and `Object` JavaScript constructors which are
+  `String`, `Number`, `Boolean` and `Object` JavaScript constructors, which are
   mapped to their relative `GObject.ParamSpec`.
 
   - `Object`: `ParamSpec.jsobject`
@@ -154,7 +154,7 @@ notify signal when the value is set to a new value.
 
 > [!WARNING]
 >
-> The value is checked by reference, this is important if your property is an
+> The value is checked by reference, which is important if your property is an
 > object type.
 >
 > ```ts
@@ -251,7 +251,7 @@ obj.emit("my-signal", "a", "b")
 
 > [!TIP]
 >
-> To make the `connect` method aware of signals you can override it
+> To make the `connect` method aware of signals, you can override it.
 >
 > ```ts
 > interface MyObjSignals extends GObject.Object.SignalSignatures {
@@ -274,13 +274,14 @@ obj.emit("my-signal", "a", "b")
 ## Register decorator
 
 Every `GObject.Object` subclass has to be registered. You can pass the same
-options to this decorator as you would to `GObject.registerClass`
+options to this decorator as you would to `GObject.registerClass`.
 
 ```ts
 @register({ GTypeName: "MyObj" })
 class MyObj extends GObject.Object {}
 ```
 
-> [!TIP] This decorator registers properties and signals defined with
-> decorators, so make sure to use this and **not** `GObject.registerClass` if
-> you define any.
+> [!TIP]
+>
+> This decorator registers properties and signals defined with decorators, so
+> make sure to use this and **not** `GObject.registerClass` if you define any.
