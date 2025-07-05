@@ -1,8 +1,8 @@
 export class Scope {
-    static current: Scope | null
+    static current?: Scope | null
 
     parent?: Scope | null
-    context?: any
+    contexts = new Map<Context, unknown>()
 
     private cleanups = new Set<() => void>()
     private mounts = new Set<() => void>()
@@ -41,8 +41,8 @@ export class Scope {
     dispose() {
         this.cleanups.forEach((cb) => cb())
         this.cleanups.clear()
+        this.contexts.clear()
         delete this.parent
-        delete this.context
     }
 }
 
@@ -75,19 +75,20 @@ export type Context<T = any> = {
  * ```
  */
 export function createContext<T>(defaultValue: T): Context<T> {
+    let ctx: Context<T>
+
     function provide<R>(value: T, fn: () => R): R {
-        const scope = new Scope(Scope.current)
-        onCleanup(() => scope.dispose())
-        scope.context = value
+        const scope = getScope()
+        scope.contexts.set(ctx, value)
         return scope.run(fn)
     }
 
     function use(): T {
         let scope = Scope.current
         while (scope) {
-            const value = scope.context
-            if (value) return value
-            scope = scope.parent ?? null
+            const value = scope.contexts.get(ctx)
+            if (value !== undefined) return value as T
+            scope = scope.parent
         }
         return defaultValue
     }
@@ -96,10 +97,10 @@ export function createContext<T>(defaultValue: T): Context<T> {
         return provide(value, children)
     }
 
-    return Object.assign(context, {
+    return (ctx = Object.assign(context, {
         provide,
         use,
-    })
+    }))
 }
 
 /**
