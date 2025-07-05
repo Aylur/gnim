@@ -61,10 +61,10 @@ function Box() {
 ## JSX expressions and `jsx` function
 
 A JSX expression transpiles to a `jsx` function call. A JSX expression's type
-however is **always** the base `GObject.Object` type while the `jsx` return type
-is the instance type of the class or the return type of the function you pass to
-it. If you need the actual type of an object either use the `jsx` function
-directly or type assert the JSX expression.
+however is **always** the base `GObject.Object` type, while the `jsx` return
+type is the instance type of the class or the return type of the function you
+pass to it. If you need the actual type of an object, either use the `jsx`
+function directly or type assert the JSX expression.
 
 ```tsx
 import { jsx } from "gnim"
@@ -81,24 +81,23 @@ menubutton.popover = jsx(MyPopover, {}) // works as expected
 
 ## Class components
 
-When defining custom components choosing between using classes vs functions is
+When defining custom components, choosing between using classes vs. functions is
 mostly down to preference. There are cases when one or the other is more
-convenient to use, but you are mostly be using class components that come from
-libraries such as Gtk and you will be defining function components for custom
-components.
+convenient to use, but you will mostly be using class components from libraries
+such as Gtk, and defining function components for custom components.
 
-Using classes in JSX expressions let's you set some additional properties.
+Using classes in JSX expressions lets you set some additional properties.
 
 ### Constructor function
 
-By default classes are instantiated with the `new` keyword and initial values
+By default, classes are instantiated with the `new` keyword and initial values
 are passed in. In cases where you need to use a static constructor function
-instead you can specify it with `$constructor`.
+instead, you can specify it with `$constructor`.
 
 > [!WARNING]
 >
 > Initial values this way cannot be passed to the constructor and are set
-> **after** construction. This means construct only properties like `css-name`
+> **after** construction. This means construct-only properties like `css-name`
 > cannot be set.
 
 ```tsx
@@ -109,9 +108,9 @@ instead you can specify it with `$constructor`.
 
 ### Type string
 
-Under the hood the `jsx` function uses the
-[Gtk.Buildable](https://docs.gtk.org/gtk4/iface.Buildable.html) interface which
-lets you specify a type string to specify the type of `child` it is meant to be.
+Under the hood, the `jsx` function uses the
+[Gtk.Buildable](https://docs.gtk.org/gtk4/iface.Buildable.html) interface, which
+lets you use a type string to specify the type the `child` is meant to be.
 
 > [!NOTE] In Gnome extensions, it has no effect.
 
@@ -125,7 +124,7 @@ lets you specify a type string to specify the type of `child` it is meant to be.
 
 ### Signal handlers
 
-Signal handlers can be defined with an `on` prefix and `notify::` signal
+Signal handlers can be defined with an `on` prefix, and `notify::` signal
 handlers can be defined with an `onNotify` prefix.
 
 > [!NOTE]
@@ -143,15 +142,15 @@ handlers can be defined with an `onNotify` prefix.
 ### Setup function
 
 It is possible to define an arbitrary function to do something with the instance
-imperatively. It is run **after** properties are set, signals are connected and
-children are appended but **before** the `jsx` function returns.
+imperatively. It is run **after** properties are set, signals are connected, and
+children are appended, but **before** the `jsx` function returns.
 
 ```tsx
 <Gtk.Stack $={(self) => print(self, "is about to be returned")} />
 ```
 
-Most common use case is to acquire a reference to the widget in the scope of the
-function.
+The most common use case is to acquire a reference to the widget in the scope of
+the function.
 
 ```tsx
 function MyWidget() {
@@ -187,9 +186,9 @@ function MyWidget() {
 
 ### Bindings
 
-Properties can be set as a static value or can be passed an
-[Accessor](./jsx#accessor) in which case whenever its value changes it will be
-reflected on the widget
+Properties can be set as a static value. Alternatively, they can be passed an
+[Accessor](./jsx#accessor), in which case whenever its value changes, it will be
+reflected on the widget.
 
 ```tsx
 const [revealed, setRevealed] = createState(false)
@@ -206,12 +205,12 @@ return (
 ### How children are passed to class components
 
 Class components can only take `GObject.Object` instances as children. They are
-set through the
+set through
 [`Gtk.Buildable.add_child`](https://docs.gtk.org/gtk4/iface.Buildable.html).
 
 > [!NOTE]
 >
-> In Gnome extensions they are set with `Clutter.Actor.add_child`
+> In Gnome extensions, they are set with `Clutter.Actor.add_child`.
 
 ```ts
 @register({ Implements: [Gtk.Buildable] })
@@ -233,8 +232,8 @@ class MyContainer extends Gtk.Widget {
 ### Class names and inline CSS
 
 JSX supports setting `class` and `css` properties. `css` is mostly meant to be
-used as a debugging tool e.g with `css="border: 1px solid red;"`. `class` is a
-space separated list of class names.
+used as a debugging tool, e.g. with `css="border: 1px solid red;"`. `class` is a
+space-separated list of class names.
 
 ```tsx
 <Gtk.Button class="flat" css="border: 1px solid red;" />
@@ -242,14 +241,14 @@ space separated list of class names.
 
 > [!NOTE]
 >
-> In Gtk4 `class` you can also still use `css-classes` and in Gnome
-> `style-class`.
+> Besides `class`, you can also use `css-classes` in Gtk4 and `style-class` in
+> Gnome.
 
 ### This component
 
-In most cases you will use JSX to instantiate objects. However there are cases
+In most cases, you will use JSX to instantiate objects. However, there are cases
 when you have a reference to an instance that you would like to use in a JSX
-expression for example in subclasses.
+expression, for example, in subclasses.
 
 ```tsx
 @register()
@@ -295,7 +294,7 @@ return <MyComponent $={(self) => print(self, "is a Button")} prop="hello" />
 
 ### How children are passed to function components
 
-They are passed in as `children` property. They can be of any type.
+They are passed in through the `children` property. They can be of any type.
 
 ```tsx
 interface MyButtonProps {
@@ -309,7 +308,7 @@ function MyButton({ children }: MyButtonProps) {
 return <MyButton>Click Me</MyButton>
 ```
 
-When multiple children are passed in `children` is an `Array`.
+When multiple children are passed in, `children` is an `Array`.
 
 ```tsx
 interface MyBoxProps {
@@ -372,22 +371,22 @@ return (
 
 > [!TIP]
 >
-> In a lot of cases it is better to always render the component and set its
-> `visible` property instead because `<With>` will destroy/recreate the widget
-> each time the passed `value` changes.
+> In a lot of cases, it is better to always render the component and set its
+> `visible` property instead. This is because `<With>` will destroy/recreate the
+> widget each time the passed `value` changes.
 
 > [!WARNING]
 >
-> When the value changes and the widget is re-rendered the previous one is
-> removed from the parent component and the new one is **appended**. Order of
-> widgets are not kept so make sure to wrap `<With>` in a container to avoid
+> When the value changes and the widget is re-rendered, the previous one is
+> removed from the parent component and the new one is **appended**. The order
+> of widgets is not kept, so make sure to wrap `<With>` in a container to avoid
 > this.
 
 ### List rendering
 
-The `<For>` component let's you render based on an array dynamically. Each time
-the array changes it is compared with its previous state. Widgets for new items
-are inserted while widgets associated with removed items are removed.
+The `<For>` component lets you render based on an array dynamically. Each time
+the array changes, it is compared with its previous state. Widgets for new items
+are inserted, while widgets associated with removed items are removed.
 
 ```tsx
 let list: Accessor<Iterable<any>>
@@ -403,16 +402,17 @@ return (
 
 > [!WARNING]
 >
-> Similarly to `<With>`, when the list changes and a new item is added it is
-> simply **appended** to the parent. Order of widgets are not kept so make sure
-> to wrap `<For>` in a container to avoid this.
+> Similarly to `<With>`, when the list changes and a new item is added, it is
+> simply **appended** to the parent. The order of widgets is not kept, so make
+> sure to wrap `<For>` in a container to avoid this.
 
 ### Fragments
 
 Both `<When>` and `<For>` are `Fragment`s. A `Fragment` is a collection of
-children. Whenever the children array changes it is reflected on the parent
-widget the `Fragment` was assigned to. When implementing custom widgets you need
-to take into consideration the API being used for child insertion and removing.
+children. Whenever the children array changes, it is reflected on the parent
+widget the `Fragment` was assigned to. When implementing custom widgets, you
+need to take into consideration the API being used for child insertion and
+removing.
 
 - Both Gtk3 and Gtk4 uses the `Gtk.Buildable` interface to append children.
 - Gtk3 uses the `Gtk.Container` interface to remove children.
@@ -421,7 +421,7 @@ to take into consideration the API being used for child insertion and removing.
 
 ## State management
 
-There is a single primitive called `Accessor` which is a read-only signal.
+There is a single primitive called `Accessor`, which is a read-only signal.
 
 ```ts
 export interface Accessor<T> {
@@ -459,8 +459,8 @@ setValue((prev) => prev + 1)
 
 ### `createComputed`
 
-Creates a computed signal from a list of Accessors. The provided transform is
-run when the Accessor's value is accessed. The function should be pure.
+Creates a computed signal from a list of `Accessor`s. The provided transform is
+run when the `Accessor`'s value is accessed. The function should be pure.
 
 ```ts
 function createComputed<
@@ -525,8 +525,8 @@ const value = createConnection(
 
 > [!IMPORTANT]
 >
-> The connection will only get attached when the first subscriber appears and is
-> dropped when the last one disappears.
+> The connection will only get attached when the first subscriber appears, and
+> is dropped when the last one disappears.
 
 ### `createSettings`
 
@@ -559,9 +559,9 @@ s.setComplexKey((prev) => ({
 
 ### `createExternal`
 
-Creates a signal from a `provier` function. The provider is called when the
-first subscriber appears and the returned dispose function from the provider
-will be called when the number of subscribers drop to zero.
+Creates a signal from a `provider` function. The provider is called when the
+first subscriber appears. The returned dispose function from the provider will
+be called when the number of subscribers drops to zero.
 
 ```ts
 function createExternal<T>(
@@ -587,11 +587,12 @@ values.
 ```js
 let scope = new Scope()
 
-// inside this function synchronously executed code will have access to `scope`
-// and will attach any allocated resource such as signal subscriptions to the `scope`
+// Inside this function, synchronously executed code will have access
+// to `scope` and will attach any allocated resource, such as signal
+// subscriptions, to the `scope`.
 scopedFuntion()
 
-// at a later point it can be disposed
+// At a later point it can be disposed.
 scope.dispose()
 ```
 
@@ -601,9 +602,9 @@ scope.dispose()
 function createRoot<T>(fn: (dispose: () => void) => T)
 ```
 
-Creates a root scope. Other than wrapping the main entry function in this you
+Creates a root scope. Other than wrapping the main entry function in this, you
 likely won't need this elsewhere. `<For>` and `<With>` components run their
-children an their own scopes for example.
+children in their own scopes, for example.
 
 Example:
 
@@ -654,7 +655,7 @@ function MyComponent() {
 
 ### `onMount`
 
-Attaches a function to run when the farthest non mounted scope returns.
+Attaches a function to run when the farthest non-mounted scope returns.
 
 Example:
 
@@ -670,8 +671,8 @@ function MyComponent() {
 
 ### Contexts
 
-Context provides a form of dependency injection. It is used to save from needing
-to pass data as props through intermediate components (aka prop drilling). The
+Context provides a form of dependency injection. It lets you avoid the need to
+pass data as props through intermediate components (a.k.a. prop drilling). The
 default value is used when no Provider is found above in the hierarchy.
 
 Example:
@@ -696,8 +697,8 @@ function ProviderComponent() {
 
 ## Intrinsic Elements
 
-Intrinsic elements are globally available components which in web frameworks are
-usually HTMLElements such as `<div>` `<span>` `<p>`. There are no intrinsic
+Intrinsic elements are globally available components, which in web frameworks
+are usually HTMLElements such as `<div>` `<span>` `<p>`. There are no intrinsic
 elements by default, but they can be set.
 
 > [!TIP]

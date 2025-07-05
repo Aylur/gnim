@@ -72,8 +72,8 @@ console.log(value) // "hello"
 ## `Service`
 
 Base class of every DBus service for both proxies and exported objects. Derived
-from `GObject.Object`. DBus signals are also GObject signals and DBus properties
-are also GObject properties.
+from `GObject.Object`. DBus signals are also GObject signals, and DBus
+properties are also GObject properties.
 
 ```ts
 import { Service, iface } from "gnim/dbus"
@@ -115,9 +115,9 @@ class Service {
 ```
 
 Method, signal and property access implementations are ignored. When acting as a
-proxy they work over the remote object.
+proxy, they work over the remote object.
 
-Exmaple
+Example
 
 ```ts
 @iface("some.dbus.interface")
@@ -161,12 +161,12 @@ class {
 
 > [!TIP]
 >
-> When writing an interface to be used as a proxy prefer using
-> [methodAsync](./dbus#methodAsync) instead as it does not block IO.
+> When writing an interface to be used as a proxy, prefer using
+> [methodAsync](./dbus#methodAsync) instead, as it does not block IO.
 
 ## `methodAsync`
 
-Async version of the `method` decorator which is useful for proxies.
+Async version of the `method` decorator, which is useful for proxies.
 
 ```ts
 type Arg = string | { name: string; type: string }
@@ -192,12 +192,12 @@ class {
 
 > [!NOTE]
 >
-> On exported objects this is functionally the same as [method](./dbus#method)
+> On exported objects, this is functionally the same as [method](./dbus#method).
 
 ## `property`
 
 Registers a property, similarly to the
-[gobject property](./gobject#property-decorator) decorator. Except that it works
+[gobject property](./gobject#property-decorator) decorator, except that it works
 over `Variant` types.
 
 ```ts
@@ -229,7 +229,7 @@ class {
 > [!TIP]
 >
 > Can be used in combination with the `setter` decorator to define read-write
-> properties
+> properties.
 
 ## `setter`
 
@@ -250,7 +250,7 @@ class {
 > [!TIP]
 >
 > Can be used in combination with the `getter` decorator to define read-write
-> properties
+> properties.
 
 ## `signal`
 
