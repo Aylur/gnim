@@ -8,7 +8,7 @@ export class Scope {
     private mounts = new Set<() => void>()
     private mounted = false
 
-    constructor(parent: Scope | null) {
+    constructor(parent?: Scope | null) {
         this.parent = parent
     }
 
