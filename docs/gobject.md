@@ -140,6 +140,8 @@ These decorators take a single parameter that defines the type:
   }
   ```
 
+### `property`
+
 The `property` decorator lets you declare a read-write property.
 
 ```ts {3}
@@ -164,6 +166,23 @@ notify signal when the value is set to a new value.
 > obj.prop = { ...dict } // This will emit notify::prop
 > ```
 
+When using custom subclasses as properties, you might want to annotate its
+`$gtype`.
+
+```ts {3,8}
+@register()
+class DeepProp extends GObject.Object {
+  declare static $gtype: GObject.GType<DeepProp>
+}
+
+@register()
+class MyClass extends GObject.Object {
+  @property(DeepProp) prop: DeepProp
+}
+```
+
+### `getter`
+
 The `getter` decorator lets you declare a read-only property.
 
 ```ts {3}
@@ -175,6 +194,8 @@ class MyObj extends GObject.Object {
   }
 }
 ```
+
+### `setter`
 
 The `setter` decorator lets you declare a write-only property.
 
