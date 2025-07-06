@@ -5,7 +5,17 @@ import { CC, FC, env } from "./env.js"
 import { kebabify, Pascalify, set } from "../util.js"
 import { onCleanup } from "./scope.js"
 
-type Node = Array<GObject.Object> | GObject.Object | number | string | boolean | null | undefined
+/**
+ * Represents all of the things that can be passed as a child to class components.
+ */
+export type Node =
+    | Array<GObject.Object>
+    | GObject.Object
+    | number
+    | string
+    | boolean
+    | null
+    | undefined
 
 export const gtkType = Symbol("gtk builder type")
 
