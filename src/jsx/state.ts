@@ -31,6 +31,7 @@ export class Accessor<T = unknown> extends Function {
      * @returns Unsubscribe function.
      */
     subscribe(callback: SubscribeCallback): DisposeFunction {
+        // TODO: auto unsub when a scope is available?
         return this.#subscribe(callback)
     }
 

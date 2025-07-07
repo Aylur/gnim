@@ -47,8 +47,9 @@ type Meta = {
             type: PropertyTypeDeclaration<unknown>
         }
     }
-    signals: {
+    signals?: {
         [key: string]: {
+            default?: boolean
             flags?: SignalFlags
             accumulator?: AccumulatorType
             return_type?: GType
@@ -56,6 +57,18 @@ type Meta = {
             method: (...arg: any[]) => unknown
         }
     }
+}
+
+type Context = { private: false; static: false; name: string }
+type PropertyContext<T> = ClassFieldDecoratorContext<GObj, T> & Context
+type GetterContext<T> = ClassGetterDecoratorContext<GObj, T> & Context
+type SetterContext<T> = ClassSetterDecoratorContext<GObj, T> & Context
+type SignalContext<T extends () => any> = ClassMethodDecoratorContext<GObj, T> & Context
+
+type SignalOptions = {
+    default?: boolean
+    flags?: SignalFlags
+    accumulator?: AccumulatorType
 }
 
 type PropertyTypeDeclaration<T> =
@@ -89,7 +102,7 @@ function assertField(
 export function property<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
     return function (
         _: void,
-        ctx: ClassFieldDecoratorContext<GObj, T>,
+        ctx: PropertyContext<T>,
         options?: { metaOnly: true },
     ): (this: GObj, init: T) => T {
         const fieldName = assertField(ctx)
@@ -147,10 +160,7 @@ export function property<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
  * ```
  */
 export function getter<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
-    return function getter(
-        getter: (this: GObj) => T,
-        ctx: ClassGetterDecoratorContext<GObj, T>,
-    ): (this: GObj) => T {
+    return function getter(getter: (this: GObj) => T, ctx: GetterContext<T>): (this: GObj) => T {
         const fieldName = assertField(ctx)
         const meta: Partial<Meta> = ctx.metadata!
         const props = (meta.properties ??= {})
@@ -186,7 +196,7 @@ export function getter<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
 export function setter<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
     return function setter(
         setter: (this: GObj, value: T) => void,
-        ctx: ClassSetterDecoratorContext<GObj, T>,
+        ctx: SetterContext<T>,
     ): (this: GObj, value: T) => void {
         const fieldName = assertField(ctx)
         const meta: Partial<Meta> = ctx.metadata!
@@ -229,13 +239,10 @@ export function signal<
 >(
     params: Params,
     returnType?: Return,
-    options?: {
-        flags?: SignalFlags
-        accumulator?: AccumulatorType
-    },
+    options?: SignalOptions,
 ): (
     method: (this: GObj, ...args: ParamTypes<Params>) => ParamType<Return>,
-    ctx: ClassMethodDecoratorContext<GObj, typeof method>,
+    ctx: SignalContext<typeof method>,
 ) => typeof method
 
 /**
@@ -255,26 +262,17 @@ export function signal<Params extends Array<{ $gtype: GType } | GType>>(
     ...params: Params
 ): (
     method: (this: GObject.Object, ...args: ParamTypes<Params>) => void,
-    ctx: ClassMethodDecoratorContext<GObj, typeof method>,
+    ctx: SignalContext<typeof method>,
 ) => typeof method
 
 export function signal<
     Params extends Array<{ $gtype: GType } | GType>,
     Return extends { $gtype: GType } | GType,
 >(
-    ...args:
-        | Params
-        | [
-              params: Params,
-              returnType?: Return,
-              options?: {
-                  flags?: SignalFlags
-                  accumulator?: AccumulatorType
-              },
-          ]
+    ...args: Params | [params: Params, returnType?: Return, options?: SignalOptions]
 ): (
     method: (this: GObj, ...args: ParamTypes<Params>) => ParamType<Return> | void,
-    ctx: ClassMethodDecoratorContext<GObj, typeof method> | ClassFieldDecoratorContext<GObj>,
+    ctx: SignalContext<typeof method>,
 ) => typeof method {
     return function (method, ctx) {
         if (ctx.private) throw Error("private fields are not supported")
@@ -292,14 +290,12 @@ export function signal<
             const [params, returnType, options] = args as [
                 params: Params,
                 returnType?: Return,
-                options?: {
-                    flags?: SignalFlags
-                    accumulator?: AccumulatorType
-                },
+                options?: SignalOptions,
             ]
 
             signals[signalName] = {
                 method,
+                default: options?.default ?? true,
                 param_types: params.map((i) => ("$gtype" in i ? i.$gtype : i)),
                 ...(returnType && {
                     return_type: "$gtype" in returnType ? returnType.$gtype : returnType,
@@ -324,6 +320,7 @@ export function signal<
         }
     }
 }
+
 const MAXINT = 2 ** 31 - 1
 const MININT = -(2 ** 31)
 const MAXUINT = 2 ** 32 - 1
@@ -346,7 +343,7 @@ function pspecFromGType(type: GType<unknown>, name: string, flags: ParamFlags) {
             return ParamSpec.int64(name, "", "", flags, MININT64, MAXINT64, 0)
         case GObject.TYPE_UINT64:
             return ParamSpec.uint64(name, "", "", flags, 0, Number.MAX_SAFE_INTEGER, 0)
-        case GObject.type_from_name("gfloat"):
+        case GObject.TYPE_FLOAT:
             return ParamSpec.float(name, "", "", flags, MINFLOAT, MAXFLOAT, 0)
         case GObject.TYPE_DOUBLE:
             return ParamSpec.double(name, "", "", flags, Number.MIN_VALUE, Number.MIN_VALUE, 0)
@@ -433,15 +430,20 @@ export function register<Cls extends { new (...args: any): GObj }>(options: Meta
         )
 
         const signals = fromEntries(
-            entries(meta.signals ?? {}).map(([signalName, { method, ...signal }]) => {
-                defineProperty(cls.prototype, `on_${signalName.replaceAll("-", "_")}`, {
-                    enumerable: false,
-                    configurable: false,
-                    value: method,
-                })
+            entries(meta.signals ?? {}).map(([signalName, { default: def, method, ...signal }]) => {
+                if (def) {
+                    defineProperty(cls.prototype, `on_${signalName.replaceAll("-", "_")}`, {
+                        enumerable: false,
+                        configurable: false,
+                        value: method,
+                    })
+                }
                 return [signalName, signal]
             }),
         )
+
+        delete meta.properties
+        delete meta.signals
 
         registerClass({ ...options, Properties: props, Signals: signals }, cls)
     }

@@ -232,6 +232,7 @@ function signal(
   params: Array<GType>,
   returnType?: GType,
   options?: {
+    default?: default
     flags?: SignalFlags
     accumulator?: AccumulatorType
   },
@@ -247,6 +248,7 @@ handler of the signal.
 @register()
 class MyObj extends GObject.Object {
   @signal([String, Number], Boolean, {
+    default: true,
     accumulator: GObject.AccumulatorType.FIRST_WINS,
   })
   myFirstHandledSignal(str: string, n: number): boolean {
@@ -259,6 +261,23 @@ class MyObj extends GObject.Object {
   }
 }
 ```
+
+> [!TIP]
+>
+> It is required to provide a function implementation which becomes the default
+> signal handler. In case you don't want to implement a default handler you can
+> set the `default` option to `false`.
+>
+> ```ts
+> class {
+>   @signal([], Boolean, {
+>     default: false,
+>   })
+>   withoutDefaultImpl(): boolean {
+>     throw "this never runs"
+>   }
+> }
+> ```
 
 You can emit the signal by calling the signal method or using `emit`.
 
