@@ -452,6 +452,16 @@ export function register<Cls extends { new (...args: any): GObj }>(options: Meta
 /**
  * @experimental
  * Asserts a gtype in cases where the type is too loose/strict.
+ *
+ * Example:
+ * ```ts
+ * type Tuple = [number, number]
+ * const Tuple = gtype<Tuple>(Array)
+ *
+ * class {
+ *   \@property(Tuple) value = [1, 2] as Tuple
+ * }
+ * ```
  */
 export function gtype<Assert>(type: GType<any> | { $gtype: GType<any> }): {
     $gtype: GType<Assert>

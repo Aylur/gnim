@@ -232,10 +232,10 @@ export function createBinding<T>(object: GObject.Object | Gio.Settings, key: str
 type ConnectionHandler<
     O extends GObject.Object,
     S extends keyof O["$signals"],
-    Return,
+    T,
 > = O["$signals"][S] extends (...args: any[]) => infer R
     ? void extends R
-        ? (...args: Parameters<O["$signals"][S]>) => Return
+        ? (...args: [...Parameters<O["$signals"][S]>, currentValue: T]) => T
         : never
     : never
 
@@ -297,7 +297,7 @@ export function createConnection<
                     object,
                     signal as string,
                     (_, ...args) => {
-                        const newValue = callback(...args)
+                        const newValue = callback(...args, value)
                         if (value !== newValue) {
                             value = newValue
                             subscribers.forEach((cb) => cb())

@@ -127,11 +127,6 @@ lets you use a type string to specify the type the `child` is meant to be.
 Signal handlers can be defined with an `on` prefix, and `notify::` signal
 handlers can be defined with an `onNotify` prefix.
 
-> [!NOTE]
->
-> Signals are currently not typed. See
-> [this issue](https://github.com/gjsify/ts-for-gir/issues/259) for context.
-
 ```tsx
 <Gtk.Revealer
   onNotifyChildRevealed={(self) => print(self, "child-revealed")}
@@ -510,16 +505,35 @@ const style = createBinding(styleManager, "colorScheme")
 
 ### `createConnection`
 
+```ts
+function createConnection<
+  T,
+  O extends GObject.Object,
+  S extends keyof O1["$signals"],
+>(
+  init: T,
+  handler: [
+    object: O,
+    signal: S,
+    callback: (
+      ...args: [...Parameters<O["$signals"][S]>, currentValue: T]
+    ) => T,
+  ],
+): Accessor<T>
+```
+
 Creates an `Accessor` which sets up a list of `GObject.Object` signal
-connections.
+connections. It expects an initial value and a list of
+`[object, signal, callback]` tuples where the callback is called with the
+arguments passed by the signal and the current value as the last parameter.
 
 Example:
 
 ```ts
 const value = createConnection(
   "initial value",
-  [obj1, "sig-name", (...args) => "str"],
-  [obj2, "sig-name", (...args) => "str"],
+  [obj1, "notify", (pspec, currentValue) => currentValue + pspec.name],
+  [obj2, "sig-name", (sigArg1, sigArg2, currentValue) => "str"],
 )
 ```
 

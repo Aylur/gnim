@@ -27,6 +27,8 @@ const remoteMethod = Symbol("proxy remoteMethod")
 const remoteMethodAsync = Symbol("proxy remoteMethodAsync")
 const remotePropertySet = Symbol("proxy remotePropertySet")
 
+type Ctx = { private: false; static: false; name: string }
+
 // TODO: consider making some parts public
 // - remoteMethod, remoteMethodAsync, remotePropertySet
 // - info, proxy, dbusObject
@@ -733,7 +735,7 @@ export function property<T extends string>(type: T) {
 
         void gproperty({ $gtype: inferGTypeFromVariant(type) })(
             _,
-            ctx as ClassFieldDecoratorContext<GObject.Object>,
+            ctx as ClassFieldDecoratorContext<GObject.Object> & Ctx,
             { metaOnly: true },
         )
 
@@ -792,7 +794,7 @@ export function getter<T extends string>(type: T) {
 
         void ggetter({ $gtype: inferGTypeFromVariant(type) })(
             () => {},
-            ctx as ClassGetterDecoratorContext<GObject.Object>,
+            ctx as ClassGetterDecoratorContext<GObject.Object> & Ctx,
         )
 
         return function () {
@@ -819,7 +821,7 @@ export function setter<T extends string>(type: T) {
 
         void gsetter({ $gtype: inferGTypeFromVariant(type) })(
             () => {},
-            ctx as ClassSetterDecoratorContext<GObject.Object>,
+            ctx as ClassSetterDecoratorContext<GObject.Object> & Ctx,
         )
 
         return function (value: DeepInfer<T>) {
@@ -849,7 +851,7 @@ export function signal<const Params extends Array<DBusType>>(...params: Params) 
 
         void gsignal(...params.map(inferGTypeFromVariant))(
             () => {},
-            ctx as ClassMethodDecoratorContext<GObject.Object>,
+            ctx as ClassMethodDecoratorContext<GObject.Object> & Ctx,
         )
 
         return function (...params: InferVariantTypes<Params>) {
