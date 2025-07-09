@@ -2,6 +2,7 @@ import GObject from "gi://GObject"
 import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import { type Pascalify, camelify, kebabify } from "../util.js"
+import type { DeepInfer, RecursiveInfer } from "../variant.js"
 
 type SubscribeCallback = () => void
 type DisposeFunction = () => void
@@ -371,9 +372,6 @@ export function createExternal<T>(
 
     return new Accessor(() => currentValue, subscribe)
 }
-
-type DeepInfer<T extends string> = ReturnType<GLib.Variant<T>["deepUnpack"]>
-type RecursiveInfer<T extends string> = ReturnType<GLib.Variant<T>["recursiveUnpack"]>
 
 /** @experimental */
 type Settings<T extends Record<string, string>> = {

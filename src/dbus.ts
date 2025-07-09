@@ -8,6 +8,7 @@ import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import GObject from "gi://GObject"
 import { definePropertyGetter, kebabify, xml } from "./util.js"
+import { type DeepInfer } from "./variant.js"
 import {
     register,
     property as gproperty,
@@ -480,8 +481,6 @@ export function iface(name: string, options?: Parameters<typeof register>[0]) {
 }
 
 type DBusType = string | { type: string; name: string }
-
-type DeepInfer<T extends string> = ReturnType<GLib.Variant<T>["deepUnpack"]>
 
 type InferVariantTypes<T extends Array<DBusType>> = {
     [K in keyof T]: T[K] extends string
