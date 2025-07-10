@@ -128,7 +128,7 @@ export function jsx<T extends GObject.Object>(
     // key is a special prop in jsx which is passed as a third argument and not in props
     key?: string,
 ): T {
-    const { $, $type, $constructor, children = [], ...rest } = inprops as CCProps<T, any>
+    const { $, $type, $constructor, children, ...rest } = inprops as CCProps<T, any>
     const props = rest as Record<string, any>
 
     if (key) Object.assign(props, { key })
