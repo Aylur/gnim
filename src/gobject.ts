@@ -311,6 +311,7 @@ export function signal<
             const params = args as Params
             signals[signalName] = {
                 method,
+                default: true,
                 param_types: params.map((i) => ("$gtype" in i ? i.$gtype : i)),
             }
         }
