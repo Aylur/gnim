@@ -72,6 +72,10 @@ function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
 function remove(parent: GObject.Object, child: GObject.Object) {
     if (specialRemove(parent, child)) return
 
+    if (parent instanceof Gtk.Widget && child instanceof Gtk.EventController) {
+        return parent.remove_controller(child)
+    }
+
     if ("set_child" in parent && typeof parent.set_child == "function") {
         return parent.set_child(null)
     }
