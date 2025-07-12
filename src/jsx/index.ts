@@ -1,4 +1,4 @@
-export { type CCProps, type FCProps, getType, jsx } from "./jsx.js"
+export { type Node, type CCProps, type FCProps, getType, jsx } from "./jsx.js"
 export { Fragment } from "./Fragment.js"
 export { For } from "./For.js"
 export { With } from "./With.js"
