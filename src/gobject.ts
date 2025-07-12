@@ -478,7 +478,12 @@ declare global {
     interface ArrayConstructor {
         $gtype: GType<any[]>
     }
+
+    interface DateConstructor {
+        $gtype: GType<Date>
+    }
 }
 
 Function.$gtype = Object.$gtype as FunctionConstructor["$gtype"]
 Array.$gtype = Object.$gtype as ArrayConstructor["$gtype"]
+Date.$gtype = Object.$gtype as DateConstructor["$gtype"]
