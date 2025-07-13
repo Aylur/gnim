@@ -1,6 +1,6 @@
 {
     "name": "gnim",
-    "version": "1.2.9",
+    "version": "1.3.0",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
@@ -13,7 +13,8 @@
         "url": "https://ko-fi.com/aylur"
     },
     "scripts": {
-        "build": "tsc",
+        "wipe": "rm -rf dist ; rm -rf build",
+        "build": "tsc ; mkdir dist ; glib-compile-resources src/resource.xml --sourcedir=build --target=dist/gnim.gresource ; cp -r src/* dist/",
         "lint": "eslint . --fix",
         "docs:dev": "vitepress dev docs",
         "docs:build": "vitepress build docs",
@@ -33,42 +34,16 @@
         "vitepress": "latest"
     },
     "exports": {
-        ".": {
-            "import": "./dist/jsx/index.js",
-            "types": "./dist/jsx/index.d.ts"
-        },
-        "./gobject": {
-            "import": "./dist/gobject.js",
-            "types": "./dist/gobject.d.ts"
-        },
-        "./dbus": {
-            "import": "./dist/dbus.js",
-            "types": "./dist/dbus.d.ts"
-        },
-        "./fetch": {
-            "import": "./dist/fetch.js",
-            "types": "./dist/fetch.d.ts"
-        },
-        "./gtk3/jsx-runtime": {
-            "import": "./dist/gtk3/jsx-runtime.js",
-            "types": "./dist/gtk3/jsx-runtime.d.ts"
-        },
-        "./gtk3/style": {
-            "import": "./dist/gtk3/style.js",
-            "types": "./dist/gtk3/style.d.ts"
-        },
-        "./gtk4/jsx-runtime": {
-            "import": "./dist/gtk4/jsx-runtime.js",
-            "types": "./dist/gtk4/jsx-runtime.d.ts"
-        },
-        "./gtk4/style": {
-            "import": "./dist/gtk4/style.js",
-            "types": "./dist/gtk4/style.d.ts"
-        },
-        "./gnome/jsx-runtime": {
-            "import": "./dist/gnome/jsx-runtime.js",
-            "types": "./dist/gnome/jsx-runtime.d.ts"
-        }
+        ".": "./dist/index.ts",
+        "./dbus": "./dist/dbus.ts",
+        "./fetch": "./dist/fetch.ts",
+        "./gobject": "./dist/gobject.ts",
+        "./resource": "./dist/resource/resource.ts",
+        "./gnome/jsx-runtime": "./dist/gnome/jsx-runtime.ts",
+        "./gtk3/jsx-runtime": "./dist/gtk3/jsx-runtime.ts",
+        "./gtk3/style": "./dist/gtk3/style.ts",
+        "./gtk4/jsx-runtime": "./dist/gtk4/jsx-runtime.ts",
+        "./gtk4/style": "./dist/gtk4/style.ts"
     },
     "files": [
         "dist"

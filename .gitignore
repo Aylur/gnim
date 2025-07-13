@@ -1,6 +1,6 @@
 node_modules/
+build/
 dist/
 docs/.vitepress/dist
 docs/.vitepress/cache
 test.nu
-src/_index.tsx

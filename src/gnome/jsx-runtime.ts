@@ -2,7 +2,7 @@ import Clutter from "gi://Clutter"
 import St from "gi://St"
 import GObject from "gi://GObject"
 import { configue } from "../jsx/env.js"
-import { onCleanup, Accessor, Fragment } from "../jsx/index.js"
+import { onCleanup, Accessor, Fragment } from "../index.js"
 
 function add(parent: GObject.Object, child: GObject.Object, _: number) {
     if (parent instanceof Clutter.Actor) {

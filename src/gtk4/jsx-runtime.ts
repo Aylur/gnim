@@ -1,7 +1,7 @@
 import Gtk from "gi://Gtk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject"
-import { getType, onCleanup, Accessor, Fragment } from "../jsx/index.js"
+import { getType, onCleanup, Accessor, Fragment } from "../index.js"
 import { configue } from "../jsx/env.js"
 
 const dummyBuilder = new Gtk.Builder()
