@@ -11,7 +11,8 @@
         "skipLibCheck": true,
         "jsx": "react-jsx",
         "baseUrl": ".",
-        "jsxImportSource": "src/gtk4"
+        "jsxImportSource": "src/gtk4",
+        "verbatimModuleSyntax": true
     },
     "include": ["./src/**/*"]
 }

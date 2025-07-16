@@ -1,7 +1,7 @@
 import GObject from "gi://GObject"
 import { env } from "./env.js"
 import { Accessor } from "./state.js"
-import { kebabify, Pascalify, set } from "../util.js"
+import { kebabify, type Pascalify, set } from "../util.js"
 import { onCleanup } from "./scope.js"
 import { setType } from "./jsx.js"
 

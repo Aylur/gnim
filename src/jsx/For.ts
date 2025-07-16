@@ -1,5 +1,5 @@
 import { Fragment } from "./Fragment.js"
-import { Accessor, State, createState } from "./state.js"
+import { Accessor, type State, createState } from "./state.js"
 import { env } from "./env.js"
 import { getScope, onCleanup, Scope } from "./scope.js"
 
