@@ -4,7 +4,7 @@ import { env } from "./env.js"
 import { getScope, onCleanup, Scope } from "./scope.js"
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import Clutter from "gi://Clutter"
+import type Clutter from "gi://Clutter"
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type Gtk from "gi://Gtk?version=3.0"
 
