@@ -482,8 +482,18 @@ declare global {
     interface DateConstructor {
         $gtype: GType<Date>
     }
+
+    interface MapConstructor {
+        $gtype: GType<Map<any, any>>
+    }
+
+    interface SetConstructor {
+        $gtype: GType<Set<any>>
+    }
 }
 
 Function.$gtype = Object.$gtype as FunctionConstructor["$gtype"]
 Array.$gtype = Object.$gtype as ArrayConstructor["$gtype"]
 Date.$gtype = Object.$gtype as DateConstructor["$gtype"]
+Map.$gtype = Object.$gtype as MapConstructor["$gtype"]
+Set.$gtype = Object.$gtype as SetConstructor["$gtype"]
