@@ -143,9 +143,9 @@ children are appended, but **before** the `jsx` function returns.
 ```tsx
 <Gtk.Stack $={(self) => print(self, "is about to be returned")} />
 ```
+Below are a few common use cases for this function:
 
-The most common use case is to acquire a reference to the widget in the scope of
-the function.
+Acquire a reference to the widget in the scope of the function:
 
 ```tsx
 function MyWidget() {
@@ -159,7 +159,7 @@ function MyWidget() {
 }
 ```
 
-Another common use case is to initialize relations between widgets in the tree.
+Initialize relations between widgets in the tree:
 
 ```tsx
 function MyWidget() {
@@ -176,6 +176,36 @@ function MyWidget() {
       </Gtk.SearchBar>
     </Gtk.Window>
   )
+}
+```
+
+Adding event controllers to widgets after construction: 
+```tsx
+function MyWidget() {
+  const scrollCtrl = new Gtk.EventControllerScroll({
+    flags: Gtk.EventControllerScrollFlags.VERTICAL,
+  });
+  scrollCtrl.connect("scroll", (_ctrl, dx, dy) => {
+    // dy < 0 is wheel-up, dy > 0 is wheel-down
+    if (dy < 0) console.log("Scrolled up");
+    else if (dy > 0) console.log("Scrolled down");
+  });
+
+  const clickCtrl = new Gtk.GestureClick();
+  clickCtrl.connect("released", () => {
+    console.log("Clicked");
+  });
+
+  return (
+    <box
+      $={(w) => {
+        w.add_controller(clickCtrl);
+        w.add_controller(scrollCtrl);
+      }}
+    >
+      <label label={"Scroll/Click on me!"} />
+    </box>
+  );
 }
 ```
 
