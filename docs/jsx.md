@@ -79,6 +79,24 @@ menubutton.popover = <MyPopover /> // cannot assign Object to Popover // [!code 
 menubutton.popover = jsx(MyPopover, {}) // works as expected
 ```
 
+## JSX Element
+
+A valid JSX component must either be a function that returns a `GObject.Object`
+instance, or a class that inherits from `GObject.Object`.
+
+> [!TIP]
+>
+> `JSX.Element` is simply an alias for `GObject.Object`.
+
+When two types have a parent-child relationship, they can be composed naturally
+using JSX syntax. For example, this applies to types like `Gtk.EventController`:
+
+```tsx
+<Gtk.Box>
+  <Gtk.GestureClick onPressed={() => print("clicked")} />
+</Gtk.Box>
+```
+
 ## Class components
 
 When defining custom components, choosing between using classes vs. functions is
