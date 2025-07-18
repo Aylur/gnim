@@ -473,7 +473,7 @@ function MyWidget() {
 
 > [!TIP]
 >
-> You can use [`craeteConnection`](../jsx#createconnection) as an alternative.
+> You can use [`createConnection`](../jsx#createconnection) as an alternative.
 
 ### Timers
 
@@ -488,4 +488,4 @@ function MyWidget() {
 
 > [!TIP]
 >
-> You can use [`craeteExternal`](../jsx#createexternal) as an alternative.
+> You can use [`createExternal`](../jsx#createexternal) as an alternative.
