@@ -3,16 +3,37 @@ import { defineConfig } from "vitepress"
 export default defineConfig({
     title: "Gnim",
     base: "/gnim/",
+    cleanUrls: true,
+
+    sitemap: {
+        hostname: "https://github.com/aylur/gnim",
+    },
+
     themeConfig: {
         outline: "deep",
 
         sidebar: [
-            { text: "JSX", link: "/jsx" },
-            { text: "GObject", link: "/gobject" },
-            { text: "DBus", link: "/dbus" },
-            { text: "Polyfills", link: "/polyfills" },
+            {
+                text: "Tutorial",
+                items: [
+                    { text: "Intro", link: "/tutorial/intro" },
+                    { text: "GObject", link: "/tutorial/gobject" },
+                    { text: "Gtk", link: "/tutorial/gtk" },
+                    { text: "Gnim", link: "/tutorial/gnim" },
+                    { text: "App", link: "/tutorial/app" },
+                    { text: "Packaging", link: "/tutorial/packaging" },
+                ],
+            },
+            {
+                text: "Reference",
+                items: [
+                    { text: "JSX", link: "/jsx" },
+                    { text: "GObject", link: "/gobject" },
+                    { text: "DBus", link: "/dbus" },
+                    { text: "Polyfills", link: "/polyfills" },
+                ],
+            },
         ],
-
         socialLinks: [
             { icon: "github", link: "https://github.com/aylur/gnim/" },
             { icon: "discord", link: "https://discord.gg/CXQpHwDuhY" },
@@ -25,8 +46,17 @@ export default defineConfig({
             },
         ],
 
+        editLink: {
+            pattern: "https://github.com/aylur/gnim/edit/main/docs/:path",
+            text: "Edit this page on GitHub",
+        },
+
         search: {
             provider: "local",
+        },
+
+        lastUpdated: {
+            text: "Last updated",
         },
     },
 })

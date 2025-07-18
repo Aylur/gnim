@@ -14,9 +14,6 @@ export type Accessed<T> = T extends Accessor<infer V> ? V : never
 export class Accessor<T = unknown> extends Function {
     static $gtype = GObject.TYPE_JSOBJECT as unknown as GObject.GType<Accessor>
 
-    /** @experimental */
-    static evaluating?: Set<Accessor<unknown>>
-
     #get: () => T
     #subscribe: SubscribeFunction
 
@@ -40,7 +37,6 @@ export class Accessor<T = unknown> extends Function {
      * @returns The current value.
      */
     get(): T {
-        Accessor.evaluating?.add(this)
         return this.#get()
     }
 
