@@ -1,6 +1,6 @@
 {
     "name": "gnim",
-    "version": "1.3.2",
+    "version": "1.3.3",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
@@ -13,7 +13,7 @@
         "url": "https://ko-fi.com/aylur"
     },
     "scripts": {
-        "build": "rm -rf dist ; rm -rf build ; tsc ; mkdir dist ; glib-compile-resources src/resource.xml --sourcedir=build --target=dist/gnim.gresource ; cp -r src/* dist/",
+        "build": "./scripts/build.sh",
         "lint": "eslint . --fix",
         "docs:dev": "vitepress dev docs",
         "docs:build": "vitepress build docs",
@@ -45,8 +45,7 @@
         "./gtk4/style": "./dist/gtk4/style.ts"
     },
     "files": [
-        "dist",
-        "dist/gnim.gresource"
+        "dist"
     ],
     "engines": {
         "gjs": ">=1.79.0"
