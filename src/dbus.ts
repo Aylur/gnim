@@ -8,7 +8,7 @@ import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import GObject from "gi://GObject"
 import { definePropertyGetter, kebabify, xml } from "./util.js"
-import { type DeepInfer } from "./variant.js"
+import type { DeepInfer } from "./variant.js"
 import {
     register,
     property as gproperty,
