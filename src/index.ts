@@ -3,7 +3,15 @@ export { Fragment } from "./jsx/Fragment.js"
 export { For } from "./jsx/For.js"
 export { With } from "./jsx/With.js"
 export { This } from "./jsx/This.js"
-export { createRoot, getScope, onCleanup, onMount, createContext } from "./jsx/scope.js"
+export {
+    type Context,
+    type Scope,
+    createRoot,
+    getScope,
+    onCleanup,
+    onMount,
+    createContext,
+} from "./jsx/scope.js"
 export {
     type Accessed,
     type State,
