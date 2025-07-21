@@ -3,11 +3,6 @@ import { Accessor } from "./state.js"
 import { env } from "./env.js"
 import { getScope, onCleanup, Scope } from "./scope.js"
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type Clutter from "gi://Clutter"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type Gtk from "gi://Gtk?version=3.0"
-
 interface WithProps<T, E extends JSX.Element> {
     value: Accessor<T>
     children: (value: T) => E | "" | false | null | undefined
@@ -17,8 +12,8 @@ interface WithProps<T, E extends JSX.Element> {
      * The default value depends on the environment:
      *
      * - **Gtk4**: null
-     * - **Gtk3**: {@link Gtk.Widget.prototype.destroy}
-     * - **Gnome**: {@link Clutter.Actor.prototype.destroy}
+     * - **Gtk3**: Gtk.Widget.prototype.destroy
+     * - **Gnome**: Clutter.Actor.prototype.destroy
      */
     cleanup?: null | ((element: E) => void)
 }

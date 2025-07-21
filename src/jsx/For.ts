@@ -3,11 +3,6 @@ import { Accessor, type State, createState } from "./state.js"
 import { env } from "./env.js"
 import { getScope, onCleanup, Scope } from "./scope.js"
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type Clutter from "gi://Clutter"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type Gtk from "gi://Gtk?version=3.0"
-
 interface ForProps<Item, El extends JSX.Element, Key> {
     each: Accessor<Iterable<Item>>
     children: (item: Item, index: Accessor<number>) => El
@@ -17,8 +12,8 @@ interface ForProps<Item, El extends JSX.Element, Key> {
      * The default value depends on the environment:
      *
      * - **Gtk4**: null
-     * - **Gtk3**: {@link Gtk.Widget.prototype.destroy}
-     * - **Gnome**: {@link Clutter.Actor.prototype.destroy}
+     * - **Gtk3**: Gtk.Widget.prototype.destroy
+     * - **Gnome**: Clutter.Actor.prototype.destroy
      */
     cleanup?: null | ((element: El, item: Item, index: number) => void)
 
