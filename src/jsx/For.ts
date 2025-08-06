@@ -3,9 +3,9 @@ import { Accessor, type State, createState } from "./state.js"
 import { env } from "./env.js"
 import { getScope, onCleanup, Scope } from "./scope.js"
 
-interface ForProps<Item, El extends JSX.Element, Key> {
+interface ForProps<Item, El extends JSX.Element, Key, Index> {
     each: Accessor<Iterable<Item>>
-    children: (item: Item, index: Accessor<number>) => El
+    children: (item: Item, index: Accessor<Index>) => El
 
     /**
      * Function to run for each removed element.
@@ -15,7 +15,7 @@ interface ForProps<Item, El extends JSX.Element, Key> {
      * - **Gtk3**: Gtk.Widget.prototype.destroy
      * - **Gnome**: Clutter.Actor.prototype.destroy
      */
-    cleanup?: null | ((element: El, item: Item, index: number) => void)
+    cleanup?: null | ((element: El, item: Item, index: Index) => void)
 
     /**
      * Function that generates the key for each item.
@@ -25,20 +25,24 @@ interface ForProps<Item, El extends JSX.Element, Key> {
      * - reference otherwise
      */
     id?: (item: Item) => Key | Item
+    widgetMap?: Map<Item | Key, { item: Item; child: El; index: State<Index>; scope: Scope }>
+    index?: (i: number) => Index
 }
 
 // TODO: support Gio.ListModel
 
-export function For<Item, El extends JSX.Element, Key>({
+export function For<Item, El extends JSX.Element, Key, Index = number>({
     each,
     children: mkChild,
     cleanup,
     id = (item: Item) => item,
-}: ForProps<Item, El, Key>): Fragment<El> {
-    type MapItem = { item: Item; child: El; index: State<number>; scope: Scope }
+    index: calculateIndex = (i: number) => i as Index,
+    widgetMap,
+}: ForProps<Item, El, Key, Index>): Fragment<El> {
+    type MapItem = { item: Item; child: El; index: State<Index>; scope: Scope }
 
     const currentScope = getScope()
-    const map = new Map<Item | Key, MapItem>()
+    const map = widgetMap ?? new Map<Item | Key, MapItem>()
     const fragment = new Fragment<El>()
 
     function remove({ item, child, index: [index], scope }: MapItem) {
@@ -55,16 +59,20 @@ export function For<Item, El extends JSX.Element, Key>({
         const ids = items.map(id)
         const idSet = new Set(ids)
 
-        // cleanup children missing from arr
-        for (const [key, value] of map.entries()) {
-            // there is no generic way to insert child at index
-            // so we sort by removing every child and reappending in order
-            fragment.removeChild(value.child)
+        if (!widgetMap) {
+            // cleanup children missing from arr
+            for (const [key, value] of map.entries()) {
+                // there is no generic way to insert child at index
+                // so we sort by removing every child and reappending in order
+                fragment.removeChild(value.child)
 
-            if (!idSet.has(key)) {
-                remove(value)
-                map.delete(key)
+                if (!idSet.has(key)) {
+                    remove(value)
+                    map.delete(key)
+                }
             }
+        } else {
+            fragment.children.forEach((ch) => fragment.removeChild(ch))
         }
 
         // update index and add new items
@@ -75,14 +83,14 @@ export function For<Item, El extends JSX.Element, Key>({
                     index: [, setIndex],
                     child,
                 } = map.get(key)!
-                setIndex(i)
+                setIndex(calculateIndex(i))
                 if (fragment.hasChild(child)) {
                     console.warn(`duplicate keys found: ${key}`)
                 } else {
                     fragment.addChild(child)
                 }
             } else {
-                const [index, setIndex] = createState(i)
+                const [index, setIndex] = createState(calculateIndex(i))
                 const scope = new Scope(currentScope)
                 const child = scope.run(() => mkChild(item, index))
                 map.set(key, { item, child, index: [index, setIndex], scope })
@@ -99,8 +107,10 @@ export function For<Item, El extends JSX.Element, Key>({
     onCleanup(() => {
         dispose()
 
-        for (const value of map.values()) {
-            remove(value)
+        if (!widgetMap) {
+            for (const value of map.values()) {
+                remove(value)
+            }
         }
 
         map.clear()

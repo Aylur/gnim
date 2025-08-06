@@ -3,6 +3,7 @@ import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import { type Pascalify, camelify, kebabify } from "../util.js"
 import type { DeepInfer, RecursiveInfer } from "../variant.js"
+import { Scope } from "./scope.js"
 
 type SubscribeCallback = () => void
 type DisposeFunction = () => void
@@ -432,4 +433,9 @@ export function createSettings<const T extends Record<string, string>>(
             ],
         ]),
     )
+}
+
+export function createScope(parent?: Scope | null) {
+    const scope = new Scope(parent)
+    return [scope.run, scope.dispose]
 }

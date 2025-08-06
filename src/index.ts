@@ -5,7 +5,7 @@ export { With } from "./jsx/With.js"
 export { This } from "./jsx/This.js"
 export {
     type Context,
-    type Scope,
+    Scope,
     createRoot,
     getScope,
     onCleanup,
