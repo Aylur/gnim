@@ -96,8 +96,8 @@ export function createState<T>(init: T): State<T> {
         const value: T = typeof newValue === "function" ? newValue(currentValue) : newValue
         if (currentValue !== value) {
             currentValue = value
-            const currentSubscribers = Array.from(subscribers)
-            currentSubscribers.forEach((cb) => cb())
+            // running callbacks might mutate subscribers
+            Array.from(subscribers).forEach((cb) => cb())
         }
     }
 
@@ -134,7 +134,7 @@ export function createComputed<
                     const value = dep.get()
                     if (cache[i] !== value) {
                         cache[i] = dep.get()
-                        subscribers.forEach((cb) => cb())
+                        Array.from(subscribers).forEach((cb) => cb())
                     }
                 }),
             )
@@ -298,7 +298,7 @@ export function createConnection<
                         const newValue = callback(...args, value)
                         if (value !== newValue) {
                             value = newValue
-                            subscribers.forEach((cb) => cb())
+                            Array.from(subscribers).forEach((cb) => cb())
                         }
                     },
                 )
@@ -352,7 +352,7 @@ export function createExternal<T>(
                 const newValue: T = typeof v === "function" ? v(currentValue) : v
                 if (newValue !== currentValue) {
                     currentValue = newValue
-                    subscribers.forEach((cb) => cb())
+                    Array.from(subscribers).forEach((cb) => cb())
                 }
             })
         }
