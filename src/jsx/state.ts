@@ -193,6 +193,7 @@ export function createBinding<T extends GObject.Object, P extends keyof T>(
  * Create an `Accessor` on a `Gio.Settings`'s `key`.
  * Values are recursively unpacked.
  *
+ * @deprecated prefer using {@link createSettings}.
  * @param object The `Gio.Settings` to create the `Accessor` on.
  * @param key The settings key
  */

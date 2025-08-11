@@ -502,16 +502,13 @@ const c = createComputed([a, b], (a, b) => `${a}+${b}`)
 
 ### `createBinding`
 
-Creates an `Accessor` on a `GObject.Object`'s `property` or a `Gio.Settings`'s
-`key`.
+Creates an `Accessor` on a `GObject.Object`'s `property`.
 
 ```ts
 function createBinding<T extends GObject.Object, P extends keyof T>(
   object: T,
   property: Extract<P, string>,
 ): Accessor<T[P]>
-
-function createBinding<T>(settings: Gio.Settings, key: string): Accessor<T>
 ```
 
 Example:
