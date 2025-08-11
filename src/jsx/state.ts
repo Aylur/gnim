@@ -96,7 +96,8 @@ export function createState<T>(init: T): State<T> {
         const value: T = typeof newValue === "function" ? newValue(currentValue) : newValue
         if (currentValue !== value) {
             currentValue = value
-            subscribers.forEach((cb) => cb())
+            const currentSubscribers = Array.from(subscribers)
+            currentSubscribers.forEach((cb) => cb())
         }
     }
 
