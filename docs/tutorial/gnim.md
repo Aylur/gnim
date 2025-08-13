@@ -65,7 +65,7 @@ we can just cleanup the scope. This behaviour also cascades: if the root scope
 were to be cleaned up the nested scope would also be cleaned up as a result.
 
 Gnim manages scopes for you, the only scope you need to take care of is the
-root, which is usually tied to a window.
+root, which is usually tied to a window or the application.
 
 ```ts
 import { createRoot } from "gnim"
