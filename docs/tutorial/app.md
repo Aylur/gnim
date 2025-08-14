@@ -136,6 +136,21 @@ glib-compile-schemas /usr/share/glib-2.0/schemas
 > build and install phase using a build tool such as meson as shown in the
 > [packaging](./packaging) section.
 
+You can then create a `Gio.Settings` and optionally wrap it in a
+[`createSettings`](../jsx#createsettings).
+
+```ts
+const settings = new Gio.Settings({ schemaId: "my.awesome.app" })
+
+const { simpleString, setSimpleString } = createSettings(settings, {
+  "simple-string": "s",
+  "string-dictionary": "a{ss}",
+})
+
+console.log(simpleString.get())
+setSimpleString("new value")
+```
+
 ## Exposing a D-Bus interface
 
 If you want other apps or processes to communicate with your application, the
