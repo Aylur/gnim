@@ -472,8 +472,28 @@ setValue((prev) => prev + 1)
 
 ### `createComputed`
 
-Creates a computed signal from a list of `Accessor`s. The provided transform is
-run when the `Accessor`'s value is accessed. The function should be pure.
+Creates a computed signal from a producer function that tracks its dependencies
+and caches its value.
+
+```ts
+export function createComputed<T>(
+  producer: (track: <V>(signal: Accessor<V>) => V) => T,
+): Accessor<T>
+```
+
+Example:
+
+```ts
+let a: Accessor<number>
+let b: Accessor<number>
+
+const c = createComputed((get) => get(a) + get(b))
+```
+
+Alternatively, you can specify a list of dependencies, in which case values are
+passed to an optional transform function. The values are cached, but the result
+of the transform function is not, and it is called each time the value is
+accessed.
 
 ```ts
 function createComputed<
