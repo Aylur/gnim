@@ -104,21 +104,63 @@ export function createState<T>(init: T): State<T> {
     return [new Accessor(() => currentValue, subscribe), set as Setter<T>]
 }
 
-/**
- * Create an `Accessor` which is computed from a list of `Accessor`s.
- *
- * ```ts Example
- * let a: Accessor<number>
- * let b: Accessor<string>
- * const c: Accessor<[number, string]> = createComputed([a, b])
- * const d: Accessor<string> = createComputed([a, b], (a: number, b: string) => `${a} ${b}`)
- * ```
- *
- * @param deps List of `Accessors`.
- * @param transform An optional transform function.
- * @returns The computed `Accessor`.
- */
-export function createComputed<
+const empty = Symbol("empty computed value")
+
+function createComputedProducer<T>(fn: (track: <V>(signal: Accessor<V>) => V) => T): Accessor<T> {
+    const subscribers = new Set<SubscribeCallback>()
+    let value: typeof empty | T
+    let prevDeps = new Map<Accessor, DisposeFunction>()
+
+    const effect = () => {
+        const deps = new Set<Accessor>()
+        value = fn((v) => (deps.add(v), v.get()))
+
+        const newDeps = new Map<Accessor, DisposeFunction>()
+
+        for (const [dep, unsub] of prevDeps) {
+            if (!deps.has(dep)) {
+                unsub()
+            } else {
+                newDeps.set(dep, unsub)
+            }
+        }
+
+        for (const dep of deps) {
+            if (!newDeps.has(dep)) {
+                newDeps.set(dep, dep.subscribe(effect))
+            }
+        }
+
+        prevDeps = newDeps
+        Array.from(subscribers).forEach((cb) => cb())
+    }
+
+    const subscribe: SubscribeFunction = (callback) => {
+        if (subscribers.size === 0) {
+            effect()
+        }
+
+        subscribers.add(callback)
+
+        return () => {
+            subscribers.delete(callback)
+            if (subscribers.size === 0) {
+                value = empty
+                for (const [, unsub] of prevDeps) {
+                    unsub()
+                }
+            }
+        }
+    }
+
+    const get = (): T => {
+        return value === empty ? fn((v) => v.get()) : value
+    }
+
+    return new Accessor(get, subscribe)
+}
+
+function createComputedArgs<
     const Deps extends Array<Accessor<any>>,
     Args extends { [K in keyof Deps]: Accessed<Deps[K]> },
     V = Args,
@@ -165,6 +207,56 @@ export function createComputed<
     }
 
     return new Accessor(get, subscribe)
+}
+
+/**
+ * Create an `Accessor` from a producer function that tracks its dependencies.
+ *
+ * ```ts Example
+ * let a: Accessor<number>
+ * let b: Accessor<number>
+ * const c: Accessor<number> = createComputed((get) => get(a) + get(b))
+ * ```
+ *
+ * @experimental
+ * @param producer The producer function which let's you track dependencies
+ * @returns The computed `Accessor`.
+ */
+export function createComputed<T>(
+    producer: (track: <V>(signal: Accessor<V>) => V) => T,
+): Accessor<T>
+
+/**
+ * Create an `Accessor` which is computed from a list of given `Accessor`s.
+ *
+ * ```ts Example
+ * let a: Accessor<number>
+ * let b: Accessor<string>
+ * const c: Accessor<[number, string]> = createComputed([a, b])
+ * const d: Accessor<string> = createComputed([a, b], (a: number, b: string) => `${a} ${b}`)
+ * ```
+ *
+ * @param deps List of `Accessors`.
+ * @param transform An optional transform function.
+ * @returns The computed `Accessor`.
+ */
+export function createComputed<
+    const Deps extends Array<Accessor<any>>,
+    Args extends { [K in keyof Deps]: Accessed<Deps[K]> },
+    T = Args,
+>(deps: Deps, transform?: (...args: Args) => T): Accessor<T>
+
+export function createComputed(
+    ...args:
+        | [producer: (track: <V>(signal: Accessor<V>) => V) => unknown]
+        | [deps: Array<Accessor>, transform?: (...args: unknown[]) => unknown]
+) {
+    const [depsOrProducer, transform] = args
+    if (typeof depsOrProducer === "function") {
+        return createComputedProducer(depsOrProducer)
+    } else {
+        return createComputedArgs(depsOrProducer, transform)
+    }
 }
 
 /**
