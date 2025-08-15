@@ -1,8 +1,15 @@
 import Gtk from "gi://Gtk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject"
-import { getType, onCleanup, Accessor, Fragment } from "../index.js"
 import { configue } from "../jsx/env.js"
+import {
+    getType,
+    onCleanup,
+    addChild as _add,
+    removeChild as _remove,
+    Accessor,
+    Fragment,
+} from "../index.js"
 
 const dummyBuilder = new Gtk.Builder()
 
@@ -12,13 +19,12 @@ function add(parent: Gtk.Buildable, child: GObject.Object, _: number) {
     }
 }
 
-function specialRemove(_parent: GObject.Object, _child: GObject.Object) {
-    // TODO: add any special case
-    return false
-}
+function specialAdd(parent: GObject.Object, child: GObject.Object, index: number) {
+    if (_add in parent && typeof parent[_add] === "function") {
+        parent[_add](child, getType(child), index)
+        return true
+    }
 
-function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
-    // TODO: add any other special case
     if (
         child instanceof Gtk.Adjustment &&
         "set_adjustment" in parent &&
@@ -69,8 +75,16 @@ function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
     return false
 }
 
+// `set_child` and especially `remove` might be way too generic and there might
+// be cases where it does not actually do what we want it to do
+//
+// if there is a usecase for either of these two that does something else than
+// we expect it to do here in a JSX context we have to check for known instances
 function remove(parent: GObject.Object, child: GObject.Object) {
-    if (specialRemove(parent, child)) return
+    if (_remove in parent && typeof parent[_remove] === "function") {
+        parent[_remove](child)
+        return
+    }
 
     if (parent instanceof Gtk.Widget && child instanceof Gtk.EventController) {
         return parent.remove_controller(child)

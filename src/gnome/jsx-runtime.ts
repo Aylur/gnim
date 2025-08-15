@@ -2,9 +2,20 @@ import Clutter from "gi://Clutter"
 import St from "gi://St"
 import GObject from "gi://GObject"
 import { configue } from "../jsx/env.js"
-import { onCleanup, Accessor, Fragment } from "../index.js"
+import {
+    onCleanup,
+    getType,
+    addChild as _add,
+    removeChild as _remove,
+    Accessor,
+    Fragment,
+} from "../index.js"
 
-function add(parent: GObject.Object, child: GObject.Object, _: number) {
+function add(parent: GObject.Object, child: GObject.Object, index: number) {
+    if (_add in parent && typeof parent[_add] === "function") {
+        parent[_add](child, getType(child), index)
+    }
+
     if (parent instanceof Clutter.Actor) {
         if (child instanceof Clutter.Action) {
             return parent.add_action(child)
@@ -24,6 +35,11 @@ function add(parent: GObject.Object, child: GObject.Object, _: number) {
 }
 
 function remove(parent: GObject.Object, child: GObject.Object) {
+    if (_remove in parent && typeof parent[_remove] === "function") {
+        parent[_remove](child)
+        return
+    }
+
     if (child instanceof Clutter.Actor && parent instanceof Clutter.Actor) {
         return parent.remove_child(child)
     }

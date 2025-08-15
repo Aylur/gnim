@@ -20,6 +20,36 @@ export type Node =
 export const gtkType = Symbol("gtk builder type")
 
 /**
+ * Special symbol which lets you implement how widgets are appended in JSX.
+ *
+ * Example:
+ *
+ * ```ts
+ * class MyComponent extends GObject.Object {
+ *   [addChild](child: GObject.Object, type: string | null, index: number) {
+ *     // implement
+ *   }
+ * }
+ * ```
+ */
+export const addChild = Symbol("JSX add child method")
+
+/**
+ * Special symbol which lets you implement how widgets are removed in JSX.
+ *
+ * Example:
+ *
+ * ```ts
+ * class MyComponent extends GObject.Object {
+ *   [removeChild](child: GObject.Object) {
+ *     // implement
+ *   }
+ * }
+ * ```
+ */
+export const removeChild = Symbol("JSX add remove method")
+
+/**
  * Get the type of the object specified through the `$type` property
  */
 export function getType(object: GObject.Object) {

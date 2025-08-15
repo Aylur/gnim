@@ -1,7 +1,14 @@
 import Gtk from "gi://Gtk?version=3.0"
 import GObject from "gi://GObject"
 import { configue } from "../jsx/env.js"
-import { getType, onCleanup, Accessor, Fragment } from "../index.js"
+import {
+    getType,
+    onCleanup,
+    addChild as _add,
+    removeChild as _remove,
+    Accessor,
+    Fragment,
+} from "../index.js"
 
 const dummyBuilder = new Gtk.Builder()
 
@@ -11,13 +18,12 @@ function add(parent: Gtk.Buildable, child: GObject.Object, _: number) {
     }
 }
 
-function specialRemove(_parent: GObject.Object, _child: GObject.Object) {
-    // TODO: add any special case
-    return false
-}
+function specialAdd(parent: GObject.Object, child: GObject.Object, index: number) {
+    if (_add in parent && typeof parent[_add] === "function") {
+        parent[_add](child, getType(child), index)
+        return true
+    }
 
-function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
-    // TODO: add any other special case
     if (
         child instanceof Gtk.Adjustment &&
         "set_adjustment" in parent &&
@@ -52,7 +58,10 @@ function specialAdd(parent: GObject.Object, child: GObject.Object, _: number) {
 }
 
 function remove(parent: GObject.Object, child: GObject.Object) {
-    if (specialRemove(parent, child)) return
+    if (_remove in parent && typeof parent[_remove] === "function") {
+        parent[_remove](child)
+        return
+    }
 
     if (parent instanceof Gtk.Container && child instanceof Gtk.Widget) {
         return parent.remove(child)
