@@ -40,9 +40,7 @@
         "./resource": "./dist/resource/resource.ts",
         "./gnome/jsx-runtime": "./dist/gnome/jsx-runtime.ts",
         "./gtk3/jsx-runtime": "./dist/gtk3/jsx-runtime.ts",
-        "./gtk3/style": "./dist/gtk3/style.ts",
-        "./gtk4/jsx-runtime": "./dist/gtk4/jsx-runtime.ts",
-        "./gtk4/style": "./dist/gtk4/style.ts"
+        "./gtk4/jsx-runtime": "./dist/gtk4/jsx-runtime.ts"
     },
     "files": [
         "dist"

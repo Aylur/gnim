@@ -6,9 +6,7 @@
     --alias:gnim/dbus=resource:///gnim/dbus.js
     --alias:gnim/gobject=resource:///gnim/gobject.js
     --alias:gnim/gtk4/jsx-runtime=resource:///gnim/gtk4/jsx-runtime.js
-    --alias:gnim/gtk4/style=resource:///gnim/gtk4/style.js
     --alias:gnim/gtk3/jsx-runtime=resource:///gnim/gtk3/jsx-runtime.js
-    --alias:gnim/gtk3/style=resource:///gnim/gtk3/style.js
     --alias:gnim/gnome/jsx-runtime=resource:///gnim/gnome/jsx-runtime.js
   -->
 
@@ -40,14 +38,6 @@
     declare module "resource:///gnim/gtk3/jsx-runtime.js" {
       export * from "gnim/gtk3/jsx-runtime"
     }
-
-    declare module "resource:///gnim/gtk4/style.js" {
-      export * from "gnim/gtk4/style"
-    }
-
-    declare module "resource:///gnim/gtk3/style.js" {
-      export * from "gnim/gtk3/style"
-    }
   -->
   <gresource prefix="/gnim">
     <file>dbus.js</file>
@@ -56,14 +46,10 @@
     <file>util.js</file>
     <file>index.js</file>
 
-    <file>gnome/jsx-runtime.js</file>
     <file>gnome/signalTracker.js</file>
-
+    <file>gnome/jsx-runtime.js</file>
     <file>gtk3/jsx-runtime.js</file>
-    <file>gtk3/style.js</file>
-
     <file>gtk4/jsx-runtime.js</file>
-    <file>gtk4/style.js</file>
 
     <file>jsx/env.js</file>
     <file>jsx/For.js</file>
