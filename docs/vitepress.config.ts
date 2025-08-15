@@ -36,6 +36,7 @@ export default defineConfig({
             },
         ],
         socialLinks: [
+            { icon: "npm", link: "https://www.npmjs.com/package/gnim" },
             { icon: "github", link: "https://github.com/aylur/gnim/" },
             { icon: "discord", link: "https://discord.gg/CXQpHwDuhY" },
             {
