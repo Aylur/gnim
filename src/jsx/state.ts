@@ -2,11 +2,13 @@ import GObject from "gi://GObject"
 import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import { type Pascalify, camelify, kebabify } from "../util.js"
-import type { DeepInfer, RecursiveInfer } from "../variant.js"
 
 type SubscribeCallback = () => void
 type DisposeFunction = () => void
 type SubscribeFunction = (callback: SubscribeCallback) => DisposeFunction
+
+type DeepInfer<S extends string> = ReturnType<GLib.Variant<S>["deepUnpack"]>
+type RecursiveInfer<S extends string> = ReturnType<GLib.Variant<S>["recursiveUnpack"]>
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 
@@ -493,9 +495,6 @@ type Settings<T extends Record<string, string>> = {
  * }))
  * ```
  */
-// TODO: come up with an API
-// - to manually annotate Variant typed setters/getters
-// - to set recursive vs deep unpack per key
 export function createSettings<const T extends Record<string, string>>(
     settings: Gio.Settings,
     keys: T,

@@ -344,7 +344,7 @@ function pspecFromGType(type: GType<unknown>, name: string, flags: ParamFlags) {
             return ParamSpec.int64(name, "", "", flags, MININT64, MAXINT64, 0)
         case GObject.TYPE_UINT64:
             return ParamSpec.uint64(name, "", "", flags, 0, Number.MAX_SAFE_INTEGER, 0)
-        case GObject.type_from_name("gfloat"):
+        case GObject.TYPE_FLOAT:
             return ParamSpec.float(name, "", "", flags, MINFLOAT, MAXFLOAT, 0)
         case GObject.TYPE_DOUBLE:
             return ParamSpec.double(name, "", "", flags, Number.MIN_VALUE, Number.MIN_VALUE, 0)

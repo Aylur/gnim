@@ -8,7 +8,6 @@ import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import GObject from "gi://GObject"
 import { definePropertyGetter, kebabify, xml } from "./util.js"
-import type { DeepInfer } from "./variant.js"
 import {
     register,
     property as gproperty,
@@ -28,6 +27,7 @@ const remoteMethod = Symbol("proxy remoteMethod")
 const remoteMethodAsync = Symbol("proxy remoteMethodAsync")
 const remotePropertySet = Symbol("proxy remotePropertySet")
 
+type DeepInfer<S extends string> = ReturnType<GLib.Variant<S>["deepUnpack"]>
 type Ctx = { private: false; static: false; name: string }
 
 // TODO: consider making some parts public
@@ -118,7 +118,7 @@ export class Service extends GObject.Object {
         }
 
         if (this[propertyName] !== newValue) {
-            this[propertyName] = value.deepUnpack()
+            this[propertyName] = value.deepUnpack<any>()
         }
     }
 
@@ -243,7 +243,11 @@ export class Service extends GObject.Object {
     }
 
     // proxy
-    #handlePropertiesChanged(_: Gio.DBusProxy, changed: GLib.Variant, invalidated: string[]) {
+    #handlePropertiesChanged(
+        _: Gio.DBusProxy,
+        changed: GLib.Variant<"a{sv}">,
+        invalidated: string[],
+    ) {
         const set = new Set([...Object.keys(changed.deepUnpack()), ...invalidated])
         for (const prop of set.values()) {
             this.notify(prop as Extract<keyof this, string>)
