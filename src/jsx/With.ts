@@ -28,17 +28,21 @@ export function With<T, E extends JSX.Element>({
 
     let scope: Scope
 
+    function remove(child: E) {
+        fragment.removeChild(child)
+
+        if (typeof cleanup === "function") {
+            cleanup(child)
+        } else if (cleanup !== null) {
+            env.defaultCleanup(child)
+        }
+
+        if (scope) scope.dispose()
+    }
+
     function callback(v: T) {
         for (const child of fragment.children) {
-            fragment.removeChild(child)
-
-            if (typeof cleanup === "function") {
-                cleanup(child)
-            } else if (cleanup !== null) {
-                env.defaultCleanup(child)
-            }
-
-            if (scope) scope.dispose()
+            remove(child)
         }
 
         scope = new Scope(currentScope)
@@ -54,8 +58,11 @@ export function With<T, E extends JSX.Element>({
     callback(value.get())
 
     onCleanup(() => {
-        scope.dispose()
         dispose()
+        for (const child of fragment.children) {
+            remove(child)
+        }
+        scope.dispose()
     })
 
     return fragment
