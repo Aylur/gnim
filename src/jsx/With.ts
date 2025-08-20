@@ -36,13 +36,12 @@ export function With<T, E extends JSX.Element>({
         } else if (cleanup !== null) {
             env.defaultCleanup(child)
         }
-
-        if (scope) scope.dispose()
     }
 
     function callback(v: T) {
         for (const child of fragment.children) {
             remove(child)
+            if (scope) scope.dispose()
         }
 
         scope = new Scope(currentScope)
