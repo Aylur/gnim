@@ -42,12 +42,12 @@ export function For<Item, El extends JSX.Element, Key>({
     const fragment = new Fragment<El>()
 
     function remove({ item, child, index: [index], scope }: MapItem) {
+        scope.dispose()
         if (typeof cleanup === "function") {
             cleanup(child, item, index.get())
         } else if (cleanup !== null) {
             env.defaultCleanup(child)
         }
-        scope.dispose()
     }
 
     function callback(itareable: Iterable<Item>) {

@@ -30,6 +30,7 @@ export function With<T, E extends JSX.Element>({
 
     function remove(child: E) {
         fragment.removeChild(child)
+        if (scope) scope.dispose()
 
         if (typeof cleanup === "function") {
             cleanup(child)
@@ -41,7 +42,6 @@ export function With<T, E extends JSX.Element>({
     function callback(v: T) {
         for (const child of fragment.children) {
             remove(child)
-            if (scope) scope.dispose()
         }
 
         scope = new Scope(currentScope)
@@ -61,7 +61,6 @@ export function With<T, E extends JSX.Element>({
         for (const child of fragment.children) {
             remove(child)
         }
-        scope.dispose()
     })
 
     return fragment
