@@ -109,10 +109,19 @@ export type CCProps<Self extends GObject.Object, Props> = {
 } & {
     [S in keyof Self["$signals"] as S extends `notify::${infer P}`
         ? `onNotify${Pascalify<P>}`
-        : S extends string
-          ? `on${Pascalify<S>}`
-          : never]?: GObject.SignalCallback<Self, Self["$signals"][S]>
+        : S extends `${infer E}::${infer D}`
+          ? `on${Pascalify<`${E}:${D}`>}`
+          : S extends string
+            ? `on${Pascalify<S>}`
+            : never]?: GObject.SignalCallback<Self, Self["$signals"][S]>
 }
+// } & {
+//     [S in keyof Self["$signals"] as S extends `notify::${infer P}`
+//         ? `onNotify${Pascalify<P>}`
+//         : S extends string
+//           ? `on${Pascalify<S>}`
+//           : never]?: GObject.SignalCallback<Self, Self["$signals"][S]>
+// }
 
 // prettier-ignore
 type JsxProps<C, Props> =
@@ -131,6 +140,18 @@ function isGObjectCtor(ctor: any): ctor is CC {
 
 function isFunctionCtor(ctor: any): ctor is FC {
     return typeof ctor === "function" && !isGObjectCtor(ctor)
+}
+
+// onNotifyPropName -> notify::prop-name
+// onPascalName:detailName -> pascal-name::detail-name
+function signalName(key: string): string {
+    const [sig, detail] = kebabify(key.slice(2)).split(":")
+
+    if (sig.startsWith("notify-")) {
+        return `notify::${sig.slice(7)}`
+    }
+
+    return detail ? `${sig}::${detail}` : sig
 }
 
 /** @internal */
@@ -194,7 +215,7 @@ export function jsx<T extends GObject.Object>(
     // collect signals and bindings
     for (const [key, value] of Object.entries(props)) {
         if (key.startsWith("on")) {
-            signals.push([key.slice(2), value as () => unknown])
+            signals.push([key, value as () => unknown])
             delete props[key]
         }
         if (value instanceof Accessor) {
@@ -229,11 +250,7 @@ export function jsx<T extends GObject.Object>(
 
     // handle signals
     const disposeHandlers = signals.map(([sig, handler]) => {
-        const name = kebabify(sig)
-        const id = name.startsWith("notify-")
-            ? object.connect(`notify::${name.slice(7)}`, handler)
-            : object.connect(kebabify(sig), handler)
-
+        const id = object.connect(signalName(sig), handler)
         return () => object.disconnect(id)
     })
 
