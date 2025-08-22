@@ -30,6 +30,9 @@ const { intrinsicElements } = configue({
             object.set_style_class_name(className)
         }
     },
+    textNode(text) {
+        return St.Label.new(text.toString())
+    },
     removeChild(parent, child) {
         if (parent instanceof Clutter.Actor) {
             if (child instanceof Clutter.Action) {
