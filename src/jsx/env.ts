@@ -13,13 +13,15 @@ export function configue(conf: Partial<JsxEnv>) {
 
 type JsxEnv = {
     intrinsicElements: Record<string, CC | FC>
-    textNode: (node: string | number) => GObj
-    appendChild: (parent: GObj, child: GObj) => void
-    removeChild: (parent: GObj, child: GObj) => void
+    textNode(node: string | number): GObj
+    appendChild(parent: GObj, child: GObj): void
+    removeChild(parent: GObj, child: GObj): void
     setCss: CssSetter
     setClass: CssSetter
-    initProps: (props: any) => void
-    defaultCleanup: (object: GObj) => void
+    // string[] can be use to delay setting props after children
+    // e.g Gtk.Stack["visibleChildName"] depends on children
+    initProps(ctor: unknown, props: any): void | string[]
+    defaultCleanup(object: GObj): void
 }
 
 function missingImpl(): any {

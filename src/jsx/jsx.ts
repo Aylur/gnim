@@ -177,7 +177,7 @@ function append(parent: GObject.Object, child: GObject.Object) {
             if (!(ch instanceof GObject.Object)) {
                 return console.error(TypeError(`cannot remove ${ch} from ${parent}`))
             }
-            remove(parent, child)
+            remove(parent, ch)
         })
 
         onCleanup(() => {
@@ -225,10 +225,19 @@ export function jsx<T extends GObject.Object>(
     const props = rest as Record<string, any>
 
     if (key) Object.assign(props, { key })
-    env.initProps(props)
+
+    const deferProps = env.initProps(ctor, props) ?? []
+    const deferredProps: Record<string, unknown> = {}
 
     for (const [key, value] of Object.entries(props)) {
-        if (value === undefined) delete props[key]
+        if (value === undefined) {
+            delete props[key]
+        }
+
+        if (deferProps.includes(key)) {
+            deferredProps[key] = props[key]
+            delete props[key]
+        }
     }
 
     if (typeof ctor === "string") {
@@ -298,6 +307,15 @@ export function jsx<T extends GObject.Object>(
         const id = object.connect(signalName(sig), handler)
         return () => object.disconnect(id)
     })
+
+    // deferred props
+    for (const [key, value] of Object.entries(deferredProps)) {
+        if (value instanceof Accessor) {
+            bindings.push([key, value])
+        } else {
+            Object.assign(object, { [key]: value })
+        }
+    }
 
     // handle bindings
     const disposeBindings = bindings.map(([prop, binding]) => {

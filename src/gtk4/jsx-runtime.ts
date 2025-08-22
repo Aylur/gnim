@@ -6,6 +6,15 @@ import { getType, onCleanup, Accessor, Fragment } from "../index.js"
 const dummyBuilder = new Gtk.Builder()
 
 const { intrinsicElements } = configue({
+    initProps(ctor) {
+        if (ctor === Gtk.Stack) {
+            const keys: Array<Extract<keyof Gtk.Stack, string>> = [
+                "visibleChildName",
+                "visible_child_name",
+            ]
+            return keys
+        }
+    },
     setCss(object, css) {
         if (!(object instanceof Gtk.Widget)) {
             return console.warn(Error(`cannot set css on ${object}`))

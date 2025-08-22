@@ -5,8 +5,15 @@ import { getType, onCleanup, Accessor, Fragment } from "../index.js"
 const dummyBuilder = new Gtk.Builder()
 
 const { intrinsicElements } = configue({
-    initProps(props) {
+    initProps(ctor, props) {
         props.visible ??= true
+        if (ctor === Gtk.Stack) {
+            const keys: Array<Extract<keyof Gtk.Stack, string>> = [
+                "visibleChildName",
+                "visible_child_name",
+            ]
+            return keys
+        }
     },
     setCss(object, css) {
         if (!(object instanceof Gtk.Widget)) {
