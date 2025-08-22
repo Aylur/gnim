@@ -29,7 +29,7 @@ export function With<T, E extends JSX.Element>({
     let scope: Scope
 
     function remove(child: E) {
-        fragment.removeChild(child)
+        fragment.remove(child)
         if (scope) scope.dispose()
 
         if (typeof cleanup === "function") {
@@ -40,14 +40,14 @@ export function With<T, E extends JSX.Element>({
     }
 
     function callback(v: T) {
-        for (const child of fragment.children) {
+        for (const child of fragment) {
             remove(child)
         }
 
         scope = new Scope(currentScope)
         const ch = scope.run(() => mkChild(v))
         if (ch !== "" && ch !== false && ch !== null && ch !== undefined) {
-            fragment.addChild(ch)
+            fragment.append(ch)
         }
     }
 
@@ -58,7 +58,7 @@ export function With<T, E extends JSX.Element>({
 
     onCleanup(() => {
         dispose()
-        for (const child of fragment.children) {
+        for (const child of fragment) {
             remove(child)
         }
     })

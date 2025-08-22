@@ -30,10 +30,6 @@ const remotePropertySet = Symbol("proxy remotePropertySet")
 type DeepInfer<S extends string> = ReturnType<GLib.Variant<S>["deepUnpack"]>
 type Ctx = { private: false; static: false; name: string }
 
-// TODO: consider making some parts public
-// - remoteMethod, remoteMethodAsync, remotePropertySet
-// - info, proxy, dbusObject
-
 /**
  * Base type for DBus services and proxies. Interface name is set with
  * the {@link iface} decorator which also register it as a GObject type.

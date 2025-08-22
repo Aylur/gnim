@@ -26,13 +26,13 @@ export const gtkType = Symbol("gtk builder type")
  *
  * ```ts
  * class MyComponent extends GObject.Object {
- *   [addChild](child: GObject.Object, type: string | null, index: number) {
+ *   [appendChild](child: GObject.Object, type: string | null) {
  *     // implement
  *   }
  * }
  * ```
  */
-export const addChild = Symbol("JSX add child method")
+export const appendChild = Symbol("JSX add child method")
 
 /**
  * Special symbol which lets you implement how widgets are removed in JSX.
@@ -115,13 +115,6 @@ export type CCProps<Self extends GObject.Object, Props> = {
             ? `on${Pascalify<S>}`
             : never]?: GObject.SignalCallback<Self, Self["$signals"][S]>
 }
-// } & {
-//     [S in keyof Self["$signals"] as S extends `notify::${infer P}`
-//         ? `onNotify${Pascalify<P>}`
-//         : S extends string
-//           ? `on${Pascalify<S>}`
-//           : never]?: GObject.SignalCallback<Self, Self["$signals"][S]>
-// }
 
 // prettier-ignore
 type JsxProps<C, Props> =
@@ -152,6 +145,55 @@ function signalName(key: string): string {
     }
 
     return detail ? `${sig}::${detail}` : sig
+}
+
+function remove(parent: GObject.Object, child: GObject.Object) {
+    if (removeChild in parent && typeof parent[removeChild] === "function") {
+        parent[removeChild](child)
+    } else {
+        env.removeChild(parent, child)
+    }
+}
+
+function append(parent: GObject.Object, child: GObject.Object) {
+    if (appendChild in parent && typeof parent[appendChild] === "function") {
+        parent[appendChild](child, getType(child))
+        return
+    }
+
+    if (child instanceof Fragment) {
+        for (const ch of child) {
+            append(parent, ch)
+        }
+
+        const appendHandler = child.connect("append", (_, ch) => {
+            if (!(ch instanceof GObject.Object)) {
+                return console.error(TypeError(`cannot add ${ch} to ${parent}`))
+            }
+            append(parent, ch)
+        })
+
+        const removeHandler = child.connect("remove", (_, ch) => {
+            if (!(ch instanceof GObject.Object)) {
+                return console.error(TypeError(`cannot remove ${ch} from ${parent}`))
+            }
+            remove(parent, child)
+        })
+
+        onCleanup(() => {
+            child.disconnect(appendHandler)
+            child.disconnect(removeHandler)
+        })
+
+        return
+    }
+
+    if (child) {
+        if (!(child instanceof GObject.Object)) {
+            child = env.textNode(child)
+        }
+        env.appendChild(parent, child)
+    }
 }
 
 /** @internal */
@@ -233,18 +275,21 @@ export function jsx<T extends GObject.Object>(
     if (className) env.setClass(object, className)
 
     // add children
-    for (const child of Array.isArray(children) ? children : [children]) {
+    for (let child of Array.isArray(children) ? children : [children]) {
         if (child === true) {
-            console.warn("Trying to add boolean value of `true` as a child.")
+            console.warn(Error("Trying to add boolean value of `true` as a child."))
             continue
         }
 
         if (Array.isArray(child)) {
             for (const ch of child) {
-                env.addChild(object, ch, -1)
+                append(object, ch)
             }
         } else if (child) {
-            env.addChild(object, child, -1)
+            if (!(child instanceof GObject.Object)) {
+                child = env.textNode(child)
+            }
+            append(object, child)
         }
     }
 
@@ -275,6 +320,7 @@ export function jsx<T extends GObject.Object>(
     return object
 }
 
+// TODO: make use of jsxs
 export const jsxs = jsx
 
 declare global {

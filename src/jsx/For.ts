@@ -59,7 +59,7 @@ export function For<Item, El extends JSX.Element, Key>({
         for (const [key, value] of map.entries()) {
             // there is no generic way to insert child at index
             // so we sort by removing every child and reappending in order
-            fragment.removeChild(value.child)
+            fragment.remove(value.child)
 
             if (!idSet.has(key)) {
                 remove(value)
@@ -76,17 +76,17 @@ export function For<Item, El extends JSX.Element, Key>({
                     child,
                 } = map.get(key)!
                 setIndex(i)
-                if (fragment.hasChild(child)) {
+                if ([...fragment].some((ch) => ch === child)) {
                     console.warn(`duplicate keys found: ${key}`)
                 } else {
-                    fragment.addChild(child)
+                    fragment.append(child)
                 }
             } else {
                 const [index, setIndex] = createState(i)
                 const scope = new Scope(currentScope)
                 const child = scope.run(() => mkChild(item, index))
                 map.set(key, { item, child, index: [index, setIndex], scope })
-                fragment.addChild(child)
+                fragment.append(child)
             }
         })
     }

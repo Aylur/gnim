@@ -4,7 +4,7 @@ export {
     type FCProps,
     getType,
     jsx,
-    addChild,
+    appendChild,
     removeChild,
 } from "./jsx/jsx.js"
 export { Fragment } from "./jsx/Fragment.js"

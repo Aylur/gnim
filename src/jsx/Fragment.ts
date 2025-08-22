@@ -1,18 +1,16 @@
 import GObject from "gi://GObject"
-import { registerDestroyableType } from "../gnome/signalTracker.js"
 
-// TODO: Fragment should implement Gio.ListModel
+interface FragmentSignals<T> extends GObject.Object.SignalSignatures {
+    append: (child: T) => void
+    remove: (child: T) => void
+}
 
 export class Fragment<T = any> extends GObject.Object {
-    static [GObject.signals] = {
-        "destroy": {},
+    declare $signals: FragmentSignals<T>
 
-        "child-added": {
-            param_types: [GObject.TYPE_OBJECT, GObject.TYPE_UINT],
-        },
-        "child-removed": {
-            param_types: [GObject.TYPE_OBJECT, GObject.TYPE_UINT],
-        },
+    static [GObject.signals] = {
+        append: { param_types: [GObject.TYPE_OBJECT] },
+        remove: { param_types: [GObject.TYPE_OBJECT] },
     }
 
     static [GObject.properties] = {
@@ -21,49 +19,29 @@ export class Fragment<T = any> extends GObject.Object {
 
     static {
         GObject.registerClass(this)
-        registerDestroyableType(this)
     }
 
-    static new<T>(children: Array<T> = []) {
-        return new Fragment({ children })
+    *[Symbol.iterator]() {
+        yield* this._children
     }
 
-    private connectionIds = new Set<number>()
     private _children: Array<T>
 
-    get children() {
-        return [...this._children]
-    }
-
-    addChild(child: T, index: number = -1): void {
+    append(child: T): void {
         if (child instanceof Fragment) {
             throw Error(`nesting Fragments are not yet supported`)
         }
 
-        if (index > 0) {
-            this._children = [
-                ...this._children.slice(0, index),
-                child,
-                ...this._children.slice(index),
-            ]
-        } else {
-            this._children.push(child)
-            index = this._children.length - 1
-        }
-
-        this.emit("child-added", child, index)
+        this._children.push(child)
+        this.emit("append", child)
         this.notify("children")
     }
 
-    hasChild(child: T): boolean {
-        return this._children.findIndex((ch) => ch === child) > -1
-    }
-
-    removeChild(child: T): void {
+    remove(child: T): void {
         const index = this._children.findIndex((i) => i === child)
         this._children.splice(index, 1)
 
-        this.emit("child-removed", child, index)
+        this.emit("remove", child)
         this.notify("children")
     }
 
@@ -72,21 +50,10 @@ export class Fragment<T = any> extends GObject.Object {
         this._children = Array.isArray(children) ? children : [children]
     }
 
-    connect(signal: string, callback: (_: this, ...args: any[]) => void): number {
-        const id = super.connect(signal, callback)
-        this.connectionIds.add(id)
-        return id
-    }
-
-    disconnect(id: number): void {
-        super.disconnect(id)
-        this.connectionIds.delete(id)
-    }
-
-    destroy() {
-        this.emit("destroy")
-        for (const id of this.connectionIds.values()) {
-            super.disconnect(id)
-        }
+    connect<S extends keyof FragmentSignals<T>>(
+        signal: S,
+        callback: GObject.SignalCallback<this, FragmentSignals<T>[S]>,
+    ): number {
+        return super.connect(signal, callback)
     }
 }
