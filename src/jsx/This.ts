@@ -5,9 +5,8 @@ import { set } from "../util.js"
 import { onCleanup } from "./scope.js"
 import { append, setType, signalName, type CCProps } from "./jsx.js"
 
-type ThisProps<Self extends GObject.Object> = Omit<
-    CCProps<Self, { [K in keyof Self]: Self[K] }>,
-    "$" | "$constructor"
+type ThisProps<Self extends GObject.Object> = Partial<
+    Omit<CCProps<Self, { [K in keyof Self]: Self[K] }>, "$" | "$constructor">
 > & {
     this: Self
 }
