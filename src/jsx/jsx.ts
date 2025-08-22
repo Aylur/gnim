@@ -137,7 +137,7 @@ function isFunctionCtor(ctor: any): ctor is FC {
 
 // onNotifyPropName -> notify::prop-name
 // onPascalName:detailName -> pascal-name::detail-name
-function signalName(key: string): string {
+export function signalName(key: string): string {
     const [sig, detail] = kebabify(key.slice(2)).split(":")
 
     if (sig.startsWith("notify-")) {
@@ -147,7 +147,7 @@ function signalName(key: string): string {
     return detail ? `${sig}::${detail}` : sig
 }
 
-function remove(parent: GObject.Object, child: GObject.Object) {
+export function remove(parent: GObject.Object, child: GObject.Object) {
     if (removeChild in parent && typeof parent[removeChild] === "function") {
         parent[removeChild](child)
     } else {
@@ -155,7 +155,7 @@ function remove(parent: GObject.Object, child: GObject.Object) {
     }
 }
 
-function append(parent: GObject.Object, child: GObject.Object) {
+export function append(parent: GObject.Object, child: GObject.Object) {
     if (appendChild in parent && typeof parent[appendChild] === "function") {
         parent[appendChild](child, getType(child))
         return

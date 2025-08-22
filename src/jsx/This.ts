@@ -1,42 +1,16 @@
 import GObject from "gi://GObject"
 import { env } from "./env.js"
 import { Accessor } from "./state.js"
-import { kebabify, type Pascalify, set } from "../util.js"
+import { set } from "../util.js"
 import { onCleanup } from "./scope.js"
-import { setType } from "./jsx.js"
+import { append, setType, signalName, type CCProps } from "./jsx.js"
 
-type Element = JSX.Element | "" | false | null | undefined
-
-type ThisProps<Self extends GObject.Object> = {
+type ThisProps<Self extends GObject.Object> = Omit<
+    CCProps<Self, { [K in keyof Self]: Self[K] }>,
+    "$" | "$constructor"
+> & {
     this: Self
-    /**
-     * Gtk.Builder type
-     * its consumed internally and not actually passed to class component constructors
-     */
-    $type?: string
-
-    children?: Element | Array<Element>
-    /**
-     * CSS class names
-     */
-    class?: string | Accessor<string>
-    /**
-     * inline CSS
-     */
-    css?: string | Accessor<string>
-} & {
-    [K in keyof Self]?: Self[K] | Accessor<NonNullable<Self[K]>>
-} & {
-    [S in keyof Self["$signals"] as S extends `notify::${infer P}`
-        ? `onNotify${Pascalify<P>}`
-        : S extends string
-          ? `on${Pascalify<S>}`
-          : never]?: GObject.SignalCallback<Self, Self["$signals"][S]>
 }
-
-// TODO:
-// consider making this component a potential substitute for `createRoot()`
-// disposing the scope using a destroy signal
 
 /** @experimental */
 export function This<T extends GObject.Object>({
@@ -65,29 +39,32 @@ export function This<T extends GObject.Object>({
                 env.setClass(self, value)
             }
         } else if (key.startsWith("on")) {
-            const id = key.startsWith("onNotify")
-                ? self.connect(`notify::${kebabify(key.slice(8))}`, value)
-                : self.connect(kebabify(key.slice(2)), value)
-
+            const id = self.connect(signalName(key), value)
             cleanup.push(() => self.disconnect(id))
         } else if (value instanceof Accessor) {
+            const dispose = value.subscribe(() => set(self, key, value.get()))
             set(self, key, value.get())
-            cleanup.push(value.subscribe(() => set(self, key, value.get())))
+            cleanup.push(dispose)
         } else {
             set(self, key, value)
         }
     }
 
-    if (Array.isArray(children)) {
-        for (const ch of children) {
-            if (ch !== "" && ch !== false && ch !== null && ch !== undefined) {
-                env.addChild(self, ch, -1)
-            }
+    for (let child of Array.isArray(children) ? children : [children]) {
+        if (child === true) {
+            console.warn(Error("Trying to add boolean value of `true` as a child."))
+            continue
         }
-    } else {
-        const ch = children
-        if (ch !== "" && ch !== false && ch !== null && ch !== undefined) {
-            env.addChild(self, ch, -1)
+
+        if (Array.isArray(child)) {
+            for (const ch of child) {
+                append(self, ch)
+            }
+        } else if (child) {
+            if (!(child instanceof GObject.Object)) {
+                child = env.textNode(child)
+            }
+            append(self, child)
         }
     }
 
