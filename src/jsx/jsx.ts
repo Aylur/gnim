@@ -148,14 +148,25 @@ export function signalName(key: string): string {
 }
 
 export function remove(parent: GObject.Object, child: GObject.Object) {
+    if (parent instanceof Fragment) {
+        parent.remove(child)
+        return
+    }
+
     if (removeChild in parent && typeof parent[removeChild] === "function") {
         parent[removeChild](child)
-    } else {
-        env.removeChild(parent, child)
+        return
     }
+
+    env.removeChild(parent, child)
 }
 
 export function append(parent: GObject.Object, child: GObject.Object) {
+    if (parent instanceof Fragment) {
+        parent.append(child)
+        return
+    }
+
     if (appendChild in parent && typeof parent[appendChild] === "function") {
         parent[appendChild](child, getType(child))
         return
