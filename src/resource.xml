@@ -46,7 +46,6 @@
     <file>util.js</file>
     <file>index.js</file>
 
-    <file>gnome/signalTracker.js</file>
     <file>gnome/jsx-runtime.js</file>
     <file>gtk3/jsx-runtime.js</file>
     <file>gtk4/jsx-runtime.js</file>
