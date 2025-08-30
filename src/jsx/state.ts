@@ -110,7 +110,7 @@ const empty = Symbol("empty computed value")
 
 function createComputedProducer<T>(fn: (track: <V>(signal: Accessor<V>) => V) => T): Accessor<T> {
     const subscribers = new Set<SubscribeCallback>()
-    let value: typeof empty | T
+    let value: typeof empty | T = empty
     let prevDeps = new Map<Accessor, DisposeFunction>()
 
     const effect = () => {
