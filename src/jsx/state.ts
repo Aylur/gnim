@@ -2,13 +2,11 @@ import GObject from "gi://GObject"
 import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import { type Pascalify, camelify, kebabify } from "../util.js"
+import type { DeepInfer, RecursiveInfer } from "../variant.js"
 
 type SubscribeCallback = () => void
 type DisposeFunction = () => void
 type SubscribeFunction = (callback: SubscribeCallback) => DisposeFunction
-
-type DeepInfer<S extends string> = ReturnType<GLib.Variant<S>["deepUnpack"]>
-type RecursiveInfer<S extends string> = ReturnType<GLib.Variant<S>["recursiveUnpack"]>
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 
