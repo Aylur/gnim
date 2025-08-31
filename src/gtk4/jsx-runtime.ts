@@ -3,6 +3,9 @@ import Gio from "gi://Gio?version=2.0"
 import { configue } from "../jsx/env.js"
 import { getType, onCleanup, Accessor, Fragment } from "../index.js"
 
+import type Adw from "gi://Adw"
+const adw = await import("gi://Adw").then((m) => m.default).catch(() => null)
+
 const dummyBuilder = new Gtk.Builder()
 
 const { intrinsicElements } = configue({
@@ -11,6 +14,14 @@ const { intrinsicElements } = configue({
             const keys: Array<Extract<keyof Gtk.Stack, string>> = [
                 "visibleChildName",
                 "visible_child_name",
+            ]
+            return keys
+        }
+        if (adw && ctor === adw.ToggleGroup) {
+            const keys: Array<Extract<keyof Adw.ToggleGroup, string>> = [
+                "active",
+                "activeName",
+                "active_name",
             ]
             return keys
         }
