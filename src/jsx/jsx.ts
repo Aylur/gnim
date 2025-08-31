@@ -167,11 +167,6 @@ export function append(parent: GObject.Object, child: GObject.Object) {
         return
     }
 
-    if (appendChild in parent && typeof parent[appendChild] === "function") {
-        parent[appendChild](child, getType(child))
-        return
-    }
-
     if (child instanceof Fragment) {
         for (const ch of child) {
             append(parent, ch)
@@ -199,12 +194,12 @@ export function append(parent: GObject.Object, child: GObject.Object) {
         return
     }
 
-    if (child) {
-        if (!(child instanceof GObject.Object)) {
-            child = env.textNode(child)
-        }
-        env.appendChild(parent, child)
+    if (appendChild in parent && typeof parent[appendChild] === "function") {
+        parent[appendChild](child, getType(child))
+        return
     }
+
+    env.appendChild(parent, child)
 }
 
 /** @internal */

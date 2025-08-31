@@ -17,12 +17,21 @@ importers:
       '@girs/clutter-16':
         specifier: latest
         version: 16.0.0-4.0.0-beta.36
+      '@girs/gjs':
+        specifier: latest
+        version: 4.0.0-beta.36
       '@girs/gnome-shell':
         specifier: latest
         version: 48.0.4
       '@girs/gtk-3.0':
         specifier: latest
         version: 3.24.50-4.0.0-beta.36
+      '@girs/gtk-4.0':
+        specifier: latest
+        version: 4.19.1-4.0.0-beta.36
+      '@girs/shell-16':
+        specifier: latest
+        version: 16.0.0-4.0.0-beta.36
       '@girs/soup-3.0':
         specifier: latest
         version: 3.6.5-4.0.0-beta.36
