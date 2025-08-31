@@ -3,4 +3,3 @@ build/
 dist/
 docs/.vitepress/dist
 docs/.vitepress/cache
-test.nu

@@ -10,6 +10,12 @@ export default defineConfig({
         hostname: "https://github.com/aylur/gnim",
     },
 
+    vite: {
+        resolve: {
+            preserveSymlinks: true,
+        },
+    },
+
     themeConfig: {
         outline: "deep",
 

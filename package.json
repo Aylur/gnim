@@ -20,6 +20,7 @@
         "docs:preview": "vitepress preview docs"
     },
     "devDependencies": {
+        "@eslint/js": "latest",
         "@girs/adw-1": "latest",
         "@girs/clutter-16": "latest",
         "@girs/gtk-3.0": "latest",
