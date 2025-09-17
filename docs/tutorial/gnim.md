@@ -28,7 +28,7 @@ function printScope() {
 function nested() {
   printScope() // scope
 
-  setTimeou(() => {
+  setTimeout(() => {
     // this block of code gets executed after the last line
     // at which point scope no longer exists
     printScope() // null
@@ -425,13 +425,14 @@ to bugs and with increasing number of dependencies it grows in complexity.
 const a: Accessor<number>
 
 // ✅ Good: computed signal from dependencies
-const b = createComputed([a], (a) => a * 2)
+const b = createComputed((get) => get(a) * 2)
 ```
 
 > [!TIP]
 >
-> Using `.get()` outside of event handlers should be your clue to rethink your
-> logic in a series of computations rather than a chain of effects.
+> Using the `.get()` method of accessors outside of event handlers should be
+> your clue to rethink your logic in a series of computations rather than a
+> chain of effects.
 
 ### Effect hook
 
@@ -443,7 +444,7 @@ supposed to setup the effect and use `onCleanup` manually.
 ```ts
 function MyWidget() {
   const unsub = accessor.subscribe(() => {
-    // sideeffect
+    // side-effect
   })
   onCleanup(unsub)
 }
@@ -456,7 +457,7 @@ function MyWidget() {
 >
 > ```ts
 > const unsub = createComputed([a, b, c]).subscribe(() => {
->   // sideeffect
+>   // side-effect
 > })
 > ```
 
@@ -465,7 +466,7 @@ function MyWidget() {
 ```ts
 function MyWidget() {
   const id = gobject.connect("signal", () => {
-    // sideeffect
+    // side-effect
   })
   onCleanup(() => gobject.disconnect(id))
 }
@@ -473,14 +474,15 @@ function MyWidget() {
 
 > [!TIP]
 >
-> You can use [`createConnection`](../jsx#createconnection) as an alternative.
+> If the purpose of a signal is not to run a side-effect, but to track values
+> you can use [`createConnection`](../jsx#createconnection).
 
 ### Timers
 
 ```ts
 function MyWidget() {
   const interval = setInterval(() => {
-    // sideeffect
+    // side-effect
   })
   onCleanup(() => clearInterval(interval))
 }
@@ -488,4 +490,5 @@ function MyWidget() {
 
 > [!TIP]
 >
-> You can use [`createExternal`](../jsx#createexternal) as an alternative.
+> If the purpose of the interval is to track a value you can use
+> [`createExternal`](../jsx#createexternal).
