@@ -48,7 +48,7 @@ export class Accessor<T = unknown> extends Function {
     }
 
     protected _call<R = T>(transform: (value: T) => R): Accessor<R> {
-        return this.as(transform)
+        return createComputedProducer((track) => transform(track(this)))
     }
 
     toString(): string {
@@ -63,8 +63,9 @@ export class Accessor<T = unknown> extends Function {
 
 export interface Accessor<T> {
     /**
-     * Create a new `Accessor` that applies a transformation on its value.
+     * Create a computed `Accessor` that caches its transformed value.
      * @param transform The transformation to apply. Should be a pure function.
+     * see {@link createComputed} and {@link createComputedProducer}
      */
     <R = T>(transform: (value: T) => R): Accessor<R>
 }
