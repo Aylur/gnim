@@ -472,8 +472,7 @@ setValue((prev) => prev + 1)
 
 ### `createComputed`
 
-Creates a computed signal from a producer function that tracks its dependencies
-and caches its value.
+Creates a computed signal from a producer function that tracks its dependencies.
 
 ```ts
 export function createComputed<T>(
@@ -491,9 +490,7 @@ const c = createComputed((get) => get(a) + get(b))
 ```
 
 Alternatively, you can specify a list of dependencies, in which case values are
-passed to an optional transform function. The values are cached, but the result
-of the transform function is not, and it is called each time the value is
-accessed.
+passed to an optional transform function.
 
 ```ts
 function createComputed<

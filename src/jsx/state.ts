@@ -10,6 +10,8 @@ type SubscribeFunction = (callback: SubscribeCallback) => DisposeFunction
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 
+const empty = Symbol("empty computed value")
+
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class Accessor<T = unknown> extends Function {
     static $gtype = GObject.TYPE_JSOBJECT as unknown as GObject.GType<Accessor>
@@ -48,7 +50,38 @@ export class Accessor<T = unknown> extends Function {
     }
 
     protected _call<R = T>(transform: (value: T) => R): Accessor<R> {
-        return createComputedProducer((track) => transform(track(this)))
+        let value: typeof empty | R = empty
+        let unsub: DisposeFunction
+
+        const subscribers = new Set<SubscribeCallback>()
+
+        const subscribe: SubscribeFunction = (callback) => {
+            if (subscribers.size === 0) {
+                unsub = this.subscribe(() => {
+                    const newValue = transform(this.get())
+                    if (value !== newValue) {
+                        value = newValue
+                        Array.from(subscribers).forEach((cb) => cb())
+                    }
+                })
+            }
+
+            subscribers.add(callback)
+
+            return () => {
+                subscribers.delete(callback)
+                if (subscribers.size === 0) {
+                    value = empty
+                    unsub()
+                }
+            }
+        }
+
+        const get = (): R => {
+            return value !== empty ? value : transform(this.get())
+        }
+
+        return new Accessor(get, subscribe)
     }
 
     toString(): string {
@@ -104,16 +137,22 @@ export function createState<T>(init: T): State<T> {
     return [new Accessor(() => currentValue, subscribe), set as Setter<T>]
 }
 
-const empty = Symbol("empty computed value")
-
 function createComputedProducer<T>(fn: (track: <V>(signal: Accessor<V>) => V) => T): Accessor<T> {
-    const subscribers = new Set<SubscribeCallback>()
     let value: typeof empty | T = empty
     let prevDeps = new Map<Accessor, DisposeFunction>()
 
+    const subscribers = new Set<SubscribeCallback>()
+    const cache = new Map<Accessor, unknown>()
+
     const effect = () => {
         const deps = new Set<Accessor>()
-        value = fn((v) => (deps.add(v), v.get()))
+        const newValue = fn((v) => {
+            deps.add(v)
+            return (cache.get(v) as any) || v.get()
+        })
+
+        const didChange = value !== newValue
+        value = newValue
 
         const newDeps = new Map<Accessor, DisposeFunction>()
 
@@ -127,12 +166,21 @@ function createComputedProducer<T>(fn: (track: <V>(signal: Accessor<V>) => V) =>
 
         for (const dep of deps) {
             if (!newDeps.has(dep)) {
-                newDeps.set(dep, dep.subscribe(effect))
+                const dispose = dep.subscribe(() => {
+                    const value = dep.get()
+                    if (cache.get(dep) !== value) {
+                        cache.set(dep, value)
+                        effect()
+                    }
+                })
+                newDeps.set(dep, dispose)
             }
         }
 
         prevDeps = newDeps
-        Array.from(subscribers).forEach((cb) => cb())
+        if (didChange) {
+            Array.from(subscribers).forEach((cb) => cb())
+        }
     }
 
     const subscribe: SubscribeFunction = (callback) => {
@@ -154,7 +202,7 @@ function createComputedProducer<T>(fn: (track: <V>(signal: Accessor<V>) => V) =>
     }
 
     const get = (): T => {
-        return value === empty ? fn((v) => v.get()) : value
+        return value !== empty ? value : fn((v) => v.get())
     }
 
     return new Accessor(get, subscribe)
@@ -166,17 +214,36 @@ function createComputedArgs<
     V = Args,
 >(deps: Deps, transform?: (...args: Args) => V): Accessor<V> {
     let dispose: Array<DisposeFunction>
+    let value: typeof empty | V = empty
+
     const subscribers = new Set<SubscribeCallback>()
     const cache = new Array<unknown>(deps.length)
+
+    const compute = (): V => {
+        const args = deps.map((dep, i) => {
+            if (!cache[i]) {
+                cache[i] = dep.get()
+            }
+
+            return cache[i]
+        })
+
+        return transform ? transform(...(args as Args)) : (args as V)
+    }
 
     const subscribe: SubscribeFunction = (callback) => {
         if (subscribers.size === 0) {
             dispose = deps.map((dep, i) =>
                 dep.subscribe(() => {
-                    const value = dep.get()
-                    if (cache[i] !== value) {
+                    const newValue = dep.get()
+                    if (cache[i] !== newValue) {
                         cache[i] = dep.get()
-                        Array.from(subscribers).forEach((cb) => cb())
+
+                        const newValue = compute()
+                        if (value !== newValue) {
+                            value = newValue
+                            Array.from(subscribers).forEach((cb) => cb())
+                        }
                     }
                 }),
             )
@@ -187,6 +254,7 @@ function createComputedArgs<
         return () => {
             subscribers.delete(callback)
             if (subscribers.size === 0) {
+                value = empty
                 dispose.map((cb) => cb())
                 dispose.length = 0
                 cache.length = 0
@@ -195,15 +263,7 @@ function createComputedArgs<
     }
 
     const get = (): V => {
-        const args = deps.map((dep, i) => {
-            if (!cache[i]) {
-                cache[i] = dep.get()
-            }
-
-            return cache[i]
-        })
-
-        return transform ? transform(...(args as Args)) : (args as V)
+        return value !== empty ? value : compute()
     }
 
     return new Accessor(get, subscribe)
