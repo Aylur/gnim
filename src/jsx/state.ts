@@ -29,7 +29,6 @@ export class Accessor<T = unknown> extends Function {
      * @returns Unsubscribe function.
      */
     subscribe(callback: SubscribeCallback): DisposeFunction {
-        // TODO: auto unsub when a scope is available?
         return this.#subscribe(callback)
     }
 
@@ -303,7 +302,9 @@ export function createBinding<T>(object: GObject.Object | Gio.Settings, key: str
     const get = (): T => {
         if (object instanceof Gio.Settings) {
             return object.get_value(key).recursiveUnpack() as T
-        } else {
+        }
+
+        if (object instanceof GObject.Object) {
             const getter = `get_${prop.replaceAll("-", "_")}` as keyof typeof object
 
             if (getter in object && typeof object[getter] === "function") {
@@ -312,9 +313,9 @@ export function createBinding<T>(object: GObject.Object | Gio.Settings, key: str
 
             if (prop in object) return object[prop] as T
             if (key in object) return object[key as keyof typeof object] as T
-
-            throw Error(`cannot get property ${key}`)
         }
+
+        throw Error(`cannot get property "${key}" on "${object}"`)
     }
 
     return new Accessor(get, subscribe)
