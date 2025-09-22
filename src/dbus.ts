@@ -620,9 +620,9 @@ export function method<const InArgs extends Array<DBusType>, const OutArgs exten
     inArgs: InArgs,
     outArgs: OutArgs,
 ): (
-    method: (this: Service, ...args: InferVariantTypes<InArgs>) => InferVariantTypes<OutArgs>,
+    method: (this: Service, ...args: any[]) => InferVariantTypes<OutArgs>,
     ctx: ClassMethodDecoratorContext<Service, typeof method>,
-) => void
+) => (this: Service, ...args: InferVariantTypes<InArgs>) => any
 
 /**
  * Registers a method.
@@ -633,9 +633,9 @@ export function method<const InArgs extends Array<DBusType>, const OutArgs exten
 export function method<const InArgs extends Array<DBusType>>(
     ...inArgs: InArgs
 ): (
-    method: (this: Service, ...args: InferVariantTypes<InArgs>) => void,
+    method: (this: Service, ...args: any[]) => void,
     ctx: ClassMethodDecoratorContext<Service, typeof method>,
-) => void
+) => (this: Service, ...args: InferVariantTypes<InArgs>) => void
 
 export function method<const InArgs extends Array<DBusType>, const OutArgs extends Array<DBusType>>(
     ...args: InArgs | [inArgs: InArgs, outArgs?: OutArgs]
@@ -646,10 +646,10 @@ export function method<const InArgs extends Array<DBusType>, const OutArgs exten
             ...args: InferVariantTypes<InArgs>
         ) => InferVariantTypes<OutArgs> | void,
         ctx: ClassMethodDecoratorContext<Service, typeof method>,
-    ): typeof method {
+    ): (this: Service, ...args: InferVariantTypes<InArgs>) => any {
         const name = installMethod(args, method, ctx)
 
-        return function (...args: InferVariantTypes<InArgs>) {
+        return function (...args) {
             if (this[internals].proxy) {
                 const value = this[remoteMethod](name, args)
                 return value.deepUnpack<InferVariantTypes<OutArgs>>()
@@ -673,12 +673,9 @@ export function methodAsync<
     inArgs: InArgs,
     outArgs: OutArgs,
 ): (
-    method: (
-        this: Service,
-        ...args: InferVariantTypes<InArgs>
-    ) => Promise<InferVariantTypes<OutArgs>>,
+    method: (this: Service, ...args: any[]) => Promise<InferVariantTypes<OutArgs>>,
     ctx: ClassMethodDecoratorContext<Service, typeof method>,
-) => void
+) => (this: Service, ...args: InferVariantTypes<InArgs>) => Promise<any>
 
 /**
  * Registers a method.
@@ -689,9 +686,9 @@ export function methodAsync<
 export function methodAsync<const InArgs extends Array<DBusType>>(
     ...inArgs: InArgs
 ): (
-    method: (this: Service, ...args: InferVariantTypes<InArgs>) => Promise<void>,
+    method: (this: Service, ...args: any[]) => Promise<void>,
     ctx: ClassMethodDecoratorContext<Service, typeof method>,
-) => void
+) => (this: Service, ...args: InferVariantTypes<InArgs>) => Promise<void>
 
 export function methodAsync<
     const InArgs extends Array<DBusType>,
@@ -703,10 +700,10 @@ export function methodAsync<
             ...args: InferVariantTypes<InArgs>
         ) => Promise<InferVariantTypes<OutArgs> | void>,
         ctx: ClassMethodDecoratorContext<Service, typeof method>,
-    ): typeof method {
+    ): (this: Service, ...args: InferVariantTypes<InArgs>) => Promise<any> {
         const name = installMethod(args, method, ctx)
 
-        return async function (...args: InferVariantTypes<InArgs>) {
+        return async function (...args) {
             if (this[internals].proxy) {
                 const value = await this[remoteMethodAsync](name, args)
                 return value.deepUnpack<InferVariantTypes<OutArgs>>()
@@ -729,7 +726,7 @@ export function property<T extends string>(type: T) {
     return function (
         _: void,
         ctx: ClassFieldDecoratorContext<Service, DeepInfer<T>>,
-    ): (this: Service, init: DeepInfer<T>) => DeepInfer<T> {
+    ): (this: Service, init: DeepInfer<T>) => any {
         const name = installProperty(type, ctx)
 
         void gproperty({ $gtype: inferGTypeFromVariant(type) })(
@@ -768,8 +765,7 @@ export function property<T extends string>(type: T) {
         return function (init) {
             const priv = this[internals].priv
             priv[name] = init
-            // we don't need to store the value on the object
-            return void 0 as unknown as DeepInfer<T>
+            // we don't need to store the value on the object itself
         }
     }
 }
@@ -782,9 +778,9 @@ export function property<T extends string>(type: T) {
  */
 export function getter<T extends string>(type: T) {
     return function (
-        getter: (this: Service) => DeepInfer<T>,
+        method: (this: Service) => DeepInfer<T>,
         ctx: ClassGetterDecoratorContext<Service, DeepInfer<T>>,
-    ): (this: Service) => DeepInfer<T> {
+    ): (this: Service) => any {
         const name = installProperty(type, ctx)
 
         ctx.addInitializer(function () {
@@ -796,11 +792,11 @@ export function getter<T extends string>(type: T) {
             ctx as ClassGetterDecoratorContext<GObject.Object> & Ctx,
         )
 
-        return function () {
+        return function get(): DeepInfer<T> {
             const { proxy } = this[internals]
             return proxy
                 ? proxy.get_cached_property(name)!.deepUnpack<DeepInfer<T>>()
-                : getter.call(this)
+                : method.call(this)
         }
     }
 }
@@ -813,7 +809,7 @@ export function getter<T extends string>(type: T) {
  */
 export function setter<T extends string>(type: T) {
     return function (
-        setter: (this: Service, value: DeepInfer<T>) => void,
+        setter: (this: Service, value: any) => void,
         ctx: ClassSetterDecoratorContext<Service, DeepInfer<T>>,
     ): (this: Service, value: DeepInfer<T>) => void {
         const name = installProperty(type, ctx)
@@ -843,9 +839,9 @@ export function setter<T extends string>(type: T) {
  */
 export function signal<const Params extends Array<DBusType>>(...params: Params) {
     return function (
-        method: (this: Service, ...params: InferVariantTypes<Params>) => void,
+        method: (this: Service, ...params: any) => void,
         ctx: ClassMethodDecoratorContext<Service, typeof method>,
-    ): typeof method {
+    ): (this: Service, ...params: InferVariantTypes<Params>) => void {
         const name = installSignal(params, ctx)
 
         void gsignal(...params.map(inferGTypeFromVariant))(
@@ -853,7 +849,7 @@ export function signal<const Params extends Array<DBusType>>(...params: Params) 
             ctx as ClassMethodDecoratorContext<GObject.Object> & Ctx,
         )
 
-        return function (...params: InferVariantTypes<Params>) {
+        return function (...params) {
             if (this[internals].proxy) {
                 console.warn(`cannot emit signal "${name}" on remote object`)
             }

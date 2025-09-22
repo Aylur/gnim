@@ -104,7 +104,7 @@ export function property<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
         _: void,
         ctx: PropertyContext<T>,
         options?: { metaOnly: true },
-    ): (this: GObj, init: T) => T {
+    ): (this: GObj, init: T) => any {
         const fieldName = assertField(ctx)
         const key = kebabify(fieldName)
         const meta: Partial<Meta> = ctx.metadata!
@@ -160,7 +160,7 @@ export function property<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
  * ```
  */
 export function getter<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
-    return function getter(getter: (this: GObj) => T, ctx: GetterContext<T>): (this: GObj) => T {
+    return function (get: (this: GObj) => any, ctx: GetterContext<T>) {
         const fieldName = assertField(ctx)
         const meta: Partial<Meta> = ctx.metadata!
         const props = (meta.properties ??= {})
@@ -170,7 +170,7 @@ export function getter<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
         } else {
             props[fieldName] = { flags: ParamFlags.READABLE, type: typeDeclaration }
         }
-        return getter
+        return get
     }
 }
 
@@ -194,10 +194,7 @@ export function getter<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
  * ```
  */
 export function setter<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
-    return function setter(
-        setter: (this: GObj, value: T) => void,
-        ctx: SetterContext<T>,
-    ): (this: GObj, value: T) => void {
+    return function (set: (this: GObj, value: any) => void, ctx: SetterContext<T>) {
         const fieldName = assertField(ctx)
         const meta: Partial<Meta> = ctx.metadata!
         const props = (meta.properties ??= {})
@@ -207,7 +204,7 @@ export function setter<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
         } else {
             props[fieldName] = { flags: ParamFlags.WRITABLE, type: typeDeclaration }
         }
-        return setter
+        return set
     }
 }
 
@@ -238,12 +235,12 @@ export function signal<
     Return extends { $gtype: GType } | GType,
 >(
     params: Params,
-    returnType?: Return,
+    returnType: Return,
     options?: SignalOptions,
 ): (
-    method: (this: GObj, ...args: ParamTypes<Params>) => ParamType<Return>,
+    method: (this: GObj, ...args: any) => ParamType<Return>,
     ctx: SignalContext<typeof method>,
-) => typeof method
+) => (this: GObj, ...args: ParamTypes<Params>) => any
 
 /**
  * Defines a signal to be registered when using the {@link register} decorator.
@@ -261,9 +258,9 @@ export function signal<
 export function signal<Params extends Array<{ $gtype: GType } | GType>>(
     ...params: Params
 ): (
-    method: (this: GObject.Object, ...args: ParamTypes<Params>) => void,
+    method: (this: GObject.Object, ...args: any) => void,
     ctx: SignalContext<typeof method>,
-) => typeof method
+) => (this: GObject.Object, ...args: ParamTypes<Params>) => void
 
 export function signal<
     Params extends Array<{ $gtype: GType } | GType>,
