@@ -235,9 +235,9 @@ function createComputedArgs<
         if (subscribers.size === 0) {
             dispose = deps.map((dep, i) =>
                 dep.subscribe(() => {
-                    const newValue = dep.get()
-                    if (cache[i] !== newValue) {
-                        cache[i] = dep.get()
+                    const newDepValue = dep.get()
+                    if (cache[i] !== newDepValue) {
+                        cache[i] = newDepValue
 
                         const newValue = compute()
                         if (value !== newValue) {
