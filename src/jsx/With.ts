@@ -26,6 +26,7 @@ export function With<T, E extends JSX.Element>({
     const currentScope = getScope()
     const fragment = new Fragment<E>()
 
+    let currentValue: T
     let scope: Scope
 
     function remove(child: E) {
@@ -52,9 +53,14 @@ export function With<T, E extends JSX.Element>({
     }
 
     const dispose = value.subscribe(() => {
-        callback(value.get())
+        const newValue = value.get()
+        if (currentValue === newValue) {
+            callback((currentValue = newValue))
+        }
     })
-    callback(value.get())
+
+    currentValue = value.get()
+    callback(currentValue)
 
     onCleanup(() => {
         dispose()
