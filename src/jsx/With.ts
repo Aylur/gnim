@@ -54,7 +54,7 @@ export function With<T, E extends JSX.Element>({
 
     const dispose = value.subscribe(() => {
         const newValue = value.get()
-        if (currentValue === newValue) {
+        if (currentValue !== newValue) {
             callback((currentValue = newValue))
         }
     })
