@@ -41,7 +41,7 @@ Can be written as
 ```tsx
 function Box() {
   const [counter, setCounter] = createState(0)
-  const label = createComputed([counter], (c) => `clicked ${c} times`)
+  const label = createComputed((get) => `clicked ${get(counter)} times`)
 
   function onClicked() {
     setCounter((c) => c + 1)
