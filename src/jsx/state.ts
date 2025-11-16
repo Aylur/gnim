@@ -10,6 +10,7 @@ type SubscribeFunction = (callback: SubscribeCallback) => DisposeFunction
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 
+const { connect, disconnect } = GObject.Object.prototype
 const empty = Symbol("empty computed value")
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
@@ -356,8 +357,8 @@ export function createBinding<T>(object: GObject.Object | Gio.Settings, key: str
 
     const subscribe: SubscribeFunction = (callback) => {
         const sig = object instanceof Gio.Settings ? "changed" : "notify"
-        const id = object.connect(`${sig}::${prop}`, () => callback())
-        return () => object.disconnect(id)
+        const id = connect.call(object, `${sig}::${prop}`, () => callback())
+        return () => disconnect.call(object, id)
     }
 
     const get = (): T => {
@@ -446,19 +447,15 @@ export function createConnection<
     const subscribe: SubscribeFunction = (callback) => {
         if (subscribers.size === 0) {
             dispose = signals.map(([object, signal, callback]) => {
-                const id = GObject.Object.prototype.connect.call(
-                    object,
-                    signal as string,
-                    (_, ...args) => {
-                        const newValue = callback(...args, value)
-                        if (value !== newValue) {
-                            value = newValue
-                            Array.from(subscribers).forEach((cb) => cb())
-                        }
-                    },
-                )
+                const id = connect.call(object, signal as string, (_, ...args) => {
+                    const newValue = callback(...args, value)
+                    if (value !== newValue) {
+                        value = newValue
+                        Array.from(subscribers).forEach((cb) => cb())
+                    }
+                })
 
-                return () => GObject.Object.prototype.disconnect.call(object, id)
+                return () => disconnect.call(object, id)
             })
         }
 
@@ -566,8 +563,8 @@ export function createSettings<const T extends Record<string, string>>(
                 new Accessor(
                     () => settings.get_value(key).recursiveUnpack(),
                     (callback) => {
-                        const id = settings.connect(`changed::${key}`, callback)
-                        return () => settings.disconnect(id)
+                        const id = connect.call(settings, `changed::${key}`, callback)
+                        return () => disconnect.call(settings, id)
                     },
                 ),
             ],
