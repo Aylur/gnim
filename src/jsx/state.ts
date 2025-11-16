@@ -1,92 +1,98 @@
+/* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
+
 import GObject from "gi://GObject"
 import Gio from "gi://Gio"
 import GLib from "gi://GLib"
 import { type Pascalify, camelify, kebabify } from "../util.js"
 import type { DeepInfer, RecursiveInfer } from "../variant.js"
+import { Scope } from "./scope.js"
 
-type SubscribeCallback = () => void
-type DisposeFunction = () => void
-type SubscribeFunction = (callback: SubscribeCallback) => DisposeFunction
+type Callback = () => void
+type DisposeFn = () => void
+
+const nil = Symbol("nil")
+const accessStack = new Array<Set<Accessor>>()
+const { connect, disconnect } = GObject.Object.prototype
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 
-const { connect, disconnect } = GObject.Object.prototype
-const empty = Symbol("empty computed value")
+export interface Accessor<T> {
+    /**
+     * Shorthand for `createComputed(() => compute(accessor()))`
+     * @returns The current value.
+     */
+    <R = T>(compute: (value: T) => R): Accessor<R>
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
+    /**
+     * Create a new `Accessor` that applies a transformation on its value without caching.
+     * @param transform The transformation to apply. Should be a pure function.
+     */
+    as<R = T>(transform: (value: T) => R): Accessor<R>
+
+    /**
+     * Get the current value and track it as a dependency in reactive scopes.
+     * @returns The current value.
+     */
+    (): T
+
+    /**
+     * Get the current value **without** tracking it as a dependency in reactive scopes.
+     * @returns The current value.
+     */
+    peek(): T
+}
+
 export class Accessor<T = unknown> extends Function {
     static $gtype = GObject.TYPE_JSOBJECT as unknown as GObject.GType<Accessor>
 
     #get: () => T
-    #subscribe: SubscribeFunction
+    #subscribe: (callback: Callback) => DisposeFn
 
-    constructor(get: () => T, subscribe?: SubscribeFunction) {
+    constructor(get: () => T, subscribe: (callback: Callback) => DisposeFn) {
         super("return arguments.callee._call.apply(arguments.callee, arguments)")
-        this.#subscribe = subscribe ?? (() => () => void 0)
+        this.#subscribe = subscribe
         this.#get = get
     }
 
     /**
      * Subscribe for value changes.
-     * @param callback The function to run when the current value changes.
+     * This method is **not** scope aware; you need to dispose it when it is no longer used.
+     * You might want to consider using {@link createEffect} instead.
+     * @param callback The function to run when the value changes.
      * @returns Unsubscribe function.
      */
-    subscribe(callback: SubscribeCallback): DisposeFunction {
+    subscribe(callback: Callback): DisposeFn {
         return this.#subscribe(callback)
     }
 
     /**
      * @returns The current value.
+     * @deprecated Has been renamed to {@link Accessor.prototype.peek}
      */
     get(): T {
         return this.#get()
     }
 
-    /**
-     * Create a new `Accessor` that applies a transformation on its value.
-     * @param transform The transformation to apply. Should be a pure function.
-     */
+    peek(): T {
+        return this.#get()
+    }
+
     as<R = T>(transform: (value: T) => R): Accessor<R> {
         return new Accessor(() => transform(this.#get()), this.#subscribe)
     }
 
-    protected _call<R = T>(transform: (value: T) => R): Accessor<R> {
-        let value: typeof empty | R = empty
-        let unsub: DisposeFunction
+    protected _call<R = T>(compute: (value: T) => R): Accessor<R>
+    protected _call(): T
 
-        const subscribers = new Set<SubscribeCallback>()
+    protected _call<R = T>(compute?: (value: T) => R): Accessor<R> | T {
+        if (compute) return createComputed(() => compute(this()))
 
-        const subscribe: SubscribeFunction = (callback) => {
-            if (subscribers.size === 0) {
-                unsub = this.subscribe(() => {
-                    const newValue = transform(this.get())
-                    if (value !== newValue) {
-                        value = newValue
-                        Array.from(subscribers).forEach((cb) => cb())
-                    }
-                })
-            }
-
-            subscribers.add(callback)
-
-            return () => {
-                subscribers.delete(callback)
-                if (subscribers.size === 0) {
-                    value = empty
-                    unsub()
-                }
-            }
-        }
-
-        const get = (): R => {
-            return value !== empty ? value : transform(this.get())
-        }
-
-        return new Accessor(get, subscribe)
+        accessStack.at(-1)?.add(this)
+        return this.peek()
     }
 
     toString(): string {
-        return `Accessor<${this.get()}>`
+        return `Accessor { ${this.peek()} }`
     }
 
     [Symbol.toPrimitive]() {
@@ -95,98 +101,108 @@ export class Accessor<T = unknown> extends Function {
     }
 }
 
-export interface Accessor<T> {
-    /**
-     * Create a computed `Accessor` that caches its transformed value.
-     * @param transform The transformation to apply. Should be a pure function.
-     * see {@link createComputed} and {@link createComputedProducer}
-     */
-    <R = T>(transform: (value: T) => R): Accessor<R>
-}
-
 export type Setter<T> = {
     (value: T): void
-    (value: (prev: T) => T): void
+    (producer: (prev: T) => T): void
 }
 
 export type State<T> = [Accessor<T>, Setter<T>]
 
 /**
  * Create a writable signal.
- *
  * @param init The intial value of the signal
  * @returns An `Accessor` and a setter function
  */
 export function createState<T>(init: T): State<T> {
     let currentValue = init
-    const subscribers = new Set<SubscribeCallback>()
+    const subscribers = new Set<Callback>()
 
-    const subscribe: SubscribeFunction = (callback) => {
+    function subscribe(callback: Callback): DisposeFn {
         subscribers.add(callback)
         return () => subscribers.delete(callback)
     }
 
-    const set = (newValue: unknown) => {
+    function set(newValue: unknown): void {
         const value: T = typeof newValue === "function" ? newValue(currentValue) : newValue
-        if (currentValue !== value) {
+        if (!Object.is(currentValue, value)) {
             currentValue = value
-            // running callbacks might mutate subscribers
             Array.from(subscribers).forEach((cb) => cb())
         }
     }
 
-    return [new Accessor(() => currentValue, subscribe), set as Setter<T>]
+    function get(): T {
+        return currentValue
+    }
+
+    return [new Accessor(get, subscribe), set]
 }
 
-function createComputedProducer<T>(fn: (track: <V>(signal: Accessor<V>) => V) => T): Accessor<T> {
-    let value: typeof empty | T = empty
-    let prevDeps = new Map<Accessor, DisposeFunction>()
+/** marks wether we are in an {@link effect} scope */
+let effectScope = false
 
-    const subscribers = new Set<SubscribeCallback>()
-    const cache = new Map<Accessor, unknown>()
+function push<T>(fn: () => T) {
+    const deps = new Set<Accessor>()
+    accessStack.push(deps)
+    const res = fn()
+    accessStack.pop()
+    return [res, deps] as const
+}
 
-    const effect = () => {
-        const deps = new Set<Accessor>()
-        const newValue = fn((v) => {
-            deps.add(v)
-            return (cache.get(v) as any) || v.get()
+function createComputedProducer<T>(
+    _producer: (DEPRECATED_track: <V>(signal: Accessor<V>) => V) => T,
+): Accessor<T> {
+    let cachedValue: T | typeof nil = nil
+    let currentDeps = new Map<Accessor, DisposeFn>()
+
+    // in an effect scope we want to immediately track dependencies
+    // and cache the result to avoid a recomputation after the effect scope
+    let preValue: T | typeof nil = nil
+    let preDeps = new Set<Accessor>()
+
+    const subscribers = new Set<Callback>()
+    const producer = () =>
+        _producer((s) => {
+            // we might want to console.warn here
+            return s()
         })
 
-        const didChange = value !== newValue
-        value = newValue
+    function invalidate() {
+        cachedValue = nil
+        Array.from(subscribers).forEach((cb) => cb())
+    }
 
-        const newDeps = new Map<Accessor, DisposeFunction>()
+    function computeEffect() {
+        const [res, deps] = push(producer)
+        const newDeps = new Map<Accessor, DisposeFn>()
 
-        for (const [dep, unsub] of prevDeps) {
+        for (const [dep, dispose] of currentDeps) {
             if (!deps.has(dep)) {
-                unsub()
+                dispose()
             } else {
-                newDeps.set(dep, unsub)
+                newDeps.set(dep, dispose)
             }
         }
 
         for (const dep of deps) {
             if (!newDeps.has(dep)) {
-                const dispose = dep.subscribe(() => {
-                    const value = dep.get()
-                    if (cache.get(dep) !== value) {
-                        cache.set(dep, value)
-                        effect()
-                    }
-                })
-                newDeps.set(dep, dispose)
+                newDeps.set(dep, dep.subscribe(invalidate))
             }
         }
 
-        prevDeps = newDeps
-        if (didChange) {
-            Array.from(subscribers).forEach((cb) => cb())
-        }
+        currentDeps = newDeps
+        return (cachedValue = res)
     }
 
-    const subscribe: SubscribeFunction = (callback) => {
+    function subscribe(callback: Callback): DisposeFn {
         if (subscribers.size === 0) {
-            effect()
+            if (effectScope) {
+                cachedValue = preValue
+                currentDeps = new Map([...preDeps].map((dep) => [dep, dep.subscribe(invalidate)]))
+                preDeps.clear()
+                preValue = nil
+            } else {
+                computeEffect()
+            }
         }
 
         subscribers.add(callback)
@@ -194,36 +210,48 @@ function createComputedProducer<T>(fn: (track: <V>(signal: Accessor<V>) => V) =>
         return () => {
             subscribers.delete(callback)
             if (subscribers.size === 0) {
-                value = empty
-                for (const [, unsub] of prevDeps) {
-                    unsub()
-                }
+                currentDeps.forEach((cb) => cb())
+                currentDeps.clear()
+                cachedValue = nil
             }
         }
     }
 
-    const get = (): T => {
-        return value !== empty ? value : fn((v) => v.get())
+    function get(): T {
+        if (cachedValue !== nil) return cachedValue
+
+        if (subscribers.size === 0) {
+            if (effectScope) {
+                const [res, deps] = push(producer)
+                preDeps = deps
+                preValue = res
+                return res
+            } else {
+                return producer()
+            }
+        }
+
+        return computeEffect()
     }
 
     return new Accessor(get, subscribe)
 }
 
-function createComputedArgs<
+function DEPRECATED_createComputedArgs<
     const Deps extends Array<Accessor<any>>,
     Args extends { [K in keyof Deps]: Accessed<Deps[K]> },
     V = Args,
 >(deps: Deps, transform?: (...args: Args) => V): Accessor<V> {
-    let dispose: Array<DisposeFunction>
-    let value: typeof empty | V = empty
+    let dispose: Array<DisposeFn>
+    let value: typeof nil | V = nil
 
-    const subscribers = new Set<SubscribeCallback>()
+    const subscribers = new Set<Callback>()
     const cache = new Array<unknown>(deps.length)
 
-    const compute = (): V => {
+    function compute(): V {
         const args = deps.map((dep, i) => {
             if (!cache[i]) {
-                cache[i] = dep.get()
+                cache[i] = dep.peek()
             }
 
             return cache[i]
@@ -232,11 +260,11 @@ function createComputedArgs<
         return transform ? transform(...(args as Args)) : (args as V)
     }
 
-    const subscribe: SubscribeFunction = (callback) => {
+    function subscribe(callback: Callback): DisposeFn {
         if (subscribers.size === 0) {
             dispose = deps.map((dep, i) =>
                 dep.subscribe(() => {
-                    const newDepValue = dep.get()
+                    const newDepValue = dep.peek()
                     if (cache[i] !== newDepValue) {
                         cache[i] = newDepValue
 
@@ -255,7 +283,7 @@ function createComputedArgs<
         return () => {
             subscribers.delete(callback)
             if (subscribers.size === 0) {
-                value = empty
+                value = nil
                 dispose.map((cb) => cb())
                 dispose.length = 0
                 cache.length = 0
@@ -263,38 +291,42 @@ function createComputedArgs<
         }
     }
 
-    const get = (): V => {
-        return value !== empty ? value : compute()
+    function get(): V {
+        return value !== nil ? value : compute()
     }
 
     return new Accessor(get, subscribe)
 }
 
 /**
- * Create an `Accessor` from a producer function that tracks its dependencies.
+ * Create a computed value from a producer function which tracks
+ * dependencies and invalidates tha value whenever they change.
+ * The result is cached and is only computed on access.
  *
  * ```ts Example
  * let a: Accessor<number>
  * let b: Accessor<number>
- * const c: Accessor<number> = createComputed((get) => get(a) + get(b))
+ * const c: Accessor<number> = createComputed(() => a() + b())
  * ```
  *
- * @experimental
- * @param producer The producer function which let's you track dependencies
- * @returns The computed `Accessor`.
+ * @param producer The computation logic
+ * @returns An {@link Accessor} to the value
  */
 export function createComputed<T>(
-    producer: (track: <V>(signal: Accessor<V>) => V) => T,
+    producer: (
+        /** @deprecated */
+        track: <V>(signal: Accessor<V>) => V,
+    ) => T,
 ): Accessor<T>
 
 /**
  * Create an `Accessor` which is computed from a list of given `Accessor`s.
  *
- * ```ts Example
- * let a: Accessor<number>
- * let b: Accessor<string>
- * const c: Accessor<[number, string]> = createComputed([a, b])
- * const d: Accessor<string> = createComputed([a, b], (a: number, b: string) => `${a} ${b}`)
+ * @deprecated Use the producer version
+ *
+ * ```ts
+ * createComputed([dep1, dep2], (v1, v2) => v1 + v2) // ❌
+ * createComputed(() => dep1() + dep2()) // ✅
  * ```
  *
  * @param deps List of `Accessors`.
@@ -316,8 +348,56 @@ export function createComputed(
     if (typeof depsOrProducer === "function") {
         return createComputedProducer(depsOrProducer)
     } else {
-        return createComputedArgs(depsOrProducer, transform)
+        return DEPRECATED_createComputedArgs(depsOrProducer, transform)
     }
+}
+
+/**
+ * Runs a function tracking the dependencies and reruns whenever they change.
+ * @param fn The effect logic
+ * @returns Dispose function
+ */
+export function createEffect(fn: Callback): DisposeFn {
+    let currentDeps = new Map<Accessor, DisposeFn>()
+
+    function effect() {
+        effectScope = true
+        const [, deps] = push(fn)
+        const newDeps = new Map<Accessor, DisposeFn>()
+
+        for (const [dep, dispose] of currentDeps) {
+            if (!deps.has(dep)) {
+                dispose()
+            } else {
+                newDeps.set(dep, dispose)
+            }
+        }
+
+        for (const dep of deps) {
+            if (!newDeps.has(dep)) {
+                newDeps.set(dep, dep.subscribe(effect))
+            }
+        }
+
+        currentDeps = newDeps
+        effectScope = false
+    }
+
+    function dispose() {
+        currentDeps.forEach((cb) => cb())
+        currentDeps.clear()
+    }
+
+    const scope = Scope.current
+    if (!scope) {
+        console.warn(Error("effects created outside a `createRoot` will never be disposed"))
+        effect()
+        return dispose
+    }
+
+    scope.onMount(effect)
+    scope.onCleanup(dispose)
+    return dispose
 }
 
 /**
@@ -330,17 +410,6 @@ export function createBinding<T extends GObject.Object, P extends keyof T>(
     object: T,
     property: Extract<P, string>,
 ): Accessor<T[P]>
-
-// TODO: support nested bindings
-// export function createBinding<
-//     T extends GObject.Object,
-//     P1 extends keyof T,
-//     P2 extends keyof NonNullable<T[P1]>,
-// >(
-//     object: T,
-//     property1: Extract<P1, string>,
-//     property2: Extract<P2, string>,
-// ): Accessor<NonNullable<T[P1]>[P2]>
 
 /**
  * Create an `Accessor` on a `Gio.Settings`'s `key`.
@@ -355,13 +424,13 @@ export function createBinding<T>(settings: Gio.Settings, key: string): Accessor<
 export function createBinding<T>(object: GObject.Object | Gio.Settings, key: string): Accessor<T> {
     const prop = kebabify(key) as keyof typeof object
 
-    const subscribe: SubscribeFunction = (callback) => {
+    function subscribe(callback: Callback): DisposeFn {
         const sig = object instanceof Gio.Settings ? "changed" : "notify"
         const id = connect.call(object, `${sig}::${prop}`, () => callback())
         return () => disconnect.call(object, id)
     }
 
-    const get = (): T => {
+    function get(): T {
         if (object instanceof Gio.Settings) {
             return object.get_value(key).recursiveUnpack() as T
         }
@@ -400,13 +469,18 @@ type ConnectionHandler<
  * const value: Accessor<string> = createConnection(
  *   "initial value",
  *   [obj1, "sig-name", (...args) => "str"],
- *   [obj2, "sig-name", (...args) => "str"]
+ *   [obj2, "sig-name", (...args) => "str"],
  * )
  * ```
  *
  * @param init The initial value
- * @param signals A list of `GObject.Object`, signal name and callback pairs to connect.
+ * @param handler A `GObject.Object`, signal name and callback pairs to connect.
  */
+export function createConnection<T, O1 extends GObject.Object, S1 extends keyof O1["$signals"]>(
+    init: T,
+    handler: [O1, S1, ConnectionHandler<O1, S1, T>],
+): Accessor<T>
+
 export function createConnection<
     T,
     O1 extends GObject.Object,
@@ -439,18 +513,19 @@ export function createConnection<
     h8?: [O8, S8, ConnectionHandler<O8, S8, T>],
     h9?: [O9, S9, ConnectionHandler<O9, S9, T>],
 ) {
-    let value = init
-    let dispose: Array<DisposeFunction>
-    const subscribers = new Set<SubscribeCallback>()
+    let currentValue = init
+    let dispose: Array<DisposeFn>
+
+    const subscribers = new Set<Callback>()
     const signals = [h1, h2, h3, h4, h5, h6, h7, h8, h9].filter((h) => h !== undefined)
 
-    const subscribe: SubscribeFunction = (callback) => {
+    function subscribe(callback: Callback): DisposeFn {
         if (subscribers.size === 0) {
             dispose = signals.map(([object, signal, callback]) => {
                 const id = connect.call(object, signal as string, (_, ...args) => {
-                    const newValue = callback(...args, value)
-                    if (value !== newValue) {
-                        value = newValue
+                    const newValue = callback(...args, currentValue)
+                    if (currentValue !== newValue) {
+                        currentValue = newValue
                         Array.from(subscribers).forEach((cb) => cb())
                     }
                 })
@@ -470,7 +545,11 @@ export function createConnection<
         }
     }
 
-    return new Accessor(() => value, subscribe)
+    function get(): T {
+        return currentValue
+    }
+
+    return new Accessor(get, subscribe)
 }
 
 /**
@@ -490,15 +569,12 @@ export function createConnection<
  * @param init The initial value
  * @param producer The producer function which should return a cleanup function
  */
-export function createExternal<T>(
-    init: T,
-    producer: (set: Setter<T>) => DisposeFunction,
-): Accessor<T> {
+export function createExternal<T>(init: T, producer: (set: Setter<T>) => DisposeFn): Accessor<T> {
     let currentValue = init
-    let dispose: DisposeFunction
-    const subscribers = new Set<SubscribeCallback>()
+    let dispose: DisposeFn
+    const subscribers = new Set<Callback>()
 
-    const subscribe: SubscribeFunction = (callback) => {
+    function subscribe(callback: Callback): DisposeFn {
         if (subscribers.size === 0) {
             dispose = producer((v: unknown) => {
                 const newValue: T = typeof v === "function" ? v(currentValue) : v
@@ -557,7 +633,7 @@ export function createSettings<const T extends Record<string, string>>(
     keys: T,
 ): Settings<T> {
     return Object.fromEntries(
-        Object.entries(keys).flatMap(([key, type]) => [
+        Object.entries(keys).flatMap<[any, any]>(([key, type]) => [
             [
                 camelify(key),
                 new Accessor(

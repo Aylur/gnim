@@ -26,6 +26,7 @@ export {
     type Setter,
     Accessor,
     createState,
+    createEffect,
     createComputed,
     createBinding,
     createConnection,
