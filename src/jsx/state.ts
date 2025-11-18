@@ -138,7 +138,7 @@ export function createState<T>(init: T): State<T> {
 }
 
 /** marks wether we are in an {@link effect} scope */
-let effectScope = false
+let effectScope = 0
 
 function push<T>(fn: () => T) {
     const deps = new Set<Accessor>()
@@ -355,14 +355,19 @@ export function createComputed(
 /**
  * Runs a function tracking the dependencies and reruns whenever they change.
  * @param fn The effect logic
- * @returns Dispose function
  */
-export function createEffect(fn: Callback): DisposeFn {
+export function createEffect(fn: Callback) {
+    const parent = Scope.current
+
     let currentDeps = new Map<Accessor, DisposeFn>()
+    let currentScope = new Scope(parent)
 
     function effect() {
-        effectScope = true
-        const [, deps] = push(fn)
+        effectScope += 1
+        currentScope.dispose()
+        currentScope = new Scope(parent)
+
+        const [, deps] = currentScope.run(() => push(fn))
         const newDeps = new Map<Accessor, DisposeFn>()
 
         for (const [dep, dispose] of currentDeps) {
@@ -380,24 +385,22 @@ export function createEffect(fn: Callback): DisposeFn {
         }
 
         currentDeps = newDeps
-        effectScope = false
+        effectScope -= 1
     }
 
     function dispose() {
         currentDeps.forEach((cb) => cb())
         currentDeps.clear()
+        currentScope.dispose()
     }
 
-    const scope = Scope.current
-    if (!scope) {
+    if (!parent) {
         console.warn(Error("effects created outside a `createRoot` will never be disposed"))
-        effect()
-        return dispose
+        return effect()
     }
 
-    scope.onMount(effect)
-    scope.onCleanup(dispose)
-    return dispose
+    parent.onCleanup(dispose)
+    effect()
 }
 
 /**
