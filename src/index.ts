@@ -28,6 +28,7 @@ export {
     createState,
     createEffect,
     createComputed,
+    createMemo,
     createBinding,
     createConnection,
     createExternal,
