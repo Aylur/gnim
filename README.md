@@ -18,15 +18,19 @@ This library provides:
 
 ```tsx
 function Counter() {
-  const [counter, setCounter] = createState(0)
+  const [count, setCount] = createState(0)
 
   function increment() {
-    setCounter((v) => v + 1)
+    setCount((v) => v + 1)
   }
+
+  createEffect(() => {
+    console.log("count is", count())
+  })
 
   return (
     <Gtk.Box spacing={8}>
-      <Gtk.Label label={counter((c) => c.toString())} />
+      <Gtk.Label label={count((c) => c.toString())} />
       <Gtk.Button onClicked={increment}>Increment</Gtk.Button>
     </Gtk.Box>
   )
