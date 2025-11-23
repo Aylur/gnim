@@ -63,9 +63,9 @@ export class Accessor<T = unknown> extends Function {
     #get: () => T
     #subscribe: (callback: Callback) => DisposeFn
 
-    constructor(get: () => T, subscribe: (callback: Callback) => DisposeFn) {
+    constructor(get: () => T, subscribe?: (callback: Callback) => DisposeFn) {
         super("return arguments.callee._call.apply(arguments.callee, arguments)")
-        this.#subscribe = subscribe
+        this.#subscribe = subscribe ?? (() => () => {})
         this.#get = get
     }
 
@@ -323,9 +323,8 @@ function DEPRECATED_createComputedArgs<
 }
 
 /**
- * Create a computed value from a producer function which tracks
- * dependencies and invalidates the value whenever they change.
- * The result is cached and is only computed on access.
+ * Create a computed value which tracks dependencies and invalidates the value
+ * whenever they change. The result is cached and is only computed on access.
  *
  * ```ts Example
  * let a: Accessor<number>
@@ -375,7 +374,7 @@ export function createComputed(
 
 /**
  * Schedule a function to run after the current {@link Scope} returns
- * tracking dependencies and reruns the functions whenever they change.
+ * tracking dependencies and re-running the function whenever they change.
  * @param fn The effect logic
  */
 export function createEffect(fn: Callback) {
@@ -584,7 +583,7 @@ export function createBinding<T>(
         return new Accessor(get, subscribe)
     }
 
-    return createMemo(() => {
+    return createComputed(() => {
         let v = createBinding(object as any, key)()
         for (const prop of props) {
             if (prop) v = v !== null ? createBinding(v, prop)() : null

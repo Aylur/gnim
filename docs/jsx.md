@@ -41,7 +41,7 @@ Can be written as
 ```tsx
 function Box() {
   const [counter, setCounter] = createState(0)
-  const label = createComputed((get) => `clicked ${get(counter)} times`)
+  const label = createComputed(() => `clicked ${counter()} times`)
 
   function onClicked() {
     setCounter((c) => c + 1)
@@ -200,8 +200,8 @@ function MyWidget() {
 ### Bindings
 
 Properties can be set as a static value. Alternatively, they can be passed an
-[Accessor](./jsx#accessor), in which case whenever its value changes, it will be
-reflected on the widget.
+[Accessor](#state-management), in which case whenever its value changes, it will
+be reflected on the widget.
 
 ```tsx
 const [revealed, setRevealed] = createState(false)
@@ -366,6 +366,31 @@ function MyWidget({ label, onClicked }: MyWidgetProps) {
 }
 ```
 
+> [!TIP]
+>
+> To make reusable function components more convenient to use, you should
+> annotate props as either static or dynamic and handle both cases as if it was
+> dynamic.
+>
+> ```ts
+> type $<T> = T | Accessor<T>
+> const $ = <T>(value: $<T>): Accessor<T> =>
+>   value instanceof Accessor ? value : new Accessor(() => value)
+> ```
+
+```tsx
+function Counter(props: {
+  count?: $<number>
+  label?: $<string>
+  onClicked?: () => void
+}) {
+  const count = $(props.count)((v) => v ?? 0)
+  const label = $(props.label)((v) => v ?? `Fallback label ${count()}`)
+
+  return <Gtk.Button label={label} onClicked={props.onClicked} />
+}
+```
+
 ## Control flow
 
 ### Dynamic rendering
@@ -385,8 +410,7 @@ return (
 > [!TIP]
 >
 > In a lot of cases, it is better to always render the component and set its
-> `visible` property instead. This is because `<With>` will destroy/recreate the
-> widget each time the passed `value` changes.
+> `visible` property instead.
 
 > [!WARNING]
 >
@@ -434,16 +458,30 @@ removing.
 
 ## State management
 
-There is a single primitive called `Accessor`, which is a read-only signal.
+There is a single primitive called `Accessor`, which is a read-only reactive
+value. It is the base of Gnim's reactive system. They are essentially functions
+that let you read a value and track it in reactive scopes so that when they
+change the reader is notified.
 
 ```ts
-export interface Accessor<T> {
-  get(): T
-  subscribe(callback: () => void): () => void
-  <R = T>(transform: (value: T) => R): Accessor<R>
+interface Accessor<T> {
+  (): T
+  peek(): T
+  subscribe(callback: Callback): DisposeFn
 }
+```
 
-let accessor: Accessor<any>
+There are two ways to read the current value:
+
+- `(): T`: which returns the current value and tracks it as a dependency in
+  reactive scopes
+- `peek(): T` which returns the current value **without** tracking it as a
+  dependency
+
+To subscribe for value changes you can use the `subscribe` method.
+
+```ts
+const accessor: Accessor<any>
 
 const unsubscribe = accessor.subscribe(() => {
   console.log("value of accessor changed to", accessor.get())
@@ -452,9 +490,14 @@ const unsubscribe = accessor.subscribe(() => {
 unsubscribe()
 ```
 
+> [!WARNING]
+>
+> The subscribe method is not scope aware. Do not forget to clean them up when
+> no longer needed. Alternatively, use an [`effect`](#createeffect) instead.
+
 ### `createState`
 
-Creates a writable signal.
+Creates a writable reactive value.
 
 ```ts
 function createState<T>(init: T): [Accessor<T>, Setter<T>]
@@ -470,14 +513,41 @@ setValue(2)
 setValue((prev) => prev + 1)
 ```
 
-### `createComputed`
+> [!IMPORTANT]
+>
+> Effects and computations are only triggered when the value changes.
 
-Creates a computed signal from a producer function that tracks its dependencies.
+By default, equality between the previous and new value is checked with
+[Object.is](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is)
+and so this would not trigger an update:
 
 ```ts
-export function createComputed<T>(
-  producer: (track: <V>(signal: Accessor<V>) => V) => T,
-): Accessor<T>
+const [object, setObject] = createState({})
+
+// this does NOT trigger an update by default
+setObject((obj) => {
+  obj.field = "mutated"
+  return obj
+})
+```
+
+You can pass in a custom `equals` function to customize this behavior:
+
+```ts
+const [value, setValue] = createState("initial value", {
+  equals: (prev, next): boolean => {
+    return prev != next
+  },
+})
+```
+
+### `createComputed`
+
+Create a computed value which tracks dependencies and invalidates the value
+whenever they change. The result is cached and is only computed on access.
+
+```ts
+function createComputed<T>(compute: () => T): Accessor<T>
 ```
 
 Example:
@@ -486,35 +556,17 @@ Example:
 let a: Accessor<number>
 let b: Accessor<number>
 
-const c = createComputed((get) => get(a) + get(b))
-```
-
-Alternatively, you can specify a list of dependencies, in which case values are
-passed to an optional transform function.
-
-```ts
-function createComputed<
-  Deps extends Array<Accessor<any>>,
-  Values extends { [K in keyof Deps]: Accessed<Deps[K]> },
->(deps: Deps, transform: (...values: Values) => V): Accessor<V>
-```
-
-Example:
-
-```ts
-let a: Accessor<string>
-let b: Accessor<string>
-
-const c = createComputed([a, b], (a, b) => `${a}+${b}`)
+const c: Accessor<number> = createComputed(() => a() + b())
 ```
 
 > [!TIP]
 >
-> There is a shorthand for single dependency computed signals.
+> There is a shorthand for computed values.
 >
 > ```ts
 > let a: Accessor<string>
-> const b: Accessor<string> = a((v) => `transformed ${v}`)
+> const b = createComputed(() => `transformed ${a()}`)
+> const b = a((v) => `transformed ${v}`) // alias for the above line
 > ```
 
 ### `createBinding`
@@ -535,13 +587,57 @@ const styleManager = Adw.StyleManager.get_default()
 const style = createBinding(styleManager, "colorScheme")
 ```
 
+It also supports nested bindings.
+
+```ts
+interface Outer extends GObject.Object {
+  nested: Inner | null
+}
+
+interface Inner extends GObject.Object {
+  field: string
+}
+
+const value: Accessor<string | null> = createBinding(outer, "nested", "field")
+```
+
+### `createEffect`
+
+Schedule a function to run after the current Scope created with
+[`createRoot`](#createroot) returns, tracking dependencies and re-running the
+function whenever they change.
+
+```ts
+function createEffect(fn: () => void): void
+```
+
+Example:
+
+```ts
+const count: Accessor<number>
+
+createEffect(() => {
+  console.log(count()) // reruns whenever count changes
+})
+
+createEffect(() => {
+  console.log(count.peek()) // only runs once
+})
+```
+
+> [!CAUTION]
+>
+> Effects are a common pitfall for beginners to understand when to use and when
+> not to use them. You can read about
+> [when it is discouraged and their alternatives](./tutorial/gnim.md#when-not-to-use-an-effect).
+
 ### `createConnection`
 
 ```ts
 function createConnection<
   T,
   O extends GObject.Object,
-  S extends keyof O1["$signals"],
+  S extends keyof O["$signals"],
 >(
   init: T,
   handler: [
@@ -562,7 +658,7 @@ arguments passed by the signal and the current value as the last parameter.
 Example:
 
 ```ts
-const value = createConnection(
+const value: Accessor<string> = createConnection(
   "initial value",
   [obj1, "notify", (pspec, currentValue) => currentValue + pspec.name],
   [obj2, "sig-name", (sigArg1, sigArg2, currentValue) => "str"],
@@ -573,6 +669,36 @@ const value = createConnection(
 >
 > The connection will only get attached when the first subscriber appears, and
 > is dropped when the last one disappears.
+
+### `createMemo`
+
+Create a derived reactive value which tracks its dependencies and re-runs the
+computation whenever a dependency changes. The resulting `Accessor` will only
+notify subscribers when the computed value has changed.
+
+```ts
+function createMemo<T>(compute: () => T): Accessor<T>
+```
+
+It is useful to memoize values that are dependencies of expensive computations.
+
+Example:
+
+```ts
+const value = createBinding(gobject, "field")
+
+createEffect(() => {
+  console.log("effect1", value())
+})
+
+const memoValue = createMemo(() => value())
+
+createEffect(() => {
+  console.log("effect2", memoValue())
+})
+
+value.notify("field") // triggers effect1 but not effect2
+```
 
 ### `createSettings`
 
@@ -627,15 +753,15 @@ const counter = createExternal(0, (set) => {
 
 ## Scopes and Life cycle
 
-A scope is essentially a global object which holds cleanup functions and context
-values.
+A [scope](./tutorial/gnim.md#scopes) is essentially a global object which holds
+cleanup functions and context values.
 
 ```js
 let scope = new Scope()
 
 // Inside this function, synchronously executed code will have access
-// to `scope` and will attach any allocated resource, such as signal
-// subscriptions, to the `scope`.
+// to `scope` and will attach any allocated resources, such as signal
+// subscriptions.
 scopedFuntion()
 
 // At a later point it can be disposed.

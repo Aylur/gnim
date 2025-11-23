@@ -32,7 +32,7 @@ const labelWidget = Gtk.Label.new("Text")
 
 GObjects support a signaling system, similar to events and EventListeners in the
 JavaScript Web API. Here we will cover the basics of connecting and
-disconnection signals, as well as using callbacks.
+disconnecting signals, as well as using callbacks.
 
 ### Connecting Signals
 
@@ -41,15 +41,15 @@ returns a handler ID. Signals are disconnected by passing that ID to
 `GObject.Object.prototype.disconnect()`:
 
 ```ts
-const label = Gtk.Label.new("Lorem Ipsum")
+const button = new Gtk.Button({ label: "Lorem Ipsum" })
 
 // Connecting a signal
-const handlerId = label.connect("copy-clipboard", () => {
-  console.log(`Copied "${label.label}" to clipboard!`)
+const handlerId = button.connect("clicked", () => {
+  console.log("Button clicked!")
 })
 
 // Disconnecting a signal
-label.disconnect(handlerId)
+button.disconnect(handlerId)
 ```
 
 ### Callback Arguments
