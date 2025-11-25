@@ -277,7 +277,7 @@ export function jsx<T extends GObject.Object>(
         }
         if (value instanceof Accessor) {
             bindings.push([key, value])
-            props[key] = value.get()
+            props[key] = value.peek()
         }
     }
 
@@ -326,9 +326,9 @@ export function jsx<T extends GObject.Object>(
     // handle bindings
     const disposeBindings = bindings.map(([prop, binding]) => {
         const dispose = binding.subscribe(() => {
-            set(object, prop, binding.get())
+            set(object, prop, binding.peek())
         })
-        set(object, prop, binding.get())
+        set(object, prop, binding.peek())
         return dispose
     })
 

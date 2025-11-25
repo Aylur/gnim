@@ -372,12 +372,21 @@ export function createComputed(
     }
 }
 
+type EffectOptions = {
+    /**
+     * Run the effect immediately instead of after the {@link Scope} returns
+     */
+    immediate?: boolean
+    // will be used in the future when devtools are implemented
+    // name?: string
+    // internal?: boolean
+}
+
 /**
- * Schedule a function to run after the current {@link Scope} returns
- * tracking dependencies and re-running the function whenever they change.
- * @param fn The effect logic
+ * Schedule a function which tracks reactive values accessed within
+ * and re-runs whenever they change.
  */
-export function createEffect(fn: Callback) {
+export function createEffect(fn: Callback, options?: EffectOptions) {
     const parent = Scope.current
 
     let currentDeps = new Map<Accessor, DisposeFn>()
@@ -421,7 +430,11 @@ export function createEffect(fn: Callback) {
     }
 
     parent.onCleanup(dispose)
-    parent.onMount(effect)
+    if (options?.immediate) {
+        effect()
+    } else {
+        parent.onMount(effect)
+    }
 }
 
 /**
