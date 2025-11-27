@@ -1,5 +1,5 @@
 import { Fragment } from "./Fragment.js"
-import { Accessor } from "./state.js"
+import { Accessor, createEffect, createMemo } from "./state.js"
 import { env } from "./env.js"
 import { getScope, onCleanup, Scope } from "./scope.js"
 
@@ -26,7 +26,6 @@ export function With<T, E extends JSX.Element>({
     const currentScope = getScope()
     const fragment = new Fragment<E>()
 
-    let currentValue: T
     let scope: Scope
 
     function remove(child: E) {
@@ -52,18 +51,10 @@ export function With<T, E extends JSX.Element>({
         }
     }
 
-    const dispose = value.subscribe(() => {
-        const newValue = value.get()
-        if (currentValue !== newValue) {
-            callback((currentValue = newValue))
-        }
-    })
-
-    currentValue = value.get()
-    callback(currentValue)
+    const v = createMemo(value)
+    createEffect(() => callback(v()), { immediate: true })
 
     onCleanup(() => {
-        dispose()
         for (const child of fragment) {
             remove(child)
         }

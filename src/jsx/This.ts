@@ -1,6 +1,6 @@
 import GObject from "gi://GObject"
 import { env } from "./env.js"
-import { Accessor } from "./state.js"
+import { Accessor, createEffect } from "./state.js"
 import { set } from "../util.js"
 import { onCleanup } from "./scope.js"
 import { append, setType, signalName, type CCProps } from "./jsx.js"
@@ -25,15 +25,13 @@ export function This<T extends GObject.Object>({
     for (const [key, value] of Object.entries(props)) {
         if (key === "css") {
             if (value instanceof Accessor) {
-                env.setCss(self, value.get())
-                cleanup.push(value.subscribe(() => env.setCss(self, value.get())))
+                createEffect(() => env.setCss(self, value()), { immediate: true })
             } else if (typeof value === "string") {
                 env.setCss(self, value)
             }
         } else if (key === "class") {
             if (value instanceof Accessor) {
-                env.setClass(self, value.get())
-                cleanup.push(value.subscribe(() => env.setClass(self, value.get())))
+                createEffect(() => env.setClass(self, value()), { immediate: true })
             } else if (typeof value === "string") {
                 env.setClass(self, value)
             }
@@ -41,9 +39,7 @@ export function This<T extends GObject.Object>({
             const id = self.connect(signalName(key), value)
             cleanup.push(() => self.disconnect(id))
         } else if (value instanceof Accessor) {
-            const dispose = value.subscribe(() => set(self, key, value.get()))
-            set(self, key, value.get())
-            cleanup.push(dispose)
+            createEffect(() => set(self, key, value()), { immediate: true })
         } else {
             set(self, key, value)
         }

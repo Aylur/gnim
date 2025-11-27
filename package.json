@@ -1,6 +1,6 @@
 {
     "name": "gnim",
-    "version": "1.8.2",
+    "version": "1.9.0",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
@@ -41,7 +41,6 @@
         "./dbus": "./dist/dbus.ts",
         "./fetch": "./dist/fetch.ts",
         "./gobject": "./dist/gobject.ts",
-        "./resource": "./dist/resource/resource.ts",
         "./gnome/jsx-runtime": "./dist/gnome/jsx-runtime.ts",
         "./gtk3/jsx-runtime": "./dist/gtk3/jsx-runtime.ts",
         "./gtk4/jsx-runtime": "./dist/gtk4/jsx-runtime.ts"

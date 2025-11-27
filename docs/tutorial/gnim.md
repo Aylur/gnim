@@ -67,7 +67,9 @@ were to be cleaned up the nested scope would also be cleaned up as a result.
 Gnim manages scopes for you, the only scope you need to take care of is the
 root, which is usually tied to a window or the application.
 
-```ts
+:::code-group
+
+```ts [Root tied to a window Window]
 import { createRoot } from "gnim"
 
 const win = createRoot((dispose) => {
@@ -76,6 +78,21 @@ const win = createRoot((dispose) => {
   return win
 })
 ```
+
+```ts [Root tied to the Application]
+import { createRoot } from "gnim"
+
+class App extends Gtk.Application {
+  vfunc_activate() {
+    createRoot((dispose) => {
+      this.connect("shutdown", dispose)
+      new Gtk.Window()
+    })
+  }
+}
+```
+
+:::
 
 To attach a cleanup function to the current scope, simply use `onCleanup`.
 
@@ -189,7 +206,7 @@ function MyWidget() {
 > [!TIP]
 >
 > [falsy](https://developer.mozilla.org/en-US/docs/Glossary/Falsy) values are
-> not rendered.
+> not rendered and are simply ignored.
 
 ### Rendering lists
 
@@ -270,12 +287,14 @@ return (
 
 ## State management
 
-State is managed using signals which are called `Accessor` in Gnim. The most
-common signal you will use is [`createState`](../jsx#createstate),
+State is managed using reactive values <span style="opacity: 0.6">(also known as
+signals or observables in some other libraries)</span> through the
+[`Accessor`](../jsx#state-management) class. The most common primitives you will
+use is [`createState`](../jsx#createstate),
 [`createBinding`](../jsx#createbinding) and
-[`createComputed`](../jsx#createcomputed). `createState` is a writable signal,
-`createBinding` is used to hook into GObject properties and `createComputed` is
-used to derive signals.
+[`createComputed`](../jsx#createcomputed). `createState` is a writable reactive
+value, `createBinding` is used to hook into GObject properties and
+`createComputed` is used to derive values.
 
 :::code-group
 
@@ -396,99 +415,143 @@ return (
 
 ## Effects
 
-> [!NOTE]
->
-> When we talk about effects, we mean subscribing to signals or gobjects and
-> having a **sideeffect** in the handler.
+Effects are functions that run when state changes. It can be used to react to
+value changes and run _side-effects_ such as async tasks, logging or writing Gtk
+widget properties directly. In general, an effect is considered something of an
+escape hatch rather than a tool you should use frequently. In particular, avoid
+using it to synchronise state. See
+[when not to use an effect](#when-not-to-use-an-effect) for alternatives.
 
-When we think of state, we usually think in effects. For example, when we have a
-signal `a` and we want to compute `b` from it, our initial though might be to
-create a _writable_ signal and listen for changes. When `a` changes we simply
-set `b`.
+The `createEffect` primitive runs the given function tracking reactive values
+accessed within and re-runs it whenever any of its dependencies change.
 
 ```ts
-const a: Accessor<number>
-const [b, setB] = createState(a.get() * 2)
+const [count, setCount] = createState(0)
+const [message, setMessage] = createState("Hello")
 
-// 🔴 Avoid: redundant state and unnecessary effect
-// and error prone to memory leaks
-a.subscribe(() => {
-  setB(a.get() * 2)
+createEffect(() => {
+  console.log(count(), message())
+})
+
+setCount(1) // Output: 1, "Hello"
+setMessage("World") // Output: 1, "World"
+```
+
+If you wish to read a value without tracking it as a dependency you can use the
+`.peek()` method.
+
+```ts
+createEffect(() => {
+  console.log(count(), message.peek())
+})
+
+setCount(1) // Output: 1, "Hello"
+setMessage("World") // nothing happens
+```
+
+### Nested effects
+
+When working with effects, it is possible to nest them within each other. This
+allows each effect to independently track its own dependencies, without
+affecting the effect that it is nested within.
+
+```ts
+createEffect(() => {
+  console.log("Outer effect")
+  createEffect(() => console.log("Inner effect"))
 })
 ```
 
-You might forget to cleanup the subscription and leak memory, your
-initialization logic might differ from the body of the handler which might lead
-to bugs and with increasing number of dependencies it grows in complexity.
+The order of execution is important to note. An inner effect will not affect the
+outer effect. Signals that are accessed within an inner effect, will not be
+registered as dependencies for the outer effect. When the signal located within
+the inner effect changes, it will trigger only the inner effect to re-run, not
+the outer one.
 
 ```ts
-const a: Accessor<number>
-
-// ✅ Good: computed signal from dependencies
-const b = createComputed((get) => get(a) * 2)
+createEffect(() => {
+  console.log("Outer effect")
+  createEffect(() => {
+    // when count changes, only this effect will re-run
+    console.log(count())
+  })
+})
 ```
 
-> [!TIP]
->
-> Using the `.get()` method of accessors outside of event handlers should be
-> your clue to rethink your logic in a series of computations rather than a
-> chain of effects.
+### Root effects
 
-### Effect hook
-
-Gnim deliberately does not provide a `useEffect` hook like React. You are
-supposed to setup the effect and use `onCleanup` manually.
-
-### Accessor subscription
+If you wish to create an effect in the global scope you have to manage its
+life-cycle with `createRoot`.
 
 ```ts
-function MyWidget() {
-  const unsub = accessor.subscribe(() => {
-    // side-effect
+const globalObject: GObject.Object
+
+const field = createBinding(globalObject, "field")
+
+createRoot((dispose) => {
+  createEffect(() => {
+    console.log("field is", field())
   })
-  onCleanup(unsub)
+
+  dispose() // effect should be cleaned up when no longer needed
+})
+```
+
+### When not to use an effect
+
+Do not use an effect to synchronise state.
+
+```ts
+const [count, setCount] = createState(1)
+// [!code --:5]
+const [double, setDouble] = createState(count() * 2)
+createEffect(() => {
+  setDouble(count() * 2)
+})
+// [!code ++]
+const double = createComputed(() => count() * 2)
+```
+
+Same logic applies when an Accessor is passed as a prop.
+
+```ts
+function Counter(props: { count: Accessor<number> }) {
+  // [!code --:5]
+  const [double, setDouble] = createState(props.count() * 2)
+  createEffect(() => {
+    setDouble(props.count() * 2)
+  })
+  // [!code ++]
+  const double = createComputed(() => props.count() * 2)
 }
 ```
 
-> [!TIP]
->
-> You can use [`createComputed`](../jsx#createcomputed) to subscribe to multiple
-> accessors at once.
->
-> ```ts
-> const unsub = createComputed([a, b, c]).subscribe(() => {
->   // side-effect
-> })
-> ```
-
-### GObject signal subscription
+Do not use an effect to track values from `GObject` signals.
 
 ```ts
-function MyWidget() {
-  const id = gobject.connect("signal", () => {
-    // side-effect
-  })
-  onCleanup(() => gobject.disconnect(id))
-}
+// [!code --:5]
+const [count, setCount] = createState(1)
+const id = gobject.connect("signal", () => {
+  setCount(gobject.prop)
+})
+onCleanup(() => gobject.disconnect(id))
+// [!code ++:1]
+const count = createConnection(0, [gobject, "signal", () => gobject.prop])
 ```
 
-> [!TIP]
->
-> If the purpose of a signal is not to run a side-effect, but to track values
-> you can use [`createConnection`](../jsx#createconnection).
-
-### Timers
+Avoid using an effect for event specific logic.
 
 ```ts
-function MyWidget() {
-  const interval = setInterval(() => {
-    // side-effect
+function TextEntry() {
+  const [url, setUrl] = createState("")
+  // [!code --:3]
+  createEffect(() => {
+    fetch(url())
   })
-  onCleanup(() => clearInterval(interval))
+
+  function onTextEntered(entry: Gtk.Entry) {
+    setUrl(entry.text)
+    fetch(url.peek()) // [!code ++]
+  }
 }
 ```
-
-> [!TIP]
->
-> If the purpose of the interval is to track a value you can use
-> [`createExternal`](../jsx#createexternal).

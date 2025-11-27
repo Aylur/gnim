@@ -1,5 +1,5 @@
 import { Fragment } from "./Fragment.js"
-import { Accessor, type State, createState } from "./state.js"
+import { Accessor, type State, createEffect, createState } from "./state.js"
 import { env } from "./env.js"
 import { getScope, onCleanup, Scope } from "./scope.js"
 
@@ -44,7 +44,7 @@ export function For<Item, El extends JSX.Element, Key>({
     function remove({ item, child, index: [index], scope }: MapItem) {
         scope.dispose()
         if (typeof cleanup === "function") {
-            cleanup(child, item, index.get())
+            cleanup(child, item, index.peek())
         } else if (cleanup !== null) {
             env.defaultCleanup(child)
         }
@@ -91,14 +91,9 @@ export function For<Item, El extends JSX.Element, Key>({
         })
     }
 
-    const dispose = each.subscribe(() => {
-        callback(each.get())
-    })
-    callback(each.get())
+    createEffect(() => callback(each()), { immediate: true })
 
     onCleanup(() => {
-        dispose()
-
         for (const value of map.values()) {
             remove(value)
         }
