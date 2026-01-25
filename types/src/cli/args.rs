@@ -1,0 +1,57 @@
+use clap::Parser;
+use colored::Colorize;
+use std::{env, path};
+
+fn default_dirs() -> Vec<String> {
+    let data_dirs = match env::var("XDG_DATA_DIRS") {
+        Ok(dirs) => dirs,
+        Err(err) => {
+            if matches!(err, env::VarError::NotPresent) {
+                eprintln!("{}: {}", "error".red(), "XDG_DATA_DIRS is not set");
+            }
+            return Vec::new();
+        }
+    };
+
+    data_dirs
+        .split(":")
+        .filter_map(|path| {
+            // ignore nix path as this is a side effect
+            if path == "/run/current-system/sw/share" {
+                return None;
+            }
+            let name = format!("{}/gir-1.0", &path);
+            let gir_path = path::Path::new(&name);
+            match gir_path.exists() && gir_path.is_dir() {
+                true => Some(path.to_string()),
+                false => None,
+            }
+        })
+        .collect::<Vec<_>>()
+}
+
+#[derive(Parser)]
+#[command(version, about)]
+pub struct Cli {
+    /// Log debugging statements
+    #[arg(short, long, default_value_t = false)]
+    pub verbose: bool,
+
+    /// Target directory to generate to
+    #[arg(short, long, value_name = "PATH", default_value = "./.gi")]
+    pub outdir: String,
+
+    /// Lookup these directories for .gir files
+    #[arg(short, long, value_name = "PATHS", default_value_t = default_dirs().join(":"))]
+    pub dirs: String,
+
+    /// Skip rendering by name and version, e.g "Gtk-4.0"
+    #[arg(short, long, value_name = "GIRS")]
+    pub ignore: Vec<String>,
+}
+
+pub fn cli_args() -> Cli {
+    let cli = Cli::parse();
+    crate::VERBOSE.set(cli.verbose).unwrap();
+    cli
+}

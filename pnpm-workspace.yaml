@@ -1,0 +1,4 @@
+packages:
+    - "types"
+    - "docs"
+    - "gnim"

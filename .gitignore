@@ -1,6 +1,7 @@
 node_modules/
 build/
 dist/
+target/
 docs/.vitepress/dist
 docs/.vitepress/cache
-demo.tsx
+.gi/

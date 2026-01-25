@@ -1,0 +1,47 @@
+{
+    "name": "gnim",
+    "version": "1.9.0",
+    "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Aylur/gnim.git"
+    },
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "scripts": {
+        "lint": "eslint . --fix"
+    },
+    "devDependencies": {
+        "@eslint/js": "latest",
+        "esbuild": "latest",
+        "eslint": "latest",
+        "typescript": "latest",
+        "typescript-eslint": "latest",
+        "vitepress": "latest"
+    },
+    "exports": {
+        ".": "./dist/index.ts",
+        "./dbus": "./dist/dbus.ts",
+        "./fetch": "./dist/fetch.ts",
+        "./gobject": "./dist/gobject.ts",
+        "./gnome/jsx-runtime": "./dist/gnome/jsx-runtime.ts",
+        "./gtk3/jsx-runtime": "./dist/gtk3/jsx-runtime.ts",
+        "./gtk4/jsx-runtime": "./dist/gtk4/jsx-runtime.ts"
+    },
+    "files": [
+        "dist"
+    ],
+    "engines": {
+        "gjs": ">=1.83.0"
+    },
+    "keywords": [
+        "GJS",
+        "Gnome",
+        "GTK",
+        "JSX"
+    ]
+}

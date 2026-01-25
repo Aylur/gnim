@@ -1,0 +1,15 @@
+[package]
+name = "gnim-types"
+version = "0.1.0"
+edition = "2024"
+about = "GObject Introspection tool to generate type annotations"
+
+[dependencies]
+quick-xml = "0.38.4"
+rayon = "1.11"
+minijinja = { version = "2.14.0", features = ["builtins"] }
+serde = { version = "1.0", features = ["derive"] }
+regex = "1"
+stringcase = "0.4.0"
+clap = { version = "4.5.54", features = ["derive"] }
+colored = "2"

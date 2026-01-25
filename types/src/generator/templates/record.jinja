@@ -1,0 +1,26 @@
+{{ jsdoc if jsdoc }}
+{%- if type_for %}
+type {{ name }} = typeof {{ type_for }}
+{%- else %}
+{% if not constructor %}abstract {% endif %}class {{ name }} {
+    static readonly $gtype: GObject.GType<{{ name }}>
+
+    {{ constructor|indent(4) if constructor }}
+    {%- for ctor in constructors %}
+    {{ ctor|indent(4) }}
+    {%- endfor %}
+
+    {%- for fn in functions %}
+    {{ fn|indent(4) }}
+    {%- endfor %}
+
+    {%- for field in fields %}
+    {{ field.jsdoc|indent(4) }}
+    {{ field.name }}: {{ field.type }}
+    {%- endfor %}
+
+    {%- for method in methods %}
+    {{ method|indent(4) }}
+    {%- endfor %}
+}
+{%- endif %}

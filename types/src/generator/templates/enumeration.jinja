@@ -1,0 +1,15 @@
+namespace {{ name }} {
+    const $gtype: GObject.GType<{{ name }}>
+}
+
+{{ jsdoc if jsdoc }}
+enum {{ name }} {
+    {%- for member in members %}
+    {{ member.jsdoc|indent(4) }}
+    "{{ member.name }}" = {{ member.value }},
+    {%- endfor %}
+}
+
+{%- for fn in functions %}
+{{ fn }}
+{%- endfor %}

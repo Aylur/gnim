@@ -1,0 +1,35 @@
+/**
+{%- for line in text_lines %}
+{%- if line != "" %}
+ * {{ line }}
+{%- else %}
+ *
+{%- endif %}
+{%- endfor %}
+{%- if throws %}
+ * @throws {GLib.Error}
+{%- endif %}
+{%- if overrides %}
+ * @override
+{%- endif %}
+{%- if since %}
+ * @since {{ since }}
+{%- endif %}
+{%- if deprecated %}
+ * @deprecated
+   {%- if deprecated_since %} since {{ deprecated_since }}{% endif %}
+   {%- if deprecated_text %} {{ deprecated_text }}{% endif %}
+{%- endif %}
+{%- if experimental %}
+ * @experimental
+{%- endif %}
+{%- if default_value %}
+ * @default {{ default_value }}
+{%- endif %}
+{%- for param in parameters %}
+ * @param {{ param.name }}{% if param.text %} {{ param.text }}{% endif %}
+{%- endfor %}
+{%- if returns %}
+ * @returns {{ returns }}
+{%- endif %}
+ */

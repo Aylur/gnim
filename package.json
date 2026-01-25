@@ -1,7 +1,5 @@
 {
     "name": "gnim",
-    "version": "1.9.0",
-    "type": "module",
     "author": "Aylur",
     "license": "MIT",
     "repository": {
@@ -19,44 +17,6 @@
         "docs:build": "vitepress build docs",
         "docs:preview": "vitepress preview docs"
     },
-    "devDependencies": {
-        "@eslint/js": "latest",
-        "@girs/adw-1": "latest",
-        "@girs/clutter-16": "latest",
-        "@girs/gtk-3.0": "latest",
-        "@girs/gtk-4.0": "latest",
-        "@girs/soup-3.0": "latest",
-        "@girs/shell-16": "latest",
-        "@girs/st-16": "latest",
-        "@girs/gnome-shell": "latest",
-        "@girs/gjs": "latest",
-        "esbuild": "latest",
-        "eslint": "latest",
-        "typescript": "latest",
-        "typescript-eslint": "latest",
-        "vitepress": "latest"
-    },
-    "exports": {
-        ".": "./dist/index.ts",
-        "./dbus": "./dist/dbus.ts",
-        "./fetch": "./dist/fetch.ts",
-        "./gobject": "./dist/gobject.ts",
-        "./gnome/jsx-runtime": "./dist/gnome/jsx-runtime.ts",
-        "./gtk3/jsx-runtime": "./dist/gtk3/jsx-runtime.ts",
-        "./gtk4/jsx-runtime": "./dist/gtk4/jsx-runtime.ts"
-    },
-    "files": [
-        "dist"
-    ],
-    "engines": {
-        "gjs": ">=1.79.0"
-    },
-    "keywords": [
-        "GJS",
-        "Gnome",
-        "GTK",
-        "JSX"
-    ],
     "prettier": {
         "semi": false,
         "tabWidth": 4,
