@@ -1,4 +1,4 @@
-use crate::grammar::{AnyType, Parameter, Parameters};
+use crate::parser::grammar::{AnyType, Parameter, Parameters};
 
 pub fn filter_parameters<'a>(params: Option<&'a Parameters>) -> Vec<&'a Parameter> {
     let params = match params {

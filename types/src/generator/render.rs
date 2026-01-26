@@ -1,10 +1,13 @@
-use crate::log;
-
-use super::grammar;
-use super::overrides::OVERRIDES;
-use colored::Colorize;
+use super::generate;
+use super::overrides;
+use crate::parser::grammar;
 use rayon::prelude::*;
 use rayon::scope;
+
+pub struct Context<'a> {
+    pub namespace: &'a grammar::Namespace,
+    pub event: fn(generate::Event),
+}
 
 #[derive(serde::Serialize)]
 pub struct RenderedElement {
@@ -16,74 +19,77 @@ pub trait Renderable {
     const KIND: &'static str;
     const TEMPLATE: &'static str;
 
-    fn ctx(&self, _namespace: &grammar::Namespace) -> Result<minijinja::Value, String> {
+    fn ctx(&self, _ctx: &Context) -> Result<minijinja::Value, String> {
         Ok(minijinja::context! {})
     }
 
-    fn introspectable(&self, _namespace: &grammar::Namespace) -> bool {
+    fn introspectable(&self, _ctx: &Context) -> bool {
         true
     }
 
-    fn env(&self) -> minijinja::Environment<'_> {
+    fn env(&self, _ctx: &Context) -> minijinja::Environment<'_> {
         minijinja::Environment::new()
     }
 
-    fn name(&self) -> &str;
+    fn name(&self, _ctx: &Context) -> &str;
 
-    fn render(&self, namespace: &grammar::Namespace) -> Result<RenderedElement, String> {
-        if !self.introspectable(namespace) {
+    fn render(&self, ctx: &Context) -> Result<RenderedElement, String> {
+        if !self.introspectable(ctx) {
             return Ok(RenderedElement {
-                name: self.name().to_string(),
+                name: self.name(ctx).to_string(),
                 content: None,
             });
         }
 
-        let ctx = match self.ctx(namespace) {
+        let jinja_ctx = match self.ctx(ctx) {
             Ok(ctx) => ctx,
             Err(err) => {
                 return Err(format!(
                     "rendering {} {}-{}.{}: {}",
                     Self::KIND,
-                    namespace.name,
-                    namespace.version,
-                    self.name(),
+                    ctx.namespace.name,
+                    ctx.namespace.version,
+                    self.name(ctx),
                     err
                 ));
             }
         };
 
-        match self.env().render_str(Self::TEMPLATE, ctx) {
+        match self.env(ctx).render_str(Self::TEMPLATE, jinja_ctx) {
             Err(err) => Err(format!(
                 "rendering {} {}-{}.{}: {:?}",
                 Self::KIND,
-                namespace.name,
-                namespace.version,
-                self.name(),
+                ctx.namespace.name,
+                ctx.namespace.version,
+                self.name(ctx),
                 err
             )),
             Ok(res) => Ok(RenderedElement {
-                name: self.name().to_string(),
+                name: self.name(ctx).to_string(),
                 content: Some(res),
             }),
         }
     }
 }
 
-fn render<T: Renderable + Sync>(items: &[T], ns: &grammar::Namespace) -> Vec<RenderedElement> {
-    let overrides = OVERRIDES
+fn render<T: Renderable + Sync>(items: &[T], ctx: &Context) -> Vec<RenderedElement> {
+    let overrides = overrides::OVERRIDES
         .iter()
-        .find(|o| o.namespace == ns.name && o.version == ns.version);
+        .find(|o| o.namespace == ctx.namespace.name && o.version == ctx.namespace.version);
 
     items
         .par_iter()
         .filter_map(|elem| {
-            if overrides.is_some_and(|o| o.toplevel.iter().any(|n| *n == elem.name())) {
+            if overrides.is_some_and(|o| o.toplevel.iter().any(|n| *n == elem.name(ctx))) {
                 return None;
             }
 
-            match elem.render(ns) {
+            match elem.render(ctx) {
                 Err(err) => {
-                    log!("{}: {}", "error".red(), err);
+                    (ctx.event)(generate::Event::Failed {
+                        repo: None,
+                        err: err.as_str(),
+                    });
                     None
                 }
                 Ok(elem) => {
@@ -93,13 +99,13 @@ fn render<T: Renderable + Sync>(items: &[T], ns: &grammar::Namespace) -> Vec<Ren
 
                     match elem.name.as_str() {
                         "enum" | "function" | "false" | "true" | "break" | "void" => {
-                            log!(
-                                "{}: failed to include {}-{}.{} due to invalid name",
-                                "error".red(),
-                                ns.name,
-                                ns.version,
-                                elem.name,
-                            );
+                            (ctx.event)(generate::Event::Failed {
+                                repo: None,
+                                err: &format!(
+                                    "failed to include {}-{}.{} due to invalid name",
+                                    ctx.namespace.name, ctx.namespace.version, elem.name,
+                                ),
+                            });
                             None
                         }
                         _ => Some(elem),
@@ -111,7 +117,7 @@ fn render<T: Renderable + Sync>(items: &[T], ns: &grammar::Namespace) -> Vec<Ren
 }
 
 #[derive(serde::Serialize)]
-pub struct RenderedNamespace<'a> {
+struct RenderedNamespace<'a> {
     name: &'a str,
     version: &'a str,
     content: Option<&'a str>,
@@ -127,10 +133,10 @@ pub struct RenderedNamespace<'a> {
     constants: Vec<RenderedElement>,
 }
 
-pub fn render_namespace<'a>(ns: &'a grammar::Namespace) -> RenderedNamespace<'a> {
-    let overrides = OVERRIDES
+fn render_namespace<'a>(ctx: Context<'a>) -> RenderedNamespace<'a> {
+    let overrides = overrides::OVERRIDES
         .iter()
-        .find(|o| o.namespace == ns.name && o.version == ns.version);
+        .find(|o| o.namespace == ctx.namespace.name && o.version == ctx.namespace.version);
 
     let mut aliases = None;
     let mut classes = None;
@@ -144,21 +150,21 @@ pub fn render_namespace<'a>(ns: &'a grammar::Namespace) -> RenderedNamespace<'a>
     let mut constants = None;
 
     scope(|s| {
-        s.spawn(|_| aliases = Some(render(&ns.aliases, ns)));
-        s.spawn(|_| classes = Some(render(&ns.classes, ns)));
-        s.spawn(|_| interfaces = Some(render(&ns.interfaces, ns)));
-        s.spawn(|_| records = Some(render(&ns.records, ns)));
-        s.spawn(|_| enums_ = Some(render(&ns.enums, ns)));
-        s.spawn(|_| functions = Some(render(&ns.functions, ns)));
-        s.spawn(|_| unions = Some(render(&ns.unions, ns)));
-        s.spawn(|_| bitfields = Some(render(&ns.bitfields, ns)));
-        s.spawn(|_| callbacks = Some(render(&ns.callbacks, ns)));
-        s.spawn(|_| constants = Some(render(&ns.constants, ns)));
+        s.spawn(|_| aliases = Some(render(&ctx.namespace.aliases, &ctx)));
+        s.spawn(|_| classes = Some(render(&ctx.namespace.classes, &ctx)));
+        s.spawn(|_| interfaces = Some(render(&ctx.namespace.interfaces, &ctx)));
+        s.spawn(|_| records = Some(render(&ctx.namespace.records, &ctx)));
+        s.spawn(|_| enums_ = Some(render(&ctx.namespace.enums, &ctx)));
+        s.spawn(|_| functions = Some(render(&ctx.namespace.functions, &ctx)));
+        s.spawn(|_| unions = Some(render(&ctx.namespace.unions, &ctx)));
+        s.spawn(|_| bitfields = Some(render(&ctx.namespace.bitfields, &ctx)));
+        s.spawn(|_| callbacks = Some(render(&ctx.namespace.callbacks, &ctx)));
+        s.spawn(|_| constants = Some(render(&ctx.namespace.constants, &ctx)));
     });
 
     RenderedNamespace {
-        name: &ns.name,
-        version: &ns.version,
+        name: &ctx.namespace.name,
+        version: &ctx.namespace.version,
         content: overrides.map(|o| o.content).unwrap_or_default(),
         aliases: aliases.unwrap(),
         classes: classes.unwrap(),
@@ -170,5 +176,64 @@ pub fn render_namespace<'a>(ns: &'a grammar::Namespace) -> RenderedNamespace<'a>
         bitfields: bitfields.unwrap(),
         callbacks: callbacks.unwrap(),
         constants: constants.unwrap(),
+    }
+}
+
+impl grammar::Repository {
+    fn find_imports(&self, repos: &[grammar::Repository]) -> Vec<grammar::Include> {
+        let mut includes = self.find_includes(repos);
+
+        let has_gobject = includes
+            .iter()
+            .any(|inc| inc.name == "GObject" && inc.version == "2.0");
+
+        if self.file_stem != "GObject-2.0" && !has_gobject {
+            includes.push(grammar::Include {
+                name: String::from("GObject"),
+                version: String::from("2.0"),
+            });
+        }
+
+        let has_glib = includes
+            .iter()
+            .any(|inc| inc.name == "GLib" && inc.version == "2.0");
+
+        if self.file_stem != "GLib-2.0" && !has_glib {
+            includes.push(grammar::Include {
+                name: String::from("GLib"),
+                version: String::from("2.0"),
+            });
+        }
+
+        includes
+    }
+
+    pub fn generate_dts(
+        &self,
+        repos: &[grammar::Repository],
+        event: fn(generate::Event),
+    ) -> Result<String, String> {
+        let namespaces = self
+            .namespaces
+            .par_iter()
+            .map(|ns| {
+                render_namespace(Context {
+                    namespace: &ns,
+                    event: event,
+                })
+            })
+            .collect::<Vec<_>>();
+
+        let imports = self.find_imports(repos);
+
+        let res = minijinja::Environment::new().render_str(
+            include_str!("templates/repository.jinja"),
+            minijinja::context! { imports, namespaces },
+        );
+
+        match res {
+            Ok(res) => Ok(res),
+            Err(err) => Err(format!("{:?}", err).into()),
+        }
     }
 }

@@ -1,5 +1,5 @@
-use super::gtype::filter_parameters;
-use crate::grammar;
+use super::gtype;
+use crate::parser::grammar;
 use regex::Regex;
 use std::sync::LazyLock;
 
@@ -68,7 +68,7 @@ impl Doc<'_> {
 
         let deprecated_text: Option<String> = self.doc.doc_deprecated.as_deref().map(fmt);
 
-        let parameters = filter_parameters(self.parameters);
+        let parameters = gtype::filter_parameters(self.parameters);
 
         let in_parameters: Vec<DocParameter> = parameters
             .iter()

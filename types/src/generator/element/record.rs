@@ -1,15 +1,12 @@
-use super::super::element::doc;
-use super::super::element::gtype::resolve_anytype;
-use super::super::render::Renderable;
-use super::callable;
-use crate::grammar;
+use super::super::render;
+use super::{callable, doc, gtype};
+use crate::parser::grammar;
 use stringcase::snake_case;
 
 const TEMPLATE: &'static str = include_str!("../templates/record.jinja");
 
 macro_rules! ctx {
-    ($self:expr, $namespace:expr, $ctor:expr) => {{
-        let this = format!("{}.{}", $namespace.name, $self.name.as_ref().unwrap());
+    ($self:expr, $ctx:expr, $ctor:expr) => {{
         let jsdoc = doc::jsdoc(&$self.doc, &$self.info)?;
 
         let fields: Vec<minijinja::Value> = $self
@@ -19,7 +16,7 @@ macro_rules! ctx {
             .filter_map(|f| {
                 let gtype = match &f.gtype {
                     None => return None,
-                    Some(t) => match resolve_anytype(t) {
+                    Some(t) => match gtype::resolve_anytype(t) {
                         Err(_) => return None,
                         Ok(t) => t,
                     },
@@ -38,7 +35,7 @@ macro_rules! ctx {
             .collect();
 
         let methods = callable::render_callable_elements(
-            &this,
+            $ctx,
             "",
             &$self
                 .methods
@@ -48,7 +45,7 @@ macro_rules! ctx {
         );
 
         let constructors = callable::render_callable_elements(
-            &this,
+            $ctx,
             "static ",
             &$self
                 .constructors
@@ -58,7 +55,7 @@ macro_rules! ctx {
         );
 
         let functions = callable::render_callable_elements(
-            &this,
+            $ctx,
             "static ",
             &$self
                 .functions
@@ -79,27 +76,27 @@ macro_rules! ctx {
     }};
 }
 
-impl Renderable for grammar::Record {
+impl render::Renderable for grammar::Record {
     const KIND: &'static str = "record";
     const TEMPLATE: &'static str = TEMPLATE;
 
-    fn name(&self) -> &str {
+    fn name(&self, _: &render::Context) -> &str {
         match &self.name {
             Some(name) => name,
             None => "",
         }
     }
 
-    fn introspectable(&self, namespace: &grammar::Namespace) -> bool {
+    fn introspectable(&self, ctx: &render::Context) -> bool {
         // I'm not entirely sure, but maybe we can skip iteration and simply
         // return false if it *is* a gtype_struct_for?
-        let class_struct = namespace.classes.iter().any(|class| {
+        let class_struct = ctx.namespace.classes.iter().any(|class| {
             self.gtype_struct_for
                 .as_ref()
                 .is_some_and(|name| name == &class.name)
         });
 
-        let iface_struct = namespace.interfaces.iter().any(|iface| {
+        let iface_struct = ctx.namespace.interfaces.iter().any(|iface| {
             self.gtype_struct_for
                 .as_ref()
                 .is_some_and(|name| name == &iface.name)
@@ -108,33 +105,33 @@ impl Renderable for grammar::Record {
         !class_struct && !iface_struct && self.info.introspectable && self.name.is_some()
     }
 
-    fn ctx(&self, namespace: &grammar::Namespace) -> Result<minijinja::Value, String> {
+    fn ctx(&self, ctx: &render::Context) -> Result<minijinja::Value, String> {
         // TODO: generate a constructor for non opaque records
         let constructor = Option::<&str>::None;
 
         match &self.gtype_struct_for {
             Some(type_for) => Ok(minijinja::context! { name => self.name, type_for }),
-            None => ctx!(self, namespace, constructor),
+            None => ctx!(self, ctx, constructor),
         }
     }
 }
 
-impl Renderable for grammar::Union {
+impl render::Renderable for grammar::Union {
     const KIND: &'static str = "union";
     const TEMPLATE: &'static str = TEMPLATE;
 
-    fn name(&self) -> &str {
+    fn name(&self, _: &render::Context) -> &str {
         match &self.name {
             Some(name) => name,
             None => "",
         }
     }
 
-    fn introspectable(&self, _: &grammar::Namespace) -> bool {
+    fn introspectable(&self, _: &render::Context) -> bool {
         self.info.introspectable && self.name.is_some()
     }
 
-    fn ctx(&self, namespace: &grammar::Namespace) -> Result<minijinja::Value, String> {
-        ctx!(self, namespace, Option::<&str>::None)
+    fn ctx(&self, ctx: &render::Context) -> Result<minijinja::Value, String> {
+        ctx!(self, ctx, Option::<&str>::None)
     }
 }

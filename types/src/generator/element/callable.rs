@@ -1,8 +1,6 @@
-use colored::Colorize;
-
-use super::doc;
-use super::gtype::{filter_parameters, resolve_anytype};
-use crate::{grammar, log};
+use super::super::{generate, render};
+use super::{doc, gtype};
+use crate::parser::grammar;
 
 static TEMPLATE: &'static str = include_str!("../templates/callable.jinja");
 
@@ -13,7 +11,7 @@ struct Parameter<'a> {
 }
 
 fn tstype(anytype: Option<&grammar::AnyType>, nullable: bool) -> Result<String, String> {
-    let tstype = resolve_anytype(anytype.ok_or("Missing type".to_owned())?)?;
+    let tstype = gtype::resolve_anytype(anytype.ok_or("Missing type".to_owned())?)?;
     if nullable {
         Ok(format!("{tstype} | null"))
     } else {
@@ -54,7 +52,7 @@ impl Callable<'_> {
     pub fn render(&self) -> Result<String, String> {
         let env = minijinja::Environment::new();
 
-        let (p_returns, p_parameters): (Vec<_>, Vec<_>) = filter_parameters(self.parameters)
+        let (p_returns, p_parameters): (Vec<_>, Vec<_>) = gtype::filter_parameters(self.parameters)
             .into_iter()
             .partition(|p| matches!(p.direction.as_deref(), Some("inout" | "out")));
 
@@ -166,7 +164,7 @@ pub enum CallableElement<'a> {
 }
 
 pub fn render_callable_elements(
-    parent: &str,
+    ctx: &render::Context,
     prefix: &str,
     elements: &[CallableElement<'_>],
 ) -> Vec<String> {
@@ -203,14 +201,13 @@ pub fn render_callable_elements(
             match elem.render() {
                 Ok(res) => Some(res),
                 Err(err) => {
-                    log!(
-                        "{}: rendering {} {}.{}: {}",
-                        "error".red(),
-                        kind,
-                        parent,
-                        name,
-                        err
-                    );
+                    (ctx.event)(generate::Event::Failed {
+                        repo: None,
+                        err: &format!(
+                            "failed to render {} {}-{}.{}: {}",
+                            kind, ctx.namespace.name, ctx.namespace.version, name, err
+                        ),
+                    });
                     None
                 }
             }

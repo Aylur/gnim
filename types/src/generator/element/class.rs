@@ -1,15 +1,9 @@
-use crate::generator::overrides::OVERRIDES;
-use crate::log;
-
-use super::super::element::gtype::resolve_anytype;
-use super::super::grammar;
-use super::super::render::Renderable;
-use super::callable;
-use super::doc;
-use colored::Colorize;
+use super::super::{generate, overrides, render};
+use super::{callable, doc, gtype};
+use crate::parser::grammar;
 use stringcase::camel_case;
 
-fn iter_signals(parent: &str, signals: &[grammar::Signal]) -> Vec<String> {
+fn iter_signals(ctx: &render::Context, signals: &[grammar::Signal]) -> Vec<String> {
     signals
         .iter()
         .filter(|s| s.info.introspectable)
@@ -30,13 +24,13 @@ fn iter_signals(parent: &str, signals: &[grammar::Signal]) -> Vec<String> {
             match signal.render() {
                 Ok(res) => Some(res),
                 Err(err) => {
-                    log!(
-                        "{}: rendering signal {}.{}: {}",
-                        "error".red(),
-                        parent,
-                        s.name,
-                        err
-                    );
+                    (ctx.event)(generate::Event::Failed {
+                        repo: None,
+                        err: &format!(
+                            "failed to render signal {}-{}.{}: {}",
+                            ctx.namespace.name, ctx.namespace.version, s.name, err
+                        ),
+                    });
                     None
                 }
             }
@@ -44,7 +38,10 @@ fn iter_signals(parent: &str, signals: &[grammar::Signal]) -> Vec<String> {
         .collect()
 }
 
-fn iter_properties(parent: &str, properties: &[grammar::Property]) -> Vec<minijinja::Value> {
+fn iter_properties(
+    ctx: &render::Context,
+    properties: &[grammar::Property],
+) -> Vec<minijinja::Value> {
     properties
         .iter()
         .filter(|p| p.info.introspectable)
@@ -62,7 +59,7 @@ fn iter_properties(parent: &str, properties: &[grammar::Property]) -> Vec<miniji
                 .render()?;
 
                 let gtype = match &p.gtype {
-                    Some(t) => resolve_anytype(t),
+                    Some(t) => gtype::resolve_anytype(t),
                     None => Err("Missing type".to_owned()),
                 }?;
 
@@ -79,13 +76,13 @@ fn iter_properties(parent: &str, properties: &[grammar::Property]) -> Vec<miniji
             match res {
                 Ok(res) => Some(res),
                 Err(err) => {
-                    log!(
-                        "{}: rendering property {}.{}: {}",
-                        "error".red(),
-                        parent,
-                        p.name,
-                        err
-                    );
+                    (ctx.event)(generate::Event::Failed {
+                        repo: None,
+                        err: &format!(
+                            "failed to render property {}-{}.{}: {}",
+                            ctx.namespace.name, ctx.namespace.version, p.name, err
+                        ),
+                    });
                     None
                 }
             }
@@ -93,19 +90,19 @@ fn iter_properties(parent: &str, properties: &[grammar::Property]) -> Vec<miniji
         .collect()
 }
 
-impl Renderable for grammar::Class {
+impl render::Renderable for grammar::Class {
     const KIND: &'static str = "class";
     const TEMPLATE: &'static str = include_str!("../templates/class.jinja");
 
-    fn name(&self) -> &str {
+    fn name(&self, _: &render::Context) -> &str {
         &self.name
     }
 
-    fn introspectable(&self, _: &grammar::Namespace) -> bool {
+    fn introspectable(&self, _: &render::Context) -> bool {
         self.info.introspectable
     }
 
-    fn env(&self) -> minijinja::Environment<'_> {
+    fn env(&self, _: &render::Context) -> minijinja::Environment<'_> {
         let mut env = minijinja::Environment::new();
         env.add_template(
             "introspection",
@@ -116,24 +113,23 @@ impl Renderable for grammar::Class {
         env
     }
 
-    fn ctx(&self, namespace: &grammar::Namespace) -> Result<minijinja::Value, String> {
+    fn ctx(&self, ctx: &render::Context) -> Result<minijinja::Value, String> {
         let extends: Vec<&String> = self
             .parent
             .iter()
             .chain(self.implements.iter().map(|i| &i.name))
             .collect();
 
-        let this = format!("{}.{}", namespace.name, self.name);
-        let signals: Vec<String> = iter_signals(&this, &self.signals);
-        let properties: Vec<minijinja::Value> = iter_properties(&this, &self.properties);
+        let signals: Vec<String> = iter_signals(ctx, &self.signals);
+        let properties: Vec<minijinja::Value> = iter_properties(ctx, &self.properties);
 
-        let overrides = OVERRIDES
+        let overrides = overrides::OVERRIDES
             .iter()
-            .find(|o| o.namespace == namespace.name && o.version == namespace.version)
+            .find(|o| o.namespace == ctx.namespace.name && o.version == ctx.namespace.version)
             .and_then(|o| o.classes.iter().find(|c| c.name == &self.name));
 
         let methods = callable::render_callable_elements(
-            &this,
+            ctx,
             "",
             &self
                 .methods
@@ -146,7 +142,7 @@ impl Renderable for grammar::Class {
         // TODO: consider overriding return value with self.name
         // example: currently `Adw.AboutDialog.new` returns `Adw.Dialog`
         let constructors = callable::render_callable_elements(
-            &this,
+            ctx,
             "",
             &self
                 .constructors
@@ -156,7 +152,7 @@ impl Renderable for grammar::Class {
         );
 
         let functions = callable::render_callable_elements(
-            &this,
+            ctx,
             "",
             &self
                 .functions
@@ -166,7 +162,7 @@ impl Renderable for grammar::Class {
         );
 
         let virtual_methods = callable::render_callable_elements(
-            &this,
+            ctx,
             "vfunc_",
             &self
                 .virtual_methods
@@ -175,7 +171,8 @@ impl Renderable for grammar::Class {
                 .collect::<Vec<_>>(),
         );
 
-        let name_class = namespace
+        let name_class = ctx
+            .namespace
             .records
             .iter()
             .find(|rec| {
@@ -188,8 +185,9 @@ impl Renderable for grammar::Class {
             // Class suffix is only convention, so it might conflict with another symbol
             .unwrap_or_else(|| format!("{}Class", &self.name));
 
+        // TODO: render functions from record
         let parent_class = self.parent.as_ref().map(|parent| {
-            namespace
+            ctx.namespace
                 .records
                 .iter()
                 .find(|rec| {
@@ -221,15 +219,15 @@ impl Renderable for grammar::Class {
     }
 }
 
-impl Renderable for grammar::Interface {
+impl render::Renderable for grammar::Interface {
     const KIND: &'static str = "interface";
     const TEMPLATE: &'static str = include_str!("../templates/interface.jinja");
 
-    fn name(&self) -> &str {
+    fn name(&self, _: &render::Context) -> &str {
         &self.name
     }
 
-    fn env(&self) -> minijinja::Environment<'_> {
+    fn env(&self, _: &render::Context) -> minijinja::Environment<'_> {
         let mut env = minijinja::Environment::new();
         env.add_template(
             "introspection",
@@ -240,11 +238,11 @@ impl Renderable for grammar::Interface {
         env
     }
 
-    fn introspectable(&self, _: &grammar::Namespace) -> bool {
+    fn introspectable(&self, _: &render::Context) -> bool {
         self.info.introspectable
     }
 
-    fn ctx(&self, namespace: &grammar::Namespace) -> Result<minijinja::Value, String> {
+    fn ctx(&self, ctx: &render::Context) -> Result<minijinja::Value, String> {
         let extends: Vec<&String> = self
             .prerequisites
             .iter()
@@ -252,17 +250,16 @@ impl Renderable for grammar::Interface {
             .chain(self.implements.iter().map(|i| &i.name))
             .collect();
 
-        let this = format!("{}.{}", namespace.name, self.name);
-        let signals: Vec<String> = iter_signals(&this, &self.signals);
-        let properties: Vec<minijinja::Value> = iter_properties(&this, &self.properties);
+        let signals: Vec<String> = iter_signals(ctx, &self.signals);
+        let properties: Vec<minijinja::Value> = iter_properties(ctx, &self.properties);
 
-        let overrides = OVERRIDES
+        let overrides = overrides::OVERRIDES
             .iter()
-            .find(|o| o.namespace == namespace.name && o.version == namespace.version)
+            .find(|o| o.namespace == ctx.namespace.name && o.version == ctx.namespace.version)
             .and_then(|o| o.classes.iter().find(|c| c.name == &self.name));
 
         let methods = callable::render_callable_elements(
-            &this,
+            &ctx,
             "",
             &self
                 .methods
@@ -273,7 +270,7 @@ impl Renderable for grammar::Interface {
         );
 
         let constructors = callable::render_callable_elements(
-            &this,
+            &ctx,
             "",
             &self
                 .constructors
@@ -283,7 +280,7 @@ impl Renderable for grammar::Interface {
         );
 
         let functions = callable::render_callable_elements(
-            &this,
+            &ctx,
             "",
             &self
                 .functions
@@ -293,7 +290,7 @@ impl Renderable for grammar::Interface {
         );
 
         let virtual_methods = callable::render_callable_elements(
-            &this,
+            &ctx,
             "vfunc_",
             &self
                 .virtual_methods
@@ -302,7 +299,9 @@ impl Renderable for grammar::Interface {
                 .collect::<Vec<_>>(),
         );
 
-        let name_iface = namespace
+        // TODO: render functions from record
+        let name_iface = ctx
+            .namespace
             .records
             .iter()
             .find(|rec| {

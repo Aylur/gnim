@@ -9,7 +9,7 @@ def "main types" [] {
         })
     ]
     cargo build
-    ./target/debug/gnim-types ...$flags
+    ./target/debug/gnim types ...$flags
 }
 
 def "main build" [] {

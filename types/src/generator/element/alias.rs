@@ -1,19 +1,18 @@
-use super::super::element::doc;
-use super::super::element::gtype::resolve_anytype;
-use super::super::render::Renderable;
-use crate::grammar;
+use super::super::render;
+use super::{doc, gtype};
+use crate::parser::grammar;
 
-impl Renderable for grammar::Alias {
+impl render::Renderable for grammar::Alias {
     const KIND: &'static str = "alias";
     const TEMPLATE: &'static str = "{{ jsdoc if jsdoc}}\ntype {{ name }} = {{ type }}";
 
-    fn name(&self) -> &str {
+    fn name(&self, _: &render::Context) -> &str {
         &self.name
     }
 
-    fn ctx(&self, _: &grammar::Namespace) -> Result<minijinja::Value, String> {
+    fn ctx(&self, _: &render::Context) -> Result<minijinja::Value, String> {
         let gtype = match &self.gtype {
-            Some(t) => resolve_anytype(t),
+            Some(t) => gtype::resolve_anytype(t),
             None => Err("Missing type".to_owned()),
         }?;
 

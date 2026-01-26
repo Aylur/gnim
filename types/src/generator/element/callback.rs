@@ -1,16 +1,16 @@
-use super::super::render::Renderable;
+use super::super::render;
 use super::callable;
-use crate::grammar;
+use crate::parser::grammar;
 
-impl Renderable for grammar::Callback {
+impl render::Renderable for grammar::Callback {
     const KIND: &'static str = "callback";
     const TEMPLATE: &'static str = "{{ callback }}";
 
-    fn name(&self) -> &str {
+    fn name(&self, _: &render::Context) -> &str {
         &self.name
     }
 
-    fn introspectable(&self, _: &grammar::Namespace) -> bool {
+    fn introspectable(&self, _: &render::Context) -> bool {
         self.returns.as_ref().is_none_or(|r| r.introspectable)
             && self.parameters.as_ref().is_none_or(|ps| {
                 ps.parameters
@@ -20,7 +20,7 @@ impl Renderable for grammar::Callback {
             && self.info.introspectable
     }
 
-    fn ctx(&self, _: &grammar::Namespace) -> Result<minijinja::Value, String> {
+    fn ctx(&self, _: &render::Context) -> Result<minijinja::Value, String> {
         let function = callable::Callable {
             doc: &self.doc,
             info: &self.info,

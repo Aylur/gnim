@@ -1,23 +1,22 @@
-use crate::generator::element::gtype::resolve_anytype;
+use super::super::render;
+use super::gtype;
+use crate::parser::grammar;
 
-use super::super::grammar;
-use super::super::render::Renderable;
-
-impl Renderable for grammar::Constant {
+impl render::Renderable for grammar::Constant {
     const KIND: &'static str = "constant";
     const TEMPLATE: &'static str = "const {{ name }}: {{ value }}";
 
-    fn name(&self) -> &str {
+    fn name(&self, _: &render::Context) -> &str {
         &self.name
     }
 
-    fn introspectable(&self, _: &grammar::Namespace) -> bool {
+    fn introspectable(&self, _: &render::Context) -> bool {
         self.info.introspectable
     }
 
-    fn ctx(&self, _: &grammar::Namespace) -> Result<minijinja::Value, String> {
+    fn ctx(&self, _: &render::Context) -> Result<minijinja::Value, String> {
         let anytype = self.gtype.as_ref().ok_or("Missing type")?;
-        let t = resolve_anytype(&anytype)?;
+        let t = gtype::resolve_anytype(&anytype)?;
 
         let value = match t.as_str() {
             "boolean" => &self.value,
