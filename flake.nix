@@ -16,21 +16,13 @@
   in {
     devShells = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
-      type-dirs =
-        pkgs.writers.writeNu "type-dirs"
-        # nu
-        ''
-          $env.XDG_DATA_DIRS
-          | split row ':'
-          | where { $in != '/run/current-system/sw/share' }
-          | each { $'($in)/gir-1.0' }
-          | where { $in | path exists  }
-          | str join ':'
-        '';
     in {
       default = with pkgs;
         mkShell {
           packages = [
+            cargo
+            typescript
+            nodejs
             wrapGAppsHook4
             gobject-introspection
             glib
@@ -40,14 +32,7 @@
             gjs
             esbuild
             libsoup_3
-            mutter
-            gnome-shell
           ];
-          shellHook =
-            # sh
-            ''
-              export GNIM_TYPE_DIRS="$(${type-dirs}):${mutter}/lib/mutter-17:${gnome-shell}/lib/"
-            '';
         };
     });
   };

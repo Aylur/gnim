@@ -12,16 +12,20 @@
         "type": "kofi",
         "url": "https://ko-fi.com/aylur"
     },
+    "bin": "bin/index.ts",
     "scripts": {
-        "lint": "eslint . --fix",
-        "build": "../scripts.nu gnim:build"
+        "lint": "eslint . --fix"
     },
     "devDependencies": {
+        "@types/node": "latest",
         "@eslint/js": "latest",
-        "jiti": "latest",
         "eslint": "latest",
+        "jiti": "latest",
         "typescript": "latest",
         "typescript-eslint": "latest"
+    },
+    "optionalDependencies": {
+        "@gnim-js/cli-linux-x64": "^0.1.0"
     },
     "exports": {
         ".": "./dist/index.ts",

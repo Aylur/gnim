@@ -3,8 +3,10 @@
     "author": "Aylur",
     "type": "module",
     "scripts": {
+        "setup": "./scripts.nu setup",
+        "clean": "./scripts.nu clean",
         "lint": "pnpm -F gnim run lint",
-        "types": "./scripts.nu types",
+        "types": "./scripts.nu setup:types",
         "build": "./scripts.nu build",
         "docs:dev": "pnpm -F docs run dev",
         "docs:build": "pnpm -F docs run build"
