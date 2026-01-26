@@ -1,4 +1,4 @@
-import type GObject from "gi://GObject"
+import type GObject from "gi://GObject?version=2.0"
 import { type Accessor } from "./state.js"
 
 type GObj = GObject.Object

@@ -14,16 +14,13 @@ pub fn generate(cli: &Cli) -> Result<ExitCode, Box<dyn std::error::Error>> {
         .dirs
         .split(":")
         .filter_map(|path| {
-            let name = format!("{}/gir-1.0", &path);
-            let gir_path = path::Path::new(&name).to_owned();
+            let gir_path = path::Path::new(&path).to_owned();
             if gir_path.exists() && gir_path.is_dir() {
-                Some(gir_path)
+                gir_path.read_dir().ok()
             } else {
                 None
             }
         })
-        .map(|path| path.read_dir())
-        .filter_map(Result::ok)
         .flat_map(|dir| {
             dir.filter_map(Result::ok)
                 .map(|file| file.path())
@@ -97,9 +94,9 @@ pub fn generate(cli: &Cli) -> Result<ExitCode, Box<dyn std::error::Error>> {
         return Ok(ExitCode::FAILURE);
     }
 
-    let _ = repos
+    let index = repos
         .par_iter()
-        .map(|repo| {
+        .filter_map(|repo| {
             let str = match repo.generate_dts(&repos) {
                 Ok(str) => str,
                 Err(err) => {
@@ -109,12 +106,13 @@ pub fn generate(cli: &Cli) -> Result<ExitCode, Box<dyn std::error::Error>> {
                         repo.file_stem,
                         err
                     );
-                    return;
+                    return None;
                 }
             };
             let path = format!("{}/{}.d.ts", cli.outdir, repo.file_stem);
             if let Err(err) = fs::write(&path, str) {
                 log!("{}: to write types {:#?}", "failed".red(), err);
+                None
             } else {
                 log!(
                     "{}: {} {}",
@@ -122,17 +120,27 @@ pub fn generate(cli: &Cli) -> Result<ExitCode, Box<dyn std::error::Error>> {
                     repo.file_stem,
                     &path.black()
                 );
+                Some(format!("import \"./{}.d.ts\"", repo.file_stem))
             }
         })
-        .chain(GJS_LIBS.par_iter().map(|lib| {
+        .chain(GJS_LIBS.par_iter().filter_map(|lib| {
             let path = format!("{}/{}.d.ts", cli.outdir, lib.name);
             if let Err(err) = fs::write(&path, lib.content) {
                 log!("{}: {:#?}", "failed".red(), err);
+                None
             } else {
                 log!("{}: {} {}", "generated".green(), lib.name, &path.black());
+                Some(format!("import \"./{}.d.ts\"", lib.name))
             }
         }))
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    fs::write(&format!("{}/index.d.ts", cli.outdir), index)?;
+    fs::write(
+        &format!("{}/package.json", cli.outdir),
+        include_str!("../generator/lib/package.json"),
+    )?;
 
     Ok(ExitCode::SUCCESS)
 }

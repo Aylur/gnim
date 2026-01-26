@@ -38,9 +38,10 @@ interface {{ name_iface }} {
     readonly prototype: {{ name }}
 
     {%- for function in functions %}
-    // HERE HELLO
     {{ function|indent(4) }}
     {%- endfor %}
+
+    [Symbol.hasInstance](instance: unknown): instance is {{ name }}
 }
 
 const {{ name }}: {{ name_iface }}

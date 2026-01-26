@@ -31,6 +31,8 @@ fn override_parameter_type(name: &str) -> String {
 
 fn filter_keyword<'a>(name: &'a str) -> &'a str {
     match name {
+        "in" => "in_",
+        "break" => "break_",
         "function" => "func",
         _ => name,
     }
@@ -80,6 +82,7 @@ impl Callable<'_> {
             .chain(
                 p_returns
                     .into_iter()
+                    .filter(|p| !p.optional)
                     .map(|p| tstype(p.gtype.as_ref(), p.nullable)),
             )
             .collect();

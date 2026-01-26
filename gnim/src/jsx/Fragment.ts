@@ -1,12 +1,14 @@
-import GObject from "gi://GObject"
-
-interface FragmentSignals<T> extends GObject.Object.SignalSignatures {
-    append: (child: T) => void
-    remove: (child: T) => void
-}
+import GObject from "gi://GObject?version=2.0"
 
 export class Fragment<T = any> extends GObject.Object {
-    declare $signals: FragmentSignals<T>
+    declare $signals: GObject.Object.SignalSignatures & {
+        append(child: T): void
+        remove(child: T): void
+    }
+
+    declare $readableProperties: GObject.Object.ReadableProperties & {
+        children: T[]
+    }
 
     static [GObject.signals] = {
         append: { param_types: [GObject.TYPE_OBJECT] },
@@ -27,7 +29,7 @@ export class Fragment<T = any> extends GObject.Object {
 
     private _children: Array<T>
 
-    append(child: T): void {
+    append(this: Fragment<T>, child: T): void {
         if (child instanceof Fragment) {
             throw Error(`nesting Fragments are not yet supported`)
         }
@@ -37,10 +39,10 @@ export class Fragment<T = any> extends GObject.Object {
         this.notify("children")
     }
 
-    remove(child: T): void {
+    remove(this: Fragment<T>, child: T): void {
         const index = this._children.findIndex((i) => i === child)
-        this._children.splice(index, 1)
 
+        this._children.splice(index, 1)
         this.emit("remove", child)
         this.notify("children")
     }
@@ -48,12 +50,5 @@ export class Fragment<T = any> extends GObject.Object {
     constructor({ children = [] }: Partial<{ children: Array<T> | T }> = {}) {
         super()
         this._children = Array.isArray(children) ? children : [children]
-    }
-
-    connect<S extends keyof FragmentSignals<T>>(
-        signal: S,
-        callback: GObject.SignalCallback<this, FragmentSignals<T>[S]>,
-    ): number {
-        return super.connect(signal, callback)
     }
 }

@@ -35,7 +35,7 @@ interface {{ name_class }}{% if parent_class %} extends Omit<{{ parent_class }},
     readonly prototype: {{ name }}
 
     {%- if not is_abstract %}
-    new (props?: Partial<{{ name }}.ConstructorProps>): {{ name }}
+    new (props?: Partial<GObject.ConstructorProps<{{ name }}>>): {{ name }}
     {%- endif %}
 
     {%- for ctor in constructors %}

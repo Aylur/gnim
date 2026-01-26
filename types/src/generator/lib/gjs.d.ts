@@ -17,7 +17,7 @@ declare global {
         format: typeof format
         searchPath: string[]
 
-        // TODO: Personally, I don't like using these
+        // TODO:
         // signals: typeof signals
         // package: typeof package
 

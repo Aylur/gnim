@@ -4,11 +4,10 @@
  * interfaces of an object at the same time. Example usage would be for example combining
  * "org.mpris.MediaPlayer2" and "org.mpris.MediaPlayer2.Player" into a single object.
  */
-import Gio from "gi://Gio"
-import GLib from "gi://GLib"
-import GObject from "gi://GObject"
-import { definePropertyGetter, kebabify, xml } from "./util.js"
-import type { DeepInfer } from "./variant.js"
+import Gio from "gi://Gio?version=2.0"
+import GLib from "gi://GLib?version=2.0"
+import GObject from "gi://GObject?version=2.0"
+import { definePropertyGetter, kebabify, xml, type DeepInferVariant, type Keyof } from "./util.js"
 import {
     register,
     property as gproperty,
@@ -60,7 +59,7 @@ export class Service extends GObject.Object {
         this.#info = service[info]
     }
 
-    notify(propertyName: Extract<keyof this, string> | (string & {})): void {
+    notify(propertyName: Keyof<this> | (string & {})): void {
         const prop = this.#info.lookup_property(propertyName)
 
         if (prop && this[internals].dbusObject) {
@@ -81,11 +80,15 @@ export class Service extends GObject.Object {
             this[internals].dbusObject.emit_signal(name, new GLib.Variant(signature, params))
         }
 
-        return super.emit(signal ? kebabify(name) : name, ...params)
+        return super.emit(
+            // @ts-expect-error signal name
+            signal ? kebabify(name) : name,
+            ...params,
+        )
     }
 
     // server
-    #handlePropertyGet(_: Gio.DBusExportedObject, propertyName: Extract<keyof this, string>) {
+    #handlePropertyGet(propertyName: Keyof<this>) {
         const prop = this.#info.lookup_property(propertyName)
 
         if (!prop) {
@@ -101,11 +104,7 @@ export class Service extends GObject.Object {
     }
 
     // server
-    #handlePropertySet(
-        _: Gio.DBusExportedObject,
-        propertyName: Extract<keyof this, string>,
-        value: GLib.Variant,
-    ) {
+    #handlePropertySet(propertyName: Keyof<this>, value: GLib.Variant) {
         const newValue = value.deepUnpack()
         const prop = this.#info.lookup_property(propertyName)
 
@@ -114,7 +113,7 @@ export class Service extends GObject.Object {
         }
 
         if (this[propertyName] !== newValue) {
-            this[propertyName] = value.deepUnpack<any>()
+            this[propertyName] = value.deepUnpack() as any
         }
     }
 
@@ -147,14 +146,13 @@ export class Service extends GObject.Object {
 
     // server
     #handleMethodCall(
-        _: Gio.DBusExportedObject,
-        methodName: Extract<keyof this, string>,
+        methodName: Keyof<this>,
         parameters: GLib.Variant,
         invocation: Gio.DBusMethodInvocation,
     ): void {
         try {
             const value = (this[methodName] as (...args: unknown[]) => unknown)(
-                ...parameters.deepUnpack<Array<unknown>>(),
+                ...(parameters.deepUnpack() as Array<unknown>),
             )
 
             if (value instanceof GLib.Variant) {
@@ -185,14 +183,17 @@ export class Service extends GObject.Object {
         flags?: Gio.BusNameOwnerFlags
         timeout?: number
     } = {}): Promise<this> {
-        const impl = new Gio.DBusExportedObject(
-            // @ts-expect-error missing constructor type
-            { g_interface_info: this.#info },
-        )
+        const impl = new Gio.DBusExportedObject({ gInterfaceInfo: this.#info })
 
-        impl.connect("handle-method-call", this.#handleMethodCall.bind(this))
-        impl.connect("handle-property-get", this.#handlePropertyGet.bind(this))
-        impl.connect("handle-property-set", this.#handlePropertySet.bind(this))
+        impl.connect("handle-method-call", (_, methodName, variant, invocation) => {
+            this.#handleMethodCall(methodName as Keyof<this>, variant, invocation)
+        })
+        impl.connect("handle-property-get", (_, propertyName) => {
+            return this.#handlePropertyGet(propertyName as Keyof<this>)
+        })
+        impl.connect("handle-property-set", (_, propertyName, value) => {
+            this.#handlePropertySet(propertyName as Keyof<this>, value)
+        })
 
         this.#info.cache_build()
 
@@ -246,7 +247,7 @@ export class Service extends GObject.Object {
     ) {
         const set = new Set([...Object.keys(changed.deepUnpack()), ...invalidated])
         for (const prop of set.values()) {
-            this.notify(prop as Extract<keyof this, string>)
+            this.notify(prop as Keyof<this>)
         }
     }
 
@@ -257,7 +258,7 @@ export class Service extends GObject.Object {
         signal: string,
         parameters: GLib.Variant,
     ) {
-        this.emit(kebabify(signal), ...parameters.deepUnpack<Array<unknown>>())
+        this.emit(kebabify(signal), ...(parameters.deepUnpack() as Array<unknown>))
     }
 
     // proxy
@@ -484,18 +485,18 @@ type DBusType = string | { type: string; name: string }
 
 type InferVariantTypes<T extends Array<DBusType>> = {
     [K in keyof T]: T[K] extends string
-        ? DeepInfer<T[K]>
+        ? DeepInferVariant<T[K]>
         : T[K] extends { type: infer S }
           ? S extends string
-              ? DeepInfer<S>
+              ? DeepInferVariant<S>
               : never
           : unknown
 }
 
 function installMethod<Args extends Array<DBusType>>(
     args: Args | [Args, Args?],
-    method: (...args: any[]) => unknown,
-    ctx: ClassMethodDecoratorContext<Service, typeof method>,
+    _method: (...args: any[]) => unknown,
+    ctx: ClassMethodDecoratorContext<Service, typeof _method>,
 ) {
     const name = ctx.name
     const meta = ctx.metadata! as InterfaceMeta
@@ -652,7 +653,7 @@ export function method<const InArgs extends Array<DBusType>, const OutArgs exten
         return function (...args) {
             if (this[internals].proxy) {
                 const value = this[remoteMethod](name, args)
-                return value.deepUnpack<InferVariantTypes<OutArgs>>()
+                return value.deepUnpack() as InferVariantTypes<OutArgs>
             } else {
                 return method.apply(this, args)
             }
@@ -706,7 +707,7 @@ export function methodAsync<
         return async function (...args) {
             if (this[internals].proxy) {
                 const value = await this[remoteMethodAsync](name, args)
-                return value.deepUnpack<InferVariantTypes<OutArgs>>()
+                return value.deepUnpack() as InferVariantTypes<OutArgs>
             } else {
                 return method.apply(this, args)
             }
@@ -725,8 +726,8 @@ export function methodAsync<
 export function property<T extends string>(type: T) {
     return function (
         _: void,
-        ctx: ClassFieldDecoratorContext<Service, DeepInfer<T>>,
-    ): (this: Service, init: DeepInfer<T>) => any {
+        ctx: ClassFieldDecoratorContext<Service, DeepInferVariant<T>>,
+    ): (this: Service, init: DeepInferVariant<T>) => any {
         const name = installProperty(type, ctx)
 
         void gproperty({ $gtype: inferGTypeFromVariant(type) })(
@@ -739,7 +740,7 @@ export function property<T extends string>(type: T) {
             Object.defineProperty(this, name, {
                 configurable: false,
                 enumerable: true,
-                set(value: DeepInfer<T>) {
+                set(value: DeepInferVariant<T>) {
                     const { proxy, priv } = this[internals]
 
                     if (proxy) {
@@ -749,15 +750,15 @@ export function property<T extends string>(type: T) {
 
                     if (priv[name] !== value) {
                         priv[name] = value
-                        this.notify(name as Extract<keyof Service, string>)
+                        this.notify(name as Keyof<Service>)
                     }
                 },
-                get(): DeepInfer<T> {
+                get(): DeepInferVariant<T> {
                     const { proxy, priv } = this[internals]
 
                     return proxy
-                        ? proxy.get_cached_property(name)!.deepUnpack<DeepInfer<T>>()
-                        : (priv[name] as DeepInfer<T>)
+                        ? (proxy.get_cached_property(name)!.deepUnpack() as DeepInferVariant<T>)
+                        : (priv[name] as DeepInferVariant<T>)
                 },
             } satisfies ThisType<Service>)
         })
@@ -778,13 +779,13 @@ export function property<T extends string>(type: T) {
  */
 export function getter<T extends string>(type: T) {
     return function (
-        method: (this: Service) => DeepInfer<T>,
-        ctx: ClassGetterDecoratorContext<Service, DeepInfer<T>>,
+        method: (this: Service) => DeepInferVariant<T>,
+        ctx: ClassGetterDecoratorContext<Service, DeepInferVariant<T>>,
     ): (this: Service) => any {
         const name = installProperty(type, ctx)
 
         ctx.addInitializer(function () {
-            definePropertyGetter(this, name as Extract<keyof Service, string>)
+            definePropertyGetter(this, name as Keyof<Service>)
         })
 
         void ggetter({ $gtype: inferGTypeFromVariant(type) })(
@@ -792,10 +793,10 @@ export function getter<T extends string>(type: T) {
             ctx as ClassGetterDecoratorContext<GObject.Object> & Ctx,
         )
 
-        return function get(): DeepInfer<T> {
+        return function get(): DeepInferVariant<T> {
             const { proxy } = this[internals]
             return proxy
-                ? proxy.get_cached_property(name)!.deepUnpack<DeepInfer<T>>()
+                ? (proxy.get_cached_property(name)!.deepUnpack() as DeepInferVariant<T>)
                 : method.call(this)
         }
     }
@@ -810,8 +811,8 @@ export function getter<T extends string>(type: T) {
 export function setter<T extends string>(type: T) {
     return function (
         setter: (this: Service, value: any) => void,
-        ctx: ClassSetterDecoratorContext<Service, DeepInfer<T>>,
-    ): (this: Service, value: DeepInfer<T>) => void {
+        ctx: ClassSetterDecoratorContext<Service, DeepInferVariant<T>>,
+    ): (this: Service, value: DeepInferVariant<T>) => void {
         const name = installProperty(type, ctx)
 
         void gsetter({ $gtype: inferGTypeFromVariant(type) })(
@@ -819,7 +820,7 @@ export function setter<T extends string>(type: T) {
             ctx as ClassSetterDecoratorContext<GObject.Object> & Ctx,
         )
 
-        return function (value: DeepInfer<T>) {
+        return function (value: DeepInferVariant<T>) {
             const { proxy } = this[internals]
 
             if (proxy) {

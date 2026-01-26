@@ -2,17 +2,11 @@ const $type: unique symbol
 
 type Keyof<T> = Extract<keyof T, string>
 
-type SignalCallback<Emitter, Callback> = Callback extends (
-    ...args: infer Args
-) => infer Return
-    ? (source: Emitter, ...args: Args) => Return
-    : never
-
 type SignalArgs<Signal> = Signal extends (...args: infer Args) => infer _
     ? Args
     : never
 
-type NonDetaliedSignals<Emitter> = Emitter extends { $signals: unknown }
+type Signals<Emitter> = Emitter extends { $signals: unknown }
     ? {
           [S in Keyof<Emitter["$signals"]> as S extends `${infer Name}::{}`
               ? Name
@@ -66,6 +60,18 @@ type SignalHandlerOptions = {
 
 type GObjectConstructor = { new (...args: any[]): GObject.Object }
 
+type PascalCase<S> = S extends `${infer Head}${"-" | "_"}${infer Tail}`
+    ? `${Capitalize<Head>}${PascalCase<Tail>}`
+    : S extends string
+      ? Capitalize<S>
+      : never
+
+type CamelCase<S> = S extends `${infer Head}${"-" | "_"}${infer Tail}`
+    ? `${Lowercase<Head>}${PascalCase<Tail>}`
+    : S extends string
+      ? Lowercase<S>
+      : never
+
 /**
  * This is an object passed to a number of signal matching functions.
  */
@@ -95,6 +101,25 @@ namespace GObject {
         name: string
     }
 
+    type ConstructorProps<Class> = Class extends {
+        $readableProperties: unknown
+        $constructOnlyProperties: unknown
+    }
+        ? {
+              [K in Keyof<
+                  Class["$readableProperties"] &
+                      Class["$constructOnlyProperties"]
+              > as CamelCase<K>]: (Class["$readableProperties"] &
+                  Class["$constructOnlyProperties"])[K]
+          }
+        : never
+
+    type SignalCallback<Emitter, Callback> = Callback extends (
+        ...args: infer Args
+    ) => infer Return
+        ? (source: Emitter, ...args: Args) => Return
+        : never
+
     interface ObjectClass {
         /**
          * This is the proper way to find the GType given an object instance or a class.
@@ -123,9 +148,9 @@ namespace GObject {
             callback: SignalCallback<this, DetaliedSignals<this>[Signal]>,
         ): number
 
-        connect<Signal extends Keyof<NonDetaliedSignals<this>>>(
+        connect<Signal extends Keyof<Signals<this>>>(
             signal: Signal,
-            callback: SignalCallback<this, NonDetaliedSignals<this>[Signal]>,
+            callback: SignalCallback<this, Signals<this>[Signal]>,
         ): number
 
         connect<Signal extends Keyof<NotifySignals<this>>>(
@@ -138,9 +163,9 @@ namespace GObject {
             callback: SignalCallback<this, DetaliedSignals<this>[Signal]>,
         ): number
 
-        connect_after<Signal extends Keyof<NonDetaliedSignals<this>>>(
+        connect_after<Signal extends Keyof<Signals<this>>>(
             signal: Signal,
-            callback: SignalCallback<this, NonDetaliedSignals<this>[Signal]>,
+            callback: SignalCallback<this, Signals<this>[Signal]>,
         ): number
 
         connect_after<Signal extends Keyof<NotifySignals<this>>>(
@@ -153,9 +178,9 @@ namespace GObject {
             ...args: SignalArgs<DetaliedSignals<this>[Signal]>
         ): void
 
-        emit<Signal extends Keyof<NonDetaliedSignals<this>>>(
+        emit<Signal extends Keyof<Signals<this>>>(
             signal: Signal,
-            ...args: SignalArgs<NonDetaliedSignals<this>[Signal]>
+            ...args: SignalArgs<Signals<this>[Signal]>
         ): void
 
         emit<Signal extends Keyof<NotifySignals<this>>>(
@@ -218,7 +243,7 @@ namespace GObject {
             Signals?: Signals
             Implements?: Interfaces
             CssName?: string
-            Template?: string | GLib.Bytes | UInt8Array
+            Template?: string | GLib.Bytes | Uint8Array
             Children?: string[]
             InternalChildren?: string[]
         },
@@ -298,12 +323,10 @@ namespace GObject {
         static $gtype: GType<ParamSpec>
 
         /**
-         * Validate a property name for a `GParamSpec`. This can be useful for
+         * Validate a property name for a `ParamSpec`. This can be useful for
          * dynamically-generated properties which need to be validated at run-time
          * before actually trying to create them.
          *
-         * See [canonical parameter names][class`GObject`.ParamSpec#parameter-names]
-         * for details of the rules for valid names.
          * @param name the canonical name of the property
          */
         static is_valid_name(name: string): boolean
@@ -321,7 +344,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             minimum: number,
             maximum: number,
             defaultValue?: number,
@@ -340,7 +363,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             minimum: number,
             maximum: number,
             defaultValue?: number,
@@ -359,7 +382,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             minimum: number,
             maximum: number,
             defaultValue?: number,
@@ -378,7 +401,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             minimum: number,
             maximum: number,
             defaultValue?: number,
@@ -397,7 +420,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             minimum: number,
             maximum: number,
             defaultValue?: number,
@@ -416,7 +439,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             minimum: number,
             maximum: number,
             defaultValue?: number,
@@ -435,7 +458,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             minimum: number,
             maximum: number,
             defaultValue?: number,
@@ -454,7 +477,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             minimum: number,
             maximum: number,
             defaultValue?: number,
@@ -473,7 +496,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             minimum: number,
             maximum: number,
             defaultValue?: number,
@@ -490,7 +513,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             defaultValue?: boolean,
         ): ParamSpec<boolean>
         /**
@@ -506,7 +529,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             enumType: GType<T> | { $gtype: GType<T> },
             defaultValue?: any,
         ): ParamSpec<T>
@@ -524,7 +547,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             minimum: number,
             maximum: number,
             defaultValue?: number,
@@ -541,7 +564,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             defaultValue?: string | null,
         ): ParamSpec<string>
         /**
@@ -556,7 +579,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             boxedType: GType<T> | { $gtype: GType<T> },
         ): ParamSpec<T>
         /**
@@ -571,7 +594,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             objectType?: GType<T> | { $gtype: GType<T> },
         ): ParamSpec<T>
         /**
@@ -586,7 +609,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
             paramType: any,
         ): ParamSpec
         /**
@@ -600,7 +623,7 @@ namespace GObject {
             name: string,
             nick: string | null,
             blurb: string | null,
-            flags: ParamFlags | number,
+            flags: ParamFlags,
         ): ParamSpec<T>
 
         name: string

@@ -1,0 +1,11 @@
+{
+    "name": "docs",
+    "type": "module",
+    "scripts": {
+        "dev": "vitepress dev",
+        "build": "vitepress build"
+    },
+    "dependencies": {
+        "vitepress": "^1.6.4"
+    }
+}

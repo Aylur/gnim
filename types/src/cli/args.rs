@@ -1,16 +1,10 @@
 use clap::Parser;
-use colored::Colorize;
 use std::{env, path};
 
-fn default_dirs() -> Vec<String> {
+fn default_dirs() -> String {
     let data_dirs = match env::var("XDG_DATA_DIRS") {
         Ok(dirs) => dirs,
-        Err(err) => {
-            if matches!(err, env::VarError::NotPresent) {
-                eprintln!("{}: {}", "error".red(), "XDG_DATA_DIRS is not set");
-            }
-            return Vec::new();
-        }
+        Err(_) => return "".to_string(),
     };
 
     data_dirs
@@ -23,11 +17,12 @@ fn default_dirs() -> Vec<String> {
             let name = format!("{}/gir-1.0", &path);
             let gir_path = path::Path::new(&name);
             match gir_path.exists() && gir_path.is_dir() {
-                true => Some(path.to_string()),
+                true => Some(name),
                 false => None,
             }
         })
         .collect::<Vec<_>>()
+        .join(":")
 }
 
 #[derive(Parser)]
@@ -38,11 +33,11 @@ pub struct Cli {
     pub verbose: bool,
 
     /// Target directory to generate to
-    #[arg(short, long, value_name = "PATH", default_value = "./.gi")]
+    #[arg(short, long, value_name = "PATH", default_value = "./.types/gi")]
     pub outdir: String,
 
     /// Lookup these directories for .gir files
-    #[arg(short, long, value_name = "PATHS", default_value_t = default_dirs().join(":"))]
+    #[arg(short, long, value_name = "PATHS", default_value_t = default_dirs())]
     pub dirs: String,
 
     /// Skip rendering by name and version, e.g "Gtk-4.0"

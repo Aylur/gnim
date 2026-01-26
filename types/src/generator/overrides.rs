@@ -55,12 +55,7 @@ pub const OVERRIDES: &[Override] = &[
         version: "2.0",
         content: Some(include_str!("overrides/GLib-2.0.d.ts")),
         classes: &[],
-        toplevel: &[
-            // "Variant",
-            // "VariantType",
-            // "VariantBuilder",
-            // "VariantDict",
-        ],
+        toplevel: &["Variant", "VariantType", "VariantBuilder", "VariantDict"],
     },
     Override {
         namespace: "Gtk",

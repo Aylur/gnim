@@ -13,15 +13,15 @@
         "url": "https://ko-fi.com/aylur"
     },
     "scripts": {
-        "lint": "eslint . --fix"
+        "lint": "eslint . --fix",
+        "build": "../scripts.nu gnim:build"
     },
     "devDependencies": {
         "@eslint/js": "latest",
-        "esbuild": "latest",
+        "jiti": "latest",
         "eslint": "latest",
         "typescript": "latest",
-        "typescript-eslint": "latest",
-        "vitepress": "latest"
+        "typescript-eslint": "latest"
     },
     "exports": {
         ".": "./dist/index.ts",

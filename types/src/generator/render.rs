@@ -42,9 +42,10 @@ pub trait Renderable {
             Ok(ctx) => ctx,
             Err(err) => {
                 return Err(format!(
-                    "rendering {} {}.{}: {}",
+                    "rendering {} {}-{}.{}: {}",
                     Self::KIND,
                     namespace.name,
+                    namespace.version,
                     self.name(),
                     err
                 ));
@@ -53,9 +54,10 @@ pub trait Renderable {
 
         match self.env().render_str(Self::TEMPLATE, ctx) {
             Err(err) => Err(format!(
-                "rendering {} {}.{}: {:?}",
+                "rendering {} {}-{}.{}: {:?}",
                 Self::KIND,
                 namespace.name,
+                namespace.version,
                 self.name(),
                 err
             )),
@@ -84,10 +86,25 @@ fn render<T: Renderable + Sync>(items: &[T], ns: &grammar::Namespace) -> Vec<Ren
                     log!("{}: {}", "error".red(), err);
                     None
                 }
-                Ok(elem) => match elem.content {
-                    Some(_) => Some(elem),
-                    None => None,
-                },
+                Ok(elem) => {
+                    if elem.content.is_none() {
+                        return None;
+                    }
+
+                    match elem.name.as_str() {
+                        "enum" | "function" | "false" | "true" | "break" | "void" => {
+                            log!(
+                                "{}: failed to include {}-{}.{} due to invalid name",
+                                "error".red(),
+                                ns.name,
+                                ns.version,
+                                elem.name,
+                            );
+                            None
+                        }
+                        _ => Some(elem),
+                    }
+                }
             }
         })
         .collect()

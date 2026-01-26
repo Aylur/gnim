@@ -1,7 +1,48 @@
-import Clutter from "gi://Clutter"
-import St from "gi://St"
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// Gnome support is experimental since EGO does not support a build step.
+// Clutter and St versions are regularly updated so we don't import the
+// versioned namespaces and simply treat this module like regular JS
+
+// @ts-expect-error
+import _Clutter from "gi://Clutter"
+// @ts-expect-error
+import _St from "gi://St"
 import { configue } from "../jsx/env.js"
 import { onCleanup, Accessor, Fragment } from "../index.js"
+import type GObject from "gi://GObject?version=2.0"
+
+declare class _ClutterActor extends GObject.Object {
+    add_action(action: _ClutterAction): void
+    remove_action(action: _ClutterAction): void
+    add_child(child: _ClutterActor): void
+    remove_child(child: _ClutterActor): void
+    add_constraint(child: _ClutterConstraint): void
+    remove_constraint(child: _ClutterConstraint): void
+    set_layout_manager(manager: _ClutterLayoutManager | null): void
+    destroy(): void
+}
+
+declare class _ClutterAction extends GObject.Object {}
+declare class _ClutterConstraint extends GObject.Object {}
+declare class _ClutterLayoutManager extends GObject.Object {}
+
+declare class _StWidget extends GObject.Object {
+    style: string
+    set_style(s: string): void
+    styleClass: string
+    set_style_class_name(s: string): void
+}
+
+const St = _St as {
+    Widget: typeof _StWidget
+}
+
+const Clutter = _Clutter as {
+    Actor: typeof _ClutterActor
+    Action: typeof _ClutterAction
+    Constraint: typeof _ClutterConstraint
+    LayoutManager: typeof _ClutterLayoutManager
+}
 
 const { intrinsicElements } = configue({
     setCss(object, css) {
@@ -31,7 +72,7 @@ const { intrinsicElements } = configue({
         }
     },
     textNode(text) {
-        return St.Label.new(text.toString())
+        return _St.Label.new(text.toString())
     },
     removeChild(parent, child) {
         if (parent instanceof Clutter.Actor) {

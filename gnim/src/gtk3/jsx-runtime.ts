@@ -8,10 +8,7 @@ const { intrinsicElements } = configue({
     initProps(ctor, props) {
         props.visible ??= true
         if (ctor === Gtk.Stack) {
-            const keys: Array<Extract<keyof Gtk.Stack, string>> = [
-                "visibleChildName",
-                "visible_child_name",
-            ]
+            const keys: Array<Extract<keyof Gtk.Stack, string>> = ["visibleChildName"]
             return keys
         }
     },

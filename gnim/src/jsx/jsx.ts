@@ -1,8 +1,15 @@
-import GObject from "gi://GObject"
+import GObject from "gi://GObject?version=2.0"
 import { Fragment } from "./Fragment.js"
 import { Accessor } from "./state.js"
 import { type CC, type FC, env } from "./env.js"
-import { kebabify, type Pascalify, set } from "../util.js"
+import {
+    kebabify,
+    type PascalCase,
+    type CamelCase,
+    set,
+    type Keyof,
+    type Reactive,
+} from "../util.js"
 import { onCleanup } from "./scope.js"
 
 /**
@@ -75,46 +82,61 @@ export type FCProps<Self, Props> = Props & {
 /**
  * Class Component Properties
  */
-export type CCProps<Self extends GObject.Object, Props> = {
-    /**
-     * @internal children elements
-     * its consumed internally and not actually passed to class component constructors
-     */
-    children?: Array<Node> | Node
-    /**
-     * Gtk.Builder type
-     * its consumed internally and not actually passed to class component constructors
-     */
-    $type?: string
-    /**
-     * function to use as a constructor,
-     * its consumed internally and not actually passed to class component constructors
-     */
-    $constructor?(props: Partial<Props>): Self
-    /**
-     * setup function,
-     * its consumed internally and not actually passed to class component constructors
-     */
-    $?(self: Self): void
-    /**
-     * CSS class names
-     */
-    class?: string | Accessor<string>
-    /**
-     * inline CSS
-     */
-    css?: string | Accessor<string>
-} & {
-    [K in keyof Props]: Accessor<NonNullable<Props[K]>> | Props[K]
-} & {
-    [S in keyof Self["$signals"] as S extends `notify::${infer P}`
-        ? `onNotify${Pascalify<P>}`
-        : S extends `${infer E}::${infer D}`
-          ? `on${Pascalify<`${E}:${D}`>}`
-          : S extends string
-            ? `on${Pascalify<S>}`
-            : never]?: GObject.SignalCallback<Self, Self["$signals"][S]>
-}
+export type CCProps<T extends GObject.Object> = Partial<
+    {
+        /**
+         * @internal children elements
+         * its consumed internally and not actually passed to class component constructors
+         */
+        children: Array<Node> | Node
+        /**
+         * Gtk.Builder type
+         * its consumed internally and not actually passed to class component constructors
+         */
+        $type: string
+        /**
+         * function to use as a constructor,
+         * its consumed internally and not actually passed to class component constructors
+         */
+        $constructor(props?: Partial<GObject.ConstructorProps<T>>): T
+        /**
+         * setup function,
+         * its consumed internally and not actually passed to class component constructors
+         */
+        $(self: T): void
+        /**
+         * CSS class names
+         */
+        class: Reactive<string>
+        /**
+         * inline CSS
+         */
+        css: Reactive<string>
+    } & {
+        // writable reactive properties
+        [K in Keyof<T["$writableProperties"]> as CamelCase<K>]: Reactive<
+            T["$writableProperties"][K]
+        >
+    } & {
+        // construct only properties
+        [K in Keyof<
+            T["$constructOnlyProperties"]
+        > as CamelCase<K>]?: T["$constructOnlyProperties"][K]
+    } & {
+        // onSignalName and onDetaliedSignal:detail
+        [S in Keyof<T["$signals"]> as S extends `${infer Name}::{}`
+            ? `on${PascalCase<Name>}:${string}`
+            : `on${PascalCase<S>}`]: GObject.SignalCallback<T, T["$signals"][S]>
+    } & {
+        // onNotifyProperty
+        [S in Keyof<
+            T["$readableProperties"]
+        > as `onNotify${PascalCase<S>}`]: GObject.SignalCallback<
+            T,
+            (pspec: GObject.ParamSpec<T["$readableProperties"][S]>) => void
+        >
+    }
+>
 
 // prettier-ignore
 type JsxProps<C, Props> =
@@ -124,7 +146,7 @@ type JsxProps<C, Props> =
     // the setup function is typed as a union of Object and actual type
     // as a fix users can and should use FCProps
     : C extends FC ? Props & Omit<FCProps<ReturnType<C>, Props>, "$">
-    : C extends CC ? CCProps<InstanceType<C>, Props>
+    : C extends CC ? CCProps<InstanceType<C>>
     : never
 
 function isGObjectCtor(ctor: any): ctor is CC {
@@ -227,7 +249,7 @@ export function jsx<T extends GObject.Object>(
     // key is a special prop in jsx which is passed as a third argument and not in props
     key?: string,
 ): T {
-    const { $, $type, $constructor, children, ...rest } = inprops as CCProps<T, any>
+    const { $, $type, $constructor, children, ...rest } = inprops as CCProps<T>
     const props = rest as Record<string, any>
 
     if (key) Object.assign(props, { key })
@@ -282,7 +304,9 @@ export function jsx<T extends GObject.Object>(
     }
 
     // construct
-    const object = $constructor ? $constructor(props) : new (ctor as CC<T>)(props)
+    const object = $constructor
+        ? $constructor(props as GObject.ConstructorProps<T>)
+        : new (ctor as CC<T>)(props)
     if ($constructor) Object.assign(object, props)
     if ($type) setType(object, $type)
 
@@ -310,7 +334,11 @@ export function jsx<T extends GObject.Object>(
 
     // handle signals
     const disposeHandlers = signals.map(([sig, handler]) => {
-        const id = object.connect(signalName(sig), handler)
+        const id = object.connect(
+            // @ts-expect-error signal name
+            signalName(sig),
+            handler,
+        )
         return () => object.disconnect(id)
     })
 

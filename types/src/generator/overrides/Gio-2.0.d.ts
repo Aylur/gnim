@@ -11,12 +11,6 @@ interface ProxyWrapper<T extends Gio.DBusProxy> {
     ): void
 }
 
-type SignalCallback<Emitter, Callback> = Callback extends (
-    ...args: infer Args
-) => infer Return
-    ? (source: Emitter, ...args: Args) => Return
-    : never
-
 type ActionEntryObject = {
     /** The name of the action */
     name: string
@@ -25,12 +19,12 @@ type ActionEntryObject = {
     /** The initial state of the action */
     state?: string | boolean | GLib.Variant
     /** The callback to connect to the "activate" signal of the action */
-    activate?: SignalCallback<
+    activate?: GObject.SignalCallback<
         Gio.SimpleAction,
         Gio.SimpleAction.SignalSignatures["activate"]
     >
     /** The callback to connect to the "change-state" signal of the action */
-    change_state?: SignalCallback<
+    change_state?: GObject.SignalCallback<
         Gio.SimpleAction,
         Gio.SimpleAction.SignalSignatures["change-state"]
     >
@@ -143,8 +137,37 @@ namespace Gio {
         ): ProxyWrapper<T>
     }
 
+    namespace DBusExportedObject {
+        interface SignalSignatures
+            extends DBusInterfaceSkeleton.SignalSignatures {
+            "handle-method-call"(
+                methodName: string,
+                parameters: GLib.Variant,
+                invocation: DBusMethodInvocation,
+            ): void
+            "handle-property-get"(propertyName: string): GLib.Variant | null
+            "handle-property-set"(
+                propertyName: string,
+                value: GLib.Variant,
+            ): void
+        }
+
+        interface ReadableProperties
+            extends DBusInterfaceSkeleton.ReadableProperties {}
+
+        interface WritableProperties
+            extends DBusInterfaceSkeleton.WritableProperties {}
+
+        interface ConstructOnlyProperties
+            extends DBusInterfaceSkeleton.ConstructOnlyProperties {
+            "g-interface-info": DBusInterfaceInfo
+        }
+    }
+
     interface DBusExportedObjectClass extends DBusInterfaceSkeletonClass {
-        new (): DBusExportedObject
+        new (
+            props?: Partial<GObject.ConstructorProps<DBusExportedObject>>,
+        ): DBusExportedObject
         prototype: DBusExportedObject
 
         /**
@@ -160,11 +183,20 @@ namespace Gio {
         ): DBusExportedObject
     }
 
+    /**
+     * [GjsPrivate.DBusImplementation](https://gitlab.gnome.org/GNOME/gjs/-/blob/master/libgjs-private/gjs-gdbus-wrapper.c)
+     */
     interface DBusExportedObject extends DBusInterfaceSkeleton {
+        readonly $signals: DBusExportedObject.SignalSignatures
+        readonly $readableProperties: DBusExportedObject.ReadableProperties
+        readonly $writableProperties: DBusExportedObject.WritableProperties
+        readonly $constructOnlyProperties: DBusExportedObject.ConstructOnlyProperties
+
         emit_property_changed(
             propertyName: string,
             propertyValue: GLib.Variant,
         ): void
+
         emit_signal(signalName: string, signalParameters: GLib.Variant): void
     }
 

@@ -1,4 +1,6 @@
-import type GObject from "gi://GObject"
+import type GObject from "gi://GObject?version=2.0"
+import type { Accessor } from "./jsx/state"
+import type GLib from "gi://GLib?version=2.0"
 
 export function kebabify(str: string) {
     return str
@@ -18,10 +20,16 @@ export function camelify(str: string) {
     return str.replace(/[-_](.)/g, (_, char) => char.toUpperCase())
 }
 
-export type Pascalify<S> = S extends `${infer Head}${"-" | "_"}${infer Tail}`
-    ? `${Capitalize<Head>}${Pascalify<Tail>}`
+export type PascalCase<S> = S extends `${infer Head}${"-" | "_"}${infer Tail}`
+    ? `${Capitalize<Head>}${PascalCase<Tail>}`
     : S extends string
       ? Capitalize<S>
+      : never
+
+export type CamelCase<S> = S extends `${infer Head}${"-" | "_"}${infer Tail}`
+    ? `${Lowercase<Head>}${PascalCase<Tail>}`
+    : S extends string
+      ? Lowercase<S>
       : never
 
 export type XmlNode = {
@@ -88,3 +96,10 @@ export function set(obj: GObject.Object, prop: string, value: any) {
         }
     }
 }
+
+export type Reactive<T> = T | Accessor<NonNullable<T>>
+export type Keyof<T> = Extract<keyof T, string>
+
+export type InferVariant<S extends string> = ReturnType<GLib.Variant<S>["unpack"]>
+export type DeepInferVariant<S extends string> = ReturnType<GLib.Variant<S>["deepUnpack"]>
+export type RecursiveInferVariant<S extends string> = ReturnType<GLib.Variant<S>["recursiveUnpack"]>

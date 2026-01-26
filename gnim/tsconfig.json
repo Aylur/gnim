@@ -11,7 +11,8 @@
         "skipLibCheck": true,
         "jsx": "react-jsx",
         "verbatimModuleSyntax": true,
-        "typeRoots": ["./.gi"]
+        "typeRoots": ["./.types"],
+        "jsxImportSource": "./gtk4"
     },
     "include": ["./src/**/*"]
 }

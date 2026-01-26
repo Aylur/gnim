@@ -31,5 +31,3 @@ extends {% for e in extends %}{{ e }}{{ suffix }}{% if not loop.last %}, {% endi
         "{{ prop.name }}": {{ prop.type }}
         {%- endfor %}
     }
-
-    type ConstructorProps = ConstructOnlyProperties & WritableProperties

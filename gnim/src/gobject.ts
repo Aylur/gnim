@@ -9,34 +9,33 @@
  * so I'm waiting for a better alternative.
  */
 
-import GObject from "gi://GObject"
-import GLib from "gi://GLib"
+import G from "gi://GObject?version=2.0"
+import GLib from "gi://GLib?version=2.0"
 import { definePropertyGetter, kebabify } from "./util.js"
 
 const priv = Symbol("gobject private")
-const { defineProperty, fromEntries, entries } = Object
-const { Object: GObj, registerClass } = GObject
+const { defineProperty, fromEntries, entries } = globalThis.Object
 
-export { GObject as default }
-export { GObj as Object }
+export { G as default }
 
-export const SignalFlags = GObject.SignalFlags
-export type SignalFlags = GObject.SignalFlags
+export const Object = G.Object
+export type Object = G.Object
 
-export const AccumulatorType = GObject.AccumulatorType
-export type AccumulatorType = GObject.AccumulatorType
+export const SignalFlags = G.SignalFlags
+export type SignalFlags = G.SignalFlags
 
-export type ParamSpec<T = unknown> = GObject.ParamSpec<T>
-export const ParamSpec = GObject.ParamSpec
+export const AccumulatorType = G.AccumulatorType
+export type AccumulatorType = G.AccumulatorType
 
-export type ParamFlags = GObject.ParamFlags
-export const ParamFlags = GObject.ParamFlags
+export type ParamSpec<T = unknown> = G.ParamSpec<T>
+export const ParamSpec = G.ParamSpec
 
-export type GType<T = unknown> = GObject.GType<T>
+export type ParamFlags = G.ParamFlags
+export const ParamFlags = G.ParamFlags
 
-type GObj = GObject.Object
+export type GType<T = unknown> = G.GType<T>
 
-interface GObjPrivate extends GObj {
+interface GPrivate extends G.Object {
     [priv]: Record<string, any>
 }
 
@@ -60,10 +59,10 @@ type Meta = {
 }
 
 type Context = { private: false; static: false; name: string }
-type PropertyContext<T> = ClassFieldDecoratorContext<GObj, T> & Context
-type GetterContext<T> = ClassGetterDecoratorContext<GObj, T> & Context
-type SetterContext<T> = ClassSetterDecoratorContext<GObj, T> & Context
-type SignalContext<T extends () => any> = ClassMethodDecoratorContext<GObj, T> & Context
+type PropertyContext<T> = ClassFieldDecoratorContext<G.Object, T> & Context
+type GetterContext<T> = ClassGetterDecoratorContext<G.Object, T> & Context
+type SetterContext<T> = ClassSetterDecoratorContext<G.Object, T> & Context
+type SignalContext<T extends () => any> = ClassMethodDecoratorContext<G.Object, T> & Context
 
 type SignalOptions = {
     default?: boolean
@@ -104,7 +103,7 @@ export function property<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
         _: void,
         ctx: PropertyContext<T>,
         options?: { metaOnly: true },
-    ): (this: GObj, init: T) => any {
+    ): (this: G.Object, init: T) => any {
         const fieldName = assertField(ctx)
         const key = kebabify(fieldName)
         const meta: Partial<Meta> = ctx.metadata!
@@ -113,7 +112,7 @@ export function property<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
         meta.properties[fieldName] = { flags: ParamFlags.READWRITE, type: typeDeclaration }
 
         ctx.addInitializer(function () {
-            definePropertyGetter(this, fieldName as Extract<keyof GObj, string>)
+            definePropertyGetter(this, fieldName as keyof G.Object)
 
             if (options && options.metaOnly) return
 
@@ -129,11 +128,11 @@ export function property<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
                 get(): T {
                     return this[priv][key]
                 },
-            } satisfies ThisType<GObjPrivate>)
+            } satisfies ThisType<GPrivate>)
         })
 
         return function (init: T) {
-            const dict = ((this as GObjPrivate)[priv] ??= {})
+            const dict = ((this as GPrivate)[priv] ??= {})
             dict[key] = init
             return init
         }
@@ -160,7 +159,7 @@ export function property<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
  * ```
  */
 export function getter<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
-    return function (get: (this: GObj) => any, ctx: GetterContext<T>) {
+    return function (get: (this: G.Object) => any, ctx: GetterContext<T>) {
         const fieldName = assertField(ctx)
         const meta: Partial<Meta> = ctx.metadata!
         const props = (meta.properties ??= {})
@@ -194,7 +193,7 @@ export function getter<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
  * ```
  */
 export function setter<T>(typeDeclaration: PropertyTypeDeclaration<T>) {
-    return function (set: (this: GObj, value: any) => void, ctx: SetterContext<T>) {
+    return function (set: (this: G.Object, value: any) => void, ctx: SetterContext<T>) {
         const fieldName = assertField(ctx)
         const meta: Partial<Meta> = ctx.metadata!
         const props = (meta.properties ??= {})
@@ -238,9 +237,9 @@ export function signal<
     returnType: Return,
     options?: SignalOptions,
 ): (
-    method: (this: GObj, ...args: any) => ParamType<Return>,
+    method: (this: G.Object, ...args: any) => ParamType<Return>,
     ctx: SignalContext<typeof method>,
-) => (this: GObj, ...args: ParamTypes<Params>) => any
+) => (this: G.Object, ...args: ParamTypes<Params>) => any
 
 /**
  * Defines a signal to be registered when using the {@link register} decorator.
@@ -258,9 +257,9 @@ export function signal<
 export function signal<Params extends Array<{ $gtype: GType } | GType>>(
     ...params: Params
 ): (
-    method: (this: GObject.Object, ...args: any) => void,
+    method: (this: G.Object, ...args: any) => void,
     ctx: SignalContext<typeof method>,
-) => (this: GObject.Object, ...args: ParamTypes<Params>) => void
+) => (this: G.Object, ...args: ParamTypes<Params>) => void
 
 export function signal<
     Params extends Array<{ $gtype: GType } | GType>,
@@ -268,7 +267,7 @@ export function signal<
 >(
     ...args: Params | [params: Params, returnType?: Return, options?: SignalOptions]
 ): (
-    method: (this: GObj, ...args: ParamTypes<Params>) => ParamType<Return> | void,
+    method: (this: G.Object, ...args: ParamTypes<Params>) => ParamType<Return> | void,
     ctx: SignalContext<typeof method>,
 ) => typeof method {
     return function (method, ctx) {
@@ -314,7 +313,11 @@ export function signal<
         }
 
         return function (...params) {
-            return this.emit(signalName, ...params) as ParamType<Return>
+            return this.emit(
+                // @ts-expect-error its a valid signal
+                signalName,
+                ...params,
+            ) as ParamType<Return>
         }
     }
 }
@@ -326,61 +329,53 @@ const MAXFLOAT = 3.4028235e38
 const MINFLOAT = -3.4028235e38
 const MININT64 = Number.MIN_SAFE_INTEGER
 const MAXINT64 = Number.MAX_SAFE_INTEGER
+const MINDOUBLE = Number.MIN_VALUE
+const MAXDOUBLE = Number.MAX_VALUE
 
 function pspecFromGType(type: GType<unknown>, name: string, flags: ParamFlags) {
     switch (type) {
-        case GObject.TYPE_BOOLEAN:
-            return ParamSpec.boolean(name, "", "", flags, false)
-        case GObject.TYPE_STRING:
-            return ParamSpec.string(name, "", "", flags, "")
-        case GObject.TYPE_INT:
-            return ParamSpec.int(name, "", "", flags, MININT, MAXINT, 0)
-        case GObject.TYPE_UINT:
-            return ParamSpec.uint(name, "", "", flags, 0, MAXUINT, 0)
-        case GObject.TYPE_INT64:
-            return ParamSpec.int64(name, "", "", flags, MININT64, MAXINT64, 0)
-        case GObject.TYPE_UINT64:
-            return ParamSpec.uint64(name, "", "", flags, 0, Number.MAX_SAFE_INTEGER, 0)
-        case GObject.TYPE_FLOAT:
-            return ParamSpec.float(name, "", "", flags, MINFLOAT, MAXFLOAT, 0)
-        case GObject.TYPE_DOUBLE:
-            return ParamSpec.double(name, "", "", flags, Number.MIN_VALUE, Number.MIN_VALUE, 0)
-        case GObject.TYPE_JSOBJECT:
-            return ParamSpec.jsobject(name, "", "", flags)
-        case GObject.TYPE_VARIANT:
-            return ParamSpec.object(name, "", "", flags as any, GLib.Variant)
-
-        case GObject.TYPE_ENUM:
-        case GObject.TYPE_INTERFACE:
-        case GObject.TYPE_BOXED:
-        case GObject.TYPE_POINTER:
-        case GObject.TYPE_PARAM:
-        case GObject.type_from_name("GType"):
-            throw Error(`cannot guess ParamSpec from GType "${type}"`)
-        case GObject.TYPE_OBJECT:
+        case G.TYPE_CHAR:
+            return G.param_spec_char(name, null, null, MININT, MAXINT, 0, flags)
+        case G.TYPE_UCHAR:
+            return G.param_spec_uchar(name, null, null, 0, MAXUINT, 0, flags)
+        case G.TYPE_INT:
+            return G.param_spec_int(name, null, null, MININT, MAXINT, 0, flags)
+        case G.TYPE_UINT:
+            return G.param_spec_uint(name, null, null, 0, MAXUINT, 0, flags)
+        case G.TYPE_LONG:
+            return G.param_spec_long(name, null, null, MININT, MAXINT, 0, flags)
+        case G.TYPE_ULONG:
+            return G.param_spec_ulong(name, null, null, 0, MAXUINT, 0, flags)
+        case G.TYPE_INT64:
+            return G.param_spec_int64(name, null, null, MININT64, MAXINT64, 0, flags)
+        case G.TYPE_UINT64:
+            return G.param_spec_uint64(name, null, null, 0, Number.MAX_SAFE_INTEGER, 0, flags)
+        case G.TYPE_FLOAT:
+            return G.param_spec_float(name, null, null, MINFLOAT, MAXFLOAT, 0, flags)
+        case G.TYPE_DOUBLE:
+            return G.param_spec_double(name, null, null, MINDOUBLE, MAXDOUBLE, 0, flags)
+        case G.TYPE_BOOLEAN:
+            return G.param_spec_boolean(name, null, null, false, flags)
+        case G.TYPE_STRING:
+            return G.param_spec_string(name, null, null, "", flags)
+        case G.TYPE_JSOBJECT:
+            return G.param_spec_boxed(name, null, null, G.TYPE_JSOBJECT, flags)
         default:
-            return ParamSpec.object(name, "", "", flags as any, type)
+            if (G.type_is_a(type, G.TYPE_OBJECT)) {
+                return G.param_spec_object(name, null, null, type, flags)
+            }
+            if (G.type_is_a(type, G.TYPE_GTYPE)) {
+                return G.param_spec_gtype(name, null, null, type, flags)
+            }
+            if (G.type_is_a(type, G.TYPE_BOXED)) {
+                return G.param_spec_boxed(name, null, null, type, flags)
+            }
+            throw Error(`cannot guess ParamSpec from GType "${type}"`)
     }
 }
 
 function pspec(name: string, flags: ParamFlags, declaration: PropertyTypeDeclaration<unknown>) {
     if (declaration instanceof ParamSpec) return declaration
-
-    if (declaration === Object || declaration === Function || declaration === Array) {
-        return ParamSpec.jsobject(name, "", "", flags)
-    }
-
-    if (declaration === String) {
-        return ParamSpec.string(name, "", "", flags, "")
-    }
-
-    if (declaration === Number) {
-        return ParamSpec.double(name, "", "", flags, -Number.MAX_VALUE, Number.MAX_VALUE, 0)
-    }
-
-    if (declaration === Boolean) {
-        return ParamSpec.boolean(name, "", "", flags, false)
-    }
 
     if ("$gtype" in declaration) {
         return pspecFromGType(declaration.$gtype, name, flags)
@@ -393,10 +388,19 @@ function pspec(name: string, flags: ParamFlags, declaration: PropertyTypeDeclara
     throw Error("invalid PropertyTypeDeclaration")
 }
 
-type MetaInfo = GObject.MetaInfo<never, Array<{ $gtype: GType<unknown> }>, never>
+type MetaInfo = {
+    GTypeName?: string
+    GTypeFlags?: G.TypeFlags
+    Requires?: Array<{ $gtype: GType }>
+    Implements?: Array<{ $gtype: GType }>
+    CssName?: string
+    Template?: string | GLib.Bytes | Uint8Array
+    Children?: string[]
+    InternalChildren?: string[]
+}
 
 /**
- * Replacement for {@link GObject.registerClass}
+ * Replacement for {@link G.registerClass}
  * This decorator consumes metadata needed to register types where the provided decorators are used:
  * - {@link signal}
  * - {@link property}
@@ -409,7 +413,7 @@ type MetaInfo = GObject.MetaInfo<never, Array<{ $gtype: GType<unknown> }>, never
  * class MyClass extends GObject.Object { }
  * ```
  */
-export function register<Cls extends { new (...args: any): GObj }>(options: MetaInfo = {}) {
+export function register<Cls extends { new (...args: any): G.Object }>(options: MetaInfo = {}) {
     return function (cls: Cls, ctx: ClassDecoratorContext<Cls>) {
         const t = options.Template
 
@@ -443,7 +447,7 @@ export function register<Cls extends { new (...args: any): GObj }>(options: Meta
         delete meta.properties
         delete meta.signals
 
-        registerClass({ ...options, Properties: props, Signals: signals }, cls)
+        G.registerClass({ ...options, Properties: props, Signals: signals }, cls)
     }
 }
 
@@ -489,8 +493,8 @@ declare global {
     }
 }
 
-Function.$gtype = Object.$gtype as FunctionConstructor["$gtype"]
-Array.$gtype = Object.$gtype as ArrayConstructor["$gtype"]
-Date.$gtype = Object.$gtype as DateConstructor["$gtype"]
-Map.$gtype = Object.$gtype as MapConstructor["$gtype"]
-Set.$gtype = Object.$gtype as SetConstructor["$gtype"]
+Function.$gtype = G.TYPE_JSOBJECT as FunctionConstructor["$gtype"]
+Array.$gtype = G.TYPE_JSOBJECT as ArrayConstructor["$gtype"]
+Date.$gtype = G.TYPE_JSOBJECT as DateConstructor["$gtype"]
+Map.$gtype = G.TYPE_JSOBJECT as MapConstructor["$gtype"]
+Set.$gtype = G.TYPE_JSOBJECT as SetConstructor["$gtype"]

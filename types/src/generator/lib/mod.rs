@@ -5,12 +5,20 @@ pub struct GjsLib {
 
 pub const GJS_LIBS: &[GjsLib] = &[
     GjsLib {
+        name: "cairo",
+        content: include_str!("cairo.d.ts"),
+    },
+    GjsLib {
         name: "console",
         content: include_str!("console.d.ts"),
     },
     GjsLib {
         name: "encoding",
         content: include_str!("encoding.d.ts"),
+    },
+    GjsLib {
+        name: "format",
+        content: include_str!("format.d.ts"),
     },
     GjsLib {
         name: "gettext",
@@ -29,11 +37,7 @@ pub const GJS_LIBS: &[GjsLib] = &[
         content: include_str!("system.d.ts"),
     },
     GjsLib {
-        name: "format",
-        content: include_str!("format.d.ts"),
-    },
-    GjsLib {
-        name: "cairo",
-        content: include_str!("cairo.d.ts"),
+        name: "timers",
+        content: include_str!("timers.d.ts"),
     },
 ];

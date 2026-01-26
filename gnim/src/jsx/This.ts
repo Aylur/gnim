@@ -1,15 +1,38 @@
-import GObject from "gi://GObject"
+import GObject from "gi://GObject?version=2.0"
 import { env } from "./env.js"
 import { Accessor, createEffect } from "./state.js"
-import { set } from "../util.js"
+import { set, type CamelCase, type Keyof, type PascalCase, type Reactive } from "../util.js"
 import { onCleanup } from "./scope.js"
-import { append, setType, signalName, type CCProps } from "./jsx.js"
+import { append, setType, signalName, type Node } from "./jsx.js"
 
-type ThisProps<Self extends GObject.Object> = Partial<
-    Omit<CCProps<Self, { [K in keyof Self]: Self[K] }>, "$" | "$constructor">
-> & {
-    this: Self
-}
+type ThisProps<T extends GObject.Object> = {
+    this: T
+} & Partial<
+    {
+        children: Array<Node> | Node
+        $type: string
+        class: Reactive<string>
+        css: Reactive<string>
+    } & {
+        // writable reactive properties
+        [K in Keyof<T["$writableProperties"]> as CamelCase<K>]: Reactive<
+            T["$writableProperties"][K]
+        >
+    } & {
+        // onSignalName and onDetaliedSignal:detail
+        [S in Keyof<T["$signals"]> as S extends `${infer Name}::{}`
+            ? `on${PascalCase<Name>}:${string}`
+            : `on${PascalCase<S>}`]: GObject.SignalCallback<T, T["$signals"][S]>
+    } & {
+        // onNotifyProperty
+        [S in Keyof<
+            T["$readableProperties"]
+        > as `onNotify${PascalCase<S>}`]: GObject.SignalCallback<
+            T,
+            (pspec: GObject.ParamSpec<T["$readableProperties"][S]>) => void
+        >
+    }
+>
 
 /** @experimental */
 export function This<T extends GObject.Object>({
@@ -36,7 +59,7 @@ export function This<T extends GObject.Object>({
                 env.setClass(self, value)
             }
         } else if (key.startsWith("on")) {
-            const id = self.connect(signalName(key), value)
+            const id = self.connect(signalName(key) as never, value)
             cleanup.push(() => self.disconnect(id))
         } else if (value instanceof Accessor) {
             createEffect(() => set(self, key, value()), { immediate: true })

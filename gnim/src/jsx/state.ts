@@ -1,10 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
 
-import GObject from "gi://GObject"
-import Gio from "gi://Gio"
-import GLib from "gi://GLib"
-import { type Pascalify, camelify, kebabify } from "../util.js"
-import type { DeepInfer, RecursiveInfer } from "../variant.js"
+import GLib from "gi://GLib?version=2.0"
+import GObject from "gi://GObject?version=2.0"
+import Gio from "gi://Gio?version=2.0"
+import {
+    type PascalCase,
+    camelify,
+    kebabify,
+    type DeepInferVariant,
+    type RecursiveInferVariant,
+} from "../util.js"
 import { Scope } from "./scope.js"
 
 type Callback = () => void
@@ -12,7 +17,11 @@ type DisposeFn = () => void
 
 const nil = Symbol("nil")
 const accessStack = new Array<Set<Accessor>>()
-const { connect, disconnect } = GObject.Object.prototype
+const { connect: _connect, disconnect } = GObject.Object.prototype
+
+function connect(this: GObject.Object, signal: string, callback: (...args: unknown[]) => unknown) {
+    return _connect.call(this, signal as never, callback as never)
+}
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 
@@ -788,9 +797,9 @@ export function createExternal<T>(init: T, producer: (set: Setter<T>) => Dispose
 }
 
 type Settings<T extends Record<string, string>> = {
-    [K in keyof T as Uncapitalize<Pascalify<K>>]: Accessor<RecursiveInfer<T[K]>>
+    [K in keyof T as Uncapitalize<PascalCase<K>>]: Accessor<RecursiveInferVariant<T[K]>>
 } & {
-    [K in keyof T as `set${Pascalify<K>}`]: Setter<DeepInfer<T[K]>>
+    [K in keyof T as `set${PascalCase<K>}`]: Setter<DeepInferVariant<T[K]>>
 }
 
 /**
