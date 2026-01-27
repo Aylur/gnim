@@ -3,7 +3,7 @@ use super::{callable, doc, gtype};
 use crate::parser::grammar;
 use stringcase::camel_case;
 
-fn iter_signals(ctx: &render::Context, signals: &[grammar::Signal]) -> Vec<String> {
+fn collect_signals(ctx: &render::Context, signals: &[grammar::Signal]) -> Vec<String> {
     signals
         .iter()
         .filter(|s| s.info.introspectable)
@@ -38,7 +38,7 @@ fn iter_signals(ctx: &render::Context, signals: &[grammar::Signal]) -> Vec<Strin
         .collect()
 }
 
-fn iter_properties(
+fn collect_properties(
     ctx: &render::Context,
     properties: &[grammar::Property],
 ) -> Vec<minijinja::Value> {
@@ -120,8 +120,8 @@ impl render::Renderable for grammar::Class {
             .chain(self.implements.iter().map(|i| &i.name))
             .collect();
 
-        let signals: Vec<String> = iter_signals(ctx, &self.signals);
-        let properties: Vec<minijinja::Value> = iter_properties(ctx, &self.properties);
+        let signals: Vec<String> = collect_signals(ctx, &self.signals);
+        let properties: Vec<minijinja::Value> = collect_properties(ctx, &self.properties);
 
         let overrides = overrides::OVERRIDES
             .iter()
@@ -171,21 +171,29 @@ impl render::Renderable for grammar::Class {
                 .collect::<Vec<_>>(),
         );
 
-        let name_class = ctx
-            .namespace
-            .records
-            .iter()
-            .find(|rec| {
-                rec.gtype_struct_for
-                    .as_ref()
-                    .is_some_and(|name| name == &self.name)
-            })
+        let constructor_record = ctx.namespace.records.iter().find(|rec| {
+            rec.gtype_struct_for
+                .as_ref()
+                .is_some_and(|name| name == &self.name)
+        });
+
+        let class_functions = constructor_record.map(|record| {
+            callable::render_callable_elements(
+                ctx,
+                "",
+                &record
+                    .methods
+                    .iter()
+                    .map(callable::CallableElement::Method)
+                    .collect::<Vec<_>>(),
+            )
+        });
+
+        let name_class = constructor_record
             .and_then(|rec| rec.name.clone())
-            // TODO: check for name collision
-            // Class suffix is only convention, so it might conflict with another symbol
+            // TODO: check for possible name collision
             .unwrap_or_else(|| format!("{}Class", &self.name));
 
-        // TODO: render functions from record
         let parent_class = self.parent.as_ref().map(|parent| {
             ctx.namespace
                 .records
@@ -196,8 +204,7 @@ impl render::Renderable for grammar::Class {
                         .is_some_and(|name| name == parent)
                 })
                 .and_then(|rec| rec.name.clone())
-                // TODO: check for name collision
-                // Class suffix is only convention, so it might conflict with another symbol
+                // TODO: check for possible name collision
                 .unwrap_or_else(|| format!("{}Class", parent))
         });
 
@@ -215,6 +222,7 @@ impl render::Renderable for grammar::Class {
             constructors,
             functions,
             virtual_methods,
+            class_functions,
         })
     }
 }
@@ -250,8 +258,8 @@ impl render::Renderable for grammar::Interface {
             .chain(self.implements.iter().map(|i| &i.name))
             .collect();
 
-        let signals: Vec<String> = iter_signals(ctx, &self.signals);
-        let properties: Vec<minijinja::Value> = iter_properties(ctx, &self.properties);
+        let signals: Vec<String> = collect_signals(ctx, &self.signals);
+        let properties: Vec<minijinja::Value> = collect_properties(ctx, &self.properties);
 
         let overrides = overrides::OVERRIDES
             .iter()
@@ -299,19 +307,27 @@ impl render::Renderable for grammar::Interface {
                 .collect::<Vec<_>>(),
         );
 
-        // TODO: render functions from record
-        let name_iface = ctx
-            .namespace
-            .records
-            .iter()
-            .find(|rec| {
-                rec.gtype_struct_for
-                    .as_ref()
-                    .is_some_and(|name| name == &self.name)
-            })
+        let constructor_record = ctx.namespace.records.iter().find(|rec| {
+            rec.gtype_struct_for
+                .as_ref()
+                .is_some_and(|name| name == &self.name)
+        });
+
+        let class_functions = constructor_record.map(|iface| {
+            callable::render_callable_elements(
+                ctx,
+                "",
+                &iface
+                    .methods
+                    .iter()
+                    .map(callable::CallableElement::Method)
+                    .collect::<Vec<_>>(),
+            )
+        });
+
+        let name_iface = constructor_record
             .and_then(|rec| rec.name.clone())
-            // TODO: check for name collision
-            // Iface suffix is only convention, so it might conflict with another symbol
+            // TODO: check for possible name collision
             .unwrap_or_else(|| format!("{}Iface", &self.name));
 
         Ok(minijinja::context! {
@@ -325,6 +341,7 @@ impl render::Renderable for grammar::Interface {
             constructors,
             functions,
             virtual_methods,
+            class_functions,
         })
     }
 }

@@ -37,8 +37,12 @@ interface {{ name_iface }} {
     readonly $gtype: GObject.GType<{{ name }}>
     readonly prototype: {{ name }}
 
-    {%- for function in functions %}
-    {{ function|indent(4) }}
+    {%- for fn in functions %}
+    {{ fn|indent(4) }}
+    {%- endfor %}
+
+    {%- for fn in class_functions %}
+    {{ fn|indent(4) }}
     {%- endfor %}
 
     [Symbol.hasInstance](instance: unknown): instance is {{ name }}

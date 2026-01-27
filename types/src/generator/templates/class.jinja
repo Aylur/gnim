@@ -45,6 +45,10 @@ interface {{ name_class }}{% if parent_class %} extends Omit<{{ parent_class }},
     {%- for fn in functions %}
     {{ fn|indent(4) }}
     {%- endfor %}
+
+    {%- for fn in class_functions %}
+    {{ fn|indent(4) }}
+    {%- endfor %}
 }
 
 const {{ name }}: {{ name_class }}

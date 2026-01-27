@@ -87,22 +87,9 @@ impl render::Renderable for grammar::Record {
         }
     }
 
-    fn introspectable(&self, ctx: &render::Context) -> bool {
-        // I'm not entirely sure, but maybe we can skip iteration and simply
-        // return false if it *is* a gtype_struct_for?
-        let class_struct = ctx.namespace.classes.iter().any(|class| {
-            self.gtype_struct_for
-                .as_ref()
-                .is_some_and(|name| name == &class.name)
-        });
-
-        let iface_struct = ctx.namespace.interfaces.iter().any(|iface| {
-            self.gtype_struct_for
-                .as_ref()
-                .is_some_and(|name| name == &iface.name)
-        });
-
-        !class_struct && !iface_struct && self.info.introspectable && self.name.is_some()
+    fn introspectable(&self, _: &render::Context) -> bool {
+        // gtype structs are rendered in classes/interfaces
+        self.gtype_struct_for.is_none() && self.info.introspectable && self.name.is_some()
     }
 
     fn ctx(&self, ctx: &render::Context) -> Result<minijinja::Value, String> {
