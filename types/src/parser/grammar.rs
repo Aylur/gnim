@@ -359,6 +359,7 @@ pub struct Enumeration {
     pub doc: InfoElements,
     pub name: String,
     pub type_name: Option<String>,
+    pub error_domain: Option<String>,
     pub members: Vec<Member>,
     pub functions: Vec<Function>,
 }

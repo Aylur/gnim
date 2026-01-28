@@ -687,6 +687,7 @@ impl Enumeration {
             doc: InfoElements::new(),
             name: get_attr(attrs, "name")?,
             type_name: get_attr(attrs, "glib:type-name").ok(),
+            error_domain: get_attr(attrs, "glib:error-domain").ok(),
             members: Vec::new(),
             functions: Vec::new(),
         })

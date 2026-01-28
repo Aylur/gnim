@@ -13,11 +13,9 @@ fn remove_prefix(fn_name: &str, prefixes: &Vec<&str>) -> String {
     fn_name.to_string()
 }
 
-macro_rules! ctx {
-    ($self:expr, $ctx:expr) => {{
-        let jsdoc = doc::jsdoc(&$self.doc, &$self.info)?;
-
-        let functions = if $self.functions.is_empty() {
+macro_rules! render_functions {
+    ($self:expr, $ctx:expr) => {
+        if $self.functions.is_empty() {
             Vec::new()
         } else {
             match $ctx.namespace.c_symbol_prefixes.as_ref() {
@@ -63,9 +61,13 @@ macro_rules! ctx {
                         .collect()
                 }
             }
-        };
+        }
+    };
+}
 
-        let members: Vec<minijinja::Value> = $self
+macro_rules! render_members {
+    ($self:expr, $ctx:expr) => {
+        $self
             .members
             .iter()
             .map(|m| {
@@ -75,15 +77,8 @@ macro_rules! ctx {
                     value => m.value,
                 }
             })
-            .collect();
-
-        Ok(minijinja::context! {
-            name => &$self.name,
-            jsdoc,
-            functions,
-            members,
-        })
-    }};
+            .collect::<Vec<minijinja::Value>>()
+    };
 }
 
 impl render::Renderable for grammar::Enumeration {
@@ -99,7 +94,17 @@ impl render::Renderable for grammar::Enumeration {
     }
 
     fn ctx(&self, ctx: &render::Context) -> Result<minijinja::Value, String> {
-        ctx!(self, ctx)
+        let jsdoc = doc::jsdoc(&self.doc, &self.info)?;
+        let functions = render_functions!(self, ctx);
+        let members = render_members!(self, ctx);
+
+        Ok(minijinja::context! {
+            name => &self.name,
+            error_domain => &self.error_domain,
+            jsdoc,
+            functions,
+            members,
+        })
     }
 }
 
@@ -116,6 +121,15 @@ impl render::Renderable for grammar::BitField {
     }
 
     fn ctx(&self, ctx: &render::Context) -> Result<minijinja::Value, String> {
-        ctx!(self, ctx)
+        let jsdoc = doc::jsdoc(&self.doc, &self.info)?;
+        let functions = render_functions!(self, ctx);
+        let members = render_members!(self, ctx);
+
+        Ok(minijinja::context! {
+            name => &self.name,
+            jsdoc,
+            functions,
+            members,
+        })
     }
 }

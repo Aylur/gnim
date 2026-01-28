@@ -1,3 +1,14 @@
+{%- if error_domain %}
+abstract class {{ name }} extends GLib.Error {
+    static readonly $gtype: GObject.GType<{{ name }}>
+
+    {%- for member in members %}
+    {{ member.jsdoc|indent(4) if member.jsdoc }}
+    static "{{ member.name }}": {{ member.value }}
+    {%- endfor %}
+}
+
+{%- else %}
 namespace {{ name }} {
     const $gtype: GObject.GType<{{ name }}>
 }
@@ -9,6 +20,7 @@ enum {{ name }} {
     "{{ member.name }}" = {{ member.value }},
     {%- endfor %}
 }
+{%- endif %}
 
 {%- for fn in functions %}
 {{ fn }}
