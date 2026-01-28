@@ -1,6 +1,6 @@
 use super::super::render;
 use super::{callable, doc, gtype};
-use crate::parser::grammar;
+use crate::grammar;
 use stringcase::snake_case;
 
 const TEMPLATE: &'static str = include_str!("../templates/record.jinja");

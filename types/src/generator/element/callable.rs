@@ -1,6 +1,6 @@
 use super::super::{generate, render};
 use super::{doc, gtype};
-use crate::parser::grammar;
+use crate::grammar;
 
 static TEMPLATE: &'static str = include_str!("../templates/callable.jinja");
 

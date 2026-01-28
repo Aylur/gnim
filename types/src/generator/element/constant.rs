@@ -1,6 +1,6 @@
 use super::super::render;
 use super::gtype;
-use crate::parser::grammar;
+use crate::grammar;
 
 impl render::Renderable for grammar::Constant {
     const KIND: &'static str = "constant";

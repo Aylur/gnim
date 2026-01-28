@@ -1,34 +1,28 @@
-pub mod grammar;
+use crate::grammar::*;
+use quick_xml::events::{BytesStart, Event};
+use std::{collections, error};
 
-use grammar::*;
-use quick_xml::{
-    Reader,
-    events::{BytesStart, Event},
-};
-use std::{
-    collections::{HashMap, HashSet},
-    error::Error,
-    fs,
-    path::Path,
-};
+type Err = Box<dyn error::Error>;
+type Attrs = collections::HashMap<String, String>;
 
-type Res<T> = Result<T, Box<dyn std::error::Error>>;
-type Attrs = HashMap<String, String>;
-
-fn attributes(e: &BytesStart) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
-    let mut map = HashMap::new();
+fn attributes(e: &BytesStart) -> Result<Attrs, Err> {
+    let mut map = collections::HashMap::new();
 
     for attr in e.attributes() {
-        let a = attr?;
-        let key = String::from_utf8(a.key.into_inner().to_vec())?;
-        let value = a.unescape_value()?.into_owned();
-        map.insert(key, value);
+        match attr {
+            Err(_) => todo!(),
+            Ok(a) => {
+                let key = String::from_utf8(a.key.into_inner().to_vec())?;
+                let value = a.unescape_value()?.into_owned();
+                map.insert(key, value);
+            }
+        }
     }
 
     Ok(map)
 }
 
-fn get_attr(attrs: &HashMap<String, String>, key: &str) -> Result<String, String> {
+fn get_attr(attrs: &Attrs, key: &str) -> Result<String, Err> {
     let res = attrs
         .get(key)
         .ok_or_else(|| format!("failed to read key '{key}'"))?
@@ -36,7 +30,7 @@ fn get_attr(attrs: &HashMap<String, String>, key: &str) -> Result<String, String
     Ok(res)
 }
 
-fn get_boolean_attr(attrs: &HashMap<String, String>, key: &str) -> Option<bool> {
+fn get_boolean_attr(attrs: &Attrs, key: &str) -> Option<bool> {
     match get_attr(attrs, key).ok() {
         Some(s) if s == "1" => Some(true),
         Some(s) if s == "0" => Some(false),
@@ -44,14 +38,11 @@ fn get_boolean_attr(attrs: &HashMap<String, String>, key: &str) -> Option<bool> 
     }
 }
 
-fn get_int_attr(
-    attrs: &HashMap<String, String>,
-    key: &str,
-) -> Option<Result<i32, std::num::ParseIntError>> {
+fn get_int_attr(attrs: &Attrs, key: &str) -> Option<Result<i32, std::num::ParseIntError>> {
     get_attr(attrs, key).ok().map(|s| s.parse::<i32>())
 }
 
-fn get_info(attrs: &HashMap<String, String>) -> InfoAttrs {
+fn get_info(attrs: &Attrs) -> InfoAttrs {
     InfoAttrs {
         introspectable: get_boolean_attr(attrs, "introspectable").unwrap_or(true),
         deprecated: get_boolean_attr(attrs, "deprecated").unwrap_or(false),
@@ -61,7 +52,7 @@ fn get_info(attrs: &HashMap<String, String>) -> InfoAttrs {
     }
 }
 
-fn get_callable_attrs(attrs: &HashMap<String, String>) -> Result<CallableAttrs, Box<dyn Error>> {
+fn get_callable_attrs(attrs: &Attrs) -> Result<CallableAttrs, Err> {
     Ok(CallableAttrs {
         info: get_info(attrs),
         name: get_attr(attrs, "name")?,
@@ -96,7 +87,7 @@ impl Repository {
 }
 
 impl Namespace {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             name: get_attr(attrs, "name")?,
             version: get_attr(attrs, "version")?,
@@ -136,7 +127,7 @@ impl Namespace {
 }
 
 impl Alias {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             doc: InfoElements::new(),
@@ -158,7 +149,7 @@ impl Alias {
 }
 
 impl Interface {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             doc: InfoElements::new(),
@@ -197,7 +188,7 @@ impl Interface {
 }
 
 impl Class {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             doc: InfoElements::new(),
@@ -238,7 +229,7 @@ impl Class {
 }
 
 impl Record {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             doc: InfoElements::new(),
@@ -269,7 +260,7 @@ impl Record {
 }
 
 impl Constant {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             doc: InfoElements::new(),
@@ -292,7 +283,7 @@ impl Constant {
 }
 
 impl Property {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             name: get_attr(attrs, "name")?,
@@ -321,7 +312,7 @@ impl Property {
 }
 
 impl Signal {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             name: get_attr(attrs, "name")?,
@@ -349,7 +340,7 @@ impl Signal {
 }
 
 impl Field {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             doc: InfoElements::new(),
@@ -376,7 +367,7 @@ impl Field {
 }
 
 impl Callback {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             doc: InfoElements::new(),
@@ -400,7 +391,7 @@ impl Callback {
 }
 
 impl Type {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             name: get_attr(attrs, "name").ok(),
             introspectable: get_boolean_attr(attrs, "introspectable").unwrap_or(true),
@@ -422,7 +413,7 @@ impl Type {
 }
 
 impl ArrayType {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             name: get_attr(attrs, "name").ok(),
             introspectable: get_boolean_attr(attrs, "introspectable").unwrap_or(true),
@@ -443,7 +434,7 @@ impl ArrayType {
 }
 
 impl Constructor {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             attrs: get_callable_attrs(attrs)?,
             doc: InfoElements::new(),
@@ -465,7 +456,7 @@ impl Constructor {
 }
 
 impl Parameters {
-    fn new() -> Res<Self> {
+    fn new() -> Result<Self, Err> {
         Ok(Self {
             instance: None,
             parameters: Vec::new(),
@@ -482,7 +473,7 @@ impl Parameters {
 }
 
 impl Parameter {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             name: get_attr(attrs, "name")?,
             nullable: get_boolean_attr(attrs, "nullable").unwrap_or(false),
@@ -514,7 +505,7 @@ impl Parameter {
 }
 
 impl InstanceParameter {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             doc: InfoElements::new(),
             name: get_attr(attrs, "name")?,
@@ -536,7 +527,7 @@ impl InstanceParameter {
 }
 
 impl ReturnValue {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             doc: InfoElements::new(),
             gtype: None,
@@ -561,7 +552,7 @@ impl ReturnValue {
 }
 
 impl Function {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             attrs: get_callable_attrs(attrs)?,
             doc: InfoElements::new(),
@@ -583,7 +574,7 @@ impl Function {
 }
 
 impl Method {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             attrs: get_callable_attrs(attrs)?,
             doc: InfoElements::new(),
@@ -607,7 +598,7 @@ impl Method {
 }
 
 impl VirtualMethod {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             attrs: get_callable_attrs(attrs)?,
             doc: InfoElements::new(),
@@ -629,7 +620,7 @@ impl VirtualMethod {
 }
 
 impl Union {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             doc: InfoElements::new(),
@@ -659,7 +650,7 @@ impl Union {
 }
 
 impl BitField {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             doc: InfoElements::new(),
@@ -683,7 +674,7 @@ impl BitField {
 }
 
 impl Enumeration {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             doc: InfoElements::new(),
@@ -708,7 +699,7 @@ impl Enumeration {
 }
 
 impl Member {
-    fn new(attrs: &Attrs) -> Res<Self> {
+    fn new(attrs: &Attrs) -> Result<Self, Err> {
         Ok(Self {
             info: get_info(attrs),
             doc: InfoElements::new(),
@@ -766,7 +757,7 @@ pub enum Element {
 }
 
 impl Element {
-    fn push(&mut self, e: &BytesStart) -> Res<Self> {
+    fn push(&mut self, e: &BytesStart) -> Result<Self, Err> {
         let attrs = attributes(e)?;
 
         let element: Self = match e.name().as_ref() {
@@ -862,7 +853,7 @@ impl Element {
         }
     }
 
-    fn text(&mut self, str: &str) -> Result<(), Box<dyn Error>> {
+    fn text(&mut self, str: &str) -> Result<(), String> {
         match self {
             Self::Doc(d) => {
                 let text = d.text.as_deref().unwrap_or("");
@@ -879,7 +870,7 @@ impl Element {
 }
 
 impl Repository {
-    pub fn find_includes(&self, repos: &[Repository]) -> Vec<Include> {
+    pub fn find_includes(&self, repos: &[&Repository]) -> Vec<Include> {
         let mut result = self
             .includes
             .iter()
@@ -900,15 +891,14 @@ impl Repository {
             });
         }
 
-        let mut seen = HashSet::new();
+        let mut seen = collections::HashSet::new();
         result.retain(|inc| seen.insert((inc.name.clone(), inc.version.clone())));
         result
     }
 }
 
-pub fn parse(path: &Path) -> Result<Repository, Box<dyn Error>> {
-    let xml = fs::read_to_string(path)?;
-    let mut reader = Reader::from_str(&xml);
+pub fn parse(gir_contents: &str) -> Result<Repository, Err> {
+    let mut reader = quick_xml::Reader::from_str(gir_contents);
 
     let mut repo: Option<Repository> = None;
     let mut stack: Vec<Element> = Vec::new();
@@ -918,11 +908,6 @@ pub fn parse(path: &Path) -> Result<Repository, Box<dyn Error>> {
             Ok(Event::Start(e)) => match e.name().as_ref() {
                 b"repository" => {
                     stack.push(Element::Repository(Repository {
-                        file_stem: path
-                            .file_stem()
-                            .and_then(|p| p.to_str())
-                            .ok_or("invalid file stem")?
-                            .to_owned(),
                         includes: Vec::new(),
                         namespaces: Vec::new(),
                     }));
@@ -977,9 +962,7 @@ pub fn parse(path: &Path) -> Result<Repository, Box<dyn Error>> {
             }
             Ok(Event::Eof) => break,
             Ok(_) => (),
-            Err(err) => {
-                return Err(format!("parse error: {} {}", path.to_string_lossy(), err,).into());
-            }
+            Err(err) => return Err(err.into()),
         }
     }
 

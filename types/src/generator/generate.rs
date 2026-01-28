@@ -1,7 +1,13 @@
-use super::lib;
-use crate::parser;
+use super::{cache, lib};
+use crate::{grammar, parser};
 use rayon::prelude::*;
 use std::{fs, io, path};
+
+struct Gir<'a> {
+    name: &'a str,
+    contents: String,
+    repo: grammar::Repository,
+}
 
 pub enum Event<'a> {
     Parsed {
@@ -11,11 +17,18 @@ pub enum Event<'a> {
         file_path: &'a path::Path,
         err: &'a str,
     },
+    Warning {
+        warning: &'a str,
+    },
     Failed {
         repo: Option<&'a str>,
         err: &'a str,
     },
     Generated {
+        repo: &'a str,
+        out_path: &'a str,
+    },
+    CacheHit {
         repo: &'a str,
         out_path: &'a str,
     },
@@ -32,61 +45,109 @@ impl From<io::Error> for Error {
     }
 }
 
-pub fn generate(girs: &[path::PathBuf], outdir: &str, event: fn(Event)) -> Result<(), Error> {
-    let repo_paths = girs
-        .iter()
-        .filter(|gir| matches!(gir.extension().and_then(|ext| ext.to_str()), Some("gir")))
-        .collect::<Vec<_>>();
-
-    let repos = repo_paths
+pub fn generate(gir_paths: &[&path::Path], outdir: &str, event: fn(Event)) -> Result<(), Error> {
+    let girs: Vec<Gir> = gir_paths
         .par_iter()
-        .filter_map(|p| match parser::parse(p) {
-            Ok(repo) => {
-                event(Event::Parsed { file_path: p });
-                Some(repo)
-            }
-            Err(err) => {
-                event(Event::ParseFailed {
-                    file_path: p,
-                    err: err.to_string().as_str(),
-                });
-                None
+        .filter(|gir| matches!(gir.extension().and_then(|ext| ext.to_str()), Some("gir")))
+        .filter_map(|path| {
+            let contents = match fs::read_to_string(path) {
+                Ok(ok) => ok,
+                Err(err) => {
+                    event(Event::ParseFailed {
+                        file_path: path,
+                        err: err.to_string().as_str(),
+                    });
+                    return None;
+                }
+            };
+
+            match parser::parse(&contents) {
+                Ok(repo) => {
+                    event(Event::Parsed { file_path: path });
+                    Some(Gir {
+                        name: path.file_stem().and_then(|f| f.to_str()).unwrap(),
+                        repo,
+                        contents,
+                    })
+                }
+                Err(err) => {
+                    event(Event::ParseFailed {
+                        file_path: path,
+                        err: err.to_string().as_str(),
+                    });
+                    None
+                }
             }
         })
         .collect::<Vec<_>>();
 
-    if repos.is_empty() {
+    if girs.is_empty() {
         return Err(Error::Empty);
     }
 
     fs::create_dir_all(&outdir)?;
 
-    let index = repos
+    let repos = girs.iter().map(|gir| &gir.repo).collect::<Vec<_>>();
+
+    let index = girs
         .par_iter()
-        .filter_map(|repo| {
-            let str = match repo.generate_dts(&repos, event) {
-                Ok(str) => str,
+        .filter_map(|gir| {
+            let (hash, cache_path) = cache::lookup_cache(gir.name, &gir.contents);
+            let out_path = format!("{}/{}.d.ts", outdir, gir.name);
+            let import = format!("import \"./{}.d.ts\"", gir.name);
+
+            if let Some(path) = cache_path {
+                match fs::read_to_string(path) {
+                    Err(err) => event(Event::Warning {
+                        warning: err.to_string().as_str(),
+                    }),
+                    Ok(result) => match fs::write(&out_path, result) {
+                        Err(err) => event(Event::Warning {
+                            warning: err.to_string().as_str(),
+                        }),
+                        Ok(_) => {
+                            event(Event::CacheHit {
+                                repo: gir.name,
+                                out_path: &out_path,
+                            });
+                            return Some(import);
+                        }
+                    },
+                }
+            }
+
+            let result = match gir.repo.generate_dts(&repos, event) {
+                Ok(result) => result,
                 Err(err) => {
                     event(Event::Failed {
-                        repo: Some(repo.file_stem.as_str()),
+                        repo: Some(gir.name),
                         err: err.as_str(),
                     });
                     return None;
                 }
             };
-            let path = format!("{}/{}.d.ts", outdir, repo.file_stem);
-            if let Err(err) = fs::write(&path, str) {
-                event(Event::Failed {
-                    repo: Some(repo.file_stem.as_str()),
-                    err: err.to_string().as_str(),
-                });
-                None
-            } else {
-                event(Event::Generated {
-                    repo: repo.file_stem.as_str(),
-                    out_path: &path,
-                });
-                Some(format!("import \"./{}.d.ts\"", repo.file_stem))
+
+            if let Err(err) = cache::cache(&hash, &result) {
+                event(Event::Warning {
+                    warning: err.to_string().as_str(),
+                })
+            }
+
+            match fs::write(&out_path, &result) {
+                Err(err) => {
+                    event(Event::Failed {
+                        repo: Some(gir.name),
+                        err: err.to_string().as_str(),
+                    });
+                    None
+                }
+                Ok(_) => {
+                    event(Event::Generated {
+                        repo: gir.name,
+                        out_path: &out_path,
+                    });
+                    Some(import)
+                }
             }
         })
         .chain(lib::GJS_LIBS.par_iter().filter_map(|lib| {
@@ -98,7 +159,7 @@ pub fn generate(girs: &[path::PathBuf], outdir: &str, event: fn(Event)) -> Resul
                 });
                 None
             } else {
-                event(Event::Generated {
+                event(Event::CacheHit {
                     repo: &lib.name,
                     out_path: &path,
                 });

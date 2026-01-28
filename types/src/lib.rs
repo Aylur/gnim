@@ -1,5 +1,7 @@
 mod generator;
+mod grammar;
 mod parser;
+
 use std::{env, path};
 
 pub fn default_dirs() -> String {

@@ -1,6 +1,6 @@
 use super::generate;
 use super::overrides;
-use crate::parser::grammar;
+use crate::grammar;
 use rayon::prelude::*;
 use rayon::scope;
 
@@ -180,14 +180,20 @@ fn render_namespace<'a>(ctx: Context<'a>) -> RenderedNamespace<'a> {
 }
 
 impl grammar::Repository {
-    fn find_imports(&self, repos: &[grammar::Repository]) -> Vec<grammar::Include> {
-        let mut includes = self.find_includes(repos);
+    fn find_imports(&self, repos: &[&grammar::Repository]) -> Vec<grammar::Include> {
+        let mut includes = self.find_includes(&repos);
+
+        let namespace = self
+            .namespaces
+            .first()
+            .map(|ns| format!("{}-{}", ns.name, ns.version))
+            .unwrap();
 
         let has_gobject = includes
             .iter()
             .any(|inc| inc.name == "GObject" && inc.version == "2.0");
 
-        if self.file_stem != "GObject-2.0" && !has_gobject {
+        if namespace != "GObject-2.0" && !has_gobject {
             includes.push(grammar::Include {
                 name: String::from("GObject"),
                 version: String::from("2.0"),
@@ -198,7 +204,7 @@ impl grammar::Repository {
             .iter()
             .any(|inc| inc.name == "GLib" && inc.version == "2.0");
 
-        if self.file_stem != "GLib-2.0" && !has_glib {
+        if namespace != "GLib-2.0" && !has_glib {
             includes.push(grammar::Include {
                 name: String::from("GLib"),
                 version: String::from("2.0"),
@@ -210,7 +216,7 @@ impl grammar::Repository {
 
     pub fn generate_dts(
         &self,
-        repos: &[grammar::Repository],
+        repos: &[&grammar::Repository],
         event: fn(generate::Event),
     ) -> Result<String, String> {
         let namespaces = self
@@ -224,7 +230,7 @@ impl grammar::Repository {
             })
             .collect::<Vec<_>>();
 
-        let imports = self.find_imports(repos);
+        let imports = self.find_imports(&repos);
 
         let res = minijinja::Environment::new().render_str(
             include_str!("templates/repository.jinja"),

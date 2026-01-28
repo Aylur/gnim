@@ -1,4 +1,4 @@
-use crate::parser::grammar::{AnyType, Parameter, Parameters, ReturnValue};
+use crate::grammar::{AnyType, Parameter, Parameters, ReturnValue};
 
 pub fn filter_parameters<'a>(
     params: Option<&'a Parameters>,

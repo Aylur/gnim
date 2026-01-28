@@ -1,5 +1,5 @@
 use super::gtype;
-use crate::parser::grammar;
+use crate::grammar;
 use regex::Regex;
 use std::sync::LazyLock;
 

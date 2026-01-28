@@ -1,6 +1,6 @@
 use super::super::render;
 use super::{doc, gtype};
-use crate::parser::grammar;
+use crate::grammar;
 
 impl render::Renderable for grammar::Alias {
     const KIND: &'static str = "alias";

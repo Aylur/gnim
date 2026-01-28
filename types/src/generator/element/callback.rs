@@ -1,6 +1,6 @@
 use super::super::render;
 use super::callable;
-use crate::parser::grammar;
+use crate::grammar;
 
 impl render::Renderable for grammar::Callback {
     const KIND: &'static str = "callback";

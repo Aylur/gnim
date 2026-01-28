@@ -1,6 +1,6 @@
 use super::super::{generate, render};
 use super::doc;
-use crate::parser::grammar;
+use crate::grammar;
 
 const TEMPLATE: &'static str = include_str!("../templates/enumeration.jinja");
 

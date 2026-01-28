@@ -3,7 +3,6 @@
 use serde::Serialize;
 
 pub struct Repository {
-    pub file_stem: String, // not part of the grammar
     pub includes: Vec<Include>,
     pub namespaces: Vec<Namespace>,
     // pub doc_format: Vec<DocFormat>,

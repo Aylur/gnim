@@ -1,6 +1,6 @@
 use super::super::{generate, overrides, render};
 use super::{callable, doc, gtype};
-use crate::parser::grammar;
+use crate::grammar;
 use stringcase::camel_case;
 
 fn collect_signals(ctx: &render::Context, signals: &[grammar::Signal]) -> Vec<String> {

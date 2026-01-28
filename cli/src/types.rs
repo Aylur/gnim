@@ -58,6 +58,12 @@ fn on_event(event: Event) {
             Event::Generated { repo, out_path } => {
                 eprintln!("{}: {} {}", "generated".green(), repo, out_path.black())
             }
+            Event::CacheHit { repo, out_path } => {
+                eprintln!("{}: {} {}", "cache hit".green(), repo, out_path.black())
+            }
+            Event::Warning { warning } => {
+                eprintln!("{}: {}", "warning".yellow(), warning)
+            }
         }
     }
 }
@@ -103,7 +109,11 @@ pub fn types(args: &Args) -> ExitCode {
         })
     });
 
-    match generate(&girs, &args.outdir, on_event) {
+    match generate(
+        &girs.iter().map(|p| p.as_path()).collect::<Vec<_>>(),
+        &args.outdir,
+        on_event,
+    ) {
         Ok(_) => ExitCode::SUCCESS,
         Err(err) => {
             match err {
