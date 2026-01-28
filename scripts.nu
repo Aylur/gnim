@@ -8,11 +8,6 @@ def "main clean" [] {
     rm -rf node_modules
 }
 
-def "main setup" [] {
-    main types
-    pnpm install
-}
-
 def "main types" [] {
     cargo build
     ./target/debug/gnim types --verbose --outdir gnim/.types/gi

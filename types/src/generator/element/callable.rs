@@ -52,9 +52,10 @@ impl Callable<'_> {
     pub fn render(&self) -> Result<String, String> {
         let env = minijinja::Environment::new();
 
-        let (p_returns, p_parameters): (Vec<_>, Vec<_>) = gtype::filter_parameters(self.parameters)
-            .into_iter()
-            .partition(|p| matches!(p.direction.as_deref(), Some("inout" | "out")));
+        let (p_returns, p_parameters): (Vec<_>, Vec<_>) =
+            gtype::filter_parameters(self.parameters, self.returns)
+                .into_iter()
+                .partition(|p| matches!(p.direction.as_deref(), Some("inout" | "out")));
 
         let parameter_results: Vec<Result<Parameter, String>> = p_parameters
             .into_iter()

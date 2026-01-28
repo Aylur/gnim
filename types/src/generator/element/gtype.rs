@@ -1,6 +1,9 @@
-use crate::parser::grammar::{AnyType, Parameter, Parameters};
+use crate::parser::grammar::{AnyType, Parameter, Parameters, ReturnValue};
 
-pub fn filter_parameters<'a>(params: Option<&'a Parameters>) -> Vec<&'a Parameter> {
+pub fn filter_parameters<'a>(
+    params: Option<&'a Parameters>,
+    returns: Option<&'a ReturnValue>,
+) -> Vec<&'a Parameter> {
     let params = match params {
         Some(p) => &p.parameters,
         None => return Vec::new(),
@@ -9,17 +12,30 @@ pub fn filter_parameters<'a>(params: Option<&'a Parameters>) -> Vec<&'a Paramete
     let mut remove = vec![false; params.len()];
     let mut result = Vec::new();
 
+    if let Some(ret) = returns
+        && let Some(AnyType::Array(t)) = &ret.gtype
+        && let Some(length) = t.length
+        && let Ok(i) = usize::try_from(length)
+    {
+        remove[i] = true;
+    }
+
     for param in params.iter() {
-        if let Some(destroy) = param.destroy {
-            remove[usize::try_from(destroy).unwrap()] = true;
+        if let Some(destroy) = param.destroy
+            && let Ok(i) = usize::try_from(destroy)
+        {
+            remove[i] = true;
         }
-        if let Some(closure) = param.closure {
-            remove[usize::try_from(closure).unwrap()] = true;
+        if let Some(closure) = param.closure
+            && let Ok(i) = usize::try_from(closure)
+        {
+            remove[i] = true;
         }
         if let Some(AnyType::Array(t)) = &param.gtype
             && let Some(length) = t.length
+            && let Ok(i) = usize::try_from(length)
         {
-            remove[usize::try_from(length).unwrap()] = true;
+            remove[i] = true;
         }
     }
 
