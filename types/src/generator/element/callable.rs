@@ -10,15 +10,6 @@ struct Parameter<'a> {
     tstype: String,
 }
 
-fn tstype(anytype: Option<&grammar::AnyType>, nullable: bool) -> Result<String, String> {
-    let tstype = gtype::resolve_anytype(anytype.ok_or("Missing type".to_owned())?)?;
-    if nullable {
-        Ok(format!("{tstype} | null"))
-    } else {
-        Ok(tstype)
-    }
-}
-
 // https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Mapping.md#gtype-objects
 fn override_parameter_type(name: &str) -> String {
     match name {
@@ -60,10 +51,10 @@ impl Callable<'_> {
         let parameter_results: Vec<Result<Parameter, String>> = p_parameters
             .into_iter()
             .map(|p| -> Result<Parameter, String> {
-                let gtype = tstype(p.gtype.as_ref(), p.nullable)?;
+                let t = gtype::tstype(p.gtype.as_ref(), p.nullable)?;
                 Ok(Parameter {
                     name: filter_keyword(&p.name),
-                    tstype: override_parameter_type(gtype.as_str()),
+                    tstype: override_parameter_type(t.as_str()),
                 })
             })
             .collect();
@@ -77,12 +68,12 @@ impl Callable<'_> {
                 })
             })
             .into_iter()
-            .map(|r| tstype(r.gtype.as_ref(), r.nullable))
+            .map(|r| gtype::tstype(r.gtype.as_ref(), r.nullable))
             .chain(
                 p_returns
                     .into_iter()
                     .filter(|p| !p.optional)
-                    .map(|p| tstype(p.gtype.as_ref(), p.nullable)),
+                    .map(|p| gtype::tstype(p.gtype.as_ref(), p.nullable)),
             )
             .collect();
 

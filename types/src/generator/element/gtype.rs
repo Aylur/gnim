@@ -134,3 +134,12 @@ pub fn resolve_anytype(input: &AnyType) -> Result<String, String> {
         }
     }
 }
+
+pub fn tstype(anytype: Option<&AnyType>, nullable: bool) -> Result<String, String> {
+    let tstype = resolve_anytype(anytype.ok_or("Missing type".to_owned())?)?;
+    if nullable {
+        Ok(format!("{tstype} | null"))
+    } else {
+        Ok(tstype)
+    }
+}

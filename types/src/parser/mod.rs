@@ -301,6 +301,8 @@ impl Property {
             construct: get_boolean_attr(attrs, "construct").unwrap_or(false),
             construct_only: get_boolean_attr(attrs, "construct-only").unwrap_or(false),
             default_value: get_attr(attrs, "default-value").ok(),
+            setter: get_attr(attrs, "setter").ok(),
+            getter: get_attr(attrs, "getter").ok(),
             doc: InfoElements::new(),
             gtype: None,
         })

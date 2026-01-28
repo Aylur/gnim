@@ -150,6 +150,8 @@ pub struct Property {
     pub construct: bool,
     pub construct_only: bool,
     pub default_value: Option<String>,
+    pub getter: Option<String>,
+    pub setter: Option<String>,
     pub doc: InfoElements,
     pub gtype: Option<AnyType>,
 }

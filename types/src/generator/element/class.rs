@@ -41,40 +41,38 @@ fn collect_signals(ctx: &render::Context, signals: &[grammar::Signal]) -> Vec<St
 fn collect_properties(
     ctx: &render::Context,
     properties: &[grammar::Property],
+    methods: &[grammar::Method],
 ) -> Vec<minijinja::Value> {
     properties
         .iter()
         .filter(|p| p.info.introspectable)
         .filter_map(|p| {
-            let res: Result<minijinja::Value, String> = (|| {
-                let jsdoc = doc::Doc {
-                    doc: &p.doc,
-                    info: &p.info,
-                    parameters: None,
-                    returns: None,
-                    throws: false,
-                    overrides: false,
-                    default_value: p.default_value.as_deref(),
-                }
-                .render()?;
+            let getter_is_nullable = p
+                .getter
+                .as_ref()
+                .and_then(|getter| methods.iter().find(|m| m.attrs.name == *getter))
+                .and_then(|m| m.returns.as_ref())
+                .is_some_and(|r| r.nullable);
 
-                let gtype = match &p.gtype {
-                    Some(t) => gtype::resolve_anytype(t),
-                    None => Err("Missing type".to_owned()),
-                }?;
+            let jsdoc = doc::Doc {
+                doc: &p.doc,
+                info: &p.info,
+                parameters: None,
+                returns: None,
+                throws: false,
+                overrides: false,
+                default_value: p.default_value.as_deref(),
+            };
 
-                Ok(minijinja::context! {
-                    jsdoc,
+            match gtype::tstype(p.gtype.as_ref(), getter_is_nullable) {
+                Ok(t) => Some(minijinja::context! {
+                    jsdoc => jsdoc.render().ok(),
                     name => &p.name,
-                    type => gtype,
+                    type => t,
                     readable => p.readable,
                     writable => p.writable,
                     construct_only => p.construct_only,
-                })
-            })();
-
-            match res {
-                Ok(res) => Some(res),
+                }),
                 Err(err) => {
                     (ctx.event)(generate::Event::Failed {
                         repo: None,
@@ -120,8 +118,8 @@ impl render::Renderable for grammar::Class {
             .chain(self.implements.iter().map(|i| &i.name))
             .collect();
 
-        let signals: Vec<String> = collect_signals(ctx, &self.signals);
-        let properties: Vec<minijinja::Value> = collect_properties(ctx, &self.properties);
+        let signals = collect_signals(ctx, &self.signals);
+        let properties = collect_properties(ctx, &self.properties, &self.methods);
 
         let overrides = overrides::OVERRIDES
             .iter()
@@ -258,8 +256,8 @@ impl render::Renderable for grammar::Interface {
             .chain(self.implements.iter().map(|i| &i.name))
             .collect();
 
-        let signals: Vec<String> = collect_signals(ctx, &self.signals);
-        let properties: Vec<minijinja::Value> = collect_properties(ctx, &self.properties);
+        let signals = collect_signals(ctx, &self.signals);
+        let properties = collect_properties(ctx, &self.properties, &self.methods);
 
         let overrides = overrides::OVERRIDES
             .iter()
