@@ -823,10 +823,30 @@ namespace GObject {
         func: Function,
     ): number
 
-    export function type_is_a<T extends Object>(
+    function type_is_a<T extends Object>(
         obj: Object,
         is_a_type: T | GType<T>,
     ): obj is T
+
+    /** @see Object.connect */
+    function signal_connect<T extends Object>(
+        object: T,
+        name: string,
+        handler: (source: T, ...args: unknown[]) => unknown,
+    ): number
+
+    /** @see Object.connect_after */
+    function signal_connect_after<T extends Object>(
+        object: T,
+        name: string,
+        handler: (source: T, ...args: unknown[]) => unknown,
+    ): number
+
+    /** @see Object.emit */
+    function signal_emit_by_name<T extends Object>(
+        object: T,
+        ...args: unknown[]
+    ): unknown
 
     /**
      * A generic value container, usually only used to implement GObject Properties

@@ -1,0 +1,7 @@
+{
+    "prettier": {
+        "semi": false,
+        "tabWidth": 4,
+        "printWidth": 80
+    }
+}
