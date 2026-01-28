@@ -87,19 +87,19 @@ pub fn types(args: &Args) -> ExitCode {
 
     girs.retain(|path| {
         path.file_stem().is_some_and(|name| {
-            let dup = uniq.insert(name.to_owned());
+            let is_new = uniq.insert(name.to_owned());
             let ignore = args.ignore.iter().any(|ignore| **ignore == *name);
-            let skip = dup || ignore;
-            if skip && *VERBOSE.get().unwrap_or(&false) {
+            let keep = is_new || !ignore;
+            if !keep && *VERBOSE.get().unwrap_or(&false) {
                 eprintln!(
                     "{}: {}{} {}",
                     "ignored".yellow(),
-                    (if dup { "duplicate " } else { "" }).black(),
+                    (if keep { "duplicate " } else { "" }).black(),
                     name.to_str().expect("valid utf8 file name"),
                     path.to_str().expect("valid utf8 file name").black(),
                 )
             }
-            skip
+            keep
         })
     });
 
