@@ -406,7 +406,7 @@ export async function fetch(url: string | URL, { method, headers, body }: Reques
     })
 
     return new Response(inputStream, {
-        statusText: message.reasonPhrase,
+        statusText: message.reasonPhrase || undefined,
         status: message.statusCode,
     })
 }

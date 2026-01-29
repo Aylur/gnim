@@ -12,7 +12,9 @@
         "type": "kofi",
         "url": "https://ko-fi.com/aylur"
     },
-    "bin": "bin/index.ts",
+    "bin": {
+        "gnim-types": "bin/gnim-types.js"
+    },
     "scripts": {
         "lint": "eslint . --fix"
     },
@@ -25,19 +27,21 @@
         "typescript-eslint": "latest"
     },
     "optionalDependencies": {
-        "@gnim-js/cli-linux-x64": "^0.1.0"
+        "@gnim-js/types-linux-x64": "0.1.0-alpha.1"
     },
     "exports": {
-        ".": "./dist/index.ts",
-        "./dbus": "./dist/dbus.ts",
-        "./fetch": "./dist/fetch.ts",
-        "./gobject": "./dist/gobject.ts",
-        "./gnome/jsx-runtime": "./dist/gnome/jsx-runtime.ts",
-        "./gtk3/jsx-runtime": "./dist/gtk3/jsx-runtime.ts",
-        "./gtk4/jsx-runtime": "./dist/gtk4/jsx-runtime.ts"
+        ".": "./src/index.ts",
+        "./dbus": "./src/dbus.ts",
+        "./fetch": "./src/fetch.ts",
+        "./gobject": "./src/gobject.ts",
+        "./gnome/jsx-runtime": "./src/gnome/jsx-runtime.ts",
+        "./gtk3/jsx-runtime": "./src/gtk3/jsx-runtime.ts",
+        "./gtk4/jsx-runtime": "./src/gtk4/jsx-runtime.ts"
     },
     "files": [
-        "dist"
+        "bin",
+        "src",
+        "gnim.gresource"
     ],
     "engines": {
         "gjs": ">=1.83.0"

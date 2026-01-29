@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "module": "nodenext",
+        "target": "ES2020",
+        "outDir": "build/bin",
+        "removeComments": true,
+        "strict": true,
+        "moduleResolution": "nodenext",
+        "verbatimModuleSyntax": true,
+        "skipLibCheck": true
+    },
+    "include": ["./bin/**/*"]
+}

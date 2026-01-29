@@ -167,19 +167,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "gnim"
-version = "0.1.0"
-dependencies = [
- "clap",
- "colored",
- "gnim-types",
-]
-
-[[package]]
 name = "gnim-types"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "colored",
  "minijinja",
  "quick-xml",
  "rayon",

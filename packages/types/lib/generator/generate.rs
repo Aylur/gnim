@@ -1,4 +1,4 @@
-use super::{cache, lib};
+use super::{cache, gjs_lib};
 use crate::{grammar, parser};
 use rayon::prelude::*;
 use std::{fs, io, path};
@@ -150,7 +150,7 @@ pub fn generate(gir_paths: &[&path::Path], outdir: &str, event: fn(Event)) -> Re
                 }
             }
         })
-        .chain(lib::GJS_LIBS.par_iter().filter_map(|lib| {
+        .chain(gjs_lib::GJS_LIBS.par_iter().filter_map(|lib| {
             let path = format!("{}/{}.d.ts", outdir, lib.name);
             if let Err(err) = fs::write(&path, lib.content) {
                 event(Event::Failed {
@@ -177,7 +177,10 @@ pub fn generate(gir_paths: &[&path::Path], outdir: &str, event: fn(Event)) -> Re
     });
 
     let package_path = format!("{}/package.json", outdir);
-    fs::write(&package_path, include_str!("../generator/lib/package.json"))?;
+    fs::write(
+        &package_path,
+        include_str!("../generator/gjs_lib/package.json"),
+    )?;
     event(Event::Generated {
         repo: "package",
         out_path: package_path.as_str(),

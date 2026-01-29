@@ -11,5 +11,9 @@ minijinja = { version = "2.14.0", features = ["builtins"] }
 serde = { version = "1.0", features = ["derive"] }
 regex = "1"
 stringcase = "0.4.0"
-clap = { version = "4.5.54", features = ["derive"] }
 twox-hash = "2.1.2"
+clap = { version = "4.5.54", features = ["derive"] }
+colored = "2"
+
+[lib]
+path = "lib/mod.rs"

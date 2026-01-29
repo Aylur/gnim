@@ -10,7 +10,7 @@ if (!supportedPlatforms.includes(target)) {
     throw Error(`${target} is not yet supported`)
 }
 
-const cli = import.meta.resolve(`@gnim-js/cli-${target}/gnim`).replace("file://", "")
+const cli = import.meta.resolve(`@gnim-js/types-${target}`).replace("file://", "")
 const processResult = spawnSync(cli, argv.slice(2), {
     stdio: "inherit",
 })
