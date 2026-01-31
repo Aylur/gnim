@@ -4,7 +4,7 @@ abstract class {{ name }} extends GLib.Error {
 
     {%- for member in members %}
     {{ member.jsdoc|indent(4) if member.jsdoc }}
-    static "{{ member.name }}": {{ member.value }}
+    static readonly "{{ member.name }}": {{ member.value }}
     {%- endfor %}
 }
 
