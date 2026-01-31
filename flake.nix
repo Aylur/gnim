@@ -30,10 +30,15 @@
             gtk3
             gtk4
             gjs
-            esbuild
             libsoup_3
           ];
         };
+    });
+
+    packages = forAllSystems (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      gnim-types = pkgs.callPackage ./packages/types {};
     });
   };
 }
