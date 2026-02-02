@@ -2,7 +2,6 @@ import { defineConfig } from "vitepress"
 
 export default defineConfig({
     title: "Gnim",
-    base: "/gnim/",
     description: "Library which brings JSX and reactivity to GNOME JavaScript.",
     cleanUrls: true,
 

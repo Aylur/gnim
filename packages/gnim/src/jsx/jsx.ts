@@ -376,7 +376,7 @@ export function jsx<T extends GObject.Object>(
 export const jsxs = jsx
 
 declare global {
-    // eslint-disable-next-line @typescript-eslint/no-namespace
+     
     namespace JSX {
         type ElementType = keyof IntrinsicElements | FC | CC
         type Element = GObject.Object
