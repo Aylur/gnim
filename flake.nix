@@ -21,6 +21,9 @@
         mkShell {
           packages = [
             cargo
+            rustup
+            gcc
+
             typescript
             nodejs
             wrapGAppsHook4

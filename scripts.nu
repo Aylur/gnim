@@ -10,15 +10,15 @@ def "main clean" [] {
 }
 
 def "main types" [] {
-    cargo build --bin gnim-types
-    ./target/debug/gnim-types --verbose --outdir packages/gnim/.types/gi
+    cargo build --bin gnim-types --target x86_64-unknown-linux-musl
+    ./target/x86_64-unknown-linux-musl/debug/gnim-types --verbose --outdir packages/gnim/.types/gi
 }
 
-def "main build:types" [] {
-    let os = "console.log(process.platform)" | node
-    let cpu = "console.log(process.arch)" | node
+def "main build:types-linux-64" [] {
+    let os = "linux"
+    let cpu = "x64"
 
-    cargo build --bin gnim-types --release
+    cargo build --release --target x86_64-unknown-linux-musl
 
     let target = $"types-($os)-($cpu)"
     let version = open packages/types/Cargo.toml | get package | get version
@@ -33,7 +33,7 @@ def "main build:types" [] {
 
     let dist = $"dist/($target)"
     mkdir $dist
-    mv target/release/gnim-types $dist
+    mv target/x86_64-unknown-linux-musl/release/gnim-types $dist
     $package | save -f $"($dist)/package.json"
 }
 
@@ -56,11 +56,6 @@ def "main build:gnim" [] {
     cp ../../README.md $target
     cp ../../LICENSE $target
     rm -r build
-}
-
-def "main build" [] {
-    main build:types
-    main build:gnim
 }
 
 def "main setup" [] {

@@ -1,6 +1,6 @@
 {
     "name": "gnim",
-    "version": "1.9.0",
+    "version": "1.10.0-rc.0",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
@@ -27,7 +27,7 @@
         "typescript-eslint": "latest"
     },
     "optionalDependencies": {
-        "@gnim-js/types-linux-x64": "0.1.0-alpha.1"
+        "@gnim-js/types-linux-x64": "0.1.0"
     },
     "exports": {
         ".": "./src/index.ts",

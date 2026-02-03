@@ -36,8 +36,8 @@ importers:
         version: 8.54.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
     optionalDependencies:
       '@gnim-js/types-linux-x64':
-        specifier: 0.1.0-alpha.1
-        version: 0.1.0-alpha.1
+        specifier: 0.1.0
+        version: 0.1.0
 
   packages/types: {}
 
@@ -263,8 +263,8 @@ packages:
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@gnim-js/types-linux-x64@0.1.0-alpha.1':
-    resolution: {integrity: sha512-Fg9xYE8CtTRq4896eOskboC3zbUDnUF5IAYfWyqc62ZKar6sVgq3czyluPlI3xk/By8IKrTqtyvnkriuC+3Eng==}
+  '@gnim-js/types-linux-x64@0.1.0':
+    resolution: {integrity: sha512-QQrFE5Thp4HBHQQvnnjiLBhgNWfS/7UT6gsNU7ZMvyPpYYWSrAl4wQ3PdnSiK2cWXco10AlhuuIjyfHDqZuLEw==}
     cpu: [x64]
     os: [linux]
 
@@ -1363,7 +1363,7 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
-  '@gnim-js/types-linux-x64@0.1.0-alpha.1':
+  '@gnim-js/types-linux-x64@0.1.0':
     optional: true
 
   '@humanfs/core@0.19.1': {}
