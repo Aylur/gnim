@@ -4,8 +4,8 @@ Syntactic sugar for creating objects declaratively.
 
 > [!WARNING] This is not React
 >
-> This works nothing like React and has nothing in common with React other than
-> the XML syntax.
+> Gnim shares many concepts with UI rendering libraries like React, Solid, and
+> Svelte, but it is its own solution: it is **not React**.
 
 Consider the following example:
 
@@ -41,7 +41,7 @@ Can be written as
 ```tsx
 function Box() {
   const [counter, setCounter] = createState(0)
-  const label = createComputed(() => `clicked ${counter()} times`)
+  const label = createMemo(() => `clicked ${counter()} times`)
 
   function onClicked() {
     setCounter((c) => c + 1)
@@ -56,27 +56,6 @@ function Box() {
     </Gtk.Box>
   )
 }
-```
-
-## JSX expressions and `jsx` function
-
-A JSX expression transpiles to a `jsx` function call. A JSX expression's type
-however is **always** the base `GObject.Object` type, while the `jsx` return
-type is the instance type of the class or the return type of the function you
-pass to it. If you need the actual type of an object, either use the `jsx`
-function directly or type assert the JSX expression.
-
-```tsx
-import { jsx } from "gnim"
-
-const menubutton = new Gtk.MenuButton()
-
-menubutton.popover = <Gtk.Popover /> // cannot assign Object to Popover // [!code error]
-menubutton.popover = jsx(Gtk.Popover, {}) // works as expected
-
-function MyPopover(): Gtk.Popover
-menubutton.popover = <MyPopover /> // cannot assign Object to Popover // [!code error]
-menubutton.popover = jsx(MyPopover, {}) // works as expected
 ```
 
 ## JSX Element
@@ -126,7 +105,7 @@ instead, you can specify it with `$constructor`.
 
 ### Type string
 
-Under the hood, the `jsx` function uses the
+Under the hood, JSX function uses the
 [Gtk.Buildable](https://docs.gtk.org/gtk4/iface.Buildable.html) interface, which
 lets you use a type string to specify the type the `child` is meant to be.
 
@@ -156,7 +135,7 @@ handlers can be defined with an `onNotify` prefix.
 
 It is possible to define an arbitrary function to do something with the instance
 imperatively. It is run **after** properties are set, signals are connected, and
-children are appended, but **before** the `jsx` function returns.
+children are appended, but **before** the expression returns.
 
 ```tsx
 <Gtk.Stack $={(self) => print(self, "is about to be returned")} />
@@ -173,7 +152,11 @@ function MyWidget() {
     console.log(box)
   }
 
-  return <Gtk.Box $={(self) => (box = self)} />
+  return (
+    <Gtk.Box $={(self) => (box = self)}>
+      <Gtk.Button onClicked={someHandler} />
+    </Gtk.Box>
+  )
 }
 ```
 
@@ -484,7 +467,7 @@ To subscribe for value changes you can use the `subscribe` method.
 const accessor: Accessor<any>
 
 const unsubscribe = accessor.subscribe(() => {
-  console.log("value of accessor changed to", accessor.get())
+  console.log("value of accessor changed to", accessor.peek())
 })
 
 unsubscribe()
@@ -910,19 +893,23 @@ elements by default, but they can be set.
 - Class components
 
   ```tsx
-  import { CCProps } from "gnim"
-  import { intrinsicElements } from "gnim/gtk4/jsx-runtime"
-  import { property, register } from "gnim/gobject"
-
-  interface MyWidgetProps extends Gtk.Widget.ConstructorProps {
-    someProp: string
-  }
-
   @register()
   class MyWidget extends Gtk.Widget {
+    declare $writableProperties: Gtk.Widget.WritableProperties & {
+      // annotates someProp with JSX
+      "some-prop": MyWidget["someProp"]
+    }
+
+    declare $readableProperties: Gtk.Widget.ReadableProperties & {
+      // annotates onNotifySomeProp with JSX
+      "some-prop": MyWidget["someProp"]
+    }
+
     @property(String) someProp = ""
 
-    constructor(props: Partial<MyWidgetProps>) {
+    // NOTE: props annotation here has no effect on JSX expressions
+    // JSX will infer props from `$` prefixed types on the class
+    constructor(props: Partial<GObject.ConstructorProps<MyWidget>>) {
       super(props)
     }
   }
@@ -932,10 +919,10 @@ elements by default, but they can be set.
   declare global {
     namespace JSX {
       interface IntrinsicElements {
-        "my-widget": CCProps<MyWidget, MyWidgetProps>
+        "my-widget": CCProps<MyWidget>
       }
     }
   }
 
-  return <my-widget someProp="hello" />
+  return <my-widget someProp="hello" onNotifySomeProp={console.log} />
   ```

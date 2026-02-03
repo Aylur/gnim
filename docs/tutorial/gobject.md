@@ -130,15 +130,13 @@ or GObject get and set methods.
 const invisibleLabel = new Gtk.Label({
   visible: false,
 })
+
 let visible
 
-// Three different ways to get or set properties
 visible = invisibleLabel.visible
-visible = invisibleLabel["visible"]
 visible = invisibleLabel.get_visible()
 
 invisibleLabel.visible = false
-invisibleLabel["visible"] = false
 invisibleLabel.set_visible(false)
 ```
 
@@ -148,8 +146,9 @@ are accessed differently depending on the situation:
 ```ts
 const markupLabel = new Gtk.Label({
   label: "<i>Italics</i>",
-  use_markup: true,
+  useMarkup: true,
 })
+
 let useMarkup
 
 // If using native accessors, you can use `underscore_case` or `camelCase`
@@ -164,6 +163,12 @@ markupLabel.connect("notify::use-markup", () => {})
 useMarkup = markupLabel.get_use_markup()
 markupLabel.set_use_markup(true)
 ```
+
+> [!IMPORTANT]
+>
+> Gnim, by convention only uses `camelCase` where appropriate so type
+> annotations might be intentionally missing. For example while
+> `markupLabel["use-markup"]` works at runtime, types are not generated for it.
 
 ### Property Change Notification
 

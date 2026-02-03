@@ -86,7 +86,7 @@ tell the bundler about the environment and JSX runtime.
    mkdir gnim-app
    cd gnim-app
    npm install gnim
-   npm install typescript esbuild @girs/gtk-4.0 @girs/gjs -D
+   npm install esbuild -D
    ```
 
 2. configure `tsconfig.json`
@@ -102,32 +102,31 @@ tell the bundler about the environment and JSX runtime.
        "moduleResolution": "Bundler",
        "skipLibCheck": true,
        "jsx": "react-jsx",
-       "jsxImportSource": "gnim/gtk4"
-     }
+       "jsxImportSource": "gnim/gtk4",
+       "typeRoots": ["./.types"]
+     },
+     "include": ["./src/**/*"]
    }
    ```
 
-3. by convention, source files go in the `src` directory
+3. Generate types
 
    ```sh
-   mkdir src
+   # TIP: add a `"types": "gnim-types"` script in package.json
+   ./node_modules/.bin/gnim-types
+
+   # don't forget to git ignore generated files
+   echo ".types/" > .gitignore
    ```
 
-4. create an `env.d.ts` file
+4. Create the entry point
 
    ```ts
-   import "@girs/gtk-4.0"
-   import "@girs/gjs"
-   import "@girs/gjs/dom"
-   ```
-
-5. create the entry point
-
-   ```ts
+   // src/main.ts
    console.log("hello world")
    ```
 
-6. write a build script
+5. write a build script
 
    ```sh
    # scripts/build.sh
@@ -161,10 +160,15 @@ To make running the project easier you can add a `dev` script in `package.json`.
 ```json
 {
   "scripts": {
+    "types": "gnim-types",
     "dev": "bash scripts/build.sh ; gjs -m dist/main.js"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "gnim": "latest"
+  },
+  "devDependencies": {
+    "esbuild": "latest"
+  }
 }
 ```
 

@@ -119,7 +119,6 @@ These decorators take a single parameter that defines the type:
 - any class that has a registered `GType`. This includes the globally available
   `String`, `Number`, `Boolean` and `Object` JavaScript constructors, which are
   mapped to their relative `GObject.ParamSpec`.
-
   - `Object`: `ParamSpec.jsobject`
   - `String`: `ParamSpec.string`
   - `Number`: `ParamSpec.double`
@@ -285,13 +284,14 @@ You can emit the signal by calling the signal method or using `emit`.
 const obj = new MyObj()
 obj.connect("my-signal", (obj, a: string, b: string) => {})
 
-obj.mySig("a", "b")
+obj.mySignal("a", "b")
 obj.emit("my-signal", "a", "b")
 ```
 
 > [!TIP]
 >
-> To make the `connect` method aware of signals, you can override it.
+> To make the `connect` and `emit` methods aware of signals, you can override
+> it.
 >
 > ```ts
 > interface MyObjSignals extends GObject.Object.SignalSignatures {
@@ -300,14 +300,7 @@ obj.emit("my-signal", "a", "b")
 >
 > @register()
 > class MyObj extends GObject.Object {
->   declare $signals: MyObjSignals // this makes signals inferable in JSX
->
->   override connect<S extends keyof MyObjSignals>(
->     signal: S,
->     callback: GObject.SignalCallback<this, MyObjSignals[S]>,
->   ): number {
->     return super.connect(signal, callback)
->   }
+>   declare $signals: MyObjSignals
 > }
 > ```
 

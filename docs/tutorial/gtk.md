@@ -5,7 +5,7 @@ in-depth concepts you can read the [Gtk docs](https://docs.gtk.org/gtk4/#extra).
 
 ## Running Gtk
 
-To run Gtk you will have to initialize it, create widgets and run a GLib main
+To run Gtk, you will have to initialize it, create widgets, and run a GLib main
 loop.
 
 ```ts

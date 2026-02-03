@@ -1,18 +1,12 @@
 # Gnim
 
-Library which brings JSX and reactivity to GNOME JavaScript.
+Library which brings type-safety, JSX and reactivity to GNOME JavaScript.
 
-If you are not already familiar with GJS and GObject, you should read
-[gjs.guide](https://gjs.guide/) first.
-
-This library provides:
-
-- [JSX and reactivity](https://aylur.github.io/gnim/jsx) for both Gtk
-  Applications and Gnome extensions
-- [GObject decorators](https://aylur.github.io/gnim/gobject) for a convenient
-  and type safe way for subclassing GObjects
-- [DBus decorators](https://aylur.github.io/gnim/dbus) for a convenient and type
-  safe way for implementing DBus services and proxies.
+- [TypeScript support](/typescript) for generating GObject Introspection type
+  annotations
+- [JSX and reactivity](/jsx) for both Gtk Applications and Gnome extensions
+- [GObject decorators](/gobject) for a convenient way for subclassing GObjects
+- [DBus decorators](/dbus) for a implementing DBus services and proxies
 
 ## Obligatory Counter Example
 
