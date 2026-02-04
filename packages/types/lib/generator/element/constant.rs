@@ -19,26 +19,8 @@ impl render::Renderable for grammar::Constant {
         let t = gtype::resolve_anytype(&anytype)?;
 
         let value = match t.as_str() {
-            "boolean" => &self.value,
+            "boolean" | "number" => &self.value,
             "string" => &format!("\"{}\"", &self.value.replace('"', r#"\""#)),
-            "number" => {
-                if self.value.contains(".") {
-                    &self.value
-                } else {
-                    const LIMIT: i128 = 1i128 << 53; // 2^53
-                    let v: i128 = match self.value.parse() {
-                        Ok(v) => v,
-                        Err(_) => {
-                            return Err(format!("failed to parse number '{}'", self.value));
-                        }
-                    };
-                    if v.abs() > LIMIT {
-                        &format!("{}n", self.value)
-                    } else {
-                        &self.value
-                    }
-                }
-            }
             t => t,
         };
 
