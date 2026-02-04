@@ -322,38 +322,47 @@ export function signal<
     }
 }
 
-const MAXINT = 2 ** 31 - 1
-const MININT = -(2 ** 31)
-const MAXUINT = 2 ** 32 - 1
-const MAXFLOAT = 3.4028235e38
-const MINFLOAT = -3.4028235e38
-const MININT64 = Number.MIN_SAFE_INTEGER
-const MAXINT64 = Number.MAX_SAFE_INTEGER
-const MINDOUBLE = Number.MIN_VALUE
+const MININT8 = GLib.MININT8
+const MAXINT8 = GLib.MAXINT8
+const MAXUINT8 = GLib.MAXUINT8
+
+const MAXINT32 = GLib.MAXINT32
+const MININT32 = GLib.MININT32
+const MAXUINT32 = GLib.MAXUINT32
+
+const MININT64 = GLib.MININT64_BIGINT as unknown as number
+const MAXINT64 = GLib.MAXINT64_BIGINT as unknown as number
+const MAXUINT64 = GLib.MAXUINT64_BIGINT as unknown as number
+
+const MINLONG = Number.MIN_SAFE_INTEGER
+const MAXLONG = Number.MAX_SAFE_INTEGER
+const MAXULONG = Number.MAX_SAFE_INTEGER
+
+const MAXFLOAT = 3.4028234663852886e38
 const MAXDOUBLE = Number.MAX_VALUE
 
 function pspecFromGType(type: GType<unknown>, name: string, flags: ParamFlags) {
     switch (type) {
         case G.TYPE_CHAR:
-            return G.param_spec_char(name, null, null, MININT, MAXINT, 0, flags)
+            return G.param_spec_char(name, null, null, MININT8, MAXINT8, 0, flags)
         case G.TYPE_UCHAR:
-            return G.param_spec_uchar(name, null, null, 0, MAXUINT, 0, flags)
+            return G.param_spec_uchar(name, null, null, 0, MAXUINT8, 0, flags)
         case G.TYPE_INT:
-            return G.param_spec_int(name, null, null, MININT, MAXINT, 0, flags)
+            return G.param_spec_int(name, null, null, MININT32, MAXINT32, 0, flags)
         case G.TYPE_UINT:
-            return G.param_spec_uint(name, null, null, 0, MAXUINT, 0, flags)
+            return G.param_spec_uint(name, null, null, 0, MAXUINT32, 0, flags)
         case G.TYPE_LONG:
-            return G.param_spec_long(name, null, null, MININT, MAXINT, 0, flags)
+            return G.param_spec_long(name, null, null, MINLONG, MAXLONG, 0, flags)
         case G.TYPE_ULONG:
-            return G.param_spec_ulong(name, null, null, 0, MAXUINT, 0, flags)
+            return G.param_spec_ulong(name, null, null, 0, MAXULONG, 0, flags)
         case G.TYPE_INT64:
             return G.param_spec_int64(name, null, null, MININT64, MAXINT64, 0, flags)
         case G.TYPE_UINT64:
-            return G.param_spec_uint64(name, null, null, 0, Number.MAX_SAFE_INTEGER, 0, flags)
+            return G.param_spec_uint64(name, null, null, 0, MAXUINT64, 0, flags)
         case G.TYPE_FLOAT:
-            return G.param_spec_float(name, null, null, MINFLOAT, MAXFLOAT, 0, flags)
+            return G.param_spec_float(name, null, null, -MAXFLOAT, MAXFLOAT, 0, flags)
         case G.TYPE_DOUBLE:
-            return G.param_spec_double(name, null, null, MINDOUBLE, MAXDOUBLE, 0, flags)
+            return G.param_spec_double(name, null, null, -MAXDOUBLE, MAXDOUBLE, 0, flags)
         case G.TYPE_BOOLEAN:
             return G.param_spec_boolean(name, null, null, false, flags)
         case G.TYPE_STRING:
