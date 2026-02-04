@@ -256,10 +256,10 @@ namespace GObject {
     const VoidType: PrimitiveConstructor<void>
     const TYPE_NONE: GType<void>
 
-    const Char: PrimitiveConstructor<void>
+    const Char: PrimitiveConstructor<number>
     const TYPE_CHAR: GType<number>
 
-    const UChar: PrimitiveConstructor<void>
+    const UChar: PrimitiveConstructor<number>
     const TYPE_UCHAR: GType<number>
 
     // This is weird, GObject.type_from_name("gunichar") is `null`
