@@ -115,25 +115,15 @@ class MyClass {
 }
 ```
 
-## JSX
+## Escape hatches
 
-When annotating class implementations for JSX keep in mind that JSX expressions
-ignore the signature of the `constructor`: they will always use the `$` prefixed
-annotations, so if you plan to use them in JSX make sure to use
-`GObject.ConstructorProps`, otherwise type errors will not be caught.
+To avoid using `@ts-expect-error` or `as any` assertions when the signal name is
+a `string` you can use non typed versions of signal related functions:
 
-```tsx
-class MyClass extends Gtk.Button {
-  constructor(props: { prop: string }) {
-    super()
+```ts
+GObject.signal_connect(object, "signal-name", (emitter, ...args) => {
+  console.log(emitter, ...args)
+})
 
-    // will always be undefined when using JSX
-    console.log(props.prop)
-  }
-}
-
-function Comp() {
-  // Still works like Gtk.Button
-  return <MyClass label="hello" onClicked={console.log} />
-}
+GObject.signal_emit_by_name(object, "signal-name", arg1, arg2)
 ```

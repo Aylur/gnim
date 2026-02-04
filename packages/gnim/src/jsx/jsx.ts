@@ -1,16 +1,19 @@
 import GObject from "gi://GObject?version=2.0"
-import { Fragment } from "./Fragment.js"
-import { Accessor } from "./state.js"
-import { type CC, type FC, env } from "./env.js"
 import {
     kebabify,
-    type PascalCase,
-    type CamelCase,
     set,
+    type CamelCase,
     type Keyof,
-    type Reactive,
+    type MergeProps,
+    type PascalCase,
 } from "../util.js"
+import { env, type CC, type FC } from "./env.js"
+import { Fragment } from "./Fragment.js"
 import { onCleanup } from "./scope.js"
+import { Accessor } from "./state.js"
+
+const connect = GObject.signal_connect
+const disconnect = GObject.signal_handler_disconnect
 
 /**
  * Represents all of the things that can be passed as a child to class components.
@@ -79,63 +82,58 @@ export type FCProps<Self, Props> = Props & {
     $?(self: Self): void
 }
 
+export type GObjectProps<T extends GObject.Object> = {
+    /**
+     * @internal children elements
+     * its consumed internally and not actually passed to class component constructors
+     */
+    children: Array<Node> | Node
+    /**
+     * Gtk.Builder type
+     * its consumed internally and not actually passed to class component constructors
+     */
+    $type: string
+    /**
+     * function to use as a constructor,
+     * its consumed internally and not actually passed to class component constructors
+     */
+    $constructor(props?: Partial<GObject.ConstructorProps<T>>): T
+    /**
+     * setup function,
+     * its consumed internally and not actually passed to class component constructors
+     */
+    $(self: T): void
+    /**
+     * CSS class names
+     */
+    class: Accessor<string> | string
+    /**
+     * inline CSS
+     */
+    css: Accessor<string> | string
+} & {
+    // writable reactive properties
+    [K in Keyof<T["$writableProperties"]> as CamelCase<K>]: Accessor<
+        NonNullable<T["$writableProperties"][K]>
+    >
+} & {
+    // onSignalName and onDetaliedSignal:detail
+    [S in Keyof<T["$signals"]> as S extends `${infer Name}::{}`
+        ? `on${PascalCase<Name>}:${string}`
+        : `on${PascalCase<S>}`]: GObject.SignalCallback<T, T["$signals"][S]>
+} & {
+    // onNotifyProperty
+    [S in Keyof<T["$readableProperties"]> as `onNotify${PascalCase<S>}`]: GObject.SignalCallback<
+        T,
+        (pspec: GObject.ParamSpec<T["$readableProperties"][S]>) => void
+    >
+}
+
 /**
  * Class Component Properties
  */
-export type CCProps<T extends GObject.Object> = Partial<
-    {
-        /**
-         * @internal children elements
-         * its consumed internally and not actually passed to class component constructors
-         */
-        children: Array<Node> | Node
-        /**
-         * Gtk.Builder type
-         * its consumed internally and not actually passed to class component constructors
-         */
-        $type: string
-        /**
-         * function to use as a constructor,
-         * its consumed internally and not actually passed to class component constructors
-         */
-        $constructor(props?: Partial<GObject.ConstructorProps<T>>): T
-        /**
-         * setup function,
-         * its consumed internally and not actually passed to class component constructors
-         */
-        $(self: T): void
-        /**
-         * CSS class names
-         */
-        class: Reactive<string>
-        /**
-         * inline CSS
-         */
-        css: Reactive<string>
-    } & {
-        // writable reactive properties
-        [K in Keyof<T["$writableProperties"]> as CamelCase<K>]: Reactive<
-            T["$writableProperties"][K]
-        >
-    } & {
-        // construct only properties
-        [K in Keyof<
-            T["$constructOnlyProperties"]
-        > as CamelCase<K>]?: T["$constructOnlyProperties"][K]
-    } & {
-        // onSignalName and onDetaliedSignal:detail
-        [S in Keyof<T["$signals"]> as S extends `${infer Name}::{}`
-            ? `on${PascalCase<Name>}:${string}`
-            : `on${PascalCase<S>}`]: GObject.SignalCallback<T, T["$signals"][S]>
-    } & {
-        // onNotifyProperty
-        [S in Keyof<
-            T["$readableProperties"]
-        > as `onNotify${PascalCase<S>}`]: GObject.SignalCallback<
-            T,
-            (pspec: GObject.ParamSpec<T["$readableProperties"][S]>) => void
-        >
-    }
+export type CCProps<T extends GObject.Object, Props = GObject.ConstructorProps<T>> = Partial<
+    MergeProps<GObjectProps<T>, Props>
 >
 
 // prettier-ignore
@@ -146,7 +144,7 @@ type JsxProps<C, Props> =
     // the setup function is typed as a union of Object and actual type
     // as a fix users can and should use FCProps
     : C extends FC ? Props & Omit<FCProps<ReturnType<C>, Props>, "$">
-    : C extends CC ? CCProps<InstanceType<C>>
+    : C extends CC ? CCProps<InstanceType<C>, Props>
     : never
 
 function isGObjectCtor(ctor: any): ctor is CC {
@@ -245,12 +243,12 @@ export function jsx<T extends new (props: any) => GObject.Object>(
 
 export function jsx<T extends GObject.Object>(
     ctor: keyof (typeof env)["intrinsicElements"] | (new (props: any) => T) | ((props: any) => T),
-    inprops: any,
+    inprops: Record<string, unknown>,
     // key is a special prop in jsx which is passed as a third argument and not in props
     key?: string,
 ): T {
-    const { $, $type, $constructor, children, ...rest } = inprops as CCProps<T>
-    const props = rest as Record<string, any>
+    const { $, $type, $constructor, children, ...rest } = inprops
+    const props = rest
 
     if (key) Object.assign(props, { key })
 
@@ -278,8 +276,8 @@ export function jsx<T extends GObject.Object>(
 
     if (isFunctionCtor(ctor)) {
         const object = ctor({ children, ...props })
-        if ($type) setType(object, $type)
-        $?.(object)
+        if (typeof $type === "string") setType(object, $type)
+        if (typeof $ === "function") $?.(object)
         return object
     }
 
@@ -304,14 +302,17 @@ export function jsx<T extends GObject.Object>(
     }
 
     // construct
-    const object = $constructor
-        ? $constructor(props as GObject.ConstructorProps<T>)
-        : new (ctor as CC<T>)(props)
-    if ($constructor) Object.assign(object, props)
-    if ($type) setType(object, $type)
+    const object: T = typeof $constructor === "function" ? $constructor(props) : new ctor(props)
 
-    if (css) env.setCss(object, css)
-    if (className) env.setClass(object, className)
+    if ($constructor) Object.assign(object, props)
+    if (typeof $type === "string") setType(object, $type)
+
+    if (typeof css === "string" || css instanceof Accessor) {
+        env.setCss(object, css)
+    }
+    if (typeof className === "string" || className instanceof Accessor) {
+        env.setClass(object, className)
+    }
 
     // add children
     for (let child of Array.isArray(children) ? children : [children]) {
@@ -334,12 +335,8 @@ export function jsx<T extends GObject.Object>(
 
     // handle signals
     const disposeHandlers = signals.map(([sig, handler]) => {
-        const id = object.connect(
-            // @ts-expect-error signal name
-            signalName(sig),
-            handler,
-        )
-        return () => object.disconnect(id)
+        const id = connect(object, signalName(sig), handler)
+        return () => disconnect(object, id)
     })
 
     // deferred props
@@ -368,7 +365,7 @@ export function jsx<T extends GObject.Object>(
         })
     }
 
-    $?.(object)
+    if (typeof $ === "function") $?.(object)
     return object
 }
 
@@ -376,7 +373,6 @@ export function jsx<T extends GObject.Object>(
 export const jsxs = jsx
 
 declare global {
-     
     namespace JSX {
         type ElementType = keyof IntrinsicElements | FC | CC
         type Element = GObject.Object

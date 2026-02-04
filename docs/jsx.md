@@ -896,7 +896,7 @@ elements by default, but they can be set.
   @register()
   class MyWidget extends Gtk.Widget {
     declare $writableProperties: Gtk.Widget.WritableProperties & {
-      // annotates someProp with JSX
+      // annotates someProp for JSX that it can be reactive
       "some-prop": MyWidget["someProp"]
     }
 
@@ -907,8 +907,6 @@ elements by default, but they can be set.
 
     @property(String) someProp = ""
 
-    // NOTE: props annotation here has no effect on JSX expressions
-    // JSX will infer props from `$` prefixed types on the class
     constructor(props: Partial<GObject.ConstructorProps<MyWidget>>) {
       super(props)
     }

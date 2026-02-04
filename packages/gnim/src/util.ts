@@ -1,5 +1,4 @@
 import type GObject from "gi://GObject?version=2.0"
-import type { Accessor } from "./jsx/state"
 import type GLib from "gi://GLib?version=2.0"
 
 export function kebabify(str: string) {
@@ -97,9 +96,18 @@ export function set(obj: GObject.Object, prop: string, value: any) {
     }
 }
 
-export type Reactive<T> = T | Accessor<NonNullable<T>>
 export type Keyof<T> = Extract<keyof T, string>
 
 export type InferVariant<S extends string> = ReturnType<GLib.Variant<S>["unpack"]>
 export type DeepInferVariant<S extends string> = ReturnType<GLib.Variant<S>["deepUnpack"]>
 export type RecursiveInferVariant<S extends string> = ReturnType<GLib.Variant<S>["recursiveUnpack"]>
+
+export type MergeProps<A, B> = {
+    [K in keyof A | keyof B]: K extends keyof A
+        ? K extends keyof B
+            ? A[K] | B[K]
+            : A[K]
+        : K extends keyof B
+          ? B[K]
+          : never
+}

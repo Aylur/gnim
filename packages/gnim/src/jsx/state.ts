@@ -17,11 +17,9 @@ type DisposeFn = () => void
 
 const nil = Symbol("nil")
 const accessStack = new Array<Set<Accessor>>()
-const { connect: _connect, disconnect } = GObject.Object.prototype
 
-function connect(this: GObject.Object, signal: string, callback: (...args: unknown[]) => unknown) {
-    return _connect.call(this, signal as never, callback as never)
-}
+const connect = GObject.signal_connect
+const disconnect = GObject.signal_handler_disconnect
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 
@@ -579,8 +577,8 @@ export function createBinding<T>(
 
         function subscribe(callback: Callback): DisposeFn {
             const sig = object instanceof Gio.Settings ? "changed" : "notify"
-            const id = connect.call(object, `${sig}::${prop}`, () => callback())
-            return () => disconnect.call(object, id)
+            const id = connect(object, `${sig}::${prop}`, () => callback())
+            return () => disconnect(object, id)
         }
 
         function get(): T {
@@ -720,7 +718,7 @@ export function createConnection<T>(init: T, ...handlers: ConnectionHandler<T>[]
     function subscribe(callback: Callback): DisposeFn {
         if (subscribers.size === 0) {
             dispose = handlers.map(([object, signal, callback]) => {
-                const id = connect.call(object, signal, (_, ...args) => {
+                const id = connect(object, signal, (_, ...args) => {
                     const newValue = callback(...args, currentValue)
                     if (!Object.is(currentValue, newValue)) {
                         currentValue = newValue
@@ -728,7 +726,7 @@ export function createConnection<T>(init: T, ...handlers: ConnectionHandler<T>[]
                     }
                 })
 
-                return () => disconnect.call(object, id)
+                return () => disconnect(object, id)
             })
         }
 
@@ -834,8 +832,8 @@ export function createSettings<const T extends Record<string, string>>(
                 new Accessor(
                     () => settings.get_value(key).recursiveUnpack(),
                     (callback) => {
-                        const id = connect.call(settings, `changed::${key}`, callback)
-                        return () => disconnect.call(settings, id)
+                        const id = connect(settings, `changed::${key}`, callback)
+                        return () => disconnect(settings, id)
                     },
                 ),
             ],
