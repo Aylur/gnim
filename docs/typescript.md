@@ -115,6 +115,37 @@ class MyClass {
 }
 ```
 
+## Annotating GI imports
+
+You can define non versioned gi imports.
+
+:::code-group
+
+```ts [env.d.ts]
+declare module "gi://Gtk" {
+  import Gtk from "gi://Gtk?version=4.0"
+  export default Gtk
+}
+```
+
+:::
+
+## Legacy imports
+
+To declare imports on the legacy `imports.gi` module system, you can augment the
+`LegacyGiImports` interface:
+
+:::code-group
+
+```ts [env.d.ts]
+interface LegacyGiImports {
+  Gtk: typeof import("gi://Gtk?version=4.0").default
+  Adw: typeof import("gi://Adw?version=1").default
+}
+```
+
+:::
+
 ## Escape hatches
 
 To avoid using `@ts-expect-error` or `as any` assertions when the signal name is

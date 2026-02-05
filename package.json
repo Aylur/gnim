@@ -7,8 +7,7 @@
         "clean": "./scripts.nu clean",
         "lint": "pnpm -F gnim run lint",
         "types": "./scripts.nu types",
-        "build:types-linux-64": "./scripts.nu build:types-linux-64",
-        "build:gnim": "./scripts.nu build:gnim",
+        "build": "./scripts.nu build",
         "docs:dev": "pnpm -F docs run dev",
         "docs:build": "pnpm -F docs run build"
     },

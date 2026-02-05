@@ -3,6 +3,8 @@ import Gio from "gi://Gio?version=2.0"
 import { configue } from "../jsx/env.js"
 import { getType, onCleanup, Accessor, Fragment } from "../index.js"
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import GObject from "gi://GObject?version=2.0"
 import type Adw from "gi://Adw?version=1"
 const adw = await import("gi://Adw?version=1").then((m) => m.default).catch(() => null)
 

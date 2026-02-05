@@ -2,6 +2,8 @@ import Gtk from "gi://Gtk?version=3.0"
 import { configue } from "../jsx/env.js"
 import { getType, onCleanup, Accessor, Fragment } from "../index.js"
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import GObject from "gi://GObject?version=2.0"
 const dummyBuilder = new Gtk.Builder()
 
 const { intrinsicElements } = configue({

@@ -133,7 +133,7 @@ export type GObjectProps<T extends GObject.Object> = {
  * Class Component Properties
  */
 export type CCProps<T extends GObject.Object, Props = GObject.ConstructorProps<T>> = Partial<
-    MergeProps<GObjectProps<T>, Props>
+    MergeProps<GObjectProps<T>, NonNullable<Props>>
 >
 
 // prettier-ignore
