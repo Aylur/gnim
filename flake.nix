@@ -41,6 +41,7 @@
     packages = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
     in {
+      gnim = pkgs.callPackage ./packages/gnim {};
       gnim-types = pkgs.callPackage ./packages/types {};
     });
   };

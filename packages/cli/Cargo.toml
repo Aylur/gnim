@@ -1,0 +1,13 @@
+[package]
+name = "gnim"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Development CLI for GJS and Gnim"
+homepage = "https://gnim.aylur.dev/"
+repository = "https://github.com/aylur/gnim"
+exclude = ["/default.nix"]
+
+[dependencies]
+clap = { version = "4.5.54", features = ["derive"] }
+gnim-types = { path = "../types", version = "0.1.1" }
