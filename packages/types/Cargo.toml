@@ -2,7 +2,11 @@
 name = "gnim-types"
 version = "0.1.1"
 edition = "2024"
-about = "GObject Introspection tool to generate type annotations"
+license = "MIT"
+description = "GObject Introspection tool to generate type annotations"
+homepage = "https://gnim.aylur.dev/"
+repository = "https://github.com/aylur/gnim"
+exclude = ["/default.nix", "/package.json"]
 
 [dependencies]
 quick-xml = "0.38.4"
