@@ -3,7 +3,7 @@ build/
 dist/
 target/
 result
-result-dev
+result-dev/
 docs/.vitepress/dist
 docs/.vitepress/cache
 .types/

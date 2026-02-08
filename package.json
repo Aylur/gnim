@@ -1,16 +1,82 @@
 {
     "name": "gnim",
-    "author": "Aylur",
+    "version": "1.10.0-rc.2",
     "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Aylur/gnim.git"
+    },
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "bin": {
+        "gnim": "bin/gnim.js"
+    },
     "scripts": {
-        "setup": "./scripts.nu setup",
+        "lint": "eslint . --fix",
         "clean": "./scripts.nu clean",
-        "lint": "pnpm -F gnim run lint",
         "types": "./scripts.nu types",
         "build": "./scripts.nu build",
-        "docs:dev": "pnpm -F docs run dev",
-        "docs:build": "pnpm -F docs run build"
+        "docs:dev": "vitepress dev docs",
+        "docs:build": "vitepress build docs"
     },
+    "optionalDependencies": {
+        "@gnim-js/linux-x64": "1.10.0"
+    },
+    "devDependencies": {
+        "@eslint/js": "latest",
+        "@types/node": "latest",
+        "eslint": "latest",
+        "typescript": "latest",
+        "typescript-eslint": "latest",
+        "vitepress": "2.0.0-alpha.16"
+    },
+    "exports": {
+        ".": {
+            "import": "./src/index.ts",
+            "types": "./src/index.d.ts"
+        },
+        "./dbus": {
+            "import": "./src/dbus.ts",
+            "types": "./src/dbus.d.ts"
+        },
+        "./fetch": {
+            "import": "./src/fetch.ts",
+            "types": "./src/fetch.d.ts"
+        },
+        "./gobject": {
+            "import": "./src/gobject.ts",
+            "types": "./src/gobject.d.ts"
+        },
+        "./gnome/jsx-runtime": {
+            "import": "./src/gnome/jsx-runtime.ts",
+            "types": "./src/gnome/jsx-runtime.d.ts"
+        },
+        "./gtk3/jsx-runtime": {
+            "import": "./src/gtk3/jsx-runtime.ts",
+            "types": "./src/gtk3/jsx-runtime.d.ts"
+        },
+        "./gtk4/jsx-runtime": {
+            "import": "./src/gtk4/jsx-runtime.ts",
+            "types": "./src/gtk4/jsx-runtime.d.ts"
+        }
+    },
+    "files": [
+        "bin",
+        "src"
+    ],
+    "engines": {
+        "gjs": ">=1.83.0"
+    },
+    "keywords": [
+        "GJS",
+        "Gnome",
+        "GTK",
+        "JSX"
+    ],
     "prettier": {
         "semi": false,
         "tabWidth": 4,

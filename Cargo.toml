@@ -1,3 +1,18 @@
-[workspace]
-resolver = "3"
-members = ["packages/cli","packages/types"]
+[package]
+name = "gnim"
+version = "1.10.0"
+edition = "2024"
+license = "MIT"
+description = "Development CLI for GJS and Gnim"
+homepage = "https://gnim.aylur.dev/"
+repository = "https://github.com/aylur/gnim"
+include = ["/bin/gnim.rs", "/bin/command"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+colored = "3"
+girgen = "0.2.2"
+
+[[bin]]
+name = "gnim"
+path = "bin/gnim.rs"

@@ -6,7 +6,7 @@
 
         "declaration": true,
         "inlineSourceMap": true,
-        "outDir": "build/src",
+        "outDir": "build/lib",
         "removeComments": true,
         "skipLibCheck": true,
 
@@ -18,5 +18,5 @@
         "jsx": "react-jsx",
         "jsxImportSource": "./gtk4"
     },
-    "include": ["./src/**/*"]
+    "include": ["./lib/**/*"]
 }

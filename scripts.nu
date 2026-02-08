@@ -1,54 +1,50 @@
 #!/usr/bin/env nu
 
 def "main clean" [] {
-    rm -rf dist/
-    rm -rf target/
-    rm -rf node_modules/
-    rm -rf packages/docs/node_modules/
-    rm -rf packages/gnim/node_modules/
-    rm -rf packages/gnim/.types/
+    for dir in (open .gitignore | split row "\n") {
+        rm -rf $dir
+    }
 }
 
 def "main types" [] {
-    cargo build --bin gnim-types
-    ./target/debug/gnim-types --verbose --outdir packages/gnim/.types/gi
+    cargo build --bin gnim
+    ./target/debug/gnim types --verbose
 }
 
 def build_types [--os: string, --cpu: string, --target: string] {
     cargo build --release --target $target
 
-    let name = $"types-($os)-($cpu)"
-    let version = open packages/types/Cargo.toml | get package | get version
+    let name = $"($os)-($cpu)"
+    let version = open Cargo.toml | get package | get version
 
     let package = {
         name: $"@gnim-js/($name)",
         version: $version,
         os: [$os]
         cpu: [$cpu]
-        exports: "./gnim-types"
+        exports: "./gnim"
     }
 
     let dist = $"dist/($name)"
     mkdir $dist
-    mv $"target/($target)/release/gnim-types" $dist
+    mv $"target/($target)/release/gnim" $dist
     $package | save -f $"($dist)/package.json"
 }
 
 def "main build:gnim" [] {
     let target = $"(pwd)/dist/gnim"
-    cd packages/gnim
 
-    tsc -b tsconfig.src.json
     tsc -b tsconfig.bin.json
+    tsc -b tsconfig.lib.json
 
-    rm build/src/tsconfig.src.tsbuildinfo
+    rm build/lib/tsconfig.lib.tsbuildinfo
     rm build/bin/tsconfig.bin.tsbuildinfo
 
     mkdir $target
     mv build/* $target
     cp package.json $target
-    cp ../../README.md $target
-    cp ../../LICENSE $target
+    cp README.md $target
+    cp LICENSE $target
     rm -r build
 }
 

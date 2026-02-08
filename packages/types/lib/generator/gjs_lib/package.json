@@ -1,5 +1,0 @@
-{
-    "name": "gi",
-    "type": "module",
-    "types": "./index.d.ts"
-}
