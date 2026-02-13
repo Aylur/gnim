@@ -39,91 +39,99 @@ fn stem(path: &path::Path) -> &str {
         .expect("valid utf8 file name")
 }
 
-fn on_event(event: Event) {
-    if *VERBOSE.get().unwrap_or(&false) {
-        match event {
-            Event::Parsed { file_path } => {
-                eprintln!(
-                    "{}: {} {}",
-                    "   parsed".green(),
-                    stem(file_path),
-                    file_path.display().to_string().black()
-                );
-            }
-            Event::ParseFailed { file_path, err } => {
-                eprintln!(
-                    "{}: could not parse {} {} {}",
-                    "   failed".red(),
-                    stem(file_path),
-                    file_path.display().to_string().black(),
-                    err,
-                );
-            }
-            Event::Ignored { file_path, cause } => {
-                eprintln!(
-                    "{}: {}{} {}",
-                    "  ignored".yellow(),
-                    cause,
-                    stem(file_path),
-                    file_path.display().to_string().black(),
-                );
-            }
-            Event::Failed { repo, err } => match repo {
-                Some(repo) => {
-                    eprintln!("{}: failed to render {} {}", "error".red(), repo, err);
-                }
-                None => {
-                    eprintln!("{}: {}", "error".red(), err);
-                }
-            },
-            Event::Generated { repo, out_path } => {
-                eprintln!("{}: {} {}", "generated".green(), repo, out_path.black());
-            }
-            Event::CacheHit { repo, out_path } => {
-                eprintln!("{}: {} {}", "cache hit".green(), repo, out_path.black());
-            }
-            Event::Warning { warning } => {
-                eprintln!("{}: {}", "warning".yellow(), warning);
-            }
+fn on_verbose_event(event: Event) {
+    match event {
+        Event::Parsed { file_path } => {
+            eprintln!(
+                "{}: {} {}",
+                "   parsed".green(),
+                stem(file_path),
+                file_path.display().to_string().black()
+            );
         }
-    } else {
-        let mut out = io::stderr();
+        Event::ParseFailed { file_path, err } => {
+            eprintln!(
+                "{}: could not parse {} {} {}",
+                "   failed".red(),
+                stem(file_path),
+                file_path.display().to_string().black(),
+                err,
+            );
+        }
+        Event::Ignored { file_path, cause } => {
+            eprintln!(
+                "{}: {}{} {}",
+                "  ignored".yellow(),
+                cause,
+                stem(file_path),
+                file_path.display().to_string().black(),
+            );
+        }
+        Event::Failed { repo, err } => match repo {
+            Some(repo) => {
+                eprintln!("{}: failed to render {} {}", "error".red(), repo, err);
+            }
+            None => {
+                eprintln!("{}: {}", "error".red(), err);
+            }
+        },
+        Event::Generated { repo, out_path } => {
+            eprintln!("{}: {} {}", "generated".green(), repo, out_path.black());
+        }
+        Event::CacheHit { repo, out_path } => {
+            eprintln!("{}: {} {}", "cache hit".green(), repo, out_path.black());
+        }
+        Event::Warning { warning } => {
+            eprintln!("{}: {}", "warning".yellow(), warning);
+        }
+    }
+}
 
-        match event {
-            Event::Parsed { file_path: _ } => {
-                let girs = N_GIRS.fetch_add(1, atomic::Ordering::Relaxed) + 1;
+fn on_silent_event(event: Event) {
+    let mut out = io::stderr();
+
+    match event {
+        Event::Parsed { file_path: _ } => {
+            let girs = N_GIRS.fetch_add(1, atomic::Ordering::Relaxed) + 1;
+            write!(out, "\r  0/{}\x1b[K", girs).unwrap();
+        }
+        Event::Failed { repo, err: _ } => {
+            if repo.is_some() {
+                let girs = N_GIRS.fetch_sub(1, atomic::Ordering::Relaxed) + 1;
                 write!(out, "\r  0/{}\x1b[K", girs).unwrap();
             }
-            Event::Failed { repo, err: _ } => {
-                if repo.is_some() {
-                    let girs = N_GIRS.fetch_sub(1, atomic::Ordering::Relaxed) + 1;
-                    write!(out, "\r  0/{}\x1b[K", girs).unwrap();
-                }
-            }
-            Event::Generated {
-                repo: _,
-                out_path: _,
-            }
-            | Event::CacheHit {
-                repo: _,
-                out_path: _,
-            } => {
-                let girs = N_GIRS.load(atomic::Ordering::Relaxed);
-                let gens = N_GENERATED.fetch_add(1, atomic::Ordering::Relaxed) + 1;
-                write!(out, "\r{:>n$}/{}\x1b[K", gens, girs, n = 3).unwrap();
-            }
-            Event::Ignored {
-                file_path: _,
-                cause: _,
-            }
-            | Event::Warning { warning: _ }
-            | Event::ParseFailed {
-                file_path: _,
-                err: _,
-            } => (),
         }
+        Event::Generated {
+            repo: _,
+            out_path: _,
+        }
+        | Event::CacheHit {
+            repo: _,
+            out_path: _,
+        } => {
+            let girs = N_GIRS.load(atomic::Ordering::Relaxed);
+            let gens = N_GENERATED.fetch_add(1, atomic::Ordering::Relaxed) + 1;
+            write!(out, "\r{:>n$}/{}\x1b[K", gens, girs, n = 3).unwrap();
+        }
+        Event::Ignored {
+            file_path: _,
+            cause: _,
+        }
+        | Event::Warning { warning: _ }
+        | Event::ParseFailed {
+            file_path: _,
+            err: _,
+        } => (),
+    }
 
-        out.flush().unwrap();
+    out.flush().unwrap();
+}
+
+fn on_event(event: Event) {
+    if *VERBOSE.get().unwrap_or(&false) {
+        on_verbose_event(event);
+    } else {
+        on_silent_event(event);
     }
 }
 

@@ -1,13 +1,10 @@
 {
     "name": "gnim",
-    "version": "1.10.0-rc.2",
+    "version": "1.10.0-rc.6",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/Aylur/gnim.git"
-    },
+    "repository": "github:Aylur/gnim",
     "funding": {
         "type": "kofi",
         "url": "https://ko-fi.com/aylur"
@@ -24,7 +21,7 @@
         "docs:build": "vitepress build docs"
     },
     "optionalDependencies": {
-        "@gnim-js/linux-x64": "1.10.0"
+        "@gnim-js/linux-x64": "1.10.0-rc.6"
     },
     "devDependencies": {
         "@eslint/js": "latest",
@@ -36,37 +33,37 @@
     },
     "exports": {
         ".": {
-            "import": "./src/index.ts",
-            "types": "./src/index.d.ts"
+            "import": "./lib/index.js",
+            "types": "./lib/index.d.ts"
         },
         "./dbus": {
-            "import": "./src/dbus.ts",
-            "types": "./src/dbus.d.ts"
+            "import": "./lib/dbus.js",
+            "types": "./lib/dbus.d.ts"
         },
         "./fetch": {
-            "import": "./src/fetch.ts",
-            "types": "./src/fetch.d.ts"
+            "import": "./lib/fetch.js",
+            "types": "./lib/fetch.d.ts"
         },
         "./gobject": {
-            "import": "./src/gobject.ts",
-            "types": "./src/gobject.d.ts"
+            "import": "./lib/gobject.js",
+            "types": "./lib/gobject.d.ts"
         },
         "./gnome/jsx-runtime": {
-            "import": "./src/gnome/jsx-runtime.ts",
-            "types": "./src/gnome/jsx-runtime.d.ts"
+            "import": "./lib/gnome/jsx-runtime.js",
+            "types": "./lib/gnome/jsx-runtime.d.ts"
         },
         "./gtk3/jsx-runtime": {
-            "import": "./src/gtk3/jsx-runtime.ts",
-            "types": "./src/gtk3/jsx-runtime.d.ts"
+            "import": "./lib/gtk3/jsx-runtime.js",
+            "types": "./lib/gtk3/jsx-runtime.d.ts"
         },
         "./gtk4/jsx-runtime": {
-            "import": "./src/gtk4/jsx-runtime.ts",
-            "types": "./src/gtk4/jsx-runtime.d.ts"
+            "import": "./lib/gtk4/jsx-runtime.js",
+            "types": "./lib/gtk4/jsx-runtime.d.ts"
         }
     },
     "files": [
         "bin",
-        "src"
+        "lib"
     ],
     "engines": {
         "gjs": ">=1.83.0"

@@ -11,7 +11,7 @@ include = ["/bin/gnim.rs", "/bin/command"]
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 colored = "3"
-girgen = "0.2.2"
+girgen = "0.2.4"
 
 [[bin]]
 name = "gnim"

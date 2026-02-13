@@ -40,9 +40,14 @@
 
     packages = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
+      cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
     in {
-      gnim = pkgs.callPackage ./packages/cli {};
-      gnim-types = pkgs.callPackage ./packages/types {};
+      default = pkgs.rustPlatform.buildRustPackage {
+        pname = cargoToml.package.name;
+        version = cargoToml.package.version;
+        src = ./.; # FIXME: filter src
+        cargoHash = "sha256-4TjRmLevTMTGiyvNo35N+0w/rapRpGnuxpn3fNcHW+A=";
+      };
     });
   };
 }
