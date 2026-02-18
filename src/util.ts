@@ -70,7 +70,6 @@ export function definePropertyGetter<T extends object>(object: T, prop: Extract<
 export function set(obj: GObject.Object, prop: string, value: any) {
     const key = snakeify(prop)
     const getter = `get_${key}` as keyof typeof obj
-    const setter = `set_${key}` as keyof typeof obj
 
     let current: unknown
 
@@ -81,10 +80,6 @@ export function set(obj: GObject.Object, prop: string, value: any) {
     }
 
     if (current !== value) {
-        if (setter in obj && typeof obj[setter] === "function") {
-            ;(obj[setter] as (v: any) => void)(value)
-        } else {
-            Object.assign(obj, { [prop]: value })
-        }
+        obj[prop as keyof typeof obj] = value
     }
 }
