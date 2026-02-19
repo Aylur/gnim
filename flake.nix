@@ -46,7 +46,7 @@
         pname = cargoToml.package.name;
         version = cargoToml.package.version;
         src = ./.; # FIXME: filter src
-        cargoHash = "sha256-4TjRmLevTMTGiyvNo35N+0w/rapRpGnuxpn3fNcHW+A=";
+        cargoHash = "sha256-yfWQjqGqE0UIFjo2YS9uIGF1LH/li5wL/LHL3QcnicE=";
       };
     });
   };

@@ -1,6 +1,6 @@
 {
     "name": "gnim",
-    "version": "1.10.0-rc.6",
+    "version": "1.10.0-rc.7",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
@@ -21,7 +21,7 @@
         "docs:build": "vitepress build docs"
     },
     "optionalDependencies": {
-        "@gnim-js/linux-x64": "1.10.0-rc.6"
+        "@gnim-js/linux-x64": "1.10.0-rc.7"
     },
     "devDependencies": {
         "@eslint/js": "latest",

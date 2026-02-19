@@ -1,6 +1,6 @@
 use clap::Args;
 use colored::Colorize;
-use girgen::generator::{Error, Event};
+use girgen::generator::{Error, Event, typescript};
 use girgen::{default_dirs, girgen};
 use std::{
     io::{self, Write},
@@ -25,6 +25,10 @@ pub struct TypeArgs {
     /// Skip rendering by name and version, e.g "Gtk-4.0"
     #[arg(short, long, value_name = "GIRS")]
     ignore: Vec<String>,
+
+    /// Generate non versioned import aliases
+    #[arg(short, long)]
+    alias: bool,
 }
 
 static VERBOSE: sync::OnceLock<bool> = sync::OnceLock::new();
@@ -138,17 +142,23 @@ fn on_event(event: Event) {
 pub fn types(args: &TypeArgs) -> process::ExitCode {
     VERBOSE.set(args.verbose).unwrap();
 
-    let dirs: Vec<path::PathBuf> = args.dirs.split(":").map(path::PathBuf::from).collect();
+    let dir_paths: Vec<path::PathBuf> = args.dirs.split(":").map(path::PathBuf::from).collect();
+    let dirs = &dir_paths.iter().map(|p| p.as_path()).collect::<Vec<_>>();
+    let ignore = &args.ignore.iter().map(|i| i.as_ref()).collect::<Vec<_>>();
 
-    let args = girgen::Args {
-        dirs: &dirs.iter().map(|p| p.as_path()).collect::<Vec<_>>(),
-        outdir: &args.outdir,
-        ignore: &args.ignore.iter().map(|i| i.as_ref()).collect::<Vec<_>>(),
-        event: on_event,
-        generator: girgen::generator::typescript,
+    let opts = typescript::Opts {
+        short_paths: args.alias,
     };
 
-    match girgen(&args) {
+    let girgen_args = girgen::Args {
+        dirs,
+        ignore,
+        outdir: &args.outdir,
+        event: on_event,
+        generator: typescript::generate,
+    };
+
+    match girgen(&opts, &girgen_args) {
         Ok(_) => process::ExitCode::SUCCESS,
         Err(Error::Empty) => {
             eprintln!("nothing to generate");

@@ -74,11 +74,11 @@ class MyClass extends GObject.Object {
   })
   myDetailedSignal(arg: number): void {}
 
-  @property(Number) get myProp() {
+  @getter(Number) get myProp() {
     return 0
   }
 
-  @property(Number) set myProp(n: number) {
+  @setter(Number) set myProp(n: number) {
     //
   }
 }
@@ -129,6 +129,14 @@ declare module "gi://Gtk" {
 ```
 
 :::
+
+You can also use the `--alias` flag when generating types to do it
+automatically, which will generate an alias for each namespace that only has one
+version available.
+
+```sh
+gnim types -i Gtk-3.0 -i Gdk-3.0 --alias
+```
 
 ## Legacy imports
 

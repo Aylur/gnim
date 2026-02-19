@@ -57,7 +57,8 @@ def "main build" [] {
     }
 
     do {
-        build_types --cpu x64 --os linux --target x86_64-unknown-linux-musl
+        build_types --os linux --cpu x64 --target x86_64-unknown-linux-musl
+        # build_types --os linux --cpu arm64 --target aarch64-unknown-linux-musl
     }
 }
 

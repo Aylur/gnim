@@ -167,9 +167,9 @@ dependencies = [
 
 [[package]]
 name = "girgen"
-version = "0.2.4"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aad1421fafdcffe3324b4d5053dba32b79493d0b43a5c94ef37cf5b17d8037f3"
+checksum = "e723cea106d6ada0ce10249f21e879ad883225456120fc6180bd15b1f3673bbc"
 dependencies = [
  "clap",
  "colored",
