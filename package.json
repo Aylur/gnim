@@ -48,17 +48,17 @@
             "import": "./lib/gobject.js",
             "types": "./lib/gobject.d.ts"
         },
-        "./gnome/jsx-runtime": {
-            "import": "./lib/gnome/jsx-runtime.js",
-            "types": "./lib/gnome/jsx-runtime.d.ts"
+        "./jsx-runtime": {
+            "import": "./lib/jsx-runtime.js",
+            "types": "./lib/jsx-runtime.d.ts"
         },
-        "./gtk3/jsx-runtime": {
-            "import": "./lib/gtk3/jsx-runtime.js",
-            "types": "./lib/gtk3/jsx-runtime.d.ts"
+        "./jsx-dev-runtime": {
+            "import": "./lib/jsx-runtime.js",
+            "types": "./lib/jsx-runtime.d.ts"
         },
-        "./gtk4/jsx-runtime": {
-            "import": "./lib/gtk4/jsx-runtime.js",
-            "types": "./lib/gtk4/jsx-runtime.d.ts"
+        "./gtk4": {
+            "import": "./lib/renderer/gtk4.js",
+            "types": "./lib/renderer/gtk4.d.ts"
         }
     },
     "files": [

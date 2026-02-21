@@ -2,9 +2,6 @@ import GLib from "gi://GLib?version=2.0"
 import Gio from "gi://Gio?version=2.0"
 import Soup from "gi://Soup?version=3.0"
 
-const decoder = new TextDecoder()
-const encoder = new TextEncoder()
-
 type ResponseType = "basic" | "cors" | "default" | "error" | "opaque" | "opaqueredirect"
 export type HeadersInit = Headers | Record<string, string> | [string, string][]
 export type ResponseInit = {
@@ -330,7 +327,7 @@ export class Response {
     async bytes() {
         const { CLOSE_SOURCE, CLOSE_TARGET } = Gio.OutputStreamSpliceFlags
         const outputStream = Gio.MemoryOutputStream.new_resizable()
-        if (!this.body || !(outputStream instanceof Gio.MemoryOutputStream)) return null
+        if (!this.body) return null
 
         await new Promise((resolve, reject) => {
             outputStream.splice_async(
@@ -365,7 +362,7 @@ export class Response {
 
     async text() {
         const blob = await this.bytes()
-        return blob ? decoder.decode(blob.toArray()) : ""
+        return blob ? new TextDecoder().decode(blob.toArray()) : ""
     }
 
     async json() {
@@ -392,7 +389,8 @@ export async function fetch(url: string | URL, { method, headers, body }: Reques
     }
 
     if (typeof body === "string") {
-        message.set_request_body_from_bytes(null, GLib.Bytes.new(encoder.encode(body)))
+        const encoder = new TextEncoder()
+        message.set_request_body_from_bytes(null, encoder.encode(body))
     }
 
     const inputStream: Gio.InputStream = await new Promise((resolve, reject) => {
@@ -406,7 +404,7 @@ export async function fetch(url: string | URL, { method, headers, body }: Reques
     })
 
     return new Response(inputStream, {
-        statusText: message.reasonPhrase || undefined,
+        statusText: message.reasonPhrase ?? "",
         status: message.statusCode,
     })
 }

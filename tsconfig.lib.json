@@ -14,9 +14,10 @@
         "moduleResolution": "Bundler",
         "verbatimModuleSyntax": true,
         "typeRoots": ["./.types"],
+        "baseUrl": ".",
 
         "jsx": "react-jsx",
-        "jsxImportSource": "./gtk4"
+        "jsxImportSource": "lib"
     },
     "include": ["./lib/**/*"]
 }

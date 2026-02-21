@@ -1,30 +1,43 @@
+import "gi://GObject?version=2.0"
+import type GObject from "gi://GObject?version=2.0"
+import { resolveNode, type GnimNode } from "./element.js"
+import type { Accessor } from "./state.js"
+
+/**
+ * Scopes contain context values and cleanup functions.
+ */
 export class Scope {
     static current?: Scope | null
 
-    parent?: Scope | null
-    contexts = new Map<Context, unknown>()
+    /** @internal */
+    readonly parent?: Scope | null
 
-    private cleanups = new Set<() => void>()
-    private mounts = new Set<() => void>()
+    /** @internal */
+    readonly contexts = new Map<Context, unknown>()
+
+    private cleanups = new Array<() => void>()
+    private mounts = new Array<() => void>()
     private mounted = false
 
     constructor(parent?: Scope | null) {
         this.parent = parent
     }
 
+    /** @internal Use {@link onCleanup} */
     onCleanup(callback: () => void) {
-        this.cleanups?.add(callback)
+        this.cleanups.unshift(callback)
     }
 
+    /** @internal Use {@link onMount} */
     onMount(callback: () => void) {
         if (this.parent && !this.parent.mounted) {
             this.parent.onMount(callback)
         } else {
-            this.mounts.add(callback)
+            this.mounts.push(callback)
         }
     }
 
-    run<T>(fn: () => T) {
+    run<T>(fn: () => T): T {
         const prev = Scope.current
         Scope.current = this
 
@@ -32,7 +45,7 @@ export class Scope {
             return fn()
         } finally {
             this.mounts.forEach((cb) => cb())
-            this.mounts.clear()
+            this.mounts.length = 0
             this.mounted = true
             Scope.current = prev
         }
@@ -40,20 +53,33 @@ export class Scope {
 
     dispose() {
         this.cleanups.forEach((cb) => cb())
-        this.cleanups.clear()
-        this.contexts.clear()
-        delete this.parent
+        this.cleanups.length = 0
+        // @ts-expect-error readonly
+        this.parent = null
     }
 }
 
-export type Context<T = any> = {
+/**
+ * Context lets components pass information deep down without explicitly
+ * passing props.
+ *
+ * @see {createContext}
+ */
+export interface Context<T = any> {
     use(): T
     provide<R>(value: T, fn: () => R): R
-    (props: { value: T; children: () => JSX.Element }): JSX.Element
+    (props: { value: T; children: GnimNode }): GnimNode
 }
 
 /**
- * Example Usage:
+ * Lets you create a {@link Context} that components can provide or read.
+ *
+ * @param defaultValue The value you want the context to have when there is no
+ * provider in the tree above the component reading the context. This is meant
+ * as a "last resort" fallback.
+ *
+ * @example
+ *
  * ```tsx
  * const MyContext = createContext("fallback-value")
  *
@@ -67,7 +93,7 @@ export type Context<T = any> = {
  *   return (
  *     <Gtk.Box>
  *       <MyContext value="my-value">
- *         {() => <ConsumerComponent />}
+ *         <ConsumerComponent />
  *       </MyContext>
  *     </Gtk.Box>
  *   )
@@ -77,10 +103,11 @@ export type Context<T = any> = {
 export function createContext<T>(defaultValue: T): Context<T> {
     let ctx: Context<T>
 
-    function provide<R>(value: T, fn: () => R): R {
-        const scope = getScope()
+    function context(value: T) {
+        const parent = getScope()
+        const scope = new Scope(parent)
         scope.contexts.set(ctx, value)
-        return scope.run(fn)
+        return scope
     }
 
     function use(): T {
@@ -93,20 +120,26 @@ export function createContext<T>(defaultValue: T): Context<T> {
         return defaultValue
     }
 
-    function context({ value, children }: { value: T; children: () => JSX.Element }) {
-        return provide(value, children)
+    function provide<R>(value: T, fn: () => R): R {
+        return context(value).run(fn)
     }
 
-    return (ctx = Object.assign(context, {
-        provide,
-        use,
-    }))
+    function Context(props: {
+        value: T
+        children: GnimNode
+    }): Array<GObject.Object | Accessor<GnimNode>> {
+        const { value, children } = props
+        return context(value).run(() => resolveNode(children))
+    }
+
+    return (ctx = Object.assign(Context, { use, provide }))
 }
 
 /**
  * Gets the scope that owns the currently running code.
  *
- * Example:
+ * @example
+ *
  * ```ts
  * const scope = getScope()
  * setTimeout(() => {
@@ -154,32 +187,24 @@ export function onMount(cleanup: () => void) {
 
 /**
  * Creates a root {@link Scope} that when disposed will remove
- * any child signal handler or state subscriber.
+ * any child signal handler or state observer.
  *
- * Example:
+ * @example
+ *
  * ```tsx
+ * const [state] = createState(0)
  * createRoot((dispose) => {
- *   let root: Gtk.Window
+ *   createEffect(() => {
+ *     console.log(`state: ${state()}`)
  *
- *   const [state] = createState("value")
- *
- *   const remove = () => {
- *     root.destroy()
- *     dispose()
- *   }
- *
- *   return (
- *     <Gtk.Window $={(self) => (root = self)}>
- *       <Gtk.Box>
- *         <Gtk.Label label={state} />
- *         <Gtk.Button $clicked={remove} />
- *       </Gtk.Box>
- *     </Gtk.Window>
- *   )
+ *     if (state() === 5) {
+ *       dispose()
+ *     }
+ *   })
  * })
  * ```
  */
-export function createRoot<T>(fn: (dispose: () => void) => T) {
-    const scope = new Scope(null)
+export function createRoot<T>(fn: (dispose: () => void) => T, parent?: Scope) {
+    const scope = new Scope(parent)
     return scope.run(() => fn(() => scope.dispose()))
 }

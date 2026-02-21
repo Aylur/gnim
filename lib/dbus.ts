@@ -7,14 +7,21 @@
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import { definePropertyGetter, kebabify, xml, type DeepInferVariant, type Keyof } from "./util.js"
 import {
-    register,
-    property as gproperty,
-    signal as gsignal,
     getter as ggetter,
+    property as gproperty,
     setter as gsetter,
+    signal as gsignal,
+    register,
 } from "./gobject.js"
+import {
+    definePropertyGetter,
+    emit,
+    kebabcase,
+    xml,
+    type DeepInferVariant,
+    type Keyof,
+} from "./util.js"
 
 const DEFAULT_TIMEOUT = 10_000
 
@@ -29,12 +36,29 @@ const remotePropertySet = Symbol("proxy remotePropertySet")
 
 type Ctx = { private: false; static: false; name: string }
 
+export type ProxyProps = {
+    bus?: Gio.DBusConnection
+    name?: string
+    objectPath?: string
+    flags?: Gio.DBusProxyFlags
+    timeout?: number
+}
+
+export type ServeProps = {
+    busType?: Gio.BusType
+    name?: string
+    objectPath?: string
+    flags?: Gio.BusNameOwnerFlags
+    timeout?: number
+}
+
 /**
  * Base type for DBus services and proxies. Interface name is set with
  * the {@link iface} decorator which also register it as a GObject type.
  */
 export class Service extends GObject.Object {
     static [info]?: Gio.DBusInterfaceInfo
+    #info: Gio.DBusInterfaceInfo
 
     static {
         GObject.registerClass(this)
@@ -50,8 +74,6 @@ export class Service extends GObject.Object {
         onStop: new Set<() => void>(),
     }
 
-    #info: Gio.DBusInterfaceInfo
-
     constructor() {
         super()
         const service = this.constructor as unknown as typeof Service
@@ -59,7 +81,7 @@ export class Service extends GObject.Object {
         this.#info = service[info]
     }
 
-    notify(propertyName: Keyof<this> | (string & {})): void {
+    notify(propertyName: Extract<keyof this, string> | (string & {})): void {
         const prop = this.#info.lookup_property(propertyName)
 
         if (prop && this[internals].dbusObject) {
@@ -69,10 +91,10 @@ export class Service extends GObject.Object {
             )
         }
 
-        super.notify(prop ? kebabify(propertyName) : propertyName)
+        super.notify(prop ? kebabcase(propertyName) : propertyName)
     }
 
-    emit(name: string, ...params: unknown[]): void {
+    emit(name: string, ...params: unknown[]): unknown {
         const signal = this.#info.lookup_signal(name)
 
         if (signal && this[internals].dbusObject) {
@@ -80,22 +102,19 @@ export class Service extends GObject.Object {
             this[internals].dbusObject.emit_signal(name, new GLib.Variant(signature, params))
         }
 
-        return super.emit(
-            // @ts-expect-error signal name
-            signal ? kebabify(name) : name,
-            ...params,
-        )
+        return emit(this, signal ? kebabcase(name) : name, ...params)
     }
 
     // server
-    #handlePropertyGet(propertyName: Keyof<this>) {
+    #handlePropertyGet(_: Gio.DBusExportedObject, propertyName: string) {
+        const name = propertyName as Keyof<this>
         const prop = this.#info.lookup_property(propertyName)
 
         if (!prop) {
             throw Error(`${this.constructor.name} has no exported property: "${propertyName}"`)
         }
 
-        const value = this[propertyName]
+        const value = this[name]
         if (typeof value !== "undefined") {
             return new GLib.Variant(prop.signature, value)
         } else {
@@ -104,7 +123,8 @@ export class Service extends GObject.Object {
     }
 
     // server
-    #handlePropertySet(propertyName: Keyof<this>, value: GLib.Variant) {
+    #handlePropertySet(_: Gio.DBusExportedObject, propertyName: string, value: GLib.Variant) {
+        const name = propertyName as Keyof<this>
         const newValue = value.deepUnpack()
         const prop = this.#info.lookup_property(propertyName)
 
@@ -112,8 +132,8 @@ export class Service extends GObject.Object {
             throw Error(`${this.constructor.name} has no property: "${propertyName}"`)
         }
 
-        if (this[propertyName] !== newValue) {
-            this[propertyName] = value.deepUnpack() as any
+        if (this[name] !== newValue) {
+            this[name] = newValue as this[typeof name]
         }
     }
 
@@ -146,23 +166,25 @@ export class Service extends GObject.Object {
 
     // server
     #handleMethodCall(
-        methodName: Keyof<this>,
+        _: Gio.DBusExportedObject,
+        methodName: string,
         parameters: GLib.Variant,
         invocation: Gio.DBusMethodInvocation,
     ): void {
         try {
-            const value = (this[methodName] as (...args: unknown[]) => unknown)(
-                ...(parameters.deepUnpack() as Array<unknown>),
-            )
+            const name = methodName as Keyof<this>
+            const unpacked = parameters.deepUnpack() as Iterable<unknown>
+            const method = this[name] as (...args: unknown[]) => unknown
+            const value = method.call(this, ...unpacked)
 
             if (value instanceof GLib.Variant) {
                 invocation.return_value(value)
             } else if (value instanceof Promise) {
                 value
-                    .then((value) => this.#returnValue(value, methodName, invocation))
+                    .then((value) => this.#returnValue(value, name, invocation))
                     .catch((error) => this.#returnError(error, invocation))
             } else {
-                this.#returnValue(value, methodName, invocation)
+                this.#returnValue(value, name, invocation)
             }
         } catch (error) {
             this.#returnError(error, invocation)
@@ -176,24 +198,12 @@ export class Service extends GObject.Object {
         objectPath = "/" + this.#info.name.split(".").join("/"),
         flags = Gio.BusNameOwnerFlags.NONE,
         timeout = DEFAULT_TIMEOUT,
-    }: {
-        busType?: Gio.BusType
-        name?: string
-        objectPath?: string
-        flags?: Gio.BusNameOwnerFlags
-        timeout?: number
-    } = {}): Promise<this> {
+    }: ServeProps = {}): Promise<this> {
         const impl = new Gio.DBusExportedObject({ gInterfaceInfo: this.#info })
 
-        impl.connect("handle-method-call", (_, methodName, variant, invocation) => {
-            this.#handleMethodCall(methodName as Keyof<this>, variant, invocation)
-        })
-        impl.connect("handle-property-get", (_, propertyName) => {
-            return this.#handlePropertyGet(propertyName as Keyof<this>)
-        })
-        impl.connect("handle-property-set", (_, propertyName, value) => {
-            this.#handlePropertySet(propertyName as Keyof<this>, value)
-        })
+        impl.connect("handle-method-call", this.#handleMethodCall.bind(this))
+        impl.connect("handle-property-get", this.#handlePropertyGet.bind(this))
+        impl.connect("handle-property-set", this.#handlePropertySet.bind(this))
 
         this.#info.cache_build()
 
@@ -217,7 +227,7 @@ export class Service extends GObject.Object {
                 busType,
                 name,
                 flags,
-                (conn: Gio.DBusConnection) => {
+                (conn) => {
                     try {
                         impl.export(conn, objectPath)
                         this[internals].dbusObject = impl
@@ -247,7 +257,7 @@ export class Service extends GObject.Object {
     ) {
         const set = new Set([...Object.keys(changed.deepUnpack()), ...invalidated])
         for (const prop of set.values()) {
-            this.notify(prop as Keyof<this>)
+            this.notify(prop)
         }
     }
 
@@ -258,7 +268,8 @@ export class Service extends GObject.Object {
         signal: string,
         parameters: GLib.Variant,
     ) {
-        this.emit(kebabify(signal), ...(parameters.deepUnpack() as Array<unknown>))
+        const params = parameters.deepUnpack() as Iterable<unknown>
+        emit(this, kebabcase(signal), ...params)
     }
 
     // proxy
@@ -338,13 +349,7 @@ export class Service extends GObject.Object {
         objectPath = "/" + this.#info.name.split(".").join("/"),
         flags = Gio.DBusProxyFlags.NONE,
         timeout = DEFAULT_TIMEOUT,
-    }: {
-        bus?: Gio.DBusConnection
-        name?: string
-        objectPath?: string
-        flags?: Gio.DBusProxyFlags
-        timeout?: number
-    } = {}): Promise<this> {
+    }: ProxyProps = {}): Promise<this> {
         const proxy = new Gio.DBusProxy({
             gConnection: bus,
             gInterfaceName: this.#info.name,
@@ -495,8 +500,8 @@ type InferVariantTypes<T extends Array<DBusType>> = {
 
 function installMethod<Args extends Array<DBusType>>(
     args: Args | [Args, Args?],
-    _method: (...args: any[]) => unknown,
-    ctx: ClassMethodDecoratorContext<Service, typeof _method>,
+    method: (...args: any[]) => unknown,
+    ctx: ClassMethodDecoratorContext<Service, typeof method>,
 ) {
     const name = ctx.name
     const meta = ctx.metadata! as InterfaceMeta

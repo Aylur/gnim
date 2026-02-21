@@ -1,0 +1,290 @@
+import GObject from "gi://GObject?version=2.0"
+import { getRenderer } from "./render.js"
+import { onCleanup } from "./scope.js"
+import { Accessor, createEffect } from "./state.js"
+import {
+    IS_DEV,
+    isGObjectCtor,
+    signalName,
+    type CamelCase,
+    type Keyof,
+    type PascalCase,
+} from "./util.js"
+
+const connect = GObject.signal_connect
+const disconnect = GObject.signal_handler_disconnect
+
+/**
+ * Function Component
+ */
+export type FC<P = any> = (props: P) => GnimNode
+
+/**
+ * Class Component
+ */
+export type CC<P = any> = new (props: P) => GObject.Object
+
+interface ConstructorNode<P = any> {
+    type: string | FC<P> | CC<P>
+    props: Record<string, unknown>
+}
+
+/**
+ * Represents all of the things Gnim can render.
+ */
+export type GnimNode =
+    | ConstructorNode
+    | GObject.Object
+    | Iterable<GnimNode>
+    | Accessor<GnimNode>
+    | string
+    | number
+    | bigint
+    | boolean
+    | null
+    | undefined
+
+/**
+ * Lets you group elements without a wrapper node.
+ *
+ * @example
+ *
+ * ```tsx
+ * import { Fragment } from "gnim"
+ *
+ * <Fragment>
+ *   <Button>Hello</Button>
+ *   <Button>World</Button>
+ * </Fragment>
+ * ```
+ *
+ * @example
+ *
+ * ```tsx
+ * // Using the <></> shorthand syntax:
+ *
+ * <>
+ *   <Button>Hello</Button>
+ *   <Button>World</Button>
+ * </>
+ * ```
+ */
+export function Fragment({ children }: { children: GnimNode }): GnimNode[] {
+    return Array.isArray(children) ? children : [children]
+}
+
+/**
+ * Create a Gnim element. Do *not* use this function directly. Use JSX and a transpiler instead.
+ */
+export function jsx(
+    type: string | FC<any> | CC<any>,
+    props: Record<string, unknown>,
+    key?: string | number,
+): JSX.Element {
+    if (type === Fragment) return Fragment(props as { children: GnimNode })
+    return { type, props: key !== undefined ? { key, ...props } : props }
+}
+
+export function newObject<C extends GObject.ObjectClass>(
+    Class: C,
+    args: Partial<CCProps<InstanceType<C>>>,
+) {
+    const { children, ref, this: $constructor, ...rest } = args as Partial<CCProps<GObject.Object>>
+    const props = rest as Record<string, unknown>
+    const renderer = getRenderer()
+
+    const signals: Array<[string, (...props: unknown[]) => unknown]> = []
+    const bindings: Array<[string, Accessor<unknown>]> = []
+
+    // collect signals and bindings
+    for (const [key, value] of Object.entries(props)) {
+        if (key.startsWith("on")) {
+            signals.push([key, value as () => unknown])
+            delete props[key]
+        }
+        if (value instanceof Accessor) {
+            bindings.push([key, value])
+            delete props[key]
+        }
+    }
+
+    const obj =
+        $constructor instanceof GObject.Object
+            ? $constructor
+            : typeof $constructor === "function"
+              ? $constructor()
+              : new Class(props)
+
+    ref?.(obj)
+
+    if ($constructor instanceof GObject.Object || typeof $constructor === "function") {
+        for (const [key, value] of Object.entries(props)) {
+            renderer.setProperty(obj, key, value)
+        }
+    }
+
+    mountChildren(children, obj)
+
+    // handle signals
+    const disposeHandlers = signals.map(([sig, handler]) => {
+        const id = connect(obj, signalName(sig), handler)
+        return () => disconnect(obj, id)
+    })
+
+    // handle bindings
+    const disposeBindings = bindings.map(([prop, binding]) => {
+        const dispose = binding.subscribe(() => {
+            renderer.setProperty(obj, prop, binding.peek())
+        })
+        renderer.setProperty(obj, prop, binding.peek())
+        return dispose
+    })
+
+    // cleanup
+    if (disposeBindings.length > 0 || disposeHandlers.length > 0) {
+        onCleanup(() => {
+            disposeHandlers.forEach((cb) => cb())
+            disposeBindings.forEach((cb) => cb())
+        })
+    }
+
+    return obj
+}
+
+export function unpackSlot(node: GObject.Object | Accessor<GnimNode>): GObject.Object[] {
+    if (node instanceof GObject.Object) return [node]
+    return resolveNode(node()).map(unpackSlot).flat()
+}
+
+export function mountChildren(child: GnimNode, parent?: GObject.Object) {
+    const renderer = getRenderer()
+    const nodes = resolveNode(child)
+
+    if (!nodes.some((node) => node instanceof Accessor) && parent) {
+        renderer.setChildren(parent, nodes as Array<GObject.Object>, [])
+        return
+    }
+
+    createEffect<GObject.Object[]>(
+        function mountChildrenEffect(prev = []) {
+            const children = nodes.map(unpackSlot).flat()
+            if (parent) {
+                renderer.setChildren(parent, children, prev)
+            }
+            // do I have to unmount children onCleanup?
+            return children
+        },
+        { immediate: true },
+    )
+}
+
+export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<GnimNode>> {
+    const renderer = getRenderer()
+
+    if (node === undefined || node === null || node === false || node === "") {
+        return []
+    }
+
+    if (node === true) {
+        if (IS_DEV) console.warn("trying to render a true literal")
+        return []
+    }
+
+    if (typeof node === "string") {
+        return [renderer.createText(node)]
+    }
+
+    if (typeof node === "number" || typeof node === "bigint") {
+        return [renderer.createText(node.toString())]
+    }
+
+    if (node instanceof GObject.Object) {
+        return [node]
+    }
+
+    if (node instanceof Accessor) {
+        return [node]
+    }
+
+    if (Symbol.iterator in node) {
+        const results = new Array<GObject.Object | Accessor<GnimNode>>()
+        for (const child of node) {
+            results.push(...resolveNode(child))
+        }
+        return results
+    }
+
+    const type = typeof node.type === "string" ? renderer.resolveTag(node.type) : node.type
+
+    if (isGObjectCtor(type)) {
+        return resolveNode(renderer.constructObject(type, node.props))
+    } else {
+        return resolveNode(type(node.props))
+    }
+}
+
+type OptionalKeys<T> = {
+    [K in keyof T]-?: {} extends Pick<T, K> ? K : never
+}[keyof T]
+
+type RequiredKeys<T> = Exclude<keyof T, OptionalKeys<T>>
+
+// prettier-ignore
+type MergeProps<A, B> =
+    & { [K in Extract<RequiredKeys<A>, keyof B>]: A[K] }
+    & { [K in Extract<OptionalKeys<A>, keyof B>]?: A[K] | B[K] }
+    & Pick<A, Exclude<keyof A, keyof B>>
+    & Pick<B, Exclude<keyof B, keyof A>>
+
+type GObjectProps<T> = T extends {
+    $signals: unknown
+    $readableProperties: unknown
+    $writableProperties: unknown
+}
+    ? {
+          children: GnimNode
+          ref(self: T): void
+      } & {
+          // writable reactive properties
+          [K in Keyof<T["$writableProperties"]> as CamelCase<K>]: Accessor<
+              NonNullable<T["$writableProperties"][K]>
+          >
+      } & {
+          // onSignalName and onDetaliedSignal:detail
+          [S in Keyof<T["$signals"]> as S extends `${infer Name}::{}`
+              ? `on${PascalCase<Name>}:${string}`
+              : `on${PascalCase<S>}`]: GObject.SignalCallback<T, T["$signals"][S]>
+      } & {
+          // onNotifyProperty
+          [S in Keyof<
+              T["$readableProperties"]
+          > as `onNotify${PascalCase<S>}`]: GObject.SignalCallback<
+              T,
+              (pspec: GObject.ParamSpec<T["$readableProperties"][S]>) => void
+          >
+      }
+    : never
+
+type CCProps<T, Props = Partial<GObject.ConstructorProps<T>>> =
+    | (MergeProps<Props, Partial<GObjectProps<T>>> & { this?: never })
+    | (Partial<GObjectProps<T>> & { this: T | (() => T) })
+
+export namespace JSX {
+    export type ElementType = keyof IntrinsicElements | typeof Fragment | FC | CC
+    export type Element = ConstructorNode | Iterable<GnimNode>
+    export type ElementClass = GObject.Object
+
+    export interface IntrinsicElements {
+        // empty, defined by users and libs
+    }
+
+    export interface IntrinsicClassAttributes<T> {
+        // empty, defined by renderers
+    }
+
+    export type LibraryManagedAttributes<C, Props> = C extends FC
+        ? Props
+        : C extends CC
+          ? CCProps<InstanceType<C>, Omit<NonNullable<Props>, keyof IntrinsicClassAttributes<C>>>
+          : never
+}
