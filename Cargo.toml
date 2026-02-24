@@ -10,8 +10,11 @@ include = ["/bin/gnim.rs", "/bin/command"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
+quick-xml = "0"
 colored = "3"
-girgen = "0.2.6"
+girgen = "0.2.9"
+rolldown = { git = "https://github.com/rolldown/rolldown" }
+tokio = { version = "1", features = ["macros"] }
 
 [[bin]]
 name = "gnim"

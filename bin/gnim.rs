@@ -1,6 +1,7 @@
 mod command;
 
 use clap::{Parser, Subcommand};
+use command::schemas::{SchemasArgs, schemas};
 use command::types::{TypeArgs, types};
 use std::process;
 
@@ -16,6 +17,8 @@ struct Cli {
 enum Command {
     /// Generate annotations for TypeScript
     Types(TypeArgs),
+    /// Compile gschema.ts files into xml and gschema files
+    Schemas(SchemasArgs),
     // TODO:
     // Init,
     // Dev,
@@ -27,5 +30,6 @@ fn main() -> process::ExitCode {
 
     match cli.command {
         Command::Types(args) => types(&args),
+        Command::Schemas(args) => schemas(&args),
     }
 }
