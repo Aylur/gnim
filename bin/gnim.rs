@@ -1,6 +1,7 @@
 mod command;
 
 use clap::{Parser, Subcommand};
+use command::run::{RunArgs, run};
 use command::schemas::{SchemasArgs, schemas};
 use command::types::{TypeArgs, types};
 use std::process;
@@ -15,6 +16,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Run a GJS script as a module
+    Run(RunArgs),
     /// Generate annotations for TypeScript
     Types(TypeArgs),
     /// Compile gschema.ts files into xml and gschema files
@@ -29,6 +32,7 @@ fn main() -> process::ExitCode {
     let cli = Cli::parse();
 
     match cli.command {
+        Command::Run(args) => run(&args),
         Command::Types(args) => types(&args),
         Command::Schemas(args) => schemas(&args),
     }
