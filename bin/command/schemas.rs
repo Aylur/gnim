@@ -105,6 +105,8 @@ pub fn schemas(args: &SchemasArgs) -> process::ExitCode {
         }
     };
 
+    fs::create_dir_all(&outdir).expect("Failed to create directory");
+
     for schema in schemas {
         let path = schema.path();
         let stem = path.file_stem().unwrap().to_str().unwrap().to_owned();
@@ -125,7 +127,7 @@ pub fn schemas(args: &SchemasArgs) -> process::ExitCode {
     }
 
     match args.compile {
-        true => compile(&args.directory),
+        true => compile(outdir.as_os_str().to_str().expect("valid outdir")),
         false => process::ExitCode::SUCCESS,
     }
 }
