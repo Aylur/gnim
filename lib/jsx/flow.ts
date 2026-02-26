@@ -1,6 +1,6 @@
 import type { GnimNode } from "./element.js"
 import { getScope, onCleanup, Scope } from "./scope.js"
-import { Accessor, effect, computed, state, type State } from "./state.js"
+import { type Accessor, isAccessor, effect, computed, state, type State } from "./state.js"
 import { resolveNode, unpackSlot } from "./element.js"
 import GObject from "gi://GObject?version=2.0"
 import { getRenderer } from "./render.js"
@@ -118,7 +118,7 @@ export function Portal({ children, mount }: PortalProps): GnimNode {
     const renderer = getRenderer()
     const nodes = resolveNode(children)
 
-    if (!nodes.some((node) => node instanceof Accessor) && mount) {
+    if (!nodes.some((node) => isAccessor(node)) && mount) {
         for (const child of nodes as Array<GObject.Object>) {
             renderer.appendChild(mount, child)
         }

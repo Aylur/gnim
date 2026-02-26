@@ -2,7 +2,7 @@ use clap::Args;
 use quick_xml::events::Event;
 use quick_xml::reader::Reader;
 use quick_xml::writer::Writer;
-use rolldown::{Bundler, BundlerOptions, OutputFormat, SourceMapType};
+use rolldown;
 use std::io::Cursor;
 use std::{env, fs, path, process};
 use tokio::runtime::Runtime;
@@ -22,12 +22,12 @@ pub struct SchemasArgs {
 }
 
 fn transpile_typescript(target: &str, outfile: &str) {
-    let mut bundler = Bundler::new(BundlerOptions {
+    let mut bundler = rolldown::Bundler::new(rolldown::BundlerOptions {
         input: Some(vec![target.to_owned().into()]),
         file: Some(outfile.into()),
         external: Some(vec!["gi://*".to_owned()].into()),
-        sourcemap: Some(SourceMapType::Inline),
-        format: Some(OutputFormat::Esm),
+        sourcemap: Some(rolldown::SourceMapType::Inline),
+        format: Some(rolldown::OutputFormat::Esm),
         footer: Some(rolldown::AddonOutputOption::String(Some(
             "import(import.meta.url).then((m) => print(m.default))".to_owned(),
         ))),

@@ -7,8 +7,10 @@ def "main clean" [] {
 }
 
 def "main types" [] {
+    mkdir .gnim
+    flatpak run --command=cp --filesystem=home org.gnome.Sdk -r /usr/share/gir-1.0 ./.gnim/girs
     cargo build --bin gnim
-    ./target/debug/gnim types --verbose
+    ./target/debug/gnim types --verbose -d .gnim/girs
 }
 
 def build_types [--os: string, --cpu: string, --target: string] {
@@ -34,17 +36,15 @@ def build_types [--os: string, --cpu: string, --target: string] {
 def "main build:gnim" [] {
     let target = $"(pwd)/dist/gnim"
 
-    tsc -b tsconfig.bin.json
-    tsc -b tsconfig.lib.json
-
-    rm build/lib/tsconfig.lib.tsbuildinfo
-    rm build/bin/tsconfig.bin.tsbuildinfo
+    tsc
 
     mkdir $target
+    mkdir $"($target)/bin"
     mv build/* $target
     cp package.json $target
     cp README.md $target
     cp LICENSE $target
+    cp bin/*.js $"($target)/bin/"
     rm -r build
 }
 

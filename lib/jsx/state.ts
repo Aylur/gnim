@@ -12,7 +12,7 @@ export type Accessed<T> = T extends Accessor<infer V> ? V : never
  * They are functions that let you read a value and track it in reactive scopes so that
  * when they change the reader is notified.
  */
-export interface Accessor<T> {
+export interface Accessor<T = unknown> {
     /**
      * Create a computed value which tracks `this` and invalidates the value
      * whenever it changes. The result is cached and is only computed on access.
@@ -43,44 +43,39 @@ export interface Accessor<T> {
     subscribe(callback: Callback): DisposeFn
 }
 
-export class Accessor<T = unknown> extends Function {
-    #get: () => T
-    #subscribe: (callback: Callback) => DisposeFn
+export function isAccessor(instance: unknown): instance is Accessor {
+    return typeof instance === "function" && "peek" in instance && "subscribe" in instance
+}
 
-    constructor(get: () => T, subscribe?: (callback: Callback) => DisposeFn) {
-        super("return arguments.callee._call.apply(arguments.callee, arguments)")
-        this.#subscribe = subscribe ?? (() => () => {})
-        this.#get = get
-    }
-
-    subscribe(callback: Callback): DisposeFn {
-        return this.#subscribe(callback)
-    }
-
-    peek(): T {
-        return this.#get()
-    }
-
-    protected _call<R = T>(compute: (value: T) => R): Accessor<R>
-    protected _call(): T
-
-    protected _call<R = T>(compute?: (value: T) => R): Accessor<R> | T {
+export function createAccessor<T>(
+    get: () => T,
+    subscribe: (callback: Callback) => DisposeFn,
+): Accessor<T> {
+    function access<R = T>(compute?: (value: T) => R): Accessor<R> | T {
         if (typeof compute === "function") {
-            return createComputed(() => compute(this()))
+            return createComputed(() => {
+                accessStack.at(-1)?.add(accessor)
+                return compute(get())
+            })
         }
 
-        accessStack.at(-1)?.add(this)
-        return this.peek()
+        accessStack.at(-1)?.add(accessor)
+        return get()
     }
 
-    toString(): string {
-        return `Accessor { ${this.peek()} }`
-    }
+    const accessor = Object.assign(access, {
+        peek: get,
+        subscribe: subscribe,
+        toString(): string {
+            return `Accessor { ${get()} }`
+        },
+        [Symbol.toPrimitive]() {
+            console.warn("Accessor implicitly converted to a primitive value.")
+            return `Accessor { ${get()} }`
+        },
+    }) as Accessor<T>
 
-    [Symbol.toPrimitive]() {
-        console.warn("Accessor implicitly converted to a primitive value.")
-        return this.toString()
-    }
+    return accessor
 }
 
 export type Setter<T> = {
@@ -114,12 +109,11 @@ export function state<T>(init: T, options?: StateOptions<NoInfer<T>>): State<T> 
     }
 
     function set(newValue: unknown): void {
-        const value: T =
-            newValue instanceof Accessor
-                ? newValue
-                : typeof newValue === "function"
-                  ? newValue(currentValue)
-                  : newValue
+        const value: T = isAccessor(newValue)
+            ? newValue
+            : typeof newValue === "function"
+              ? newValue(currentValue)
+              : newValue
 
         if (!equals(currentValue, value)) {
             currentValue = value
@@ -131,12 +125,12 @@ export function state<T>(init: T, options?: StateOptions<NoInfer<T>>): State<T> 
         return currentValue
     }
 
-    return [new Accessor(get, subscribe), set]
+    return [createAccessor(get, subscribe), set]
 }
 
 let effectDepth = 0
 
-function push<T>(fn: () => T) {
+export function push<T>(fn: () => T) {
     const deps = new Set<Accessor>()
     accessStack.push(deps)
     const res = fn()
@@ -243,7 +237,7 @@ export function createComputed<T>(fn: (prev?: T) => T) {
         return computeEffect()
     }
 
-    return new Accessor(get, subscribe)
+    return createAccessor(get, subscribe)
 }
 
 interface MemoOptions<T> {
@@ -307,7 +301,7 @@ export function computed<T>(fn: (prev?: T) => T, opts?: MemoOptions<NoInfer<T>>)
         return value.peek()
     }
 
-    return new Accessor(get, subscribe)
+    return createAccessor(get, subscribe)
 }
 
 type EffectOptions = {

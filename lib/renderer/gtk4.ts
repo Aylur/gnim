@@ -3,7 +3,8 @@ import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
 import { newObject } from "../jsx/element.js"
 import { createRenderer } from "../jsx/render.js"
-import { Accessor } from "../jsx/state.js"
+import { type Accessor } from "../jsx/state.js"
+import { setProperty } from "../util.js"
 
 const dummyBuilder = new Gtk.Builder()
 const type = Symbol("gnim.gtk4.type")
@@ -108,6 +109,12 @@ function appendChild(parent: GObject.Object, child: GObject.Object) {
     throw Error(`cannot add ${child} to ${parent}`)
 }
 
+function destroyChild(parent: GObject.Object, child: GObject.Object) {
+    if (parent instanceof Gio.Application && child instanceof Gtk.Window) {
+        child.destroy()
+    }
+}
+
 export const { render } = createRenderer({
     constructObject(element, props) {
         const { slot, ...rest } = props
@@ -134,12 +141,18 @@ export const { render } = createRenderer({
         return obj
     },
     setChildren(parent, children, prev) {
+        const destroy = prev.filter((child) => !children.includes(child))
+
         for (const child of prev) {
             removeChild(parent, child)
         }
 
         for (const child of children) {
             appendChild(parent, child)
+        }
+
+        for (const child of destroy) {
+            destroyChild(parent, child)
         }
     },
     createText: Gtk.Label.new,
@@ -149,7 +162,7 @@ export const { render } = createRenderer({
         if (key === "css" && typeof value === "string") {
             setCss(object, value)
         } else {
-            Object.assign(object, { [key]: value })
+            setProperty(object, key, value)
         }
     },
 })

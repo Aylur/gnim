@@ -1,8 +1,8 @@
 import GObject from "gi://GObject?version=2.0"
+import { isGObjectCtor, kebabcase, type CamelCase, type Keyof, type PascalCase } from "../util.js"
 import { getRenderer } from "./render.js"
 import { onCleanup } from "./scope.js"
-import { Accessor, effect } from "./state.js"
-import { isGObjectCtor, kebabcase, type CamelCase, type Keyof, type PascalCase } from "../util.js"
+import { effect, isAccessor, type Accessor } from "./state.js"
 
 const connect = GObject.signal_connect
 const disconnect = GObject.signal_handler_disconnect
@@ -107,7 +107,7 @@ export function newObject<C extends GObject.ObjectClass>(
             signals.push([key, value as () => unknown])
             delete props[key]
         }
-        if (value instanceof Accessor) {
+        if (isAccessor(value)) {
             bindings.push([key, value])
             delete props[key]
         }
@@ -137,11 +137,11 @@ export function newObject<C extends GObject.ObjectClass>(
     })
 
     // handle bindings
-    const disposeBindings = bindings.map(([prop, binding]) => {
-        const dispose = binding.subscribe(() => {
-            renderer.setProperty(obj, prop, binding.peek())
+    const disposeBindings = bindings.map(([prop, { peek, subscribe }]) => {
+        renderer.setProperty(obj, prop, peek())
+        const dispose = subscribe(() => {
+            renderer.setProperty(obj, prop, peek())
         })
-        renderer.setProperty(obj, prop, binding.peek())
         return dispose
     })
 
@@ -165,7 +165,7 @@ export function mountChildren(child: GnimNode, parent?: GObject.Object) {
     const renderer = getRenderer()
     const nodes = resolveNode(child)
 
-    if (!nodes.some((node) => node instanceof Accessor) && parent) {
+    if (!nodes.some((node) => isAccessor(node)) && parent) {
         renderer.setChildren(parent, nodes as Array<GObject.Object>, [])
         return
     }
@@ -207,7 +207,7 @@ export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<Gni
         return [node]
     }
 
-    if (node instanceof Accessor) {
+    if (isAccessor(node)) {
         return [node]
     }
 

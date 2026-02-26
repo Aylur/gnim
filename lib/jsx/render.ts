@@ -1,6 +1,7 @@
 import GObject from "gi://GObject?version=2.0"
 import { mountChildren, newObject, type CC, type FC, type GnimNode } from "./element.js"
 import { createContext, Scope } from "./scope.js"
+import { setProperty } from "../util.js"
 
 const RendererContext = createContext<Renderer | null>(null)
 
@@ -46,10 +47,6 @@ function constructObject(element: CC, props: Record<string, unknown>): GObject.O
 
 function createText(string: string): GObject.Object {
     throw GObject.NotImplementedError(`createText: "${string}"`)
-}
-
-function setProperty(object: GObject.Object, key: string, value: unknown) {
-    Object.assign(object, { [key]: value })
 }
 
 export function createRenderer(props: Partial<Renderer>) {

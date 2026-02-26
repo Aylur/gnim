@@ -15,7 +15,7 @@ pub struct TypeArgs {
     verbose: bool,
 
     /// Target directory to generate to
-    #[arg(short, long, value_name = "PATH", default_value = "./.types/gi")]
+    #[arg(short, long, value_name = "PATH", default_value = "./.gnim/types/gi")]
     outdir: String,
 
     /// Lookup these directories for .gir files

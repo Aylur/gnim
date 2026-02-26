@@ -90,3 +90,19 @@ export function xml(node: XmlNode | string) {
 
     return builder
 }
+
+export function setProperty(object: GObject.Object, key: string, value: unknown) {
+    const getter = `get_${snakecase(key)}` as keyof typeof object
+
+    let current: unknown
+
+    if (getter in object && typeof object[getter] === "function") {
+        current = (object[getter] as () => unknown)()
+    } else {
+        current = object[key as keyof typeof object]
+    }
+
+    if (!Object.is(current, value)) {
+        Object.assign(object, { [key]: value })
+    }
+}

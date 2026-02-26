@@ -1,7 +1,7 @@
 import GObject from "gi://GObject?version=2.0"
-import { onCleanup } from "./scope.js"
-import { Accessor, createComputed } from "./state.js"
 import { connect, disconnect, kebabcase, type Keyof } from "../util.js"
+import { onCleanup } from "./scope.js"
+import { type Accessor, createAccessor, createComputed } from "./state.js"
 
 type Callback = () => void
 type DisposeFn = () => void
@@ -96,7 +96,7 @@ export function ref<T>(object: GObject.Object, key: string, ...props: string[]):
             throw Error(`cannot get property "${key}" on "${object}"`)
         }
 
-        return new Accessor(get, subscribe)
+        return createAccessor(get, subscribe)
     }
 
     return createComputed(() => {

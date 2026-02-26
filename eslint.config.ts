@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint"
 import { defineConfig, globalIgnores } from "eslint/config"
 
 export default defineConfig(
-    globalIgnores(["dist", ".types"]),
+    globalIgnores(["dist", ".gnim"]),
     eslint.configs.recommended,
     ...tseslint.configs.recommended,
     {

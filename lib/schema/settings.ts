@@ -1,6 +1,6 @@
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
-import { Accessor, type Setter } from "../jsx/state.js"
+import { type Accessor, createAccessor, type Setter } from "../jsx/state.js"
 import {
     type CamelCase,
     camelcase,
@@ -38,7 +38,7 @@ function settingsObject<const T extends Record<string, string>>(
 
     const accessors = entries.map(([key]) => [
         camelcase(key),
-        new Accessor(
+        createAccessor(
             () => settings.get_value(key).recursiveUnpack(),
             (callback) => {
                 const id = connect(settings, `changed::${key}`, callback)

@@ -1,8 +1,5 @@
 use clap::Args;
-use rolldown::{
-    Bundler, BundlerOptions, BundlerTransformOptions, DecoratorOptions, OutputFormat,
-    SourceMapType, TransformOptions,
-};
+use rolldown;
 use std::{env, fs, path, process};
 use tokio::runtime::Runtime;
 
@@ -17,7 +14,7 @@ pub struct RunArgs {
 }
 
 fn transpile_typescript(target: &str, outfile: &str) {
-    let mut bundler = Bundler::new(BundlerOptions {
+    let mut bundler = rolldown::Bundler::new(rolldown::BundlerOptions {
         input: Some(vec![target.to_owned().into()]),
         file: Some(outfile.into()),
         external: Some(
@@ -32,15 +29,15 @@ fn transpile_typescript(target: &str, outfile: &str) {
             ]
             .into(),
         ),
-        transform: Some(BundlerTransformOptions {
-            decorator: Some(DecoratorOptions {
+        transform: Some(rolldown::BundlerTransformOptions {
+            decorator: Some(rolldown::DecoratorOptions {
                 legacy: Some(true),
                 emit_decorator_metadata: Some(true),
             }),
             ..Default::default()
         }),
-        sourcemap: Some(SourceMapType::Inline),
-        format: Some(OutputFormat::Esm),
+        sourcemap: Some(rolldown::SourceMapType::Inline),
+        format: Some(rolldown::OutputFormat::Esm),
         ..Default::default()
     })
     .expect("Failed to create bundler");

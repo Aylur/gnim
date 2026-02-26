@@ -6,4 +6,4 @@ result
 result-dev/
 docs/.vitepress/dist
 docs/.vitepress/cache
-.types/
+.gnim/

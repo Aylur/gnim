@@ -1,6 +1,6 @@
 {
     "name": "gnim",
-    "version": "1.10.0-rc.7",
+    "version": "2.0.0-alpha.0",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
@@ -21,7 +21,7 @@
         "docs:build": "vitepress build docs"
     },
     "optionalDependencies": {
-        "@gnim-js/linux-x64": "1.10.0-rc.7"
+        "@gnim-js/linux-x64": "2.0.0-alpha.0"
     },
     "devDependencies": {
         "@eslint/js": "latest",
@@ -47,6 +47,10 @@
         "./gobject": {
             "import": "./lib/gobject.js",
             "types": "./lib/gobject.d.ts"
+        },
+        "./schema": {
+            "import": "./lib/schema/settings.js",
+            "types": "./lib/schema/settings.d.ts"
         },
         "./jsx-runtime": {
             "import": "./lib/jsx-runtime.js",
