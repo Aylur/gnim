@@ -1,10 +1,9 @@
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
-import { newObject } from "../element.js"
-import { createRenderer } from "../render.js"
-import { Accessor } from "../state.js"
-import { setProperty } from "../util.js"
+import { newObject } from "../jsx/element.js"
+import { createRenderer } from "../jsx/render.js"
+import { Accessor } from "../jsx/state.js"
 
 const dummyBuilder = new Gtk.Builder()
 const type = Symbol("gnim.gtk4.type")
@@ -54,7 +53,7 @@ function removeChild(parent: GObject.Object, child: GObject.Object) {
     }
 
     if (parent instanceof Gtk.Application && child instanceof Gtk.Window) {
-        parent.remove_window(child)
+        return parent.remove_window(child)
     }
 
     throw Error(`cannot remove ${child} from ${parent}`)
@@ -150,7 +149,7 @@ export const { render } = createRenderer({
         if (key === "css" && typeof value === "string") {
             setCss(object, value)
         } else {
-            setProperty(object, key, value)
+            Object.assign(object, { [key]: value })
         }
     },
 })

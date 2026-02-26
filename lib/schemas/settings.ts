@@ -1,6 +1,6 @@
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
-import { Accessor, type Setter } from "./state.js"
+import { Accessor, type Setter } from "../jsx/state.js"
 import {
     type CamelCase,
     camelcase,
@@ -12,7 +12,7 @@ import {
     type RecursiveInferVariant as RecursiveInfer,
     xml,
     type XmlNode,
-} from "./util.js"
+} from "../util.js"
 
 type SetterName<T> = `set${PascalCase<T>}`
 
@@ -347,7 +347,7 @@ type SchemaSettings<S> = S extends Schema<infer TypedKeys, infer EnumKeys, infer
  *   "simple-key": "s",
  * })
  *
- * createEffect(() => {
+ * effect(() => {
  *   console.log(`${s.complexKey()}`)
  * })
  *
@@ -363,23 +363,39 @@ export function createSettings<const T extends Record<string, string>>(
 ): Prettify<Settings<T>>
 
 /**
- * Wrap a {@link Gio.Settings} into a collection of setters and accessors.
+ * Wrap a {@link Gio.Settings} according to a schema.
  */
 export function createSettings<S extends Schema>(
     settings: Gio.Settings,
     schema: S,
 ): Prettify<SchemaSettings<S>>
 
-export function createSettings(settings: Gio.Settings, schema: Schema | Record<string, string>) {
-    if (schema instanceof Schema) {
+/**
+ * Instantiate a {@link Gio.Settings} for a given schema.
+ */
+export function createSettings<S extends Schema>(schema: S): Prettify<SchemaSettings<S>>
+
+export function createSettings(
+    first: Gio.Settings | Schema,
+    second?: Schema | Record<string, string>,
+) {
+    if (second instanceof Schema && first instanceof Gio.Settings) {
         const keys = [
-            ...[...schema[internal].typedKeys].map((key) => [key.name, key.type]),
-            ...[...schema[internal].enumKeys].map((key) => [key.name, "s"]),
-            ...[...schema[internal].flagsKeys].map((key) => [key.name, "as"]),
+            ...[...second[internal].typedKeys].map((key) => [key.name, key.type]),
+            ...[...second[internal].enumKeys].map((key) => [key.name, "s"]),
+            ...[...second[internal].flagsKeys].map((key) => [key.name, "as"]),
         ]
 
-        return settingsObject(settings, Object.fromEntries(keys)) as SchemaSettings<Schema>
+        return settingsObject(first, Object.fromEntries(keys)) as SchemaSettings<Schema>
     }
 
-    return settingsObject(settings, schema)
+    if (typeof second === "object" && first instanceof Gio.Settings) {
+        return settingsObject(first, second as Record<string, string>)
+    }
+
+    if (first instanceof Schema) {
+        return createSettings(new Gio.Settings({ schemaId: first.id }), first)
+    }
+
+    throw Error("invalid arguments")
 }

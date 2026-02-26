@@ -175,29 +175,18 @@ export function onCleanup(cleanup: () => void) {
 }
 
 /**
- * Attach a callback to run when the currently running {@link Scope} returns.
- */
-export function onMount(cleanup: () => void) {
-    if (!Scope.current) {
-        console.error(Error("cannot attach onMount: out of tracking context"))
-    }
-
-    Scope.current?.onMount(cleanup)
-}
-
-/**
  * Creates a root {@link Scope} that when disposed will remove
  * any child signal handler or state observer.
  *
  * @example
  *
  * ```tsx
- * const [state] = createState(0)
+ * const [n] = state(0)
  * createRoot((dispose) => {
- *   createEffect(() => {
- *     console.log(`state: ${state()}`)
+ *   effect(() => {
+ *     console.log(`value: ${n()}`)
  *
- *     if (state() === 5) {
+ *     if (n() === 5) {
  *       dispose()
  *     }
  *   })

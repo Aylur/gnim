@@ -1,45 +1,47 @@
 import GObject from "gi://GObject?version=2.0"
+import { onCleanup } from "./scope.js"
 import { Accessor, createComputed } from "./state.js"
-import { connect, disconnect, kebabcase, type Keyof } from "./util.js"
-import { Scope } from "./scope.js"
+import { connect, disconnect, kebabcase, type Keyof } from "../util.js"
 
 type Callback = () => void
 type DisposeFn = () => void
-type PropKey<P> = Exclude<Extract<P, string>, "$signals">
-
-const noop = () => {}
+type PropKeyOf<O> = Exclude<
+    Keyof<O>,
+    "$signals" | "$readableProperties" | "$writableProperties" | "$constructOnlyProperties"
+>
 
 /**
- * Create an {@link Accessor} on a {@link GObject.Object}'s registered property.
+ * Reactively reference a {@link GObject.Object}'s registered property.
  *
  * @param object The {@link GObject.Object} to create the {@link Accessor} on.
  * @param property One of its registered properties.
+ * @returns Accessor which references the property value
  */
-export function createBinding<T extends GObject.Object, P extends keyof T>(
+export function ref<T extends GObject.Object, P extends PropKeyOf<T>>(
     object: T,
-    property: PropKey<P>,
+    property: P,
 ): Accessor<T[P]>
 
-export function createBinding<
+export function ref<
     T extends GObject.Object,
-    P1 extends keyof T,
-    P2 extends keyof NonNullable<T[P1]>,
+    P1 extends PropKeyOf<T>,
+    P2 extends PropKeyOf<NonNullable<T[P1]>>,
 >(
     object: T,
-    property1: PropKey<P1>,
-    property2: PropKey<P2>,
+    property1: P1,
+    property2: P2,
 ): Accessor<null extends T[P1] ? NonNullable<T[P1]>[P2] | null : NonNullable<T[P1]>[P2]>
 
-export function createBinding<
+export function ref<
     T extends GObject.Object,
-    P1 extends keyof T,
-    P2 extends keyof NonNullable<T[P1]>,
-    P3 extends keyof NonNullable<NonNullable<T[P1]>[P2]>,
+    P1 extends PropKeyOf<T>,
+    P2 extends PropKeyOf<NonNullable<T[P1]>>,
+    P3 extends PropKeyOf<NonNullable<NonNullable<T[P1]>[P2]>>,
 >(
     object: T,
-    property1: PropKey<P1>,
-    property2: PropKey<P2>,
-    property3: PropKey<P3>,
+    property1: P1,
+    property2: P2,
+    property3: P3,
 ): Accessor<
     null extends T[P1]
         ? NonNullable<NonNullable<T[P1]>[P2]>[P3] | null
@@ -48,18 +50,18 @@ export function createBinding<
           : NonNullable<NonNullable<T[P1]>[P2]>[P3]
 >
 
-export function createBinding<
+export function ref<
     T extends GObject.Object,
-    P1 extends keyof T,
-    P2 extends keyof NonNullable<T[P1]>,
-    P3 extends keyof NonNullable<NonNullable<T[P1]>[P2]>,
-    P4 extends keyof NonNullable<NonNullable<NonNullable<T[P1]>[P2]>[P3]>,
+    P1 extends PropKeyOf<T>,
+    P2 extends PropKeyOf<NonNullable<T[P1]>>,
+    P3 extends PropKeyOf<NonNullable<NonNullable<T[P1]>[P2]>>,
+    P4 extends PropKeyOf<NonNullable<NonNullable<NonNullable<T[P1]>[P2]>[P3]>>,
 >(
     object: T,
-    property1: PropKey<P1>,
-    property2: PropKey<P2>,
-    property3: PropKey<P3>,
-    property4: PropKey<P4>,
+    property1: P1,
+    property2: P2,
+    property3: P3,
+    property4: P4,
 ): Accessor<
     null extends T[P1]
         ? NonNullable<NonNullable<NonNullable<T[P1]>[P2]>[P3]>[P4] | null
@@ -70,11 +72,7 @@ export function createBinding<
             : NonNullable<NonNullable<NonNullable<T[P1]>[P2]>[P3]>[P4]
 >
 
-export function createBinding<T>(
-    object: GObject.Object,
-    key: string,
-    ...props: string[]
-): Accessor<T> {
+export function ref<T>(object: GObject.Object, key: string, ...props: string[]): Accessor<T> {
     if (props.length === 0) {
         const prop = kebabcase(key) as keyof typeof object
 
@@ -102,9 +100,9 @@ export function createBinding<T>(
     }
 
     return createComputed(() => {
-        let v = createBinding(object as any, key)()
+        let v = ref(object as any, key)()
         for (const prop of props) {
-            if (prop) v = v !== null ? createBinding(v, prop)() : null
+            if (prop) v = v !== null ? ref(v, prop)() : null
         }
         return v
     })
@@ -127,63 +125,15 @@ type SignalsOf<O> = O extends GObject.Object
 type ConnectionCallback<
     O extends GObject.Object,
     S extends keyof SignalsOf<O>,
-    T,
-> = SignalsOf<O>[S] extends (...args: any[]) => infer R
-    ? void extends R
-        ? (...args: [...Parameters<SignalsOf<O>[S]>, prev: NoInfer<T>]) => T
-        : never
+> = SignalsOf<O>[S] extends (...args: infer Args) => infer Return
+    ? (...args: Args) => Return
     : never
 
-export function createConnection<T, O extends GObject.Object, S extends Keyof<SignalsOf<O>>>(
+export function connectEffect<O extends GObject.Object, S extends Keyof<SignalsOf<O>>>(
     object: O,
     signal: S,
-    handler: ConnectionCallback<O, S, T>,
-): Accessor<undefined | T>
-
-export function createConnection<T, O extends GObject.Object, S extends Keyof<SignalsOf<O>>>(
-    object: O,
-    signal: S,
-    handler: ConnectionCallback<O, S, T>,
-    init: T,
-): Accessor<T>
-
-export function createConnection<T, O extends GObject.Object, S extends Keyof<SignalsOf<O>>>(
-    object: O,
-    signal: S,
-    handler: (...args: any[]) => T,
-    init?: T,
-): Accessor<T> {
-    let value = init
-    let id: number
-
-    const observers = new Set<Callback>()
-
-    function subscribe(callback: Callback): DisposeFn {
-        if (observers.size === 0) {
-            id = connect(object, signal, (_, ...args) => {
-                value = handler(...args, value)
-                Array.from(observers).forEach((cb) => cb())
-            })
-        }
-
-        observers.add(callback)
-
-        return () => {
-            observers.delete(callback)
-            if (observers.size === 0) {
-                disconnect(object, id)
-            }
-        }
-    }
-
-    if (Scope.current) {
-        const dispose = subscribe(noop)
-        Scope.current.onCleanup(dispose)
-    }
-
-    function get(): T {
-        return value as T
-    }
-
-    return new Accessor(get, subscribe)
+    handler: ConnectionCallback<O, S>,
+): void {
+    const id = connect(object, signal, (_, ...args) => handler(...args))
+    onCleanup(() => disconnect(object, id))
 }

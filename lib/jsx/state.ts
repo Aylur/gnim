@@ -14,18 +14,12 @@ export type Accessed<T> = T extends Accessor<infer V> ? V : never
  */
 export interface Accessor<T> {
     /**
-     * Shorthand for `createComputed(() => compute(accessor()))`.
-     * @see createComputed
+     * Create a computed value which tracks `this` and invalidates the value
+     * whenever it changes. The result is cached and is only computed on access.
+     *
      * @returns A new {@link Accessor} for the computed value.
      */
     <R = T>(compute: (value: T) => R): Accessor<R>
-
-    /**
-     * Create a new {@link Accessor} that applies a transformation on its value when read.
-     * This operation is also known as `map` in other languages.
-     * @param transform The transformation to apply. Should be a pure function.
-     */
-    as<R = T>(transform: (value: T) => R): Accessor<R>
 
     /**
      * Get the current value and track it as a dependency in reactive scopes.
@@ -42,7 +36,7 @@ export interface Accessor<T> {
     /**
      * Subscribe for value changes.
      * This method is **not** scope aware; you need to dispose it when it is no longer used.
-     * You might want to consider using {@link createEffect} instead.
+     * You might want to consider using an {@link effect} instead.
      * @param callback The function to run when the value changes.
      * @returns Unsubscribe function.
      */
@@ -65,10 +59,6 @@ export class Accessor<T = unknown> extends Function {
 
     peek(): T {
         return this.#get()
-    }
-
-    as<R = T>(transform: (value: T) => R): Accessor<R> {
-        return new Accessor(() => transform(this.#get()), this.#subscribe)
     }
 
     protected _call<R = T>(compute: (value: T) => R): Accessor<R>
@@ -94,7 +84,7 @@ export class Accessor<T = unknown> extends Function {
 }
 
 export type Setter<T> = {
-    (value: T): void
+    (value: Exclude<T, Function>): void
     (producer: (prev: T) => T): void
 }
 
@@ -113,7 +103,7 @@ export interface StateOptions<T> {
  * @param init The intial value.
  * @returns An {@link Accessor} and a setter function.
  */
-export function createState<T>(init: T, options?: StateOptions<T>): State<T> {
+export function state<T>(init: T, options?: StateOptions<NoInfer<T>>): State<T> {
     let currentValue = init
     const observers = new Set<Callback>()
     const equals = options?.equals ?? Object.is
@@ -174,21 +164,6 @@ function diff(prev: Map<Accessor, DisposeFn>, next: Set<Accessor>, fn: Callback)
     return newDeps
 }
 
-/**
- * Create a computed value which tracks dependencies and invalidates the value
- * whenever they change. The result is cached and is only computed on access.
- *
- * @param fn The computation logic.
- * @returns An {@link Accessor} to the value.
- *
- * @example
- *
- * ```ts
- * let a: Accessor<number>
- * let b: Accessor<number>
- * const c: Accessor<number> = createComputed(() => a() + b())
- * ```
- */
 export function createComputed<T>(fn: (prev?: T) => T) {
     const parentScope = Scope.current
 
@@ -283,8 +258,16 @@ interface MemoOptions<T> {
  * Create a derived reactive value which tracks its dependencies and reruns the computation
  * whenever a dependency changes. The resulting {@link Accessor} will only notify observers
  * when the computed value has changed.
+ *
+ * @example
+ *
+ * ```ts
+ * let a: Accessor<number>
+ * let b: Accessor<number>
+ * const c: Accessor<number> = computed(() => a() + b())
+ * ```
  */
-export function createMemo<T>(fn: (prev?: T) => T, opts?: MemoOptions<T>): Accessor<T> {
+export function computed<T>(fn: (prev?: T) => T, opts?: MemoOptions<NoInfer<T>>): Accessor<T> {
     let init = false
     let currentValue: T
     let dispose: DisposeFn
@@ -327,7 +310,7 @@ export function createMemo<T>(fn: (prev?: T) => T, opts?: MemoOptions<T>): Acces
     return new Accessor(get, subscribe)
 }
 
-type EffectOptions<T> = {
+type EffectOptions = {
     /**
      * Run the effect immediately instead of after the {@link Scope} returns
      */
@@ -338,21 +321,21 @@ type EffectOptions<T> = {
  * Schedule a function which tracks reactive values accessed within
  * and re-runs whenever they change.
  */
-export function createEffect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions<T>) {
+export function effect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions) {
     const parentScope = Scope.current
 
     let currentValue: T
     let currentDeps = new Map<Accessor, DisposeFn>()
     let currentScope = new Scope(parentScope)
 
-    function effect() {
+    function syncEffect() {
         effectDepth++
         currentScope.dispose()
         currentScope = new Scope(parentScope)
 
         const [value, deps] = currentScope.run(() => push(() => fn(currentValue)))
 
-        currentDeps = diff(currentDeps, deps, effect)
+        currentDeps = diff(currentDeps, deps, syncEffect)
         currentValue = value
         effectDepth--
     }
@@ -365,59 +348,13 @@ export function createEffect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions
 
     if (!parentScope) {
         console.warn(Error("effects created outside a `createRoot` will never be disposed"))
-        return effect()
+        return syncEffect()
     }
 
     parentScope.onCleanup(dispose)
     if (opts?.immediate) {
-        effect()
+        syncEffect()
     } else {
-        parentScope.onMount(effect)
+        parentScope.onMount(syncEffect)
     }
-}
-
-/**
- * Create a reactive value from a provier function.
- * The provider is called when the first subscriber appears and the returned dispose
- * function from the provider will be called when the number of subscribers drop to zero.
- *
- * @param init The initial value
- * @param producer The producer function which should return a cleanup function
- *
- * @example
- *
- * ```ts
- * const value = createExternal(0, (set) => {
- *   const interval = setInterval(() => set((v) => v + 1))
- *   return () => clearInterval(interval)
- * })
- * ```
- */
-export function createExternal<T>(init: T, producer: (set: Setter<T>) => DisposeFn): Accessor<T> {
-    let currentValue = init
-    let dispose: DisposeFn
-    const subscribers = new Set<Callback>()
-
-    function subscribe(callback: Callback): DisposeFn {
-        if (subscribers.size === 0) {
-            dispose = producer((v: unknown) => {
-                const newValue: T = typeof v === "function" ? v(currentValue) : v
-                if (!Object.is(newValue, currentValue)) {
-                    currentValue = newValue
-                    Array.from(subscribers).forEach((cb) => cb())
-                }
-            })
-        }
-
-        subscribers.add(callback)
-
-        return () => {
-            subscribers.delete(callback)
-            if (subscribers.size === 0) {
-                dispose()
-            }
-        }
-    }
-
-    return new Accessor(() => currentValue, subscribe)
 }

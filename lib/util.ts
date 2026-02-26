@@ -1,8 +1,5 @@
 import type GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import type { CC } from "./element.js"
-
-export const IS_DEV = true // TODO:
 
 export function kebabcase(str: string) {
     return str
@@ -52,20 +49,8 @@ export type KebabCase<
 export type DeepInferVariant<S extends string> = ReturnType<GLib.Variant<S>["deepUnpack"]>
 export type RecursiveInferVariant<S extends string> = ReturnType<GLib.Variant<S>["recursiveUnpack"]>
 
-export function isGObjectCtor(ctor: any): ctor is CC {
+export function isGObjectCtor(ctor: any): ctor is { new (...args: any): GObject.Object } {
     return ctor.prototype instanceof GObject.Object
-}
-
-// onNotifyPropName -> notify::prop-name
-// onPascalName:detailName -> pascal-name::detail-name
-export function signalName(key: string): string {
-    const [sig, detail] = kebabcase(key.slice(2)).split(":")
-
-    if (sig.startsWith("notify-")) {
-        return `notify::${sig.slice(7)}`
-    }
-
-    return detail ? `${sig}::${detail}` : sig
 }
 
 export const connect = GObject.signal_connect
@@ -104,39 +89,4 @@ export function xml(node: XmlNode | string) {
     }
 
     return builder
-}
-
-export function setProperty(object: GObject.Object, key: string, value: unknown) {
-    const snake_key = snakecase(key)
-
-    const getter = `get_${snake_key}` as keyof typeof object
-    const setter = `set_${snake_key}` as keyof typeof object
-
-    let current: unknown
-
-    if (getter in object && typeof object[getter] === "function") {
-        current = (object[getter] as () => unknown)()
-    } else {
-        current = object[key as keyof typeof object]
-    }
-
-    if (current !== value) {
-        if (setter in object && typeof object[setter] === "function") {
-            ;(object[setter] as (v: unknown) => void)(value)
-        } else {
-            Object.assign(object, { [key]: value })
-        }
-    }
-}
-
-// Bindings work over properties in kebab-case because thats the convention of gobject
-// however in js its either snake_case or camelCase
-// also on DBus interfaces its PascalCase by convention
-// so as a workaround we use get_property_name and only use the property field as a fallback
-export function definePropertyGetter<T extends object>(object: T, prop: Extract<keyof T, string>) {
-    Object.defineProperty(object, `get_${kebabcase(prop).replaceAll("-", "_")}`, {
-        configurable: false,
-        enumerable: true,
-        value: () => object[prop],
-    })
 }

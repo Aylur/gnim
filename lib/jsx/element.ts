@@ -1,15 +1,8 @@
 import GObject from "gi://GObject?version=2.0"
 import { getRenderer } from "./render.js"
 import { onCleanup } from "./scope.js"
-import { Accessor, createEffect } from "./state.js"
-import {
-    IS_DEV,
-    isGObjectCtor,
-    signalName,
-    type CamelCase,
-    type Keyof,
-    type PascalCase,
-} from "./util.js"
+import { Accessor, effect } from "./state.js"
+import { isGObjectCtor, kebabcase, type CamelCase, type Keyof, type PascalCase } from "../util.js"
 
 const connect = GObject.signal_connect
 const disconnect = GObject.signal_handler_disconnect
@@ -85,11 +78,23 @@ export function jsx(
     return { type, props: key !== undefined ? { key, ...props } : props }
 }
 
+// onNotifyPropName -> notify::prop-name
+// onPascalName:detailName -> pascal-name::detail-name
+function signalName(key: string): string {
+    const [sig, detail] = kebabcase(key.slice(2)).split(":")
+
+    if (sig.startsWith("notify-")) {
+        return `notify::${sig.slice(7)}`
+    }
+
+    return detail ? `${sig}::${detail}` : sig
+}
+
 export function newObject<C extends GObject.ObjectClass>(
     Class: C,
     args: Partial<CCProps<InstanceType<C>>>,
 ) {
-    const { children, ref, this: $constructor, ...rest } = args as Partial<CCProps<GObject.Object>>
+    const { children, ref, construct, ...rest } = args as Partial<CCProps<GObject.Object>>
     const props = rest as Record<string, unknown>
     const renderer = getRenderer()
 
@@ -109,15 +114,15 @@ export function newObject<C extends GObject.ObjectClass>(
     }
 
     const obj =
-        $constructor instanceof GObject.Object
-            ? $constructor
-            : typeof $constructor === "function"
-              ? $constructor()
+        construct instanceof GObject.Object
+            ? construct
+            : typeof construct === "function"
+              ? construct()
               : new Class(props)
 
     ref?.(obj)
 
-    if ($constructor instanceof GObject.Object || typeof $constructor === "function") {
+    if (construct instanceof GObject.Object || typeof construct === "function") {
         for (const [key, value] of Object.entries(props)) {
             renderer.setProperty(obj, key, value)
         }
@@ -165,7 +170,7 @@ export function mountChildren(child: GnimNode, parent?: GObject.Object) {
         return
     }
 
-    createEffect<GObject.Object[]>(
+    effect<GObject.Object[]>(
         function mountChildrenEffect(prev = []) {
             const children = nodes.map(unpackSlot).flat()
             if (parent) {
@@ -186,7 +191,7 @@ export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<Gni
     }
 
     if (node === true) {
-        if (IS_DEV) console.warn("trying to render a true literal")
+        console.warn("trying to render a true literal")
         return []
     }
 
@@ -266,8 +271,8 @@ type GObjectProps<T> = T extends {
     : never
 
 type CCProps<T, Props = Partial<GObject.ConstructorProps<T>>> =
-    | (MergeProps<Props, Partial<GObjectProps<T>>> & { this?: never })
-    | (Partial<GObjectProps<T>> & { this: T | (() => T) })
+    | (MergeProps<Props, Partial<GObjectProps<T>>> & { construct?: never })
+    | (Partial<GObjectProps<T>> & { construct: T | (() => T) })
 
 export namespace JSX {
     export type ElementType = keyof IntrinsicElements | typeof Fragment | FC | CC

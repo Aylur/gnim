@@ -1,6 +1,6 @@
 import type { GnimNode } from "./element.js"
 import { getScope, onCleanup, Scope } from "./scope.js"
-import { Accessor, createEffect, createMemo, createState, type State } from "./state.js"
+import { Accessor, effect, computed, state, type State } from "./state.js"
 import { resolveNode, unpackSlot } from "./element.js"
 import GObject from "gi://GObject?version=2.0"
 import { getRenderer } from "./render.js"
@@ -46,7 +46,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
         map.clear()
     })
 
-    return createMemo(() => {
+    return computed(() => {
         const items = [...each()]
         const ids = items.map(id)
         const idSet = new Set(ids)
@@ -63,7 +63,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
             if (map.has(key)) {
                 map.get(key)!.index[1](i)
             } else {
-                const [index, setIndex] = createState(i)
+                const [index, setIndex] = state(i)
                 const scope = new Scope(currentScope)
                 const child = scope.run(() => resolveNode(mkChild(item, index)))
                 map.set(key, { item, child, index: [index, setIndex], scope })
@@ -94,7 +94,7 @@ export type WithProps<T> = {
  */
 export function With<T>(props: WithProps<T>): GnimNode {
     const { value, children: mkChild } = props
-    return createMemo(() => mkChild(value()))
+    return computed(() => mkChild(value()))
 }
 
 export type PortalProps = {
@@ -125,7 +125,7 @@ export function Portal({ children, mount }: PortalProps): GnimNode {
         return
     }
 
-    createEffect(
+    effect(
         function mountPortalEffect() {
             const children = nodes.map(unpackSlot).flat()
             if (mount) {

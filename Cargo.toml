@@ -3,7 +3,7 @@ name = "gnim"
 version = "1.10.0"
 edition = "2024"
 license = "MIT"
-description = "Development CLI for GJS and Gnim"
+description = "Gnim CLI"
 homepage = "https://gnim.aylur.dev/"
 repository = "https://github.com/aylur/gnim"
 include = ["/bin/gnim.rs", "/bin/command"]
@@ -12,7 +12,7 @@ include = ["/bin/gnim.rs", "/bin/command"]
 clap = { version = "4", features = ["derive"] }
 quick-xml = "0"
 colored = "3"
-girgen = "0.2.9"
+girgen = "0.2.10"
 rolldown = { git = "https://github.com/rolldown/rolldown" }
 tokio = { version = "1", features = ["macros"] }
 
