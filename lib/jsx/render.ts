@@ -1,8 +1,7 @@
 import GObject from "gi://GObject?version=2.0"
 import { setProperty } from "../util.js"
 import { mountChildren, newObject, type CC, type FC, type GnimNode } from "./element.js"
-import { createContext, Scope } from "./scope.js"
-import { computed } from "./state.js"
+import { computed, createContext, Scope } from "./reactive.js"
 
 const RendererContext = createContext<Renderer | null>(null)
 

@@ -3,7 +3,7 @@ import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
 import { newObject } from "../jsx/element.js"
 import { createRenderer } from "../jsx/render.js"
-import { type Accessor } from "../jsx/state.js"
+import { type Accessor } from "../jsx/reactive.js"
 import { setProperty } from "../util.js"
 
 const dummyBuilder = new Gtk.Builder()

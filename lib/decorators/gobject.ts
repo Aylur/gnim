@@ -217,7 +217,6 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
         if (!descriptor) {
             defineProperty(proto, key, {
                 enumerable: true,
-                configurable: false,
                 set(v) {
                     if (!(priv in this)) this[priv] = {}
 
@@ -231,6 +230,12 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
                 },
             })
         }
+
+        defineProperty(proto, `get_${snakecase(key)}`, {
+            value: function () {
+                return this[key]
+            },
+        })
 
         return [name, pspec(name, flags, type)] as const
     })

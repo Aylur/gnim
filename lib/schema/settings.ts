@@ -1,6 +1,6 @@
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
-import { type Accessor, createAccessor, type Setter } from "../jsx/state.js"
+import { type Accessor, createAccessor, type Setter } from "../jsx/reactive.js"
 import {
     type CamelCase,
     camelcase,

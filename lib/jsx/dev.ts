@@ -1,8 +1,7 @@
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
-import { jsx, type CC, type FC } from "./jsx/element.js"
-import { createContext } from "./jsx/scope.js"
-import { computed, state, type State } from "./jsx/state.js"
+import { jsx, type CC, type FC } from "./element.js"
+import { computed, state, type State } from "./reactive.js"
 
 function init(main: string) {
     const socketPath = GLib.getenv("GNIM_DEV_SOCK")
@@ -29,7 +28,7 @@ function init(main: string) {
 }
 
 type DevComponent = { impl: State<CC | FC>; ctx: unknown[] | null }
-const DevContext = createContext<unknown[] | null>(null)
+// const DevContext = createContext<unknown[] | null>(null)
 const registry = new Map<string, DevComponent>()
 
 function registerComponent(mod: string, name: string, impl: CC | FC): FC {
