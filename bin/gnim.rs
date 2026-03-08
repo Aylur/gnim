@@ -1,6 +1,8 @@
 mod command;
+mod utils;
 
 use clap::{Parser, Subcommand};
+use command::dev::{DevArgs, dev};
 use command::run::{RunArgs, run};
 use command::schemas::{SchemasArgs, schemas};
 use command::types::{TypeArgs, types};
@@ -22,18 +24,21 @@ enum Command {
     Types(TypeArgs),
     /// Compile gschema.ts files into xml and gschema files
     Schemas(SchemasArgs),
+    /// Startup the Gnim development server
+    Dev(DevArgs),
     // TODO:
     // Init,
-    // Dev,
     // Bundle,
 }
 
-fn main() -> process::ExitCode {
+#[tokio::main]
+async fn main() -> process::ExitCode {
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Run(args) => run(&args),
-        Command::Types(args) => types(&args),
-        Command::Schemas(args) => schemas(&args),
+        Command::Run(args) => run(&args).await,
+        Command::Types(args) => types(&args).await,
+        Command::Schemas(args) => schemas(&args).await,
+        Command::Dev(args) => dev(&args).await,
     }
 }

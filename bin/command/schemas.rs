@@ -2,7 +2,6 @@ use clap::Args;
 use quick_xml::events::Event;
 use quick_xml::reader::Reader;
 use quick_xml::writer::Writer;
-use rolldown;
 use std::io::Cursor;
 use std::{env, fs, path, process};
 use tokio::runtime::Runtime;
@@ -79,7 +78,7 @@ fn compile(directory: &str) -> process::ExitCode {
     process::ExitCode::SUCCESS
 }
 
-pub fn schemas(args: &SchemasArgs) -> process::ExitCode {
+pub async fn schemas(args: &SchemasArgs) -> process::ExitCode {
     let outdir = match args.outdir.as_ref() {
         Some(ok) => path::PathBuf::from(ok),
         None => path::PathBuf::from(&args.directory),

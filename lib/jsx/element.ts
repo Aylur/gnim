@@ -2,7 +2,7 @@ import GObject from "gi://GObject?version=2.0"
 import { isGObjectCtor, kebabcase, type CamelCase, type Keyof, type PascalCase } from "../util.js"
 import { getRenderer } from "./render.js"
 import { onCleanup } from "./scope.js"
-import { effect, isAccessor, type Accessor } from "./state.js"
+import { computed, effect, isAccessor, type Accessor } from "./state.js"
 
 const connect = GObject.signal_connect
 const disconnect = GObject.signal_handler_disconnect
@@ -224,7 +224,7 @@ export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<Gni
     if (isGObjectCtor(type)) {
         return resolveNode(renderer.constructObject(type, node.props))
     } else {
-        return resolveNode(type(node.props))
+        return resolveNode(computed(() => type(node.props)))
     }
 }
 

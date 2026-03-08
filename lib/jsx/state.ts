@@ -130,12 +130,16 @@ export function state<T>(init: T, options?: StateOptions<NoInfer<T>>): State<T> 
 
 let effectDepth = 0
 
-export function push<T>(fn: () => T) {
+function push<T>(fn: () => T) {
     const deps = new Set<Accessor>()
     accessStack.push(deps)
     const res = fn()
     accessStack.pop()
     return [res, deps] as const
+}
+
+export function untrack<T>(fn: () => T) {
+    return push(fn)[0]
 }
 
 function diff(prev: Map<Accessor, DisposeFn>, next: Set<Accessor>, fn: Callback) {
@@ -219,7 +223,9 @@ export function createComputed<T>(fn: (prev?: T) => T) {
     }
 
     function get(): T {
-        if (!state.dirty) return state.value
+        if (!state.dirty) {
+            return state.value
+        }
 
         if (observers.size === 0) {
             if (effectDepth > 0) {
@@ -240,13 +246,7 @@ export function createComputed<T>(fn: (prev?: T) => T) {
     return createAccessor(get, subscribe)
 }
 
-interface MemoOptions<T> {
-    /**
-     * Can be used to customize the equality check used to determine whether value has changed.
-     * @default Object.is
-     */
-    equals?: (prev: T, next: T) => boolean
-}
+const noop = () => {}
 
 /**
  * Create a derived reactive value which tracks its dependencies and reruns the computation
@@ -261,7 +261,7 @@ interface MemoOptions<T> {
  * const c: Accessor<number> = computed(() => a() + b())
  * ```
  */
-export function computed<T>(fn: (prev?: T) => T, opts?: MemoOptions<NoInfer<T>>): Accessor<T> {
+export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>): Accessor<T> {
     let init = false
     let currentValue: T
     let dispose: DisposeFn
@@ -299,6 +299,11 @@ export function computed<T>(fn: (prev?: T) => T, opts?: MemoOptions<NoInfer<T>>)
     function get(): T {
         if (init) return currentValue
         return value.peek()
+    }
+
+    // FIXME: this should be refactored
+    if (Scope.current) {
+        Scope.current.onCleanup(subscribe(noop))
     }
 
     return createAccessor(get, subscribe)

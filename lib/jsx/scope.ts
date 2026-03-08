@@ -1,4 +1,3 @@
-import "gi://GObject?version=2.0"
 import type GObject from "gi://GObject?version=2.0"
 import { resolveNode, type GnimNode } from "./element.js"
 import type { Accessor } from "./state.js"

@@ -139,7 +139,7 @@ fn on_event(event: Event) {
     }
 }
 
-pub fn types(args: &TypeArgs) -> process::ExitCode {
+pub async fn types(args: &TypeArgs) -> process::ExitCode {
     VERBOSE.set(args.verbose).unwrap();
 
     let dir_paths: Vec<path::PathBuf> = args.dirs.split(":").map(path::PathBuf::from).collect();

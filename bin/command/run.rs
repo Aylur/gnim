@@ -1,7 +1,5 @@
 use clap::Args;
-use rolldown;
 use std::{env, fs, path, process};
-use tokio::runtime::Runtime;
 
 #[derive(Args)]
 pub struct RunArgs {
@@ -13,7 +11,7 @@ pub struct RunArgs {
     args: Vec<String>,
 }
 
-fn transpile_typescript(target: &str, outfile: &str) {
+async fn transpile_typescript(target: &str, outfile: &str) {
     let mut bundler = rolldown::Bundler::new(rolldown::BundlerOptions {
         input: Some(vec![target.to_owned().into()]),
         file: Some(outfile.into()),
@@ -42,11 +40,10 @@ fn transpile_typescript(target: &str, outfile: &str) {
     })
     .expect("Failed to create bundler");
 
-    let rt = Runtime::new().unwrap();
-    let _ = rt.block_on(async { bundler.write().await.unwrap() });
+    let _ = bundler.write().await.unwrap();
 }
 
-pub fn run(args: &RunArgs) -> process::ExitCode {
+pub async fn run(args: &RunArgs) -> process::ExitCode {
     let tmpdir = match env::var("XDG_RUNTIME_DIR") {
         Ok(ok) => format!("{ok}/gnim"),
         Err(_) => "/tmp".to_owned(),
@@ -58,7 +55,7 @@ pub fn run(args: &RunArgs) -> process::ExitCode {
         .expect("Invalid File");
 
     let tmpname = format!("{}/{}.js", tmpdir, stem);
-    transpile_typescript(&args.script, &tmpname);
+    transpile_typescript(&args.script, &tmpname).await;
 
     let args: Vec<&str> = args.args.iter().map(|s| s.as_ref()).collect();
 
