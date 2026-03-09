@@ -1,5 +1,6 @@
+use super::{dev_rundir, rolldown_config};
 use clap::Args;
-use std::{env, fs, path, process};
+use std::{fs, path, process};
 
 #[derive(Args)]
 pub struct RunArgs {
@@ -11,51 +12,27 @@ pub struct RunArgs {
     args: Vec<String>,
 }
 
-async fn transpile_typescript(target: &str, outfile: &str) {
-    let mut bundler = rolldown::Bundler::new(rolldown::BundlerOptions {
-        input: Some(vec![target.to_owned().into()]),
-        file: Some(outfile.into()),
-        external: Some(
-            vec![
-                "gi://*".to_owned(),
-                "resource://*".to_owned(),
-                "file://*".to_owned(),
-                "system".to_owned(),
-                "gettext".to_owned(),
-                "console".to_owned(),
-                "cairo".to_owned(),
-            ]
-            .into(),
-        ),
-        transform: Some(rolldown::BundlerTransformOptions {
-            decorator: Some(rolldown::DecoratorOptions {
-                legacy: Some(true),
-                emit_decorator_metadata: Some(true),
-            }),
-            ..Default::default()
-        }),
-        sourcemap: Some(rolldown::SourceMapType::Inline),
-        format: Some(rolldown::OutputFormat::Esm),
-        ..Default::default()
-    })
-    .expect("Failed to create bundler");
-
-    let _ = bundler.write().await.unwrap();
-}
-
 pub async fn run(args: &RunArgs) -> process::ExitCode {
-    let tmpdir = match env::var("XDG_RUNTIME_DIR") {
-        Ok(ok) => format!("{ok}/gnim"),
-        Err(_) => "/tmp".to_owned(),
-    };
+    let tmpdir = dev_rundir();
 
     let stem = path::Path::new(&args.script)
         .file_stem()
         .and_then(|s| s.to_str())
-        .expect("Invalid File");
+        .expect("valid file");
 
-    let tmpname = format!("{}/{}.js", tmpdir, stem);
-    transpile_typescript(&args.script, &tmpname).await;
+    let tmpname = tmpdir
+        .join(format!("{}_{}.js", stem, process::id()))
+        .to_string_lossy()
+        .to_string();
+
+    let mut bundler = rolldown::Bundler::new(rolldown::BundlerOptions {
+        input: Some(vec![args.script.to_owned().into()]),
+        file: Some(tmpname.clone()),
+        ..rolldown_config()
+    })
+    .expect("failed to create bundler");
+
+    bundler.write().await.expect("failed to bundle");
 
     let args: Vec<&str> = args.args.iter().map(|s| s.as_ref()).collect();
 

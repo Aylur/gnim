@@ -1,5 +1,4 @@
 mod command;
-mod utils;
 
 use clap::{Parser, Subcommand};
 use command::dev::{DevArgs, dev};

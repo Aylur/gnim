@@ -5,12 +5,11 @@ use oxc::ast::ast::*;
 use oxc::codegen::{Codegen, CodegenOptions};
 use oxc::parser::Parser;
 use oxc::span::{Atom, SPAN, SourceType};
+use std::path::Path;
 
 fn is_component_name(name: &str) -> bool {
     name.chars().next().is_some_and(|c| c.is_ascii_uppercase())
 }
-
-use std::path::Path;
 
 /// Check if an import source is a relative JS path
 fn is_relative_js_import(source: &str) -> bool {
