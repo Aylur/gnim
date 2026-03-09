@@ -4,10 +4,10 @@ use crate::utils::dev_rundir;
 use clap::Args;
 use rolldown::{BundleEvent, ModuleType, WatcherEvent};
 use std::borrow::Cow;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use std::{fs, process};
 use tokio::io::AsyncWriteExt;
 use tokio::net::UnixListener;
@@ -19,11 +19,32 @@ pub struct DevArgs {
     entry: String,
 }
 
+#[derive(Debug, Default)]
+pub struct ModuleVersions {
+    pub versions: HashMap<String, u64>,
+}
+
+impl ModuleVersions {
+    pub fn bump(&mut self, output_filename: &str) -> u64 {
+        let version = self
+            .versions
+            .entry(output_filename.to_string())
+            .or_insert(0);
+        *version += 1;
+        *version
+    }
+
+    pub fn get(&self, output_filename: &str) -> u64 {
+        self.versions.get(output_filename).copied().unwrap_or(0)
+    }
+}
+
 #[derive(Debug)]
 struct GnimDevPlugin {
     pub dir: PathBuf,
     pub tx: broadcast::Sender<String>,
-    pub changed_sources: Arc<Mutex<HashSet<String>>>,
+    pub changed_sources: Arc<RwLock<HashSet<String>>>,
+    pub module_versions: Arc<RwLock<ModuleVersions>>,
 }
 
 impl rolldown_plugin::Plugin for GnimDevPlugin {
@@ -32,7 +53,9 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
     }
 
     fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
-        rolldown_plugin::HookUsage::Transform | rolldown_plugin::HookUsage::WriteBundle
+        rolldown_plugin::HookUsage::Transform
+            | rolldown_plugin::HookUsage::RenderChunk
+            | rolldown_plugin::HookUsage::WriteBundle
     }
 
     fn transform(
@@ -44,18 +67,44 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
         let code = args.code.to_string();
 
         async move {
-            match args.module_type {
-                ModuleType::Jsx | ModuleType::Tsx => match transform::transform_code(&code, &id) {
+            if matches!(args.module_type, ModuleType::Jsx | ModuleType::Tsx) {
+                return match transform::transform_code(&code, &id) {
                     Ok(code) => Ok(Some(rolldown_plugin::HookTransformOutput {
                         code: Some(code),
+                        side_effects: Some(rolldown_common::side_effects::HookSideEffects::True),
                         ..Default::default()
                     })),
                     Err(err) => {
                         println!("[dev] {}", err);
                         Ok(None)
                     }
-                },
-                _ => Ok(None),
+                };
+            }
+
+            Ok(None)
+        }
+    }
+
+    fn render_chunk(
+        &self,
+        _: &rolldown_plugin::PluginContext,
+        args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+    ) -> impl Future<Output = rolldown_plugin::HookRenderChunkReturn> + Send {
+        let code = args.code.to_string();
+        let chunk_filename = args.chunk.filename.to_string();
+        let module_versions = Arc::clone(&self.module_versions);
+
+        async move {
+            let versions = module_versions.read().unwrap();
+            match transform::transform_imports(&code, &chunk_filename, &versions) {
+                Ok(transformed) => Ok(Some(rolldown_plugin::HookRenderChunkOutput {
+                    code: transformed,
+                    map: None,
+                })),
+                Err(err) => {
+                    eprintln!("[dev] {}", err);
+                    Ok(None)
+                }
             }
         }
     }
@@ -65,19 +114,26 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
         _: &rolldown_plugin::PluginContext,
         args: &mut rolldown_plugin::HookWriteBundleArgs,
     ) -> impl Future<Output = rolldown_plugin::HookNoopReturn> + Send {
-        let mut changed = self.changed_sources.lock().unwrap();
+        let changed = self.changed_sources.read().unwrap();
+        let mut versions = self.module_versions.write().unwrap();
 
-        for output in &mut *args.bundle {
+        for output in &*args.bundle {
             if let rolldown_common::Output::Chunk(chunk) = output {
+                let filename = output.filename();
+
                 let is_changed = chunk
                     .module_ids
                     .iter()
                     .any(|id| changed.contains(id.as_str()));
 
                 if is_changed {
-                    match fs::canonicalize(self.dir.join(output.filename())) {
+                    let version = versions.bump(filename);
+
+                    match fs::canonicalize(self.dir.join(filename)) {
                         Ok(path) => {
-                            self.tx.send(path.to_string_lossy().to_string()).ok();
+                            self.tx
+                                .send(format!("{} {}", path.to_string_lossy(), version))
+                                .ok();
                         }
                         Err(err) => {
                             eprintln!("[dev] error {:?}", err);
@@ -87,7 +143,9 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
             }
         }
 
-        changed.clear();
+        drop(changed);
+        drop(versions);
+        self.changed_sources.write().unwrap().clear();
         async { Ok(()) }
     }
 }
@@ -105,7 +163,8 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
     };
 
     let (tx, _) = broadcast::channel::<String>(16);
-    let changed_sources: Arc<Mutex<HashSet<String>>> = Arc::default();
+    let changed_sources: Arc<RwLock<HashSet<String>>> = Arc::default();
+    let module_versions: Arc<RwLock<ModuleVersions>> = Arc::default();
     let dev_dir = ".gnim/dev";
 
     let config = rolldown::BundlerConfig::new(
@@ -113,6 +172,8 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
             input: Some(vec![args.entry.clone().into()]),
             dir: Some(dev_dir.into()),
             preserve_modules: Some(true),
+            preserve_entry_signatures: Some(rolldown::PreserveEntrySignatures::Strict),
+            minify_internal_exports: Some(false),
             external: Some(
                 vec![
                     "gi://*".to_owned(),
@@ -134,12 +195,17 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
             }),
             sourcemap: Some(rolldown::SourceMapType::Inline),
             format: Some(rolldown::OutputFormat::Esm),
+            treeshake: rolldown::TreeshakeOptions::Option(rolldown::InnerOptions {
+                module_side_effects: rolldown::ModuleSideEffects::Boolean(true),
+                ..Default::default()
+            }),
             ..Default::default()
         },
         vec![Arc::new(GnimDevPlugin {
             dir: PathBuf::from(dev_dir),
             tx: tx.clone(),
             changed_sources: Arc::clone(&changed_sources),
+            module_versions: Arc::clone(&module_versions),
         })],
     );
 
@@ -170,7 +236,7 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
                     Ok(WatcherEvent::Change(change)) => {
                         eprintln!("[dev] {} {}", change.kind, change.path);
                         changed_sources
-                            .lock()
+                            .write()
                             .unwrap()
                             .insert(change.path.to_string());
                     }

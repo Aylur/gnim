@@ -1,3 +1,4 @@
+use super::ModuleVersions;
 use oxc::allocator::Allocator;
 use oxc::ast::AstBuilder;
 use oxc::ast::ast::*;
@@ -7,6 +8,47 @@ use oxc::span::{Atom, SPAN, SourceType};
 
 fn is_component_name(name: &str) -> bool {
     name.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+}
+
+use std::path::Path;
+
+/// Check if an import source is a relative JS path
+fn is_relative_js_import(source: &str) -> bool {
+    (source.starts_with("./") || source.starts_with("../")) && source.ends_with(".js")
+}
+
+/// Resolve a relative import path to an output filename
+/// e.g., chunk_filename="test/Comp/index.js", import_source="./Test.js" -> "test/Comp/Test.js"
+fn resolve_import_path(chunk_filename: &str, import_source: &str) -> Option<String> {
+    let chunk_path = Path::new(chunk_filename);
+    let chunk_dir = chunk_path.parent()?;
+    let resolved = chunk_dir.join(import_source);
+
+    // Normalize the path (resolve . and ..)
+    let mut parts: Vec<&str> = Vec::new();
+    for component in resolved.components() {
+        match component {
+            std::path::Component::ParentDir => {
+                parts.pop();
+            }
+            std::path::Component::CurDir => {}
+            std::path::Component::Normal(s) => {
+                parts.push(s.to_str()?);
+            }
+            _ => {}
+        }
+    }
+
+    Some(parts.join("/"))
+}
+
+/// Add version query parameter to import source
+fn add_version_query(source: &str, version: u64) -> String {
+    if source.contains('?') {
+        format!("{}&v={}", source, version)
+    } else {
+        format!("{}?v={}", source, version)
+    }
 }
 
 /// Creates `$$register(import.meta.url, "name", expr)`
@@ -150,6 +192,107 @@ pub fn transform_code(source: &str, id: &str) -> Result<String, String> {
             }
 
             _ => (),
+        }
+    }
+
+    let printed = Codegen::new()
+        .with_options(CodegenOptions::default())
+        .build(&program);
+
+    Ok(printed.code)
+}
+
+/// Transform import statements in bundled JS to include version query parameters.
+/// This runs on the final JS output after rolldown has resolved all modules.
+/// `chunk_filename` is the output path of the current chunk (e.g., "test/Comp/index.js")
+pub fn transform_imports(
+    source: &str,
+    chunk_filename: &str,
+    versions: &ModuleVersions,
+) -> Result<String, String> {
+    let allocator = Allocator::default();
+    let source_type = SourceType::mjs();
+
+    let ret = Parser::new(&allocator, source, source_type).parse();
+
+    if !ret.errors.is_empty() {
+        return Err(format!("parse errors: {}", ret.errors.len()));
+    }
+
+    let mut program = ret.program;
+    let ast = AstBuilder::new(&allocator);
+
+    // Collect transforms first to handle lifetime issues
+    let mut transforms: Vec<(usize, String)> = Vec::new();
+
+    for (idx, statement) in program.body.iter().enumerate() {
+        match statement {
+            Statement::ImportDeclaration(import_decl) => {
+                let import_source = import_decl.source.value.as_str();
+                if is_relative_js_import(import_source)
+                    && let Some(resolved) = resolve_import_path(chunk_filename, import_source)
+                {
+                    let version = versions.get(&resolved);
+                    if version > 0 {
+                        transforms.push((idx, add_version_query(import_source, version)));
+                    }
+                }
+            }
+            Statement::ExportNamedDeclaration(export_decl) => {
+                if let Some(ref src) = export_decl.source {
+                    let import_source = src.value.as_str();
+                    if is_relative_js_import(import_source)
+                        && let Some(resolved) = resolve_import_path(chunk_filename, import_source)
+                    {
+                        let version = versions.get(&resolved);
+                        if version > 0 {
+                            transforms.push((idx, add_version_query(import_source, version)));
+                        }
+                    }
+                }
+            }
+            Statement::ExportAllDeclaration(export_all) => {
+                let import_source = export_all.source.value.as_str();
+                if is_relative_js_import(import_source)
+                    && let Some(resolved) = resolve_import_path(chunk_filename, import_source)
+                {
+                    let version = versions.get(&resolved);
+                    if version > 0 {
+                        transforms.push((idx, add_version_query(import_source, version)));
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // If no transforms needed, return original
+    if transforms.is_empty() {
+        return Ok(source.to_string());
+    }
+
+    // Allocate versioned strings in arena
+    let versioned_strings: Vec<&str> = transforms
+        .iter()
+        .map(|(_, s)| allocator.alloc_str(s) as &str)
+        .collect();
+
+    // Apply transforms
+    for (i, (idx, _)) in transforms.iter().enumerate() {
+        let versioned = versioned_strings[i];
+        match &mut program.body[*idx] {
+            Statement::ImportDeclaration(import_decl) => {
+                import_decl.source = ast.string_literal(SPAN, versioned, None);
+            }
+            Statement::ExportNamedDeclaration(export_decl) => {
+                if let Some(ref mut src) = export_decl.source {
+                    *src = ast.string_literal(SPAN, versioned, None);
+                }
+            }
+            Statement::ExportAllDeclaration(export_all) => {
+                export_all.source = ast.string_literal(SPAN, versioned, None);
+            }
+            _ => {}
         }
     }
 

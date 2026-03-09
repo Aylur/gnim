@@ -1,5 +1,5 @@
 import GObject from "gi://GObject?version=2.0"
-import { resolveNode, type GnimNode } from "./element"
+import { resolveNode, type GnimNode } from "./element.js"
 import { connect, disconnect, type Keyof } from "../util.js"
 
 type Fn = () => void
