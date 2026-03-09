@@ -37,16 +37,16 @@
             "types": "./lib/index.d.ts"
         },
         "./dbus": {
-            "import": "./lib/dbus.js",
-            "types": "./lib/dbus.d.ts"
+            "import": "./lib/decorators/dbus.js",
+            "types": "./lib/decorators/dbus.d.ts"
         },
         "./fetch": {
-            "import": "./lib/fetch.js",
-            "types": "./lib/fetch.d.ts"
+            "import": "./lib/polyfill/fetch.js",
+            "types": "./lib/polyfill/fetch.d.ts"
         },
         "./gobject": {
-            "import": "./lib/gobject.js",
-            "types": "./lib/gobject.d.ts"
+            "import": "./lib/decorators/gobject.js",
+            "types": "./lib/decorators/gobject.d.ts"
         },
         "./schema": {
             "import": "./lib/schema/settings.js",
@@ -57,8 +57,8 @@
             "types": "./lib/jsx-runtime.d.ts"
         },
         "./jsx-dev-runtime": {
-            "import": "./lib/jsx-runtime.js",
-            "types": "./lib/jsx-runtime.d.ts"
+            "import": "./lib/jsx-dev-runtime.js",
+            "types": "./lib/jsx-dev-runtime.d.ts"
         },
         "./gtk4": {
             "import": "./lib/renderer/gtk4.js",
