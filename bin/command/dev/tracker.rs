@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::{fs, path};
 
+use crate::command::rolldown_config;
+
 #[derive(Debug, Default)]
 pub struct ModuleVersions(HashMap<String, u64>);
 
@@ -51,8 +53,9 @@ impl ModuleTracker {
         let mut bundler = rolldown::Bundler::with_plugins(
             rolldown::BundlerOptions {
                 input: Some(vec![entry.to_string().into(), dev_entry.clone().into()]),
+                dir: Some(dir.clone().to_string_lossy().to_string()),
                 preserve_modules: Some(true),
-                ..Default::default()
+                ..rolldown_config()
             },
             vec![],
         )
