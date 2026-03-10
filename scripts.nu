@@ -9,8 +9,7 @@ def "main clean" [] {
 def "main types" [] {
     mkdir .gnim
     flatpak run --command=cp --filesystem=home org.gnome.Sdk -r /usr/share/gir-1.0 ./.gnim/girs
-    cargo build --bin gnim
-    ./target/debug/gnim types --verbose -d .gnim/girs
+    cargo run --bin gnim -- types --verbose -d .gnim/girs
 }
 
 def build_types [--os: string, --cpu: string, --target: string] {
@@ -34,7 +33,8 @@ def build_types [--os: string, --cpu: string, --target: string] {
 }
 
 def "main build:gnim" [] {
-    let target = $"(pwd)/dist/gnim"
+    let target = "./dist/gnim" | path expand
+    rm -rf $target
 
     tsc
 
@@ -44,22 +44,15 @@ def "main build:gnim" [] {
     cp package.json $target
     cp README.md $target
     cp LICENSE $target
-    cp bin/*.js $"($target)/bin/"
     rm -r build
 }
 
 def "main build" [] {
     rm -rf dist
 
-    do {
-        main types
-        main build:gnim
-    }
-
-    do {
-        build_types --os linux --cpu x64 --target x86_64-unknown-linux-musl
-        # build_types --os linux --cpu arm64 --target aarch64-unknown-linux-musl
-    }
+    main build:gnim
+    build_types --os linux --cpu x64 --target x86_64-unknown-linux-musl
+    # build_types --os linux --cpu arm64 --target aarch64-unknown-linux-musl
 }
 
 def main [] {

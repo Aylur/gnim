@@ -12,7 +12,7 @@ include = ["/bin/gnim.rs", "/bin/command"]
 clap = { version = "4", features = ["derive"] }
 quick-xml = "0"
 colored = "3"
-girgen = "0.2.10"
+girgen = "0.2.11"
 rolldown = { git = "https://github.com/rolldown/rolldown" }
 rolldown_watcher = { git = "https://github.com/rolldown/rolldown" }
 rolldown_plugin = { git = "https://github.com/rolldown/rolldown" }

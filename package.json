@@ -27,6 +27,7 @@
         "@eslint/js": "latest",
         "@types/node": "latest",
         "eslint": "latest",
+        "nushell": "latest",
         "typescript": "latest",
         "typescript-eslint": "latest",
         "vitepress": "2.0.0-alpha.16"

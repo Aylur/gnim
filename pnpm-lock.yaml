@@ -17,6 +17,9 @@ importers:
       eslint:
         specifier: latest
         version: 10.0.0(jiti@2.6.1)
+      nushell:
+        specifier: latest
+        version: 0.111.0
       typescript:
         specifier: latest
         version: 5.9.3
@@ -508,6 +511,46 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
+
+  '@nushell/darwin-arm64@0.111.0':
+    resolution: {integrity: sha512-z7GVgsW2moEDGz6faEvfBkhJ0upBILruZgQRl+Zo2YP7yspWZu7Via7TOOV4/LYsiEbknANm/LCE3WTIma5mTw==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@nushell/darwin-x64@0.111.0':
+    resolution: {integrity: sha512-uK+wRbxGxJFz376QxgGiQprstTMVIx04lQQFBW6jvCCzIwV7QTR801ZlwszCRP+7mEjBCQjeTUGWL2voPzUPIw==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@nushell/linux-arm64@0.111.0':
+    resolution: {integrity: sha512-/ymKEGpGNbd3yIiQ8DEuwoFgksH8I5AlvjwmliKMI98Fiy90FVvoOKazcrjCvNYVg9hHXuIrvWM7MVtWaW2CWg==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@nushell/linux-arm@0.111.0':
+    resolution: {integrity: sha512-JZmTpkza0uScT5/nxabyFDjZiuDFsOVe2b5J+tM0+VnleDzDgYn5MfmUnsDQx7ny1WR+AS77vpSehqT+TKNlVw==}
+    cpu: [arm]
+    os: [linux]
+
+  '@nushell/linux-riscv64@0.111.0':
+    resolution: {integrity: sha512-z7yd+Ly2YMGsvH5tlQC5iiwLvg0INDfDNsWTvtN3LE9nsjD7Utu+fIonkxnPKo1B5PCSranxfpnBVJMDntQ95g==}
+    cpu: [riscv64]
+    os: [linux]
+
+  '@nushell/linux-x64@0.111.0':
+    resolution: {integrity: sha512-o6KAljyJZXwfPlUHeSWkHZWfHXKOI2OA62Cpwy76orqABVDsaf5chshtXaBs4QfhwbawV+3UOXAKXDEBiL7UIQ==}
+    cpu: [x64]
+    os: [linux]
+
+  '@nushell/windows-arm64@0.111.0':
+    resolution: {integrity: sha512-8xy0LAqw45dhZCAgdU5DTPY2HVnusBdR261yNJvSkjHPqyk4RXFWJoFMOHFW27KL2I+MOXCZclpi4PXZ4UmGGA==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@nushell/windows-x64@0.111.0':
+    resolution: {integrity: sha512-50RO6E7YkUTFTN1I6uIVu0AfC6E6eDGwYAHAzSh6/c2/zfX5pRdhaabQPM9PWt7gAnbbaBzVdANRkqtZ7ac97w==}
+    cpu: [x64]
+    os: [win32]
 
   '@rolldown/pluginutils@1.0.0-rc.2':
     resolution: {integrity: sha512-izyXV/v+cHiRfozX62W9htOAvwMo4/bXKDrQ+vom1L1qRuexPock/7VZDAhnpHCLNejd3NJ6hiab+tO0D44Rgw==}
@@ -1375,6 +1418,11 @@ packages:
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
+  nushell@0.111.0:
+    resolution: {integrity: sha512-8M/zYC+M4tbB1kAy9MNfZLSdETt2KOxZu35StvGol95x7YqvS4I5NxiCALSJxNL+nDA2sCYjGKXdkbNckpD4jg==}
+    engines: {node: '>=22.0.0', pnpm: '>=10'}
+    hasBin: true
+
   oniguruma-parser@0.12.1:
     resolution: {integrity: sha512-8Unqkvk1RYc6yq2WBYRj4hdnsAxVze8i7iPfQr8e4uSP3tRv0rpZcbGUDvxfQQcdwHt/e9PrMvGCsa8OqG9X3w==}
 
@@ -1937,6 +1985,30 @@ snapshots:
   '@iconify/types@2.0.0': {}
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
+
+  '@nushell/darwin-arm64@0.111.0':
+    optional: true
+
+  '@nushell/darwin-x64@0.111.0':
+    optional: true
+
+  '@nushell/linux-arm64@0.111.0':
+    optional: true
+
+  '@nushell/linux-arm@0.111.0':
+    optional: true
+
+  '@nushell/linux-riscv64@0.111.0':
+    optional: true
+
+  '@nushell/linux-x64@0.111.0':
+    optional: true
+
+  '@nushell/windows-arm64@0.111.0':
+    optional: true
+
+  '@nushell/windows-x64@0.111.0':
+    optional: true
 
   '@rolldown/pluginutils@1.0.0-rc.2': {}
 
@@ -2906,6 +2978,17 @@ snapshots:
   nanoid@3.3.11: {}
 
   natural-compare@1.4.0: {}
+
+  nushell@0.111.0:
+    optionalDependencies:
+      '@nushell/darwin-arm64': 0.111.0
+      '@nushell/darwin-x64': 0.111.0
+      '@nushell/linux-arm': 0.111.0
+      '@nushell/linux-arm64': 0.111.0
+      '@nushell/linux-riscv64': 0.111.0
+      '@nushell/linux-x64': 0.111.0
+      '@nushell/windows-arm64': 0.111.0
+      '@nushell/windows-x64': 0.111.0
 
   oniguruma-parser@0.12.1: {}
 

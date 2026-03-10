@@ -3,11 +3,11 @@ import tseslint from "typescript-eslint"
 import { defineConfig, globalIgnores } from "eslint/config"
 
 export default defineConfig(
-    globalIgnores(["dist", ".gnim"]),
+    globalIgnores(["dist", ".gnim", "target"]),
     eslint.configs.recommended,
     ...tseslint.configs.recommended,
     {
-        ignores: ["docs/.vitepress/", "dist/"],
+        ignores: ["docs/.vitepress/", "dist/", ".gnim/", "target/"],
     },
     {
         rules: {
