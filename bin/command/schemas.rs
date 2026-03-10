@@ -1,10 +1,10 @@
+use crate::command::rolldown_config;
 use clap::Args;
 use quick_xml::events::Event;
 use quick_xml::reader::Reader;
 use quick_xml::writer::Writer;
 use std::io::Cursor;
 use std::{env, fs, path, process};
-use tokio::runtime::Runtime;
 
 #[derive(Args)]
 pub struct SchemasArgs {
@@ -20,22 +20,27 @@ pub struct SchemasArgs {
     outdir: Option<path::PathBuf>,
 }
 
-fn transpile_typescript(target: &str, outfile: &str) {
+async fn transpile_typescript(
+    target: &str,
+    outfile: &str,
+) -> Result<rolldown::BundleOutput, String> {
     let mut bundler = rolldown::Bundler::new(rolldown::BundlerOptions {
         input: Some(vec![target.to_owned().into()]),
         file: Some(outfile.into()),
-        external: Some(vec!["gi://*".to_owned()].into()),
-        sourcemap: Some(rolldown::SourceMapType::Inline),
-        format: Some(rolldown::OutputFormat::Esm),
         footer: Some(rolldown::AddonOutputOption::String(Some(
             "import(import.meta.url).then((m) => print(m.default))".to_owned(),
         ))),
-        ..Default::default()
+        ..rolldown_config()
     })
     .expect("Failed to create bundler");
 
-    let rt = Runtime::new().unwrap();
-    let _ = rt.block_on(async { bundler.write().await.unwrap() });
+    bundler.write().await.map_err(|err| {
+        err.into_vec()
+            .iter()
+            .map(|d| d.to_diagnostic().to_color_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    })
 }
 
 fn format_xml(input: &str) -> String {
@@ -111,7 +116,10 @@ pub async fn schemas(args: &SchemasArgs) -> process::ExitCode {
         let stem = path.file_stem().unwrap().to_str().unwrap().to_owned();
         let tmpjs = format!("{}/{}.js", &tmpdir, &stem);
 
-        transpile_typescript(path.to_str().unwrap(), tmpjs.as_str());
+        if let Err(err) = transpile_typescript(path.to_str().unwrap(), tmpjs.as_str()).await {
+            eprintln!("{err}");
+            return process::ExitCode::FAILURE;
+        };
 
         let output = process::Command::new("gjs")
             .args(["-m", tmpjs.as_str()])
