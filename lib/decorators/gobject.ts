@@ -9,10 +9,10 @@ const priv = Symbol("gobject private")
 export const Object = GObject.Object
 export type Object = GObject.Object
 export namespace Object {
-    export interface SignalSignatures extends GObject.Object.SignalSignatures {}
-    export interface ReadableProperties extends GObject.Object.ReadableProperties {}
-    export interface WritableProperties extends GObject.Object.WritableProperties {}
-    export interface ConstructOnlyProperties extends GObject.Object.ConstructOnlyProperties {}
+    export type SignalSignatures = GObject.Object.SignalSignatures
+    export type ReadableProperties = GObject.Object.ReadableProperties
+    export type WritableProperties = GObject.Object.WritableProperties
+    export type ConstructOnlyProperties = GObject.Object.ConstructOnlyProperties
 }
 
 export const SignalFlags = GObject.SignalFlags

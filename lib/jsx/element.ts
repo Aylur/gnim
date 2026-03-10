@@ -383,6 +383,7 @@ export function Portal({ children, mount }: PortalProps): GnimNode {
 }
 
 type OptionalKeys<T> = {
+    /* eslint-disable @typescript-eslint/no-empty-object-type */
     [K in keyof T]-?: {} extends Pick<T, K> ? K : never
 }[keyof T]
 
@@ -433,10 +434,12 @@ export namespace JSX {
     export type Element = ConstructorNode | Iterable<GnimNode>
     export type ElementClass = GObject.Object
 
+    /* eslint-disable @typescript-eslint/no-empty-object-type */
     export interface IntrinsicElements {
         // empty, defined by users and libs
     }
 
+    /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-object-type */
     export interface IntrinsicClassAttributes<T> {
         // empty, defined by renderers
     }

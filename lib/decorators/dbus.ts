@@ -431,9 +431,9 @@ type InterfaceMeta = {
     >
 }
 
-const metaMap = new WeakMap<Object, InterfaceMeta>()
+const metaMap = new WeakMap<object, InterfaceMeta>()
 
-function getMeta(object: Object) {
+function getMeta(object: object) {
     const meta = metaMap.get(object) ?? { dbusMethods: {}, dbusSignals: {}, dbusProperties: {} }
     metaMap.set(object, meta)
     return meta

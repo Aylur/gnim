@@ -1,6 +1,6 @@
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
-import { jsx, resolveNode, type FC } from "./jsx/element.js"
+import { resolveNode, type FC } from "./jsx/element.js"
 import { computed, state, type State } from "./jsx/reactive.js"
 
 function init(main: string) {

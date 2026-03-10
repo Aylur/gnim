@@ -267,6 +267,7 @@ export function createAccessor<T>(get: () => T, subscribe: (callback: Fn) => Fn)
 }
 
 export type Setter<T> = {
+    /* eslint-disable @typescript-eslint/no-unsafe-function-type */
     (value: Exclude<T, Function>): void
     (producer: (prev: T) => T): void
 }
