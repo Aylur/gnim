@@ -5,7 +5,7 @@ mod transform;
 use super::{dev_rundir, rolldown_config};
 use clap::Args;
 use rolldown::WatcherEvent;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, OnceLock, RwLock};
 use std::{fs, process};
 use tokio::io::AsyncWriteExt;
 use tokio::net::UnixListener;
@@ -17,43 +17,42 @@ use tracker::{ModuleTracker, ModuleVersions};
 pub struct DevArgs {
     /// Entry file
     entry: String,
+    /// Verbose logging
+    #[arg(short, long, default_value_t = false)]
+    verbose: bool,
 }
 
-pub fn get_dev_entry() -> String {
-    let candidates = [Some("./node_modules/gnim/lib/dev.js".to_string())];
+pub static VERBOSE: OnceLock<bool> = OnceLock::new();
 
-    for candidate in candidates.into_iter().flatten() {
-        if let Ok(path) = fs::canonicalize(candidate)
-            && path.exists()
-        {
-            return path.to_string_lossy().to_string();
-        }
-    }
-
-    panic!("Could not find dev entry file. Is Gnim installed?")
+pub fn is_verbose() -> bool {
+    VERBOSE.get_or_init(|| false).to_owned()
 }
 
 pub async fn dev(args: &DevArgs) -> process::ExitCode {
+    VERBOSE.get_or_init(|| args.verbose);
+
+    let entry_canonical = match fs::canonicalize(&args.entry) {
+        Ok(ok) => ok.to_string_lossy().to_string(),
+        Err(err) => {
+            eprintln!("Invalid entry file {}", err);
+            return process::ExitCode::FAILURE;
+        }
+    };
+
     let dir = dev_rundir();
     let (socket_tx, _) = broadcast::channel::<String>(16);
     let (restart_tx, restart_rx) = mpsc::channel::<()>(1);
     let module_versions: Arc<RwLock<ModuleVersions>> = Arc::default();
-    let module_tracker = match ModuleTracker::new(dir.clone(), &args.entry, &get_dev_entry()).await
-    {
+    let module_tracker = match ModuleTracker::new(dir.clone(), &entry_canonical).await {
         Ok(ok) => ok,
         Err(err) => {
-            println!("{err}");
+            eprintln!("{err}");
             return process::ExitCode::FAILURE;
         }
     };
 
     let (entry_js, dev_entry_js) = module_tracker.entry_files();
     let module_tracker = Arc::new(Mutex::new(module_tracker));
-
-    let entry_canonical = fs::canonicalize(&args.entry)
-        .expect("valid entry path")
-        .to_string_lossy()
-        .to_string();
 
     let initial_build = builder::build(
         module_tracker.clone(),
@@ -66,7 +65,7 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
     );
 
     if let Err(err) = initial_build.await {
-        println!("{err}");
+        eprintln!("{err}");
         return process::ExitCode::FAILURE;
     }
 
@@ -111,7 +110,9 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
                 match rx.recv() {
                     Ok(WatcherEvent::Change(change)) => {
                         if matches!(change.kind, rolldown_common::WatcherChangeKind::Update) {
-                            eprintln!("[dev] {} {}", change.kind, change.path);
+                            if is_verbose() {
+                                eprintln!("[dev] {} {}", change.kind, change.path);
+                            }
 
                             tokio::runtime::Handle::current().block_on(async {
                                 let build = builder::build(
@@ -170,11 +171,15 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
                             while let Ok(path) = rx.recv().await {
                                 let msg = format!("{}\n", path);
                                 if stream.write_all(msg.as_bytes()).await.is_err() {
-                                    eprintln!("[dev] failed to write socket");
+                                    if is_verbose() {
+                                        eprintln!("[dev] failed to write socket");
+                                    }
                                     break;
                                 }
                                 if stream.flush().await.is_err() {
-                                    eprintln!("[dev] failed to flush socket");
+                                    if is_verbose() {
+                                        eprintln!("[dev] failed to flush socket");
+                                    }
                                     break;
                                 };
                             }
@@ -198,25 +203,26 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
             let mut restart_rx = restart_rx;
 
             loop {
-                eprintln!("[dev] starting gjs");
+                if is_verbose() {
+                    eprintln!("[dev] starting gjs");
+                }
 
                 let mut child = Command::new("gjs")
                     .arg("-m")
                     .arg(&dev_entry_js)
                     .env("GNIM_DEV_SOCK", socket_path.to_str().unwrap())
                     .env("GNIM_ENTRY_MODULE", &entry_js)
+                    .env("GNIM_VERBOSE", if is_verbose() { "true" } else { "" })
                     .spawn()
                     .expect("failed to spawn gjs");
 
                 tokio::select! {
                     status = child.wait() => {
                         match status {
-                            Ok(s) if s.success() => {
-                                eprintln!("[dev] gjs exited successfully");
-                                break;
-                            }
                             Ok(s) => {
-                                eprintln!("[dev] gjs exited with status: {}", s);
+                                if let Some(code) = s.code() && code > 0 {
+                                    eprintln!("[dev] gjs exited with code  {}", code);
+                                }
                                 break;
                             }
                             Err(e) => {
@@ -235,13 +241,17 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
         }
     });
 
-    eprintln!("[dev] socket: {}", socket_path.to_string_lossy());
-    eprintln!("[dev] entry: {entry_js}");
-    eprintln!("[dev] dev_entry: {dev_entry_js}");
+    if is_verbose() {
+        eprintln!("[dev] socket: {}", socket_path.to_string_lossy());
+        eprintln!("[dev] entry: {entry_js}");
+        eprintln!("[dev] dev_entry: {dev_entry_js}");
+    }
 
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {
-            eprintln!("[dev] received ctrl-c, shutting down");
+            if is_verbose() {
+                eprintln!("[dev] received ctrl-c, shutting down");
+            }
         }
         _ = &mut gjs_task => ()
     }

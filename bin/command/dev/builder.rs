@@ -79,7 +79,7 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
                         ..Default::default()
                     })),
                     Err(err) => {
-                        println!("[dev] {}", err);
+                        eprintln!("[dev] {}", err);
                         Ok(None)
                     }
                 };
@@ -138,7 +138,7 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
                                 .ok();
                         }
                         Err(err) => {
-                            eprintln!("[dev] error {:?}", err);
+                            eprintln!("[dev] error {}", err);
                         }
                     };
                 }

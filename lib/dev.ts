@@ -3,6 +3,8 @@ import GLib from "gi://GLib?version=2.0"
 import { resolveNode, type FC } from "./jsx/element.js"
 import { computed, state, type State } from "./jsx/reactive.js"
 
+const VERBOSE = GLib.getenv("GNIM_VERBOSE") === "true"
+
 function init(main: string) {
     const socketPath = GLib.getenv("GNIM_DEV_SOCK")
     if (!socketPath) throw Error("GNIM_DEV_SOCK is unset")
@@ -17,7 +19,7 @@ function init(main: string) {
             if (!msg) throw Error("DEV server error")
             const [filepath, version] = msg.split(" ")
             if (main !== filepath) {
-                print(`[dev] source ${filepath}?v=${version}`)
+                if (VERBOSE) printerr(`[dev] source ${filepath}?v=${version}`)
                 import(`file://${filepath}?v=${version}`).catch(console.error)
             }
             readLoop()
