@@ -11,14 +11,13 @@ fn is_component_name(name: &str) -> bool {
     name.chars().next().is_some_and(|c| c.is_ascii_uppercase())
 }
 
-/// Check if an import source is a relative JS path
-fn is_relative_js_import(source: &str) -> bool {
-    (source.starts_with("./") || source.starts_with("../")) && source.ends_with(".js")
-}
-
-/// Resolve a relative import path to an output filename
-/// e.g., chunk_filename="test/Comp/index.js", import_source="./Test.js" -> "test/Comp/Test.js"
 fn resolve_import_path(chunk_filename: &str, import_source: &str) -> Option<String> {
+    if !import_source.starts_with("./") && !import_source.starts_with("../")
+        || !import_source.ends_with(".js")
+    {
+        return None;
+    }
+
     let chunk_path = Path::new(chunk_filename);
     let chunk_dir = chunk_path.parent()?;
     let resolved = chunk_dir.join(import_source);
@@ -41,12 +40,15 @@ fn resolve_import_path(chunk_filename: &str, import_source: &str) -> Option<Stri
     Some(parts.join("/"))
 }
 
-/// Add version query parameter to import source
 fn add_version_query(source: &str, version: u64) -> String {
-    if source.contains('?') {
-        format!("{}&v={}", source, version)
+    if version > 0 {
+        if source.contains('?') {
+            format!("{}&v={}", source, version)
+        } else {
+            format!("{}?v={}", source, version)
+        }
     } else {
-        format!("{}?v={}", source, version)
+        source.to_string()
     }
 }
 
@@ -228,44 +230,37 @@ pub fn transform_imports(
         match statement {
             Statement::ImportDeclaration(import_decl) => {
                 let import_source = import_decl.source.value.as_str();
-                if is_relative_js_import(import_source)
-                    && let Some(resolved) = resolve_import_path(chunk_filename, import_source)
-                {
-                    let version = versions.get(&resolved);
-                    if version > 0 {
-                        transforms.push((idx, add_version_query(import_source, version)));
-                    }
+                if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
+                    transforms.push((
+                        idx,
+                        add_version_query(import_source, versions.get(&resolved)),
+                    ));
                 }
             }
             Statement::ExportNamedDeclaration(export_decl) => {
                 if let Some(ref src) = export_decl.source {
                     let import_source = src.value.as_str();
-                    if is_relative_js_import(import_source)
-                        && let Some(resolved) = resolve_import_path(chunk_filename, import_source)
-                    {
-                        let version = versions.get(&resolved);
-                        if version > 0 {
-                            transforms.push((idx, add_version_query(import_source, version)));
-                        }
+                    if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
+                        transforms.push((
+                            idx,
+                            add_version_query(import_source, versions.get(&resolved)),
+                        ));
                     }
                 }
             }
             Statement::ExportAllDeclaration(export_all) => {
                 let import_source = export_all.source.value.as_str();
-                if is_relative_js_import(import_source)
-                    && let Some(resolved) = resolve_import_path(chunk_filename, import_source)
-                {
-                    let version = versions.get(&resolved);
-                    if version > 0 {
-                        transforms.push((idx, add_version_query(import_source, version)));
-                    }
+                if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
+                    transforms.push((
+                        idx,
+                        add_version_query(import_source, versions.get(&resolved)),
+                    ));
                 }
             }
             _ => {}
         }
     }
 
-    // If no transforms needed, return original
     if transforms.is_empty() {
         return Ok(source.to_string());
     }

@@ -17,13 +17,8 @@ function init(main: string) {
             if (!msg) throw Error("DEV server error")
             const [filepath, version] = msg.split(" ")
             if (main !== filepath) {
-                import(`file://${filepath}?v=${version}`)
-                    .catch((err) => {
-                        print(`[dev] failed to update ${filepath} version=${version}: ${err}`)
-                    })
-                    .then(() => {
-                        print(`[dev] updated ${filepath} version=${version}`)
-                    })
+                print(`[dev] source ${filepath}?v=${version}`)
+                import(`file://${filepath}?v=${version}`).catch(console.error)
             }
             readLoop()
         })
@@ -40,7 +35,7 @@ type DevComponent = { impl: State<CC | FC>; ctx: unknown[] | null }
 // const DevContext = createContext<unknown[] | null>(null)
 const registry = new Map<string, DevComponent>()
 
-function registerComponent(mod: string, name: string, impl: CC | FC): FC {
+function $$registerComponent(mod: string, name: string, impl: CC | FC): FC {
     if (typeof impl !== "function") return impl
 
     const path = GLib.uri_parse(mod, GLib.UriFlags.NONE).get_path()
@@ -58,7 +53,7 @@ function registerComponent(mod: string, name: string, impl: CC | FC): FC {
     return (props) => computed(() => jsx(get(), props))
 }
 
-Object.assign(globalThis, { $$registerComponent: registerComponent })
+Object.assign(globalThis, { $$registerComponent })
 const main = GLib.getenv("GNIM_ENTRY_MODULE")
 if (!main) throw Error("GNIM_ENTRY_MODULE is unset")
 init(main)

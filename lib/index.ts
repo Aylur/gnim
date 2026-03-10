@@ -32,6 +32,3 @@ export {
     setChildren,
     type Buildable,
 } from "./jsx/render.js"
-
-import * as Gnim from "."
-export default Gnim

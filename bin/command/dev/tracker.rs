@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::{fs, path};
 
 #[derive(Debug, Default)]
 pub struct ModuleVersions(HashMap<String, u64>);
@@ -16,16 +17,88 @@ impl ModuleVersions {
 }
 
 #[derive(Debug)]
-pub struct ModuleTracker(HashSet<String>);
+pub struct ModuleTracker {
+    modules: HashSet<String>,
+    entry_js: String,
+    dev_entry_js: String,
+}
 
 impl ModuleTracker {
-    pub fn sync(&mut self, file: String) -> Vec<String> {
-        self.0.insert(file);
-        self.0.retain(|f| std::path::Path::new(f).exists());
-        self.0.iter().cloned().collect()
+    pub fn sync(&mut self, file: Option<String>) -> Vec<String> {
+        if let Some(file) = file {
+            self.modules.insert(file);
+            self.modules.retain(|f| std::path::Path::new(f).exists());
+        }
+
+        self.modules.iter().cloned().collect()
     }
 
-    pub fn new(set: HashSet<String>) -> Self {
-        Self(set)
+    pub fn entry_files(&self) -> (String, String) {
+        (self.entry_js.clone(), self.dev_entry_js.clone())
+    }
+
+    pub async fn new(dir: path::PathBuf, entry: &str, dev_entry: &str) -> Result<Self, String> {
+        let prog_entry = fs::canonicalize(entry)
+            .expect("valid program entry")
+            .to_string_lossy()
+            .to_string();
+
+        let dev_entry = fs::canonicalize(dev_entry)
+            .expect("valid dev entry")
+            .to_string_lossy()
+            .to_string();
+
+        let mut bundler = rolldown::Bundler::with_plugins(
+            rolldown::BundlerOptions {
+                input: Some(vec![entry.to_string().into(), dev_entry.clone().into()]),
+                preserve_modules: Some(true),
+                ..Default::default()
+            },
+            vec![],
+        )
+        .expect("failed to create bundler");
+
+        let output = match bundler.write().await {
+            Ok(ok) => ok,
+            Err(err) => {
+                return Err(err
+                    .into_vec()
+                    .into_iter()
+                    .map(|err| err.to_diagnostic().to_color_string())
+                    .collect::<Vec<_>>()
+                    .join("\n"));
+            }
+        };
+        let mut modules = HashSet::new();
+        let mut entry_js = None;
+        let mut dev_entry_js = None;
+
+        for asset in output.assets {
+            if let rolldown_common::Output::Chunk(chunk) = &asset {
+                if chunk.is_entry
+                    && let Some(id) = chunk.facade_module_id.as_deref()
+                {
+                    if id == dev_entry {
+                        dev_entry_js =
+                            Some(dir.join(asset.filename()).to_string_lossy().to_string());
+                    }
+                    if id == prog_entry {
+                        entry_js = Some(dir.join(asset.filename()).to_string_lossy().to_string());
+                    }
+                }
+
+                for module_id in &chunk.module_ids {
+                    if !module_id.starts_with("\0") {
+                        modules.insert(module_id.to_string());
+                    }
+                }
+            }
+        }
+
+        Ok(Self {
+            modules,
+            entry_js: entry_js.expect("failed to match entry file"),
+            dev_entry_js: dev_entry_js.expect("failed to match dev entry file"),
+        })
     }
 }

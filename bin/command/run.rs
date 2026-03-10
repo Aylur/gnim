@@ -32,7 +32,12 @@ pub async fn run(args: &RunArgs) -> process::ExitCode {
     })
     .expect("failed to create bundler");
 
-    bundler.write().await.expect("failed to bundle");
+    if let Err(err) = bundler.write().await {
+        for d in err.into_vec() {
+            println!("{}", d.to_diagnostic().to_color_string());
+        }
+        return process::ExitCode::FAILURE;
+    }
 
     let args: Vec<&str> = args.args.iter().map(|s| s.as_ref()).collect();
 

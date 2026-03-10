@@ -1,17 +1,16 @@
-mod plugin;
+mod builder;
 mod tracker;
 mod transform;
 
 use super::{dev_rundir, rolldown_config};
 use clap::Args;
-use plugin::GnimDevPlugin;
-use rolldown::{BundleEvent, WatcherEvent};
-use std::collections::HashSet;
+use rolldown::WatcherEvent;
 use std::sync::{Arc, Mutex, RwLock};
-use std::{fs, path, process};
+use std::{fs, process};
 use tokio::io::AsyncWriteExt;
 use tokio::net::UnixListener;
-use tokio::sync::broadcast;
+use tokio::process::Command;
+use tokio::sync::{broadcast, mpsc};
 use tracker::{ModuleTracker, ModuleVersions};
 
 #[derive(Args)]
@@ -20,68 +19,65 @@ pub struct DevArgs {
     entry: String,
 }
 
-/// Initial bundle which returns (entry_js_file, dev_entry_js_file, modules_to_track)
-async fn init(dir: path::PathBuf, entry: &str) -> (String, String, Arc<Mutex<ModuleTracker>>) {
-    let prog_entry = fs::canonicalize(entry)
-        .expect("valid program entry")
-        .to_string_lossy()
-        .to_string();
+pub fn get_dev_entry() -> String {
+    let candidates = [
+        Some("./node_modules/gnim/lib/dev.js".to_string()),
+        Some("./node_modules/gnim/lib/dev.ts".to_string()),
+    ];
 
-    let dev_entry = fs::canonicalize("lib/dev.ts")
-        .expect("valid dev entry")
-        .to_string_lossy()
-        .to_string();
-
-    let mut bundler = rolldown::Bundler::with_plugins(
-        rolldown::BundlerOptions {
-            input: Some(vec![entry.to_string().into(), dev_entry.clone().into()]),
-            ..Default::default()
-        },
-        vec![],
-    )
-    .expect("failed to create bundler");
-
-    let output = bundler.generate().await.expect("failed initial bundle");
-    let mut modules = HashSet::new();
-    let mut entry_js = None;
-    let mut dev_entry_js = None;
-
-    for asset in output.assets {
-        if let rolldown_common::Output::Chunk(chunk) = asset {
-            if chunk.is_entry
-                && let Some(id) = chunk.facade_module_id.as_deref()
-            {
-                if id == dev_entry {
-                    dev_entry_js = Some(dir.join(&*chunk.filename).to_string_lossy().to_string());
-                }
-                if id == prog_entry {
-                    entry_js = Some(dir.join(&*chunk.filename).to_string_lossy().to_string());
-                }
-            }
-
-            for module_id in &chunk.module_ids {
-                modules.insert(module_id.to_string());
-            }
+    for candidate in candidates.into_iter().flatten() {
+        if let Ok(path) = fs::canonicalize(candidate)
+            && path.exists()
+        {
+            return path.to_string_lossy().to_string();
         }
     }
 
-    (
-        entry_js.expect("failed to match entry file"),
-        dev_entry_js.expect("failed to match dev entry file"),
-        Arc::new(Mutex::new(ModuleTracker::new(modules))),
-    )
+    panic!("Could not find dev entry file. Is Gnim installed?")
 }
 
 pub async fn dev(args: &DevArgs) -> process::ExitCode {
     let dir = dev_rundir();
-    let (tx, _) = broadcast::channel::<String>(16);
+    let (socket_tx, _) = broadcast::channel::<String>(16);
+    let (restart_tx, restart_rx) = mpsc::channel::<()>(1);
     let module_versions: Arc<RwLock<ModuleVersions>> = Arc::default();
-    let (entry_js, dev_entry_js, module_tracker) = init(dir.clone(), &args.entry).await;
+    let module_tracker = match ModuleTracker::new(dir.clone(), &args.entry, &get_dev_entry()).await
+    {
+        Ok(ok) => ok,
+        Err(err) => {
+            println!("{err}");
+            return process::ExitCode::FAILURE;
+        }
+    };
+
+    let (entry_js, dev_entry_js) = module_tracker.entry_files();
+    let module_tracker = Arc::new(Mutex::new(module_tracker));
+
+    let entry_canonical = fs::canonicalize(&args.entry)
+        .expect("valid entry path")
+        .to_string_lossy()
+        .to_string();
+
+    let initial_build = builder::build(
+        module_tracker.clone(),
+        builder::GnimDevPlugin {
+            dir: dir.clone(),
+            socket_tx: socket_tx.clone(),
+            changed_source: None,
+            module_versions: Arc::clone(&module_versions),
+        },
+    );
+
+    if let Err(err) = initial_build.await {
+        println!("{err}");
+        return process::ExitCode::FAILURE;
+    }
 
     let watcher = {
         let watcher_config = rolldown::BundlerConfig::new(
             rolldown::BundlerOptions {
                 input: Some(vec![args.entry.clone().into()]),
+                file: Some("/dev/null".into()),
                 ..rolldown_config()
             },
             vec![],
@@ -104,10 +100,12 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
         }
     });
 
-    let event_task = tokio::task::spawn_blocking({
+    let watcher_event_task = tokio::task::spawn_blocking({
         let emitter = watcher.emitter();
-        let tx = tx.clone();
+        let socket_tx = socket_tx.clone();
         let dir = dir.clone();
+        let entry_canonical = entry_canonical.clone();
+        let module_tracker = module_tracker.clone();
 
         move || {
             loop {
@@ -115,50 +113,37 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
 
                 match rx.recv() {
                     Ok(WatcherEvent::Change(change)) => {
-                        eprintln!("[dev] {} {}", change.kind, change.path);
-
-                        let inputs: Vec<rolldown::InputItem> = {
-                            let files = module_tracker
-                                .lock()
-                                .expect("failed to lock module_tracker")
-                                .sync(change.path.to_string());
-
-                            eprintln!("build {:#?}", files);
-                            files.into_iter().map(|f| f.into()).collect()
-                        };
-
                         if matches!(change.kind, rolldown_common::WatcherChangeKind::Update) {
-                            let mut bundler = rolldown::Bundler::with_plugins(
-                                rolldown::BundlerOptions {
-                                    input: Some(inputs),
-                                    dir: Some(dir.to_string_lossy().to_string()),
-                                    preserve_modules: Some(true),
-                                    treeshake: rolldown::TreeshakeOptions::Boolean(false),
-                                    ..rolldown_config()
-                                },
-                                vec![Arc::new(GnimDevPlugin {
-                                    dir: dir.clone(),
-                                    tx: tx.clone(),
-                                    changed_source: Some(change.path.to_string()),
-                                    module_versions: Arc::clone(&module_versions),
-                                })],
-                            )
-                            .expect("failed to create bundler");
+                            eprintln!("[dev] {} {}", change.kind, change.path);
 
-                            tokio::runtime::Handle::current()
-                                .block_on(bundler.write())
-                                .expect("failed to bundle");
-                        }
-                    }
-                    Ok(WatcherEvent::Event(event)) => {
-                        if let BundleEvent::Error(err) = &event {
-                            for d in &err.error.diagnostics {
-                                eprintln!("[dev] {}", d.to_diagnostic().to_color_string())
+                            tokio::runtime::Handle::current().block_on(async {
+                                let build = builder::build(
+                                    module_tracker.clone(),
+                                    builder::GnimDevPlugin {
+                                        dir: dir.clone(),
+                                        socket_tx: socket_tx.clone(),
+                                        changed_source: Some(change.path.to_string()),
+                                        module_versions: Arc::clone(&module_versions),
+                                    },
+                                );
+
+                                if let Err(err) = build.await {
+                                    println!("{err}");
+                                }
+                            });
+
+                            if change.path.to_string() == entry_canonical {
+                                restart_tx.blocking_send(()).ok();
                             }
                         }
                     }
+                    Ok(WatcherEvent::Event(_)) => (),
                     Ok(WatcherEvent::Restart) => (),
-                    Err(_) | Ok(WatcherEvent::Close) => {
+                    Ok(WatcherEvent::Close) => {
+                        break;
+                    }
+                    Err(err) => {
+                        println!("{}", err);
                         break;
                     }
                 }
@@ -166,8 +151,9 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
         }
     });
 
+    let socket_path = dir.clone().join("dev.sock");
     let socket_task = tokio::spawn({
-        let socket_path = dir.clone().join(format!("dev_{}.sock", process::id()));
+        let socket_path = socket_path.clone();
         fs::remove_file(&socket_path).ok();
 
         let listener = match UnixListener::bind(&socket_path) {
@@ -178,18 +164,11 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
             }
         };
 
-        eprintln!(
-            "GNIM_DEV_SOCK={} GNIM_ENTRY_MODULE={:?} gjs -m {:?}",
-            socket_path.to_str().unwrap(),
-            entry_js,
-            dev_entry_js
-        );
-
         async move {
             loop {
                 match listener.accept().await {
                     Ok((mut stream, _)) => {
-                        let mut rx = tx.subscribe();
+                        let mut rx = socket_tx.subscribe();
                         tokio::spawn(async move {
                             while let Ok(path) = rx.recv().await {
                                 let msg = format!("{}\n", path);
@@ -210,15 +189,71 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
                     }
                 }
             }
-
-            fs::remove_file(&socket_path).ok();
         }
     });
 
-    tokio::signal::ctrl_c().await.ok();
+    let mut gjs_task = tokio::spawn({
+        let socket_path = socket_path.clone();
+        let entry_js = entry_js.clone();
+        let dev_entry_js = dev_entry_js.clone();
+
+        async move {
+            let mut restart_rx = restart_rx;
+
+            loop {
+                eprintln!("[dev] starting gjs");
+
+                let mut child = Command::new("gjs")
+                    .arg("-m")
+                    .arg(&dev_entry_js)
+                    .env("GNIM_DEV_SOCK", socket_path.to_str().unwrap())
+                    .env("GNIM_ENTRY_MODULE", &entry_js)
+                    .spawn()
+                    .expect("failed to spawn gjs");
+
+                tokio::select! {
+                    status = child.wait() => {
+                        match status {
+                            Ok(s) if s.success() => {
+                                eprintln!("[dev] gjs exited successfully");
+                                break;
+                            }
+                            Ok(s) => {
+                                eprintln!("[dev] gjs exited with status: {}", s);
+                                break;
+                            }
+                            Err(e) => {
+                                eprintln!("[dev] gjs wait error: {}", e);
+                                break;
+                            }
+                        }
+                    }
+                    _ = restart_rx.recv() => {
+                        eprintln!("[dev] restarting gjs");
+                        child.kill().await.ok();
+                        child.wait().await.ok();
+                    }
+                }
+            }
+        }
+    });
+
+    eprintln!("[dev] socket: {}", socket_path.to_string_lossy());
+    eprintln!("[dev] entry: {entry_js}");
+    eprintln!("[dev] dev_entry: {dev_entry_js}");
+
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            eprintln!("[dev] received ctrl-c, shutting down");
+        }
+        _ = &mut gjs_task => ()
+    }
+
     watcher.close().await.ok();
+    gjs_task.abort();
     socket_task.abort();
     watcher_task.await.ok();
-    event_task.await.ok();
+    watcher_event_task.await.ok();
+    fs::remove_dir_all(dir).ok();
     process::ExitCode::SUCCESS
 }
