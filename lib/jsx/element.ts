@@ -16,6 +16,7 @@ import {
     onCleanup,
     Scope,
     state,
+    untrack,
     type Accessor,
     type State,
 } from "./reactive.js"
@@ -238,7 +239,7 @@ export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<Gni
     if (isGObjectCtor(type)) {
         return resolveNode(renderer.constructObject(type, node.props))
     } else {
-        return resolveNode(computed(() => type(node.props)))
+        return resolveNode(untrack(() => type(node.props)))
     }
 }
 
@@ -330,7 +331,7 @@ export type WithProps<T> = {
  */
 export function With<T>(props: WithProps<T>): GnimNode {
     const { value, children: mkChild } = props
-    return computed(() => mkChild(value()))
+    return computed(() => resolveNode(mkChild(value())))
 }
 
 export type PortalProps = {

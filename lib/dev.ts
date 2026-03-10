@@ -1,6 +1,6 @@
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
-import { jsx, type CC, type FC } from "./jsx/element.js"
+import { jsx, resolveNode, type FC } from "./jsx/element.js"
 import { computed, state, type State } from "./jsx/reactive.js"
 
 function init(main: string) {
@@ -31,11 +31,12 @@ function init(main: string) {
     import(`file://${main}`).catch(console.error)
 }
 
-type DevComponent = { impl: State<CC | FC>; ctx: unknown[] | null }
+type DevComponent = { impl: State<FC>; ctx: unknown[] | null }
 // const DevContext = createContext<unknown[] | null>(null)
 const registry = new Map<string, DevComponent>()
 
-function $$registerComponent(mod: string, name: string, impl: CC | FC): FC {
+function $$registerComponent(mod: string, name: string, impl: FC) {
+    if ("$$typeof" in impl) return impl
     if (typeof impl !== "function") return impl
 
     const path = GLib.uri_parse(mod, GLib.UriFlags.NONE).get_path()
@@ -50,7 +51,7 @@ function $$registerComponent(mod: string, name: string, impl: CC | FC): FC {
 
     const [get, set] = entry.impl
     set(() => impl)
-    return (props) => computed(() => jsx(get(), props))
+    return (props: any) => computed(() => resolveNode(get()(props)))
 }
 
 Object.assign(globalThis, { $$registerComponent })

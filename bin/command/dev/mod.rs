@@ -20,10 +20,7 @@ pub struct DevArgs {
 }
 
 pub fn get_dev_entry() -> String {
-    let candidates = [
-        Some("./node_modules/gnim/lib/dev.js".to_string()),
-        Some("./node_modules/gnim/lib/dev.ts".to_string()),
-    ];
+    let candidates = [Some("./node_modules/gnim/lib/dev.js".to_string())];
 
     for candidate in candidates.into_iter().flatten() {
         if let Ok(path) = fs::canonicalize(candidate)
@@ -77,7 +74,7 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
         let watcher_config = rolldown::BundlerConfig::new(
             rolldown::BundlerOptions {
                 input: Some(vec![args.entry.clone().into()]),
-                file: Some("/dev/null".into()),
+                dir: Some("/dev/null".into()),
                 ..rolldown_config()
             },
             vec![],

@@ -121,11 +121,11 @@ export interface Context<T = unknown> {
 export function createContext<T>(defaultValue: T): Context<T> {
     let ctx: Context<T>
 
-    function context(value: T) {
+    function withContext<R>(value: T, fn: () => R) {
         const parent = getScope()
         const scope = new Scope(parent)
         scope.contexts.set(ctx, value)
-        return scope
+        return scope.run(fn)
     }
 
     function use(): T {
@@ -139,15 +139,15 @@ export function createContext<T>(defaultValue: T): Context<T> {
     }
 
     function provide<R>(value: T, fn: () => R): R {
-        return context(value).run(fn)
+        return withContext(value, fn)
     }
 
     function Context(props: { value: T; children: GnimNode }) {
         const { value, children } = props
-        return context(value).run(() => resolveNode(children))
+        return withContext(value, () => resolveNode(children))
     }
 
-    return (ctx = Object.assign(Context, { use, provide }))
+    return (ctx = Object.assign(Context, { use, provide, $$typeof: "context" }))
 }
 
 /**
@@ -517,9 +517,9 @@ export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>
 
     const equals = opts?.equals ?? Object.is
     const value = createComputed(fn)
-    const subscribers = new Set<Fn>()
+    const subscribers = new Set<Fn | null>()
 
-    function subscribe(callback: Fn): Fn {
+    function subscribe(callback: Fn | null): Fn {
         if (subscribers.size === 0) {
             EffectDepth += 1
             currentValue = value.peek()
@@ -528,7 +528,7 @@ export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>
                 const v = value.peek()
                 if (!equals(currentValue, v)) {
                     currentValue = v
-                    Array.from(subscribers).forEach((cb) => cb())
+                    Array.from(subscribers).forEach((cb) => cb?.())
                 }
             })
             EffectDepth -= 1
@@ -548,6 +548,11 @@ export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>
     function get(): T {
         if (init) return currentValue
         return value.peek()
+    }
+
+    // TODO: refactor
+    if (Scope.current) {
+        Scope.current.cleanups.unshift(subscribe(null))
     }
 
     return createAccessor(get, subscribe)

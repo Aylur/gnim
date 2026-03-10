@@ -1,7 +1,7 @@
 import GObject from "gi://GObject?version=2.0"
 import { setProperty } from "../util.js"
 import { mountChildren, newObject, type CC, type FC, type GnimNode } from "./element.js"
-import { computed, createContext, Scope } from "./reactive.js"
+import { createContext, Scope, untrack } from "./reactive.js"
 
 const RendererContext = createContext<Renderer | null>(null)
 
@@ -81,7 +81,7 @@ export function createRenderer(props: Partial<Renderer>) {
     function render(element: () => GnimNode, root?: GObject.Object) {
         const scope = new Scope(Scope.current)
         scope.contexts.set(RendererContext, renderer)
-        scope.run(() => mountChildren(computed(element), root))
+        scope.run(() => mountChildren(untrack(element), root))
         return () => scope.dispose()
     }
 
