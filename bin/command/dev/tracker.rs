@@ -34,9 +34,9 @@ fn get_dev_entry() -> Result<String, String> {
 
 #[derive(Debug)]
 pub struct ModuleTracker {
-    modules: HashSet<String>,
-    entry_js: String,
-    dev_entry_js: String,
+    pub modules: HashSet<String>,
+    pub entry_js: String,
+    pub dev_entry_js: String,
 }
 
 impl ModuleTracker {
@@ -47,10 +47,6 @@ impl ModuleTracker {
         }
 
         self.modules.iter().cloned().collect()
-    }
-
-    pub fn entry_files(&self) -> (String, String) {
-        (self.entry_js.clone(), self.dev_entry_js.clone())
     }
 
     pub async fn new(dir: path::PathBuf, canonical_entry: &str) -> Result<Self, String> {

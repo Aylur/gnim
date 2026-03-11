@@ -2,11 +2,13 @@ mod builder;
 mod tracker;
 mod transform;
 
+use crate::command::schemas;
+
 use super::{dev_rundir, rolldown_config};
 use clap::Args;
 use rolldown::WatcherEvent;
 use std::sync::{Arc, Mutex, OnceLock, RwLock};
-use std::{fs, process};
+use std::{env, fs, path, process};
 use tokio::io::AsyncWriteExt;
 use tokio::net::UnixListener;
 use tokio::process::Command;
@@ -26,6 +28,32 @@ pub static VERBOSE: OnceLock<bool> = OnceLock::new();
 
 pub fn is_verbose() -> bool {
     VERBOSE.get_or_init(|| false).to_owned()
+}
+
+pub async fn compile_schemas(gschema_path: &str) {
+    let dir = path::PathBuf::from(gschema_path)
+        .parent()
+        .expect("failed to get parent dir of gschema file")
+        .to_owned();
+
+    let has_glib = env::var_os("PATH")
+        .and_then(|paths| {
+            env::split_paths(&paths).find(|dir| dir.join("glib-compile-schemas").is_file())
+        })
+        .is_some();
+
+    if !has_glib {
+        eprintln!("[dev] glib-compile-schemas was not found in $PATH");
+        return;
+    }
+
+    let args = schemas::SchemasArgs {
+        directory: dir.to_string_lossy().to_string(),
+        compile: true,
+        outdir: Some(path::PathBuf::from("./.gnim/schemas")),
+    };
+
+    schemas::schemas(&args).await;
 }
 
 pub async fn dev(args: &DevArgs) -> process::ExitCode {
@@ -51,7 +79,15 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
         }
     };
 
-    let (entry_js, dev_entry_js) = module_tracker.entry_files();
+    let entry_js = module_tracker.entry_js.to_string();
+    let dev_entry_js = module_tracker.dev_entry_js.to_string();
+
+    for file in module_tracker.modules.iter() {
+        if file.ends_with(".gschema.ts") || file.ends_with(".gschema.js") {
+            compile_schemas(file).await;
+        }
+    }
+
     let module_tracker = Arc::new(Mutex::new(module_tracker));
 
     let initial_build = builder::build(
@@ -112,6 +148,14 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
                         if matches!(change.kind, rolldown_common::WatcherChangeKind::Update) {
                             if is_verbose() {
                                 eprintln!("[dev] {} {}", change.kind, change.path);
+                            }
+
+                            let file = change.path.as_str();
+                            if file.ends_with(".gschema.ts") || file.ends_with(".gschema.js") {
+                                tokio::runtime::Handle::current()
+                                    .block_on(async { compile_schemas(file).await });
+                                restart_tx.blocking_send(()).ok();
+                                continue;
                             }
 
                             tokio::runtime::Handle::current().block_on(async {
@@ -213,6 +257,7 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
                     .env("GNIM_DEV_SOCK", socket_path.to_str().unwrap())
                     .env("GNIM_ENTRY_MODULE", &entry_js)
                     .env("GNIM_VERBOSE", if is_verbose() { "true" } else { "" })
+                    .env("GSETTINGS_SCHEMA_DIR", "./.gnim/schemas")
                     .spawn()
                     .expect("failed to spawn gjs");
 
