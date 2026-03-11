@@ -2,7 +2,14 @@ import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { jsx, resolveNode, type FC } from "./jsx/element.js"
-import { computed, createContext, createState, devHooks, type State } from "./jsx/reactive.js"
+import {
+    computed,
+    createContext,
+    createState,
+    devHooks,
+    getScope,
+    type State,
+} from "./jsx/reactive.js"
 
 const verbose = GLib.getenv("GNIM_VERBOSE") === "true"
 const entry = GLib.getenv("GNIM_ENTRY_MODULE")
@@ -67,9 +74,8 @@ function initRegistry() {
         set(() => impl)
         return function (props: any) {
             return computed(() => {
-                const node = stateCtx.provide(entry.state, () => {
-                    return resolveNode(jsx(get(), props))
-                })
+                getScope().contexts.set(stateCtx, entry.state)
+                const node = resolveNode(jsx(get(), props))
                 entry.state.flush()
                 return node
             })
