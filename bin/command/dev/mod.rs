@@ -219,9 +219,9 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
                 tokio::select! {
                     status = child.wait() => {
                         match status {
-                            Ok(s) => {
-                                if let Some(code) = s.code() && code > 0 {
-                                    eprintln!("[dev] gjs exited with code  {}", code);
+                            Ok(s)  => {
+                                if is_verbose() {
+                                    eprintln!("[dev] gjs exited with code {}", s.code().unwrap_or(0));
                                 }
                                 break;
                             }
