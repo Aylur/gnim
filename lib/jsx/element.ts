@@ -15,7 +15,7 @@ import {
     isAccessor,
     onCleanup,
     Scope,
-    state,
+    createState,
     untrack,
     type Accessor,
     type State,
@@ -300,7 +300,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
             if (map.has(key)) {
                 map.get(key)!.index[1](i)
             } else {
-                const [index, setIndex] = state(i)
+                const [index, setIndex] = createState(i)
                 const scope = new Scope(currentScope)
                 const child = scope.run(() => resolveNode(mkChild(item, index)))
                 map.set(key, { item, child, index: [index, setIndex], scope })

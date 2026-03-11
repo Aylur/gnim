@@ -4,6 +4,14 @@ import { connect, disconnect, type Keyof } from "../util.js"
 
 type Fn = () => void
 
+interface DevHooks {
+    createState<T>(init: T, get: () => T): T
+}
+
+export const devHooks: DevHooks = {
+    createState: (init) => init,
+}
+
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 
 /**
@@ -25,6 +33,13 @@ export interface Accessor<T = unknown> {
      * @returns The current value.
      */
     (): T
+
+    /**
+     * Create a new {@link Accessor} that applies a transformation on its value when read.
+     * This operation is also known as `map` in other languages.
+     * @param transform The transformation to apply. Should be a pure function.
+     */
+    as<R = T>(fn: (value: T) => R): Accessor<R>
 
     /**
      * Get the current value **without** tracking it as a dependency in reactive scopes.
@@ -239,11 +254,14 @@ export function isAccessor(instance: unknown): instance is Accessor {
 }
 
 export function createAccessor<T>(get: () => T, subscribe: (callback: Fn) => Fn): Accessor<T> {
+    function access(): T
+    function access<R = T>(compute?: (value: T) => R): Accessor<R>
     function access<R = T>(compute?: (value: T) => R): Accessor<R> | T {
         if (typeof compute === "function") {
             return createComputed(() => {
+                const value = get()
                 AccessStack.at(-1)?.add(accessor)
-                return compute(get())
+                return untrack(() => compute(value))
             })
         }
 
@@ -251,7 +269,12 @@ export function createAccessor<T>(get: () => T, subscribe: (callback: Fn) => Fn)
         return get()
     }
 
-    const accessor = Object.assign(access, {
+    function as<R = T>(fn: (value: T) => R): Accessor<R> {
+        return createAccessor(() => fn(get()), subscribe)
+    }
+
+    const accessor: Accessor<T> = Object.assign(access, {
+        as,
         peek: get,
         subscribe: subscribe,
         toString(): string {
@@ -261,7 +284,7 @@ export function createAccessor<T>(get: () => T, subscribe: (callback: Fn) => Fn)
             console.warn("Accessor implicitly converted to a primitive value.")
             return `Accessor { ${get()} }`
         },
-    }) as Accessor<T>
+    })
 
     return accessor
 }
@@ -287,10 +310,15 @@ export interface StateOptions<T> {
  * @param init The intial value.
  * @returns An {@link Accessor} and a setter function.
  */
-export function state<T>(init: T, options?: StateOptions<NoInfer<T>>): State<T> {
+export function createState<T>(init: T, options?: StateOptions<NoInfer<T>>): State<T> {
     let currentValue = init
+
     const observers = new Set<Fn>()
     const equals = options?.equals ?? Object.is
+
+    function get(): T {
+        return currentValue
+    }
 
     function subscribe(callback: Fn): Fn {
         observers.add(callback)
@@ -310,10 +338,7 @@ export function state<T>(init: T, options?: StateOptions<NoInfer<T>>): State<T> 
         }
     }
 
-    function get(): T {
-        return currentValue
-    }
-
+    currentValue = devHooks.createState(init, get)
     return [createAccessor(get, subscribe), set]
 }
 
@@ -526,11 +551,13 @@ export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>
             currentValue = value.peek()
             init = true
             dispose = value.subscribe(() => {
+                EffectDepth += 1
                 const v = value.peek()
                 if (!equals(currentValue, v)) {
                     currentValue = v
                     Array.from(subscribers).forEach((cb) => cb?.())
                 }
+                EffectDepth -= 1
             })
             EffectDepth -= 1
         }

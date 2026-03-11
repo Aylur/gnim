@@ -1,37 +1,82 @@
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import { resolveNode, type FC } from "./jsx/element.js"
-import { computed, state, type State } from "./jsx/reactive.js"
+import { jsx, resolveNode, type FC } from "./jsx/element.js"
+import { computed, createContext, createState, devHooks, type State } from "./jsx/reactive.js"
 
 const verbose = GLib.getenv("GNIM_VERBOSE") === "true"
 const entry = GLib.getenv("GNIM_ENTRY_MODULE")
 const socket = GLib.getenv("GNIM_DEV_SOCK")
 
 function initRegistry() {
-    type DevComponent = { impl: State<FC> }
-    const registry = new Map<string, DevComponent>()
+    class StateCtx {
+        private dirty = false
+        private current: null | Array<{ init: unknown; current(): unknown }> = null
+        private buffer = new Array<{ init: unknown; current(): unknown }>()
 
-    Object.assign(globalThis, {
-        $$registerComponent(mod: string, name: string, impl: FC) {
-            if ("$$typeof" in impl) return impl
-            if (typeof impl !== "function") return impl
+        push<T>(init: T, get: () => T): T {
+            if (this.dirty) return init
 
-            const path = GLib.uri_parse(mod, GLib.UriFlags.NONE).get_path()
-            const id = path + ":" + name
-
-            let entry = registry.get(id)
-
-            if (!entry) {
-                entry = { impl: state(impl) }
-                registry.set(id, entry)
+            if (!this.current) {
+                this.buffer.push({ init, current: get })
+                return init
             }
 
-            const [get, set] = entry.impl
-            set(() => impl)
-            return (props: any) => computed(() => resolveNode(get()(props)))
-        },
-    })
+            const state = this.current.shift()
+
+            if (state && state.init === init) {
+                this.buffer.push({ init, current: get })
+                return state.current() as T
+            }
+
+            this.dirty = true
+            return init
+        }
+
+        flush() {
+            this.current = this.dirty ? null : this.buffer
+            this.buffer = []
+            this.dirty = false
+        }
+    }
+
+    type DevComponent = { impl: State<FC>; state: StateCtx }
+
+    const registry = new Map<string, DevComponent>()
+    const stateCtx = createContext<StateCtx | null>(null)
+
+    devHooks.createState = function (init, get) {
+        return stateCtx.use()?.push(init, get) ?? init
+    }
+
+    function $$registerComponent(mod: string, name: string, impl: FC) {
+        if (typeof impl !== "function") return impl
+        if ("$$typeof" in impl && impl.$$typeof === "context") return impl
+
+        const path = GLib.uri_parse(mod, GLib.UriFlags.NONE).get_path()
+        const id = path + ":" + name
+
+        let entry = registry.get(id)
+
+        if (!entry) {
+            entry = { impl: createState(impl), state: new StateCtx() }
+            registry.set(id, entry)
+        }
+
+        const [get, set] = entry.impl
+        set(() => impl)
+        return function (props: any) {
+            return computed(() => {
+                const node = stateCtx.provide(entry.state, () => {
+                    return resolveNode(jsx(get(), props))
+                })
+                entry.state.flush()
+                return node
+            })
+        }
+    }
+
+    Object.assign(globalThis, { $$registerComponent })
 }
 
 function initSocket(path: string) {
