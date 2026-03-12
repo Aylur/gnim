@@ -407,7 +407,7 @@ type GObjectProps<T> = T extends {
       } & {
           // writable reactive properties
           [K in Keyof<T["$writableProperties"]> as CamelCase<K>]: Accessor<
-              NonNullable<T["$writableProperties"][K]>
+              T["$writableProperties"][K]
           >
       } & {
           // onSignalName and onDetaliedSignal:detail
