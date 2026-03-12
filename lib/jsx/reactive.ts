@@ -713,7 +713,7 @@ type ConnectionCallback<
 /**
  * Connect a side-effect to a GObject signal.
  */
-export function connectEffect<O extends GObject.Object, S extends Keyof<SignalsOf<O>>>(
+export function connectSignal<O extends GObject.Object, S extends Keyof<SignalsOf<O>>>(
     object: O,
     signal: S,
     handler: ConnectionCallback<O, S>,

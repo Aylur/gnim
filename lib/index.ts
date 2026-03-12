@@ -10,7 +10,7 @@ export {
 } from "./jsx/element.js"
 export {
     computed,
-    connectEffect,
+    connectSignal,
     createContext,
     createRoot,
     createState,
