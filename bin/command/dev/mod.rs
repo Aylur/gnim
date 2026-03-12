@@ -132,18 +132,21 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
         }
     });
 
-    let watcher_event_task = tokio::task::spawn_blocking({
+    let watcher_event_task = tokio::spawn({
         let emitter = watcher.emitter();
         let socket_tx = socket_tx.clone();
         let dir = dir.clone();
         let entry_canonical = entry_canonical.clone();
         let module_tracker = module_tracker.clone();
 
-        move || {
+        async move {
             loop {
-                let rx = emitter.rx.blocking_lock();
+                let event = tokio::task::block_in_place(|| {
+                    let rx = emitter.rx.blocking_lock();
+                    rx.recv()
+                });
 
-                match rx.recv() {
+                match event {
                     Ok(WatcherEvent::Change(change)) => {
                         if matches!(change.kind, rolldown_common::WatcherChangeKind::Update) {
                             if is_verbose() {
@@ -152,30 +155,27 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
 
                             let file = change.path.as_str();
                             if file.ends_with(".gschema.ts") || file.ends_with(".gschema.js") {
-                                tokio::runtime::Handle::current()
-                                    .block_on(async { compile_schemas(file).await });
-                                restart_tx.blocking_send(()).ok();
+                                compile_schemas(file).await;
+                                restart_tx.send(()).await.ok();
                                 continue;
                             }
 
-                            tokio::runtime::Handle::current().block_on(async {
-                                let build = builder::build(
-                                    module_tracker.clone(),
-                                    builder::GnimDevPlugin {
-                                        dir: dir.clone(),
-                                        socket_tx: socket_tx.clone(),
-                                        changed_source: Some(change.path.to_string()),
-                                        module_versions: Arc::clone(&module_versions),
-                                    },
-                                );
+                            let build = builder::build(
+                                module_tracker.clone(),
+                                builder::GnimDevPlugin {
+                                    dir: dir.clone(),
+                                    socket_tx: socket_tx.clone(),
+                                    changed_source: Some(change.path.to_string()),
+                                    module_versions: Arc::clone(&module_versions),
+                                },
+                            );
 
-                                if let Err(err) = build.await {
-                                    println!("{err}");
-                                }
-                            });
+                            if let Err(err) = build.await {
+                                println!("{err}");
+                            }
 
                             if change.path.to_string() == entry_canonical {
-                                restart_tx.blocking_send(()).ok();
+                                restart_tx.send(()).await.ok();
                             }
                         }
                     }
