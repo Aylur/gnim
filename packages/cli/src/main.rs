@@ -1,10 +1,8 @@
-mod command;
-
 use clap::{Parser, Subcommand};
-use command::dev::{DevArgs, dev};
-use command::run::{RunArgs, run};
-use command::schemas::{SchemasArgs, schemas};
-use command::types::{TypeArgs, types};
+use gnim::dev::{DevArgs, dev};
+use gnim::run::{RunArgs, run};
+use gnim::schemas::{SchemasArgs, schemas};
+use gnim::types::{TypeArgs, types};
 use std::process;
 
 #[derive(Parser)]

@@ -1,0 +1,65 @@
+{
+    "name": "gnim",
+    "version": "2.0.0-alpha.1",
+    "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "repository": "github:Aylur/gnim",
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "bin": {
+        "gnim": "bin/gnim.js"
+    },
+    "optionalDependencies": {
+        "@gnim-js/linux-x64": "2.0.0-alpha.0"
+    },
+    "exports": {
+        ".": {
+            "import": "./lib/index.js",
+            "types": "./lib/index.d.ts"
+        },
+        "./dbus": {
+            "import": "./lib/decorators/dbus.js",
+            "types": "./lib/decorators/dbus.d.ts"
+        },
+        "./fetch": {
+            "import": "./lib/polyfill/fetch.js",
+            "types": "./lib/polyfill/fetch.d.ts"
+        },
+        "./gobject": {
+            "import": "./lib/decorators/gobject.js",
+            "types": "./lib/decorators/gobject.d.ts"
+        },
+        "./schema": {
+            "import": "./lib/schema/settings.js",
+            "types": "./lib/schema/settings.d.ts"
+        },
+        "./jsx-runtime": {
+            "import": "./lib/jsx-runtime.js",
+            "types": "./lib/jsx-runtime.d.ts"
+        },
+        "./jsx-dev-runtime": {
+            "import": "./lib/jsx-dev-runtime.js",
+            "types": "./lib/jsx-dev-runtime.d.ts"
+        },
+        "./gtk4": {
+            "import": "./lib/renderer/gtk4.js",
+            "types": "./lib/renderer/gtk4.d.ts"
+        }
+    },
+    "files": [
+        "bin",
+        "lib"
+    ],
+    "engines": {
+        "gjs": ">=1.83.0"
+    },
+    "keywords": [
+        "GJS",
+        "Gnome",
+        "GTK",
+        "JSX"
+    ]
+}

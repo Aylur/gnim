@@ -1,7 +1,5 @@
-use super::builder;
-use super::schemas::compile_schemas;
 use super::tracker::{ModuleTracker, ModuleVersions};
-use crate::command::rolldown_config;
+use super::{builder, rolldown_config, schemas::compile_schemas};
 use rolldown::{BundlerConfig, BundlerOptions};
 use rolldown_common::WatcherChangeKind;
 use rolldown_watcher::{WatchEvent, Watcher, WatcherConfig, WatcherEventHandler};

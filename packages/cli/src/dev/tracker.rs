@@ -1,7 +1,6 @@
+use super::rolldown_config;
 use std::collections::{HashMap, HashSet};
 use std::{fs, path};
-
-use crate::command::rolldown_config;
 
 #[derive(Debug, Default)]
 pub struct ModuleVersions(HashMap<String, u64>);

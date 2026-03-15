@@ -16,7 +16,7 @@ def build_types [--os: string, --cpu: string, --target: string] {
     cargo build --release --target $target
 
     let name = $"($os)-($cpu)"
-    let version = open Cargo.toml | get package | get version
+    let version = open packages/cli/Cargo.toml | get package | get version
 
     let package = {
         name: $"@gnim-js/($name)",
@@ -34,17 +34,15 @@ def build_types [--os: string, --cpu: string, --target: string] {
 
 def "main build:gnim" [] {
     let target = "./dist/gnim" | path expand
-    rm -rf $target
+    mkdir ($target | path dirname)
 
+    cd packages/gnim
     tsc
-
-    mkdir $target
-    mkdir $"($target)/bin"
-    mv build/* $target
-    cp package.json $target
+    cp package.json build
+    mv build $target
+    cd ../..
     cp README.md $target
     cp LICENSE $target
-    rm -r build
 }
 
 def "main build" [] {

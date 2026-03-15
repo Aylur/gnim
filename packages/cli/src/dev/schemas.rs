@@ -1,4 +1,4 @@
-use crate::command::schemas;
+use crate::schemas;
 use std::path::PathBuf;
 
 pub async fn compile_schemas(gschema_path: &str) {

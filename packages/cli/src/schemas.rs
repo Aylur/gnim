@@ -1,4 +1,4 @@
-use crate::command::rolldown_config;
+use super::rolldown_config;
 use clap::Args;
 use quick_xml::events::Event;
 use quick_xml::reader::Reader;

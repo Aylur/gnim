@@ -1,20 +1,13 @@
 # Gnim
 
-Library which brings JSX and reactivity to GNOME JavaScript.
+Gnim brings JSX, reactivity and type-safety to GNOME JavaScript.
 
-If you are not already familiar with GJS and GObject, you should read
-[gjs.guide](https://gjs.guide/) first.
+## Templates
 
-This library provides:
+- [gnome-extension](https://github.com/Aylur/gnome-shell-extension-template/)
+- [gtk4](https://github.com/Aylur/gnim-gtk4-template/)
 
-- [JSX and reactivity](https://aylur.github.io/gnim/jsx) for both Gtk
-  Applications and Gnome extensions
-- [GObject decorators](https://aylur.github.io/gnim/gobject) for a convenient
-  and type safe way for subclassing GObjects
-- [DBus decorators](https://aylur.github.io/gnim/dbus) for a convenient and type
-  safe way for implementing DBus services and proxies.
-
-## Obligatory Counter Example
+## JSX and reactivity
 
 ```tsx
 function Counter() {
@@ -24,7 +17,7 @@ function Counter() {
     setCount((v) => v + 1)
   }
 
-  createEffect(() => {
+  effect(() => {
     console.log("count is", count())
   })
 
@@ -37,7 +30,84 @@ function Counter() {
 }
 ```
 
-## Templates
+## GObject decorators
 
-- [gnome-extension](https://github.com/Aylur/gnome-shell-extension-template/)
-- [gtk4](https://github.com/Aylur/gnim-gtk4-template/)
+```ts
+import { Object, register, property, signal } from "gnim/gobject"
+
+@register
+class MyObj extends Object {
+  @property myProp: string = ""
+
+  @signal mySignal(a: string, b: number) {
+    print(a, b)
+  }
+}
+```
+
+## DBus decorators
+
+```ts
+import { Service, iface, methodAsync, signal, property } from "gnim/dbus"
+
+@iface("example.gjs.MyService")
+export class MyService extends Service {
+  @property("s") MyProperty = ""
+
+  @methodAsync(["s"], ["s"])
+  async MyMethod(str: string): Promise<[string]> {
+    return [str]
+  }
+
+  @signal("s")
+  MySignal(str: string) {
+    print(str)
+  }
+}
+```
+
+## Gio Settings
+
+```ts
+import GLib from "gi://GLib?version=2.0"
+import { defineSchemaList, Schema, Enum, Flags } from "gnim-schemas"
+
+const myFlags = new Flags("my.flags", ["one", "two"])
+const myEnum = new Enum("my.enum", ["one", "two"])
+
+export const schema = new Schema({
+  id: "my.awesome.app",
+  path: "/my/awesome/app/",
+})
+  .key("my-key", "s", {
+    default: "",
+    summary: "Simple string key",
+  })
+  .key("complex-key", "a{sv}", {
+    default: {
+      key: GLib.Variant.new("s", "value"),
+    },
+    summary: "Variant dict key",
+  })
+  .key("enum-key", myEnum, {
+    default: "one",
+  })
+  .key("flags-key", myFlags, {
+    default: ["one", "two"],
+  })
+
+export default defineSchemaList([schema])
+```
+
+```ts
+import { schema } from "./my.awesome.app.gschema"
+import { createSettings } from "gnim-schemas"
+
+const settings = createSettings(schema)
+
+effect(() => {
+  print(settings.myKey())
+})
+
+settings.setMyKey("hello")
+```
