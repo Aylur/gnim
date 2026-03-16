@@ -3,6 +3,7 @@ use gnim::dev::{DevArgs, dev};
 use gnim::run::{RunArgs, run};
 use gnim::schemas::{SchemasArgs, schemas};
 use gnim::types::{TypeArgs, types};
+use rolldown_utils::indexmap::FxIndexMap;
 use std::process;
 
 #[derive(Parser)]
@@ -28,14 +29,28 @@ enum Command {
     // Bundle,
 }
 
+fn map(kv: &[(String, String)]) -> FxIndexMap<String, String> {
+    kv.iter().cloned().collect()
+}
+
 #[tokio::main]
 async fn main() -> process::ExitCode {
     let cli = Cli::parse();
 
+    gnim::init(gnim::GlobalOptions {
+        define: match &cli.command {
+            Command::Types(_) => None,
+            Command::Schemas(args) => Some(map(&args.define)),
+            Command::Run(args) => Some(map(&args.define)),
+            Command::Dev(args) => Some(map(&args.define)),
+        },
+        alias: None,
+    });
+
     match cli.command {
-        Command::Run(args) => run(&args).await,
         Command::Types(args) => types(&args).await,
         Command::Schemas(args) => schemas(&args).await,
+        Command::Run(args) => run(&args).await,
         Command::Dev(args) => dev(&args).await,
     }
 }

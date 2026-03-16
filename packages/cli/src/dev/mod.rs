@@ -20,13 +20,16 @@ use watcher::{DevWatcherArgs, dev_watcher};
 #[derive(Args)]
 pub struct DevArgs {
     /// Entry file
-    entry: String,
+    pub entry: String,
     /// Verbose logging
     #[arg(short, long, default_value_t = false)]
-    verbose: bool,
+    pub verbose: bool,
     /// Preload Gtk4LayerShell
     #[arg(long, default_value_t = false)]
-    gtk4_layer_shell: bool,
+    pub gtk4_layer_shell: bool,
+    /// Replace global identifiers with constant expressions
+    #[arg(short, long, value_parser = crate::parse_key_val)]
+    pub define: Vec<(String, String)>,
 }
 
 pub async fn dev(args: &DevArgs) -> process::ExitCode {

@@ -7,13 +7,16 @@ use std::{collections::HashMap, fs, path, process};
 #[derive(Args)]
 pub struct RunArgs {
     /// File
-    script: String,
+    pub script: String,
     /// Arguments to pass to the script
     #[arg(value_name = "ARGS", num_args = 0..)]
-    args: Vec<String>,
+    pub args: Vec<String>,
     /// Preload Gtk4LayerShell
     #[arg(long, default_value_t = false)]
-    gtk4_layer_shell: bool,
+    pub gtk4_layer_shell: bool,
+    /// Replace global identifiers with constant expressions
+    #[arg(short, long, value_parser = crate::parse_key_val)]
+    pub define: Vec<(String, String)>,
 }
 
 pub async fn run(args: &RunArgs) -> process::ExitCode {

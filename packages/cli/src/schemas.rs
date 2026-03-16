@@ -10,14 +10,15 @@ use std::{env, fs, path, process};
 pub struct SchemasArgs {
     /// Directory where the schemas are located at
     pub directory: String,
-
     /// Compile into a gschema.compiled binary
     #[arg(short, long)]
     pub compile: bool,
-
     /// Where to store generated xml and compiled files
     #[arg(short, long, value_name = "PATH")]
     pub outdir: Option<path::PathBuf>,
+    /// Replace global identifiers with constant expressions
+    #[arg(short, long, value_parser = crate::parse_key_val)]
+    pub define: Vec<(String, String)>,
 }
 
 async fn transpile_typescript(

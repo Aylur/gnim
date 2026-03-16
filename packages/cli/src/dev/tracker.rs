@@ -1,4 +1,4 @@
-use super::rolldown_config;
+use crate::{GNIM_LIBDIR, rolldown_config};
 use std::collections::{HashMap, HashSet};
 use std::{fs, path};
 
@@ -18,7 +18,10 @@ impl ModuleVersions {
 }
 
 fn get_dev_entry() -> Result<String, String> {
-    let candidates = [Some("./node_modules/gnim/lib/dev.js".to_string())];
+    let candidates = [
+        Some("./node_modules/gnim/lib/dev.js".to_string()),
+        GNIM_LIBDIR.map(|dir| format!("{dir}/lib/dev.js")),
+    ];
 
     for candidate in candidates.into_iter().flatten() {
         if let Ok(path) = fs::canonicalize(candidate)

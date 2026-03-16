@@ -3,7 +3,23 @@ pub mod run;
 pub mod schemas;
 pub mod types;
 
-use std::{fmt, path::PathBuf};
+use std::{fmt, path::PathBuf, sync::OnceLock};
+
+pub static GNIM_LIBDIR: Option<&str> = option_env!("GNIM_LIBDIR");
+
+static GLOBAL_OPTIONS: OnceLock<GlobalOptions> = OnceLock::new();
+
+#[derive(Default)]
+pub struct GlobalOptions {
+    pub alias: Option<rolldown::PathsOutputOption>,
+    pub define: Option<rolldown_utils::indexmap::FxIndexMap<String, String>>,
+}
+
+pub fn init(opts: GlobalOptions) {
+    if GLOBAL_OPTIONS.set(opts).is_err() {
+        eprintln!("failed to init global options");
+    }
+}
 
 pub fn dev_rundir() -> PathBuf {
     let dir = std::env::var("XDG_RUNTIME_DIR")
@@ -16,6 +32,9 @@ pub fn dev_rundir() -> PathBuf {
 }
 
 pub fn rolldown_config() -> rolldown::BundlerOptions {
+    let define = GLOBAL_OPTIONS.get().and_then(|o| o.define.clone());
+    let alias = GLOBAL_OPTIONS.get().and_then(|o| o.alias.clone());
+
     rolldown::BundlerOptions {
         external: Some(
             vec![
@@ -38,8 +57,16 @@ pub fn rolldown_config() -> rolldown::BundlerOptions {
         }),
         sourcemap: Some(rolldown::SourceMapType::Inline),
         format: Some(rolldown::OutputFormat::Esm),
+        define,
+        paths: alias,
         ..Default::default()
     }
+}
+
+pub fn parse_key_val(s: &str) -> Result<(String, String), String> {
+    s.split_once('=')
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .ok_or_else(|| format!("invalid KEY=VALUE: {s}"))
 }
 
 pub fn is_in_path(program: &str) -> bool {

@@ -783,7 +783,9 @@ dependencies = [
  "rolldown",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_utils",
  "rolldown_watcher",
+ "serde_json",
  "tokio",
 ]
 

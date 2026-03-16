@@ -13,6 +13,7 @@ pub async fn compile_schemas(gschema_path: &str) {
     }
 
     let args = schemas::SchemasArgs {
+        define: Default::default(),
         directory: dir.to_string_lossy().to_string(),
         compile: true,
         outdir: Some(PathBuf::from("./.gnim/schemas")),
