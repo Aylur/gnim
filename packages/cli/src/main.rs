@@ -44,7 +44,25 @@ async fn main() -> process::ExitCode {
             Command::Run(args) => Some(map(&args.define)),
             Command::Dev(args) => Some(map(&args.define)),
         },
-        alias: None,
+        alias: gnim::GNIM_LIBDIR.map(|dir| {
+            rolldown::PathsOutputOption::Fn(std::sync::Arc::new(move |id| {
+                // synced with package.json exports
+                let prefix = format!("file://{dir}/lib");
+                let alias = match id {
+                    "gnim" => format!("{prefix}/index.js"),
+                    "gnim/dbus" => format!("{prefix}/decorators/dbus.js"),
+                    "gnim/fetch" => format!("{prefix}/polyfill/fetch.js"),
+                    "gnim/gobject" => format!("{prefix}/decorators/gobject.js"),
+                    "gnim/schema" => format!("{prefix}/schema/settings.js"),
+                    "gnim/jsx-runtime" => format!("{prefix}/jsx-runtime.js"),
+                    "gnim/jsx-dev-runtime" => format!("{prefix}/jsx-dev-runtime.js"),
+                    "gnim/gtk4" => format!("{prefix}/renderer/gtk4.js"),
+                    _ => id.to_string(),
+                };
+
+                Box::pin(async move { Ok(alias) })
+            }))
+        }),
     });
 
     match cli.command {

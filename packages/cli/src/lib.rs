@@ -35,6 +35,11 @@ pub fn rolldown_config() -> rolldown::BundlerOptions {
     let define = GLOBAL_OPTIONS.get().and_then(|o| o.define.clone());
     let alias = GLOBAL_OPTIONS.get().and_then(|o| o.alias.clone());
 
+    let import_source = match PathBuf::from("./tsconfig.json").exists() {
+        true => None,
+        false => Some("gnim".to_owned()),
+    };
+
     rolldown::BundlerOptions {
         external: Some(
             vec![
@@ -53,6 +58,10 @@ pub fn rolldown_config() -> rolldown::BundlerOptions {
                 legacy: Some(true),
                 emit_decorator_metadata: Some(true),
             }),
+            jsx: Some(rolldown::Either::Right(rolldown::JsxOptions {
+                import_source,
+                ..Default::default()
+            })),
             ..Default::default()
         }),
         sourcemap: Some(rolldown::SourceMapType::Inline),
