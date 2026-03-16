@@ -1,4 +1,4 @@
-use super::rolldown_config;
+use super::{is_in_path, rolldown_config};
 use clap::Args;
 use quick_xml::events::Event;
 use quick_xml::reader::Reader;
@@ -59,15 +59,8 @@ fn format_xml(input: &str) -> String {
 }
 
 fn compile(directory: &str) -> process::ExitCode {
-    let glib_compile_schemas = "glib-compile-schemas";
-    let has_glib = env::var_os("PATH")
-        .and_then(|paths| {
-            env::split_paths(&paths).find(|dir| dir.join(glib_compile_schemas).is_file())
-        })
-        .is_some();
-
-    if has_glib {
-        let status = process::Command::new(glib_compile_schemas)
+    if is_in_path("glib-compile-schemas") {
+        let status = process::Command::new("glib-compile-schemas")
             .args([&directory])
             .status();
 

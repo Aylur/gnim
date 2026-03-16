@@ -24,6 +24,9 @@ pub struct DevArgs {
     /// Verbose logging
     #[arg(short, long, default_value_t = false)]
     verbose: bool,
+    /// Preload Gtk4LayerShell
+    #[arg(long, default_value_t = false)]
+    gtk4_layer_shell: bool,
 }
 
 pub async fn dev(args: &DevArgs) -> process::ExitCode {
@@ -100,6 +103,7 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
             entry_js: entry_js.clone(),
             dev_entry_js: dev_entry_js.clone(),
             rx: gjs_restart_rx,
+            gtk4_layer_shell: args.gtk4_layer_shell,
         })
     });
 

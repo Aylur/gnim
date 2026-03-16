@@ -1,15 +1,19 @@
+use crate::gtk4_layer_shell;
+
 use super::{dev_rundir, rolldown_config};
 use clap::Args;
-use std::{fs, path, process};
+use std::{collections::HashMap, fs, path, process};
 
 #[derive(Args)]
 pub struct RunArgs {
     /// File
     script: String,
-
     /// Arguments to pass to the script
     #[arg(value_name = "ARGS", num_args = 0..)]
     args: Vec<String>,
+    /// Preload Gtk4LayerShell
+    #[arg(long, default_value_t = false)]
+    gtk4_layer_shell: bool,
 }
 
 pub async fn run(args: &RunArgs) -> process::ExitCode {
@@ -39,10 +43,29 @@ pub async fn run(args: &RunArgs) -> process::ExitCode {
         return process::ExitCode::FAILURE;
     }
 
-    let args: Vec<&str> = args.args.iter().map(|s| s.as_ref()).collect();
+    let gjs_args: Vec<&str> = args.args.iter().map(|s| s.as_ref()).collect();
+    let mut gjs_env: HashMap<&'static str, String> = HashMap::new();
+
+    if args.gtk4_layer_shell {
+        if let Some(so) = option_env!("GTK4_LAYER_SHELL_LIBDIR")
+            .map(|dir| format!("{dir}/libgtk4_layer_shell.so"))
+        {
+            gjs_env.insert("LD_PRELOAD", so);
+        } else {
+            match gtk4_layer_shell().await {
+                Ok(so) => {
+                    gjs_env.insert("LD_PRELOAD", so);
+                }
+                Err(err) => {
+                    eprintln!("[dev] failed to find libgtk4_layer_shell.so: {err}")
+                }
+            }
+        }
+    }
 
     let status = process::Command::new("gjs")
-        .args([vec!["-m", &tmpname], args].concat())
+        .args([vec!["-m", &tmpname], gjs_args].concat())
+        .envs(gjs_env)
         .status()
         .expect("failed to run script");
 
