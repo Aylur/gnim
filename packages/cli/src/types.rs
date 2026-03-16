@@ -12,23 +12,16 @@ use std::{
 pub struct TypeArgs {
     /// Log debugging statements
     #[arg(short, long, default_value_t = false)]
-    verbose: bool,
-
+    pub verbose: bool,
     /// Target directory to generate to
     #[arg(short, long, value_name = "PATH", default_value = "./.gnim/types/gi")]
-    outdir: String,
-
+    pub outdir: String,
     /// Lookup these directories for .gir files
     #[arg(short, long, value_name = "PATHS", default_value_t = default_dirs())]
-    dirs: String,
-
+    pub dirs: String,
     /// Skip rendering by name and version, e.g "Gtk-4.0"
     #[arg(short, long, value_name = "GIRS")]
-    ignore: Vec<String>,
-
-    /// Generate non versioned import aliases
-    #[arg(short, long)]
-    alias: bool,
+    pub ignore: Vec<String>,
 }
 
 static VERBOSE: sync::OnceLock<bool> = sync::OnceLock::new();
@@ -147,7 +140,8 @@ pub async fn types(args: &TypeArgs) -> process::ExitCode {
     let ignore = &args.ignore.iter().map(|i| i.as_ref()).collect::<Vec<_>>();
 
     let opts = typescript::Opts {
-        short_paths: args.alias,
+        short_paths: true,
+        legacy_imports: true,
     };
 
     let girgen_args = girgen::Args {

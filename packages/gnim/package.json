@@ -13,7 +13,8 @@
         "gnim": "bin/gnim.js"
     },
     "optionalDependencies": {
-        "@gnim-js/linux-x64": "2.0.0-alpha.0"
+        "@gnim-js/linux-x64": "2.0.0-alpha.1",
+        "@gnim-js/linux-arm64": "2.0.0-alpha.1"
     },
     "exports": {
         ".": {
