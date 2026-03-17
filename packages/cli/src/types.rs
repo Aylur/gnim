@@ -22,6 +22,12 @@ pub struct TypeArgs {
     /// Skip rendering by name and version, e.g "Gtk-4.0"
     #[arg(short, long, value_name = "GIRS")]
     pub ignore: Vec<String>,
+    /// Generate non versioned imports
+    #[arg(long, default_value_t = false)]
+    pub short_imports: bool,
+    /// Generate legacy imports
+    #[arg(long, default_value_t = false)]
+    pub legacy_imports: bool,
 }
 
 static VERBOSE: sync::OnceLock<bool> = sync::OnceLock::new();
@@ -140,8 +146,8 @@ pub async fn types(args: &TypeArgs) -> process::ExitCode {
     let ignore = &args.ignore.iter().map(|i| i.as_ref()).collect::<Vec<_>>();
 
     let opts = typescript::Opts {
-        short_paths: true,
-        legacy_imports: true,
+        short_paths: args.short_imports,
+        legacy_imports: args.legacy_imports,
     };
 
     let girgen_args = girgen::Args {
