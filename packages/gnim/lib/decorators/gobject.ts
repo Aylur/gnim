@@ -6,8 +6,9 @@ import { decoratorMetadata } from "./reflect.js"
 const { defineProperty, fromEntries, entries, is } = globalThis.Object
 const priv = Symbol("gobject private")
 
-export const Object = GObject.Object
+export const { Object } = GObject
 export type Object = GObject.Object
+
 export namespace Object {
     export type SignalSignatures = GObject.Object.SignalSignatures
     export type ReadableProperties = GObject.Object.ReadableProperties
@@ -15,25 +16,28 @@ export namespace Object {
     export type ConstructOnlyProperties = GObject.Object.ConstructOnlyProperties
 }
 
-export const SignalFlags = GObject.SignalFlags
+export const { SignalFlags } = GObject
 export type SignalFlags = GObject.SignalFlags
 
-export const AccumulatorType = GObject.AccumulatorType
+export const { AccumulatorType } = GObject
 export type AccumulatorType = GObject.AccumulatorType
 
+export const { ParamSpec } = GObject
 export type ParamSpec<T = unknown> = GObject.ParamSpec<T>
-export const ParamSpec = GObject.ParamSpec
 
+export const { ParamFlags } = GObject
 export type ParamFlags = GObject.ParamFlags
-export const ParamFlags = GObject.ParamFlags
 
 export type GType<T = unknown> = GObject.GType<T>
 
 type TypeParameter<T = unknown> = GType<T> | { $gtype: GType<T> }
 
 type SignalOptions = {
+    /** @default false */
     default?: boolean
+    /** @default SignalFlags.RUN_FIRST */
     flags?: SignalFlags
+    /** @default AccumulatorType.NONE */
     accumulator?: AccumulatorType
 }
 
@@ -222,7 +226,7 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
 
                     if (!is(this[priv][key], v)) {
                         this[priv][key] = v
-                        this.notify(key)
+                        this.notify(name)
                     }
                 },
                 get() {
@@ -420,3 +424,21 @@ Array.$gtype = GObject.TYPE_JSOBJECT as ArrayConstructor["$gtype"]
 Date.$gtype = GObject.TYPE_JSOBJECT as DateConstructor["$gtype"]
 Map.$gtype = GObject.TYPE_JSOBJECT as MapConstructor["$gtype"]
 Set.$gtype = GObject.TYPE_JSOBJECT as SetConstructor["$gtype"]
+
+export const {
+    VoidType,
+    Char,
+    UChar,
+    Boolean,
+    Int,
+    UInt,
+    Long,
+    ULong,
+    Int64,
+    UInt64,
+    Float,
+    Double,
+    String,
+    JSObject,
+    Type,
+} = GObject
