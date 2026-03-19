@@ -34,8 +34,8 @@
             "types": "./lib/decorators/gobject.d.ts"
         },
         "./schema": {
-            "import": "./lib/schema/settings.js",
-            "types": "./lib/schema/settings.d.ts"
+            "import": "./lib/schema/index.js",
+            "types": "./lib/schema/index.d.ts"
         },
         "./jsx-runtime": {
             "import": "./lib/jsx-runtime.js",

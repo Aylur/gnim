@@ -166,8 +166,8 @@ settings.setMyKey("new value")
 
 If you want other apps or processes to communicate with your application, the
 standard way to do IPC on Linux is via D-Bus. Gnim offers a convenient
-[decorator API](../dbus) that lets you easily implement services for your app
-through D-Bus.
+[decorator API](/reference/dbus) that lets you easily implement services for
+your app through D-Bus.
 
 At a very high level, D-Bus lets you export _objects_ that have _interfaces_ on
 a system bus, identified by a _name_.

@@ -53,7 +53,7 @@ async fn main() -> process::ExitCode {
                     "gnim/dbus" => format!("{prefix}/decorators/dbus.js"),
                     "gnim/fetch" => format!("{prefix}/polyfill/fetch.js"),
                     "gnim/gobject" => format!("{prefix}/decorators/gobject.js"),
-                    "gnim/schema" => format!("{prefix}/schema/settings.js"),
+                    "gnim/schema" => format!("{prefix}/schema/index.js"),
                     "gnim/jsx-runtime" => format!("{prefix}/jsx-runtime.js"),
                     "gnim/jsx-dev-runtime" => format!("{prefix}/jsx-dev-runtime.js"),
                     "gnim/gtk4" => format!("{prefix}/renderer/gtk4.js"),
