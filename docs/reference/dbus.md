@@ -8,27 +8,45 @@ Read more about using DBus in GJS on
 
 > [!INFO] Required TypeScript settings
 >
-> Make sure `experimentalDecorators` is set to `false` and `target` is _less
-> than or equal_ to `ES2020` in `tsconfig.json`.
+> Make sure `experimentalDecorators` is set to `true`.
 >
 > ```json
-> {
->   "compilerOptions": {
->     "experimentalDecorators": false,
->     "target": "ES2020"
->   }
-> }
+> { "compilerOptions": { "experimentalDecorators": true } }
 > ```
 
+## Example usage
+
 ```ts
-import { Service, iface, methodAsync, signal, property } from "gnim/dbus"
+import {
+  Service,
+  iface,
+  property,
+  method,
+  methodAsync,
+  property,
+  signal,
+} from "gnim/dbus"
 
 @iface("example.gjs.MyService")
 export class MyService extends Service {
+  declare $signals: GObject.Object.SignalSignatures & {
+    "my-signal": MyService["MySignal"]
+  }
+
+  declare $readableProperties: GObject.Object.ReadableProperties & {
+    "my-property": MyService["MyProperty"]
+  }
+
   @property("s") MyProperty = ""
 
   @methodAsync(["s"], ["s"])
-  async MyMethod(str: string): Promise<[string]> {
+  async MyAsyncMethod(str: string): Promise<[string]> {
+    this.MySignal(str)
+    return [str]
+  }
+
+  @method(["s"], ["s"])
+  MySyncMethod(str: string): [string] {
     this.MySignal(str)
     return [str]
   }
@@ -43,6 +61,10 @@ export class MyService extends Service {
 > Optionally, you can declare the name of the arguments for DBus inspection by
 > passing a `{ name: string, type: string }` object as the parameter to the
 > decorators instead of just the type string.
+>
+> ```ts
+> @signal({ name: "str", type: "s" })
+> ```
 
 Use them as servers
 
@@ -65,7 +87,7 @@ const proxy = await new MyService().proxy()
 
 proxy.MyProperty = "new value"
 
-const value = await proxy.MyMethod("hello")
+const [value] = await proxy.MyAsyncMethod("hello")
 console.log(value) // "hello"
 ```
 
@@ -148,14 +170,14 @@ function method(...inArgs: Arg[])
 Example
 
 ```ts
-class {
-    @method("s", "i")
-    Simple(arg0: string, arg1: number): void {}
+class MyService {
+  @method("s", "i")
+  Simple(arg0: string, arg1: number): void {}
 
-    @method(["s", "i"], ["s"])
-    SimpleReturn(arg0: string, arg1: number): [string] {
-        return ["return valule"]
-    }
+  @method(["s", "i"], ["s"])
+  SimpleReturn(arg0: string, arg1: number): [string] {
+    return ["return valule"]
+  }
 }
 ```
 
@@ -179,14 +201,14 @@ function methodAsync(...inArgs: Arg[])
 Example
 
 ```ts
-class {
-    @methodAsync("s", "i")
-    async Simple(arg0: string, arg1: number): Promise<void> {}
+class MyService {
+  @methodAsync("s", "i")
+  async Simple(arg0: string, arg1: number): Promise<void> {}
 
-    @methodAsync(["s", "i"], ["s"])
-    async SimpleReturn(arg0: string, arg1: number): Promise<[string]> {
-        return ["return valule"]
-    }
+  @methodAsync(["s", "i"], ["s"])
+  async SimpleReturn(arg0: string, arg1: number): Promise<[string]> {
+    return ["return valule"]
+  }
 }
 ```
 
@@ -205,52 +227,19 @@ function property(type: string)
 ```
 
 ```ts
-class {
-    @property("s") Value = "value"
+class MyService {
+  @property("s")
+  ReadWrite = "value"
+
+  @property("s")
+  get ReadOnly() {
+    return "value"
+  }
+
+  @property("s")
+  set WriteOnly(v: string) {}
 }
 ```
-
-## `getter`
-
-Registers a read-only property, similarly to the
-[gobject](./gobject#property-decorator) getter decorator.
-
-```ts
-function getter(type: string)
-```
-
-```ts
-class {
-    @getter("s")
-    get Value() { return "" }
-}
-```
-
-> [!TIP]
->
-> Can be used in combination with the `setter` decorator to define read-write
-> properties.
-
-## `setter`
-
-Registers a write-only property, similarly to the
-[gobject](./gobject#property-decorator) setter decorator.
-
-```ts
-function setter(type: string)
-```
-
-```ts
-class {
-    @setter("s")
-    set Value(value: string) { }
-}
-```
-
-> [!TIP]
->
-> Can be used in combination with the `getter` decorator to define read-write
-> properties.
 
 ## `signal`
 
@@ -265,8 +254,8 @@ function method(...parameters: Param[])
 Example
 
 ```ts
-class {
-    @signal("s", "i")
-    MySignal(arg0: string, arg1: number) {}
+class MyService {
+  @signal("s", "i")
+  MySignal(arg0: string, arg1: number) {}
 }
 ```

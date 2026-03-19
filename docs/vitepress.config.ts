@@ -28,11 +28,20 @@ export default defineConfig({
             {
                 text: "Reference",
                 items: [
-                    { text: "JSX", link: "/jsx" },
-                    { text: "GObject", link: "/gobject" },
-                    { text: "DBus", link: "/dbus" },
-                    { text: "TypeScript", link: "/typescript" },
-                    { text: "Polyfills", link: "/polyfills" },
+                    { text: "TypeScript", link: "/reference/typescript" },
+                    { text: "JSX", link: "/reference/jsx" },
+                    { text: "GObject", link: "/reference/gobject" },
+                    { text: "DBus", link: "/reference/dbus" },
+                    { text: "Schemas", link: "/reference/schemas" },
+                    { text: "Polyfills", link: "/reference/polyfills" },
+                ],
+            },
+            {
+                text: "Articles",
+                items: [
+                    { text: "Gnim CLI", link: "/article/cli" },
+                    { text: "Dev server", link: "/article/dev" },
+                    { text: "Gtk Layer Shell", link: "/article/layershell" },
                 ],
             },
         ],

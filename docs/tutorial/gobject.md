@@ -1,7 +1,7 @@
 # GObject
 
-Before jumping into Gtk, you have to understand a few concepts about
-`GObject.Object` which is the base type everything inherits from.
+GObject is the base library Gtk is built upon. GObject implements object
+oriented concepts in C which GJS will call into using GObject Introspection.
 
 ## GObject Construction
 
@@ -183,4 +183,26 @@ const changingLabel = Gtk.Label.new("Original Label")
 const labelId = changingLabel.connect("notify::label", (object, _pspec) => {
   console.log(`New label is "${object.label}"`)
 })
+```
+
+## Subclassing GObject
+
+Implementing a GObject in a Gnim app is usually not necessary since you will
+mostly be using function components. However, Gnim provides an abstraction over
+[GJS's API](https://gjs.guide/guides/gobject/subclassing.html) using
+[decorators](/gobject).
+
+```ts
+import GObject from "gi://GObject?version=2.0"
+import { register, property, signal } from "gnim/gobject"
+
+@register
+class MyObj extends GObject.Object {
+  @property myProp: string = ""
+
+  @signal
+  mySignal(a: string, b: number): void {
+    // default handler
+  }
+}
 ```

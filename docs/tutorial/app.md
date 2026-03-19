@@ -18,13 +18,13 @@ handlers, or create a subclass and implement its methods.
 ::: code-group
 
 ```ts [Subclassing]
-import Gtk from "gi://Gtk"
-import Gio from "gi://Gio"
-import { register } from "./gobject"
-import { createRoot } from "./jsx/scope"
+import Gtk from "gi://Gtk?version=4.0"
+import Gio from "gi://Gio?version=2.0"
+import { register } from "gnim/gobject"
+import { render } from "gnim/gtk4"
 import { programInvocationName, programArgs } from "system"
 
-@register()
+@register
 class MyApp extends Gtk.Application {
   constructor() {
     super({
@@ -34,10 +34,11 @@ class MyApp extends Gtk.Application {
   }
 
   vfunc_activate(): void {
-    createRoot((dispose) => {
-      this.connect("shutdown", dispose)
+    const dispose = render(() => {
       // show windows here
-    })
+    }, this)
+
+    this.connect("shutdown", dispose)
   }
 }
 
@@ -57,10 +58,10 @@ export const app = new Gtk.Application({
 })
 
 app.connect("activate", () => {
-  createRoot((dispose) => {
+  const dispose = render(() => {
     app.connect("shutdown", dispose)
     // show windows here
-  })
+  }, app)
 })
 
 app.runAsync([programInvocationName, ...programArgs])
@@ -83,10 +84,16 @@ class MyApp extends Gtk.Application {
       return this.window.present()
     }
 
-    createRoot((dispose) => {
+    const dispose = render(() => {
       this.connect("shutdown", dispose)
 
-      return <Gtk.Window $={(self) => (this.window = self).present()} />
+      effect(() => {
+        this.window.present()
+      })
+
+      return (
+        <Gtk.Window application={this} ref={(self) => (this.window = self)} />
+      )
     })
   }
 }
@@ -96,66 +103,70 @@ class MyApp extends Gtk.Application {
 
 If you want to persist some data, for example some setting values, Gtk provides
 you the [Gio.Settings](https://docs.gtk.org/gio/class.Settings.html) API which
-is a way to store key value pairs in a predefined schema.
+is a way to store key value pairs in a predefined schema. Gnim provides a
+type-safe wrapper over this API which at dev time will automatically compile the
+store and provide it to GJS.
 
-First you have to define a schema in XML format named `<id>.gschema.xml` so in
-our case `my.awesome.app.gschema.xml`.
-
-```xml
-<schemalist>
-  <schema path="/my/awesome/app/" id="my.awesome.app">
-    <key name="simple-string" type="s">
-      <default>'default value in gvariant serialized format'</default>
-    </key>
-    <key name="string-dictionary" type="a{ss}">
-      <default>
-        <![CDATA[
-          {
-            'key1': 'value1',
-            'key2': 'value2'
-          }
-        ]]>
-      </default>
-    </key>
-  </schema>
-</schemalist>
-```
-
-Then you have to install it to `<prefix>/<datadir>/glib-2.0/schemas` which is
-usually `/usr/share/glib-2.0/schemas`. As a last step you have to compile it
-before writing/reading it.
-
-```sh
-cp my.awesome.app.gschema.xml /usr/share/glib-2.0/schemas
-glib-compile-schemas /usr/share/glib-2.0/schemas
-```
-
-> [!TIP]
->
-> You usually don't install it manually. Instead, you do it as part of your
-> build and install phase using a build tool such as meson as shown in the
-> [packaging](./packaging) section.
-
-You can then create a `Gio.Settings` and optionally wrap it in a
-[`createSettings`](../jsx#createsettings).
+First, define a schema in `<app-id>.gschema.ts`, for example
+`my.awesome.app.gschema.ts`.
 
 ```ts
-const settings = new Gio.Settings({ schemaId: "my.awesome.app" })
+import GLib from "gi://GLib?version=2.0"
+import { defineSchemaList, Schema, Enum, Flags } from "gnim/schema"
 
-const { simpleString, setSimpleString } = createSettings(settings, {
-  "simple-string": "s",
-  "string-dictionary": "a{ss}",
+const myFlags = new Flags("my.flags", ["one", "two"])
+const myEnum = new Enum("my.enum", ["one", "two"])
+
+export const schema = new Schema({
+  id: "my.awesome.app",
+  path: "/my/awesome/app/",
+})
+  .key("my-key", "s", {
+    default: "",
+    summary: "Simple string key",
+  })
+  .key("complex-key", "a{sv}", {
+    default: {
+      key: GLib.Variant.new("s", "value"),
+    },
+    summary: "Variant dict key",
+  })
+  .key("enum-key", myEnum, {
+    default: "one",
+  })
+  .key("flags-key", myFlags, {
+    default: ["one", "two"],
+  })
+
+export default defineSchemaList([schema])
+```
+
+> [!NOTE]
+>
+> [`GLib.Variant`](https://docs.gtk.org/glib/gvariant-format-strings.html) is
+> GLib's serialized format similar to JSON but with types.
+
+You can then instantiate a settings object with
+[`createSettings`](/jsx#createsettings) which returns an object with a setter
+and Accessor pair for each key.
+
+```ts
+import { schema } from "./my.awesome.app.gschema"
+
+const settings = createSettings(schema)
+
+effect(() => {
+  console.log(settings.myKey())
 })
 
-console.log(simpleString.get())
-setSimpleString("new value")
+settings.setMyKey("new value")
 ```
 
 ## Exposing a D-Bus interface
 
 If you want other apps or processes to communicate with your application, the
 standard way to do IPC on Linux is via D-Bus. Gnim offers a convenient
-[decorator API](../dbus) that lets you easily implement interfaces for your app
+[decorator API](../dbus) that lets you easily implement services for your app
 through D-Bus.
 
 At a very high level, D-Bus lets you export _objects_ that have _interfaces_ on
@@ -187,7 +198,7 @@ class MyService extends Service {
 Then instantiate it and export it.
 
 ```ts
-@register()
+@register
 class MyApp extends Gtk.Application {
   private service: MyService
 

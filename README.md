@@ -1,6 +1,6 @@
 # Gnim
 
-Gnim brings JSX, reactivity and type-safety to GNOME JavaScript.
+Library that brings JSX, reactivity and type-safety to GNOME JavaScript.
 
 ## Templates
 
@@ -8,6 +8,9 @@ Gnim brings JSX, reactivity and type-safety to GNOME JavaScript.
 - [gtk4](https://github.com/Aylur/gnim-gtk4-template/)
 
 ## JSX and reactivity
+
+Build reactive GTK interfaces with familiar JSX syntax. Create signals, derive
+computed values, and let the UI update automatically when state changes.
 
 ```tsx
 function Counter() {
@@ -28,24 +31,33 @@ function Counter() {
     </Gtk.Box>
   )
 }
+
+let win: Gtk.Window
+render(Counter, win)
 ```
 
 ## GObject decorators
 
+Define GObject classes with clean, declarative TypeScript decorators.
+
 ```ts
-import { Object, register, property, signal } from "gnim/gobject"
+import GObject from "gi://GObject?version=2.0"
+import { register, property, signal } from "gnim/gobject"
 
 @register
-class MyObj extends Object {
+class MyObj extends GObject.Object {
   @property myProp: string = ""
 
-  @signal mySignal(a: string, b: number) {
+  @signal mySignal(a: string, b: number): void {
     print(a, b)
   }
 }
 ```
 
 ## DBus decorators
+
+Create DBus services and proxies with ease. Decorators handle interface
+generation and type marshalling for both client and server implementations.
 
 ```ts
 import { Service, iface, methodAsync, signal, property } from "gnim/dbus"
@@ -67,6 +79,10 @@ export class MyService extends Service {
 ```
 
 ## Gio Settings
+
+Define your app's settings schema in TypeScript and get reactive, type-safe
+access to GSettings. Schema XML can be generated at build time that integrates
+into existing tooling.
 
 ```ts
 import GLib from "gi://GLib?version=2.0"

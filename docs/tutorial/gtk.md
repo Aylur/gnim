@@ -6,10 +6,13 @@ in-depth concepts you can read the [Gtk docs](https://docs.gtk.org/gtk4/#extra).
 ## Running Gtk
 
 To run Gtk, you will have to initialize it, create widgets, and run a GLib main
-loop.
+loop. Alternatively you can use `Gio.Application` and its various subclasses
+such as `Gtk.Application`.
 
-```ts
-import GLib from "gi://GLib"
+::: code-group
+
+```ts [GLib MainLoop]
+import GLib from "gi://GLib?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
 
 Gtk.init()
@@ -17,16 +20,33 @@ Gtk.init()
 const loop = GLib.MainLoop.new(null, false)
 
 // create widgets here
+// loop.quit() to exit
 
 loop.runAsync()
 ```
+
+```ts [Gtk Application]
+import Gtk from "gi://Gtk?version=4.0"
+
+const app = new Gtk.Application()
+
+app.connect("activate", () => {
+  // create widgets here
+  // app will quit automatically when the number
+  // of windows drops to 0
+})
+
+app.runAsync(null)
+```
+
+:::
 
 ## Your first widget
 
 For a list of available widgets you can refer to the
 [Gtk docs](https://docs.gtk.org/gtk4/visual_index.html). If you are planning to
 write an app for the Gnome platform you might be interested in using
-[Adwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/).
+[Adwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/).
 
 The top level widget that makes it possible to display something on the screen
 is `Gtk.Window` and its various subclasses such as `Gtk.ApplicationWindow` and

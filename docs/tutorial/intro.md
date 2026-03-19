@@ -2,7 +2,8 @@
 
 This tutorial will walk you through creating a Gtk4 application from scratch
 using Gnim. Before jumping in, you are expected to know
-[TypeScript](https://learnxinyminutes.com/typescript/) or at least JavaScript.
+[TypeScript](https://learnxinyminutes.com/typescript/) or at least
+[JavaScript](https://learnxinyminutes.com/javascript/).
 
 ## JavaScript Runtime
 
@@ -21,10 +22,9 @@ libraries.
 > [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) using
 > [GObject Introspection](https://gi.readthedocs.io/en/latest/)
 
-## Development Environment
+## Creating a new project
 
-For setting up a development environment you will need the following
-dependencies installed:
+You will need the following dependencies installed:
 
 - gjs
 - gtk4
@@ -41,7 +41,7 @@ sudo dnf install gjs-devel gtk4-devel npm
 ```
 
 ```sh [Ubuntu]
-sudo apt install libgjs-dev libgtk-3-dev npm
+sudo apt install libgjs-dev libgtk-4-dev npm
 ```
 
 ```nix [Nix]
@@ -75,26 +75,21 @@ sudo apt install libgjs-dev libgtk-3-dev npm
 
 :::
 
-Since GJS does not support `node_modules` we have to use a bundler. For this
-tutorial we will use `esbuild` which you can either install using your system
-package manager or `npm`. You also have to configure `tsconfig.json` which will
-tell the bundler about the environment and JSX runtime.
-
-1. init a directory
+1. Create a project directory and install gnim
 
    ```sh
    mkdir gnim-app
    cd gnim-app
    npm install gnim
-   npm install esbuild -D
    ```
 
-2. configure `tsconfig.json`
+2. Configure `tsconfig.json`
 
    ```json
    {
      "compilerOptions": {
-       "target": "ES2020",
+       "experimentalDecorators": true,
+       "target": "ES2022",
        "module": "ES2022",
        "lib": ["ES2024"],
        "outDir": "dist",
@@ -102,78 +97,59 @@ tell the bundler about the environment and JSX runtime.
        "moduleResolution": "Bundler",
        "skipLibCheck": true,
        "jsx": "react-jsx",
-       "jsxImportSource": "gnim/gtk4",
-       "typeRoots": ["./.types"]
+       "jsxImportSource": "gnim",
+       "typeRoots": ["./.gnim/types"]
      },
      "include": ["./src/**/*"]
    }
    ```
 
-3. Generate types
-
-   ```sh
-   # TIP: add a `"types": "gnim-types"` script in package.json
-   ./node_modules/.bin/gnim-types
-
-   # don't forget to git ignore generated files
-   echo ".types/" > .gitignore
-   ```
-
-4. Create the entry point
-
-   ```ts
-   // src/main.ts
-   console.log("hello world")
-   ```
-
-5. write a build script
-
-   ```sh
-   # scripts/build.sh
-   esbuild --bundle src/main.ts \
-     --outdir=dist \
-     --external:gi://* \
-     --external:resource://* \
-     --external:system \
-     --external:gettext \
-     --format=esm \
-     --sourcemap=inline
-   ```
-
-Finally, your project structure should like like this:
-
-```txt
-.
-├── node_modules
-├── package-lock.json
-├── package.json
-├── scripts
-│   └── build.sh
-├── src
-│   ├── env.d.ts
-│   └── main.ts
-└── tsconfig.json
-```
-
-To make running the project easier you can add a `dev` script in `package.json`.
+3. Add scripts to `package.json`
 
 ```json
 {
   "scripts": {
-    "types": "gnim-types",
-    "dev": "bash scripts/build.sh ; gjs -m dist/main.js"
-  },
-  "dependencies": {
-    "gnim": "latest"
-  },
-  "devDependencies": {
-    "esbuild": "latest"
+    "types": "gnim types",
+    "dev": "gnim dev src/main.tsx"
   }
 }
 ```
 
-Running the project then will consist of this short command:
+4. Generate types
 
-```sh
-npm run dev
-```
+   ```sh
+   npm run types
+   ```
+
+   > [!TIP]
+   >
+   > Make sure to ignore generated files
+   >
+   > ```sh
+   > echo ".gnim/" > .gitignore
+   > ```
+
+5. Create the entry point
+
+   ```tsx
+   // src/main.tsx
+   import Gtk from "gi://Gtk?version=4.0"
+   import { render } from "gnim/gtk4"
+
+   function App() {
+     return <Gtk.Window visible>hello</Gtk.Window>
+   }
+
+   const app = new Gtk.Application()
+   app.connect("activate", () => {
+     const dispose = render(App, app)
+     app.connect("shutdown", dispose)
+   })
+   app.runAsync(null)
+   ```
+
+6. Start the dev server
+
+   ```sh
+   npm run dev
+   ```

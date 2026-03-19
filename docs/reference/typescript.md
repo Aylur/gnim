@@ -14,6 +14,14 @@ We have annotations for:
 When implementing a GObject subclass you might want to annotate a subset of
 these or all of these depending on usecase.
 
+## Generating types
+
+Generating types can be done via the Gnim CLI.
+
+```sh
+gnim types --help
+```
+
 ## Type annotations
 
 Every class that inherits from GObject is going to include a namespace
@@ -51,6 +59,11 @@ namespace MyClass {
 
 And the Class will refer to these using special `$` prefixed fields:
 
+> [!IMPORTANT]
+>
+> These fields don't exist at runtime, they are used by other APIs to introspect
+> GObjects.
+
 ```ts
 class MyClass extends GObject.Object {
   declare readonly $signals: MyClass.SignalSignatures
@@ -66,26 +79,18 @@ class MyClass extends GObject.Object {
     console.log(props.myProp, props.myCtorProp)
   }
 
-  @signal(Number)
+  @signal
   mySignal(arg: number): void {}
 
-  @signal([Number], GObject.VoidType, {
-    flags: GObject.SignalFlags.DETAILED,
-  })
+  @signal({ flags: GObject.SignalFlags.DETAILED })
   myDetailedSignal(arg: number): void {}
 
-  @getter(Number) get myProp() {
-    return 0
-  }
-
-  @setter(Number) set myProp(n: number) {
-    //
-  }
+  @property
+  myProp: number = 0
 }
 ```
 
-The `connect`, `emit` and `notify` functions will also infer from these
-annotations.
+`connect`, `emit` and `notify` methods will infer from these annotations.
 
 ```ts
 const instance = new MyClass()
@@ -100,7 +105,7 @@ instance.connect("my-detailed-signal::detail", (source, arg) => {
 ```
 
 Due to how TypeScript `this` type works, you need to annotate `this` or use a
-typecast to make it work inside the class.
+typecast to make correctly infer types withing the class.
 
 ```ts
 class MyClass {
@@ -130,12 +135,12 @@ declare module "gi://Gtk" {
 
 :::
 
-You can also use the `--alias` flag when generating types to do it
+You can also use the `--short-imports` flag when generating types to do it
 automatically, which will generate an alias for each namespace that only has one
 version available.
 
 ```sh
-gnim types -i Gtk-3.0 -i Gdk-3.0 --alias
+gnim types -i Gtk-3.0 -i Gdk-3.0 --short-imports
 ```
 
 ## Legacy imports
@@ -146,13 +151,23 @@ To declare imports on the legacy `imports.gi` module system, you can augment the
 :::code-group
 
 ```ts [env.d.ts]
-interface LegacyGiImports {
-  Gtk: typeof import("gi://Gtk?version=4.0").default
-  Adw: typeof import("gi://Adw?version=1").default
+declare global {
+  interface LegacyGiImports {
+    Gtk: typeof import("gi://Gtk?version=4.0").default
+    Adw: typeof import("gi://Adw?version=1").default
+  }
 }
 ```
 
 :::
+
+You can also use the `--legacy-imports` flag when generating types to do it
+automatically, which will generate an alias for each namespace that only has one
+version available.
+
+```sh
+gnim types -i Gtk-3.0 -i Gdk-3.0 --legacy-imports
+```
 
 ## Escape hatches
 
