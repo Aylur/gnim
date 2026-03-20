@@ -30,6 +30,7 @@ export default defineConfig({
                 items: [
                     { text: "TypeScript", link: "/reference/typescript" },
                     { text: "JSX", link: "/reference/jsx" },
+                    { text: "Primitives", link: "/reference/primitives" },
                     { text: "GObject", link: "/reference/gobject" },
                     { text: "DBus", link: "/reference/dbus" },
                     { text: "Schemas", link: "/reference/schemas" },
@@ -39,7 +40,6 @@ export default defineConfig({
             {
                 text: "Articles",
                 items: [
-                    { text: "Gnim CLI", link: "/article/cli" },
                     { text: "Dev server", link: "/article/dev" },
                     { text: "Gtk Layer Shell", link: "/article/layershell" },
                 ],

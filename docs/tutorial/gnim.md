@@ -92,7 +92,7 @@ app.connect("shutdown", dispose)
 
 JSX is a syntax extension to JavaScript. It is simply a syntactic sugar for
 function composition. In Gnim, JSX is also used to enhance
-[GObject construction](/jsx#class-components).
+[GObject construction](/reference/jsx#class-components).
 
 ### Creating and nesting widgets
 
@@ -122,7 +122,7 @@ function MyWindow() {
 ```
 
 Notice that widgets start with a capital letter. Lower case widgets are
-[intrinsic elements](../jsx#intrinsic-elements)
+[intrinsic elements](/reference/jsx#intrinsic-elements)
 
 ### Displaying Data
 
@@ -271,11 +271,12 @@ return (
 
 State is managed using reactive values <span style="opacity: 0.6">(also known as
 signals or observables in some other libraries)</span> through the
-[`Accessor`](/jsx#state-management) interface. The most common primitives you
-will use is [`createState`](/jsx#createstate), [`computed`](/jsx#computed) and
-[`ref`](/jsx#ref). `createState` is used to create a writable reactive value,
-`computed` is used to derive reactive values and `ref` is used to hook into
-GObject properties.
+[`Accessor`](/reference/primitives#state-management) interface. The most common
+primitives you will use is [`createState`](/reference/primitives#createstate),
+[`computed`](/reference/primitives#computed) and
+[`ref`](/reference/primitives#ref). `createState` is used to create a writable
+reactive value, `computed` is used to derive reactive values and `ref` is used
+to hook into GObject properties.
 
 :::code-group
 
