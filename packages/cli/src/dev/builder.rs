@@ -30,7 +30,7 @@ pub async fn build(
             treeshake: rolldown::TreeshakeOptions::Boolean(false),
             ..rolldown_config()
         },
-        vec![Arc::new(plugin)],
+        vec![Arc::new(plugin), Arc::new(super::css::GnimCssPlugin)],
     )
     .expect("failed to create bundler");
 

@@ -1,6 +1,7 @@
+use super::css::GnimCssPlugin;
 use crate::{GNIM_LIBDIR, rolldown_config};
 use std::collections::{HashMap, HashSet};
-use std::{fs, path};
+use std::{fs, path, sync::Arc};
 
 #[derive(Debug, Default)]
 pub struct ModuleVersions(HashMap<String, u64>);
@@ -62,7 +63,7 @@ impl ModuleTracker {
                 preserve_modules: Some(true),
                 ..rolldown_config()
             },
-            vec![],
+            vec![Arc::new(GnimCssPlugin)],
         )
         .expect("failed to create bundler");
 
