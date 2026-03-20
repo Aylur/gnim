@@ -16,6 +16,7 @@ export {
     createState,
     effect,
     getScope,
+    isAccessor,
     onCleanup,
     ref,
     type Accessed,

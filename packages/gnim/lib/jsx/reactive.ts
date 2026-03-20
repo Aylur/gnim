@@ -12,6 +12,8 @@ export const devHooks: DevHooks = {
     createState: (init) => init,
 }
 
+const noop = () => {}
+
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 
 /**
@@ -249,11 +251,16 @@ export function isAccessor(instance: unknown): instance is Accessor {
         "peek" in instance &&
         typeof instance.peek === "function" &&
         "subscribe" in instance &&
-        typeof instance.subscribe === "function"
+        typeof instance.subscribe === "function" &&
+        "as" in instance &&
+        typeof instance.as === "function"
     )
 }
 
-export function createAccessor<T>(get: () => T, subscribe: (callback: Fn) => Fn): Accessor<T> {
+export function createAccessor<T>(
+    get: () => T,
+    subscribe: (callback: Fn) => Fn = () => noop,
+): Accessor<T> {
     function access(): T
     function access<R = T>(compute?: (value: T) => R): Accessor<R>
     function access<R = T>(compute?: (value: T) => R): Accessor<R> | T {
@@ -543,9 +550,9 @@ export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>
 
     const equals = opts?.equals ?? Object.is
     const value = createComputed(fn)
-    const subscribers = new Set<Fn | null>()
+    const subscribers = new Set<Fn>()
 
-    function subscribe(callback: Fn | null): Fn {
+    function subscribe(callback: Fn): Fn {
         if (subscribers.size === 0) {
             EffectDepth += 1
             currentValue = value.peek()
@@ -555,7 +562,7 @@ export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>
                 const v = value.peek()
                 if (!equals(currentValue, v)) {
                     currentValue = v
-                    Array.from(subscribers).forEach((cb) => cb?.())
+                    Array.from(subscribers).forEach((cb) => cb())
                 }
                 EffectDepth -= 1
             })
@@ -580,7 +587,7 @@ export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>
 
     // TODO: refactor
     if (Scope.current) {
-        Scope.current.cleanups.unshift(subscribe(null))
+        Scope.current.cleanups.unshift(subscribe(noop))
     }
 
     return createAccessor(get, subscribe)
