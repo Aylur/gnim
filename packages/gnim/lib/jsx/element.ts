@@ -22,6 +22,8 @@ import {
 } from "./reactive.js"
 import { getRenderer } from "./render.js"
 
+export type Props = Record<string, unknown>
+
 /**
  * Function Component
  */
@@ -34,7 +36,7 @@ export type CC<P = any> = new (props: P) => GObject.Object
 
 interface ConstructorNode<P = any> {
     type: string | FC<P> | CC<P>
-    props: Record<string, unknown>
+    props: Props
 }
 
 /**
@@ -86,7 +88,7 @@ export function Fragment({ children }: { children: GnimNode }): GnimNode[] {
  */
 export function jsx(
     type: string | FC<any> | CC<any>,
-    props: Record<string, unknown>,
+    props: Props,
     key?: string | number,
 ): JSX.Element {
     if (type === Fragment) return Fragment(props as { children: GnimNode })
@@ -106,12 +108,12 @@ function signalName(key: string): string {
 }
 
 export function newObject<C extends GObject.ObjectClass>(
-    Class: C,
+    constructor: C,
     args: Partial<CCProps<InstanceType<C>>>,
 ) {
     const { children, ref, construct, ...rest } = args as Partial<CCProps<GObject.Object>>
-    const props = rest as Record<string, unknown>
     const renderer = getRenderer()
+    const props = renderer.prepareProps(constructor, rest as Props)
 
     const signals: Array<[string, (...props: unknown[]) => unknown]> = []
     const bindings: Array<[string, Accessor<unknown>]> = []
@@ -133,7 +135,7 @@ export function newObject<C extends GObject.ObjectClass>(
             ? construct
             : typeof construct === "function"
               ? construct()
-              : new Class(props)
+              : new constructor(props)
 
     ref?.(obj)
 

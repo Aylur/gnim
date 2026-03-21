@@ -1,9 +1,9 @@
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
-import { newObject } from "../jsx/element.js"
+import { newObject, type CC, type Props } from "../jsx/element.js"
 import { createRenderer } from "../jsx/render.js"
-import { type Accessor } from "../jsx/reactive.js"
+import { computed, isAccessor, type Accessor } from "../jsx/reactive.js"
 import { setProperty } from "../util.js"
 
 const dummyBuilder = new Gtk.Builder()
@@ -29,6 +29,13 @@ function setCss(object: GObject.Object, css: string) {
     provider.load_from_string(css)
     ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
     Object.assign(object, { [cssprovider]: provider })
+}
+
+function flattenClassList(classList: unknown): MaybeReactive<string> {
+    if (typeof classList === "string") return classList
+    if (isAccessor(classList)) return flattenClassList(classList())
+    if (Array.isArray(classList)) return classList.map(flattenClassList).join(" ")
+    return ""
 }
 
 export function getType(object: GObject.Object) {
@@ -150,20 +157,37 @@ export const { render } = createRenderer({
     createText: Gtk.Label.new,
     appendChild,
     removeChild,
+    prepareProps(object: CC, props: Props) {
+        if (object.prototype instanceof GObject.Object && "class" in props) {
+            const cn = props.class
+            props.class = computed(() => flattenClassList(cn))
+            return props
+        }
+        return props
+    },
     setProperty(object, key, value) {
         if (key === "css" && typeof value === "string") {
-            setCss(object, value)
-        } else {
-            setProperty(object, key, value)
+            return setCss(object, value)
         }
+
+        if (object instanceof Gtk.Widget && key === "class" && typeof value === "string") {
+            return object.set_css_classes(value.split(/\s+/))
+        }
+
+        setProperty(object, key, value)
     },
 })
+
+type MaybeReactive<T> = T | Accessor<T>
+export type ClassValue = string | number | null | boolean | undefined | ClassValue[]
+export type ClassList = MaybeReactive<ClassValue> | MaybeReactive<ClassList[]> | ClassList[]
 
 declare module "gnim" {
     namespace JSX {
         interface IntrinsicClassAttributes<T> {
-            slot?: T extends Gtk.Widget ? string : never
-            css?: T extends Gtk.Widget ? string | Accessor<string> : never
+            slot?: string
+            css?: T extends Gtk.Widget ? MaybeReactive<string> : never
+            class?: T extends Gtk.Widget ? ClassList : never
         }
     }
 }
