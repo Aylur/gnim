@@ -109,12 +109,6 @@ function appendChild(parent: GObject.Object, child: GObject.Object) {
     throw Error(`cannot add ${child} to ${parent}`)
 }
 
-function destroyChild(parent: GObject.Object, child: GObject.Object) {
-    if (parent instanceof Gio.Application && child instanceof Gtk.Window) {
-        child.destroy()
-    }
-}
-
 export const { render } = createRenderer({
     constructObject(element, props) {
         const { slot, ...rest } = props
@@ -141,18 +135,16 @@ export const { render } = createRenderer({
         return obj
     },
     setChildren(parent, children, prev) {
-        const destroy = prev.filter((child) => !children.includes(child))
-
         for (const child of prev) {
             removeChild(parent, child)
         }
-
         for (const child of children) {
             appendChild(parent, child)
         }
-
-        for (const child of destroy) {
-            destroyChild(parent, child)
+    },
+    destroyChild(parent: GObject.Object, child: GObject.Object) {
+        if (parent instanceof Gio.Application && child instanceof Gtk.Window) {
+            child.destroy()
         }
     },
     createText: Gtk.Label.new,

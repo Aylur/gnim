@@ -32,6 +32,7 @@ export interface Renderer {
     setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]): void
     appendChild(parent: GObject.Object, child: GObject.Object): void
     removeChild(parent: GObject.Object, child: GObject.Object): void
+    destroyChild(parent: GObject.Object, child: GObject.Object): void
 }
 
 function resolveTag(tag: string): CC | FC {
@@ -55,11 +56,15 @@ export function createRenderer(props: Partial<Renderer>) {
         constructObject: props.constructObject ?? constructObject,
         createText: props.createText ?? createText,
         setProperty: props.setProperty ?? setProperty,
+        destroyChild: props.destroyChild ?? (() => {}),
         setChildren(parent, children, prev) {
             if (setChildren in parent && typeof parent[setChildren] === "function") {
                 parent[setChildren](children, prev)
             } else {
                 props.setChildren?.(parent, children, prev)
+            }
+            for (const child of prev.filter((child) => !children.includes(child))) {
+                renderer.destroyChild(parent, child)
             }
         },
         appendChild(parent, child) {

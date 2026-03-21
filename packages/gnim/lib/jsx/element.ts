@@ -153,10 +153,10 @@ export function newObject<C extends GObject.ObjectClass>(
 
     // handle bindings
     const disposeBindings = bindings.map(([prop, { peek, subscribe }]) => {
-        renderer.setProperty(obj, prop, peek())
         const dispose = subscribe(() => {
             renderer.setProperty(obj, prop, peek())
         })
+        renderer.setProperty(obj, prop, peek())
         return dispose
     })
 
@@ -176,26 +176,58 @@ function unpackSlot(node: GObject.Object | Accessor<GnimNode>): GObject.Object[]
     return resolveNode(node()).map(unpackSlot).flat()
 }
 
-export function mountChildren(child: GnimNode, parent?: GObject.Object) {
+export function mountChildren(children: GnimNode, mount?: GObject.Object) {
     const renderer = getRenderer()
-    const nodes = resolveNode(child)
+    const nodes = resolveNode(children)
 
-    if (!nodes.some((node) => isAccessor(node)) && parent) {
-        renderer.setChildren(parent, nodes as Array<GObject.Object>, [])
+    if (!nodes.some((node) => isAccessor(node)) && mount) {
+        for (const child of nodes as Array<GObject.Object>) {
+            renderer.appendChild(mount, child)
+        }
+        onCleanup(() => {
+            for (const child of nodes as Array<GObject.Object>) {
+                renderer.removeChild(mount, child)
+            }
+            for (const child of nodes as Array<GObject.Object>) {
+                renderer.destroyChild(mount, child)
+            }
+        })
         return
     }
 
-    effect<GObject.Object[]>(
-        function mountChildrenEffect(prev = []) {
+    let currentChildren: GObject.Object[] = []
+
+    effect(
+        function mountEffect() {
             const children = nodes.map(unpackSlot).flat()
-            if (parent) {
-                renderer.setChildren(parent, children, prev)
+
+            if (mount) {
+                for (const child of currentChildren) {
+                    renderer.removeChild(mount, child)
+                }
+                for (const child of currentChildren.filter((child) => !children.includes(child))) {
+                    renderer.destroyChild(mount, child)
+                }
+                for (const child of children) {
+                    renderer.appendChild(mount, child)
+                }
             }
-            // do I have to unmount children onCleanup?
-            return children
+
+            currentChildren = children
         },
         { immediate: true },
     )
+
+    if (mount) {
+        onCleanup(() => {
+            for (const child of currentChildren) {
+                renderer.removeChild(mount, child)
+            }
+            for (const child of currentChildren) {
+                renderer.destroyChild(mount, child)
+            }
+        })
+    }
 }
 
 export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<GnimNode>> {
@@ -352,34 +384,8 @@ export type PortalProps = {
  * ```
  */
 export function Portal({ children, mount }: PortalProps): GnimNode {
-    const renderer = getRenderer()
-    const nodes = resolveNode(children)
-
-    if (!nodes.some((node) => isAccessor(node)) && mount) {
-        for (const child of nodes as Array<GObject.Object>) {
-            renderer.appendChild(mount, child)
-        }
-        return
-    }
-
-    effect(
-        function mountPortalEffect() {
-            const children = nodes.map(unpackSlot).flat()
-            if (mount) {
-                for (const child of children) {
-                    renderer.appendChild(mount, child)
-                }
-                onCleanup(() => {
-                    for (const child of children) {
-                        renderer.removeChild(mount, child)
-                    }
-                })
-            }
-        },
-        { immediate: true },
-    )
-
-    return []
+    mountChildren(children, mount)
+    return null
 }
 
 type OptionalKeys<T> = {
