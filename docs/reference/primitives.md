@@ -226,7 +226,7 @@ connectSignal(object, "signal", (...args) => {
 
 ## Scopes and Life cycle
 
-A [scope](./tutorial/gnim.md#scopes) is essentially a global object which holds
+A [scope](/tutorial/gnim.md#scopes) is essentially a global object which holds
 cleanup functions and context values.
 
 ```js

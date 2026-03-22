@@ -190,7 +190,7 @@ const labelId = changingLabel.connect("notify::label", (object, _pspec) => {
 Implementing a GObject in a Gnim app is usually not necessary since you will
 mostly be using function components. However, Gnim provides an abstraction over
 [GJS's API](https://gjs.guide/guides/gobject/subclassing.html) using
-[decorators](/gobject).
+[decorators](/reference/gobject).
 
 ```ts
 import GObject from "gi://GObject?version=2.0"

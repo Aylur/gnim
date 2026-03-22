@@ -271,8 +271,8 @@ return (
 
 State is managed using reactive values <span style="opacity: 0.6">(also known as
 signals or observables in some other libraries)</span> through the
-[`Accessor`](/reference/primitives#state-management) interface. The most common
-primitives you will use is [`createState`](/reference/primitives#createstate),
+[`Accessor`](/reference/primitives) interface. The most common primitives you
+will use is [`createState`](/reference/primitives#createstate),
 [`computed`](/reference/primitives#computed) and
 [`ref`](/reference/primitives#ref). `createState` is used to create a writable
 reactive value, `computed` is used to derive reactive values and `ref` is used

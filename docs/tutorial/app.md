@@ -147,8 +147,8 @@ export default defineSchemaList([schema])
 > GLib's serialized format similar to JSON but with types.
 
 You can then instantiate a settings object with
-[`createSettings`](/jsx#createsettings) which returns an object with a setter
-and Accessor pair for each key.
+[`createSettings`](/reference/schemas#using-schemas) which returns an object
+with a setter and Accessor pair for each key.
 
 ```ts
 import { schema } from "./my.awesome.app.gschema"
