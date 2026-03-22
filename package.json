@@ -45,5 +45,9 @@
                 }
             }
         ]
+    },
+    "dependencies": {
+        "@vercel/analytics": "^2.0.1",
+        "vue": "^3.5.30"
     }
 }
