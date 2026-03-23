@@ -1,13 +1,13 @@
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
-import { newObject, type CC, type Props } from "../jsx/element.js"
-import { createRenderer } from "../jsx/render.js"
+import { newObject, type CC, type FC, type Props } from "../jsx/element.js"
+import { createRenderer, appendChild, removeChild, setChildren } from "../jsx/render.js"
 import { computed, isAccessor, type Accessor } from "../jsx/reactive.js"
 import { setProperty } from "../util.js"
 
 const dummyBuilder = new Gtk.Builder()
-const type = Symbol("gnim.gtk4.type")
+const slot = Symbol("gnim.gtk4.slot")
 const cssprovider = Symbol("gnim.gtk4.cssprovider")
 
 function setCss(object: GObject.Object, css: string) {
@@ -38,82 +38,8 @@ function flattenClassList(classList: unknown): MaybeReactive<string> {
     return ""
 }
 
-export function getType(object: GObject.Object) {
-    return type in object ? (object[type] as string) : null
-}
-
-// `set_child` and especially `remove` might be way too generic and there might
-// be cases where it does not actually do what we want it to do
-//
-// if there is a usecase for either of these two that does something else than
-// we expect it to do here in a JSX context we have to check for known instances
-function removeChild(parent: GObject.Object, child: GObject.Object) {
-    if (parent instanceof Gtk.Widget && child instanceof Gtk.EventController) {
-        return parent.remove_controller(child)
-    }
-
-    if ("set_child" in parent && typeof parent.set_child == "function") {
-        return parent.set_child(null)
-    }
-
-    if ("remove" in parent && typeof parent.remove == "function") {
-        return parent.remove(child)
-    }
-
-    if (parent instanceof Gtk.Application && child instanceof Gtk.Window) {
-        return parent.remove_window(child)
-    }
-
-    throw Error(`cannot remove ${child} from ${parent}`)
-}
-
-function appendChild(parent: GObject.Object, child: GObject.Object) {
-    if (
-        child instanceof Gtk.Adjustment &&
-        "set_adjustment" in parent &&
-        typeof parent.set_adjustment === "function"
-    ) {
-        return parent.set_adjustment(child)
-    }
-
-    if (
-        child instanceof Gtk.Widget &&
-        parent instanceof Gtk.Stack &&
-        child.name !== "" &&
-        child.name !== null &&
-        getType(child) === "named"
-    ) {
-        return parent.add_named(child, child.name)
-    }
-
-    if (child instanceof Gtk.Popover && parent instanceof Gtk.MenuButton) {
-        return parent.set_popover(child)
-    }
-
-    if (
-        child instanceof Gio.MenuModel &&
-        (parent instanceof Gtk.MenuButton || parent instanceof Gtk.PopoverMenu)
-    ) {
-        return parent.set_menu_model(child)
-    }
-
-    if (child instanceof Gio.MenuItem && parent instanceof Gio.Menu) {
-        // TODO:
-    }
-
-    if (child instanceof Gtk.Window && parent instanceof Gtk.Application) {
-        return parent.add_window(child)
-    }
-
-    if (child instanceof Gtk.TextBuffer && parent instanceof Gtk.TextView) {
-        return parent.set_buffer(child)
-    }
-
-    if (parent instanceof Gtk.Buildable) {
-        return parent.vfunc_add_child(dummyBuilder, child, getType(child))
-    }
-
-    throw Error(`cannot add ${child} to ${parent}`)
+export function getSlot(object: GObject.Object) {
+    return slot in object ? (object[slot] as string) : null
 }
 
 export const { render } = createRenderer({
@@ -132,7 +58,7 @@ export const { render } = createRenderer({
         )
 
         if (typeof slot === "string") {
-            Object.assign(obj, { [type]: slot })
+            Object.assign(obj, { [slot]: slot })
         }
 
         if (typeof css === "string") {
@@ -142,11 +68,18 @@ export const { render } = createRenderer({
         return obj
     },
     setChildren(parent, children, prev) {
-        for (const child of prev) {
-            removeChild(parent, child)
+        if (setChildren in parent && typeof parent[setChildren] === "function") {
+            parent[setChildren](children, prev)
+        } else {
+            for (const child of prev) {
+                this.removeChild(parent, child)
+            }
+            for (const child of children) {
+                this.appendChild(parent, child)
+            }
         }
-        for (const child of children) {
-            appendChild(parent, child)
+        for (const child of prev.filter((child) => !children.includes(child))) {
+            this.destroyChild(parent, child)
         }
     },
     destroyChild(parent: GObject.Object, child: GObject.Object) {
@@ -155,8 +88,86 @@ export const { render } = createRenderer({
         }
     },
     createText: Gtk.Label.new,
-    appendChild,
-    removeChild,
+    // `set_child` and especially `remove` might be way too generic and there might
+    // be cases where it does not actually do what we want it to do
+    //
+    // if there is a usecase for either of these two that does something else than
+    // we expect it to do here in a JSX context we have to check for known instances
+    removeChild(parent: GObject.Object, child: GObject.Object) {
+        if (removeChild in parent && typeof parent[removeChild] === "function") {
+            return parent[removeChild](child)
+        }
+
+        if (parent instanceof Gtk.Widget && child instanceof Gtk.EventController) {
+            return parent.remove_controller(child)
+        }
+
+        if ("set_child" in parent && typeof parent.set_child == "function") {
+            return parent.set_child(null)
+        }
+
+        if ("remove" in parent && typeof parent.remove == "function") {
+            return parent.remove(child)
+        }
+
+        if (parent instanceof Gtk.Application && child instanceof Gtk.Window) {
+            return parent.remove_window(child)
+        }
+
+        throw Error(`cannot remove ${child} from ${parent}`)
+    },
+    appendChild(parent: GObject.Object, child: GObject.Object) {
+        if (appendChild in parent && typeof parent[appendChild] === "function") {
+            return parent[appendChild](child)
+        }
+
+        if (
+            child instanceof Gtk.Adjustment &&
+            "set_adjustment" in parent &&
+            typeof parent.set_adjustment === "function"
+        ) {
+            return parent.set_adjustment(child)
+        }
+
+        if (
+            child instanceof Gtk.Widget &&
+            parent instanceof Gtk.Stack &&
+            child.name !== "" &&
+            child.name !== null &&
+            getSlot(child) === "named"
+        ) {
+            return parent.add_named(child, child.name)
+        }
+
+        if (child instanceof Gtk.Popover && parent instanceof Gtk.MenuButton) {
+            return parent.set_popover(child)
+        }
+
+        if (
+            child instanceof Gio.MenuModel &&
+            (parent instanceof Gtk.MenuButton || parent instanceof Gtk.PopoverMenu)
+        ) {
+            return parent.set_menu_model(child)
+        }
+
+        if (child instanceof Gio.MenuItem && parent instanceof Gio.Menu) {
+            // TODO:
+        }
+
+        if (child instanceof Gtk.Window && parent instanceof Gtk.Application) {
+            return parent.add_window(child)
+        }
+
+        if (child instanceof Gtk.TextBuffer && parent instanceof Gtk.TextView) {
+            return parent.set_buffer(child)
+        }
+
+        if (parent instanceof Gtk.Buildable) {
+            return parent.vfunc_add_child(dummyBuilder, child, getSlot(child))
+        }
+
+        throw Error(`cannot add ${child} to ${parent}`)
+    },
     prepareProps(object: CC, props: Props) {
         if (object.prototype instanceof GObject.Object && "class" in props) {
             const cn = props.class
@@ -176,11 +187,14 @@ export const { render } = createRenderer({
 
         setProperty(object, key, value)
     },
+    resolveTag(tag: string): CC | FC {
+        throw Error(`unresolved JSX tag: "${tag}"`)
+    },
 })
 
 type MaybeReactive<T> = T | Accessor<T>
 export type ClassValue = string | number | null | boolean | undefined | ClassValue[]
-export type ClassList = MaybeReactive<ClassValue> | MaybeReactive<ClassList[]> | ClassList[]
+export type ClassList = MaybeReactive<ClassValue> | MaybeReactive<ClassList[]>
 
 declare module "gnim" {
     namespace JSX {
