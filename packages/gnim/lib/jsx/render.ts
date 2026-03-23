@@ -9,12 +9,13 @@ export const appendChild = Symbol("gnim.appendChild")
 export const removeChild = Symbol("gnim.removeChild")
 
 /**
- * Gtk independent `Gtk.Buildable` alternative
+ * Gtk independent `Gtk.Buildable` alternative.
+ * Each method returns whether the operation succeded. If `false` it will fallback to default behavior.
  */
 export interface Buildable {
-    [setChildren]?(children: GObject.Object[], prev: GObject.Object[]): void
-    [appendChild]?(child: GObject.Object): void
-    [removeChild]?(child: GObject.Object): void
+    [setChildren]?(children: GObject.Object[], prev: GObject.Object[]): boolean
+    [appendChild]?(child: GObject.Object): boolean
+    [removeChild]?(child: GObject.Object): boolean
 }
 
 export function getRenderer(): Renderer {

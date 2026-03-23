@@ -41,6 +41,7 @@ export default defineConfig({
                 text: "Articles",
                 items: [
                     { text: "Dev server", link: "/article/dev" },
+                    { text: "Buildable", link: "/article/buildable" },
                     { text: "Gtk Layer Shell", link: "/article/layershell" },
                 ],
             },

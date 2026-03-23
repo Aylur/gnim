@@ -1,13 +1,13 @@
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
-import { newObject, type CC, type FC, type Props } from "../jsx/element.js"
+import { newObject, type CC, type CCProps, type FC, type Props } from "../jsx/element.js"
 import { createRenderer, appendChild, removeChild, setChildren } from "../jsx/render.js"
 import { computed, isAccessor, type Accessor } from "../jsx/reactive.js"
 import { setProperty } from "../util.js"
 
 const dummyBuilder = new Gtk.Builder()
-const slot = Symbol("gnim.gtk4.slot")
+const slotType = Symbol("gnim.gtk4.slot")
 const cssprovider = Symbol("gnim.gtk4.cssprovider")
 
 function setCss(object: GObject.Object, css: string) {
@@ -38,38 +38,36 @@ function flattenClassList(classList: unknown): MaybeReactive<string> {
     return ""
 }
 
+/**
+ * @returns The slot that was set in JSX on `object`.
+ */
 export function getSlot(object: GObject.Object) {
-    return slot in object ? (object[slot] as string) : null
+    return slotType in object ? (object[slotType] as string) : null
 }
 
 export const { render } = createRenderer({
     constructObject(element, props) {
-        const { slot, ...rest } = props
-        let css: string | null = null
+        const { slot, css, classList, ...rest } = props
 
-        if ("css" in rest && typeof rest.css === "string") {
-            css = rest.css
-            delete rest.css
-        }
-
-        const obj = newObject(
-            element as GObject.ObjectClass,
-            rest as GObject.ConstructorProps<GObject.Object>,
-        )
+        const object = newObject(element, rest as Partial<CCProps<GObject.Object>>)
 
         if (typeof slot === "string") {
-            Object.assign(obj, { [slot]: slot })
+            Object.assign(object, { [slotType]: slot })
         }
 
         if (typeof css === "string") {
-            setCss(obj, css)
+            this.setProperty(object, "css", css)
         }
 
-        return obj
+        if (typeof classList === "string") {
+            this.setProperty(object, "class", classList)
+        }
+
+        return object
     },
     setChildren(parent, children, prev) {
         if (setChildren in parent && typeof parent[setChildren] === "function") {
-            parent[setChildren](children, prev)
+            if (parent[setChildren](children, prev)) return
         } else {
             for (const child of prev) {
                 this.removeChild(parent, child)
@@ -95,7 +93,7 @@ export const { render } = createRenderer({
     // we expect it to do here in a JSX context we have to check for known instances
     removeChild(parent: GObject.Object, child: GObject.Object) {
         if (removeChild in parent && typeof parent[removeChild] === "function") {
-            return parent[removeChild](child)
+            if (parent[removeChild](child)) return
         }
 
         if (parent instanceof Gtk.Widget && child instanceof Gtk.EventController) {
@@ -118,7 +116,7 @@ export const { render } = createRenderer({
     },
     appendChild(parent: GObject.Object, child: GObject.Object) {
         if (appendChild in parent && typeof parent[appendChild] === "function") {
-            return parent[appendChild](child)
+            if (parent[appendChild](child)) return
         }
 
         if (

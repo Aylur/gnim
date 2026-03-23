@@ -107,10 +107,7 @@ function signalName(key: string): string {
     return detail ? `${sig}::${detail}` : sig
 }
 
-export function newObject<C extends GObject.ObjectClass>(
-    constructor: C,
-    args: Partial<CCProps<InstanceType<C>>>,
-) {
+export function newObject<C extends CC>(constructor: C, args: Partial<CCProps<InstanceType<C>>>) {
     const { children, ref, construct, ...rest } = args as Partial<CCProps<GObject.Object>>
     const renderer = getRenderer()
     const props = renderer.prepareProps(constructor, rest as Props)
@@ -433,7 +430,7 @@ type GObjectProps<T> = T extends {
       }
     : never
 
-type CCProps<T, Props = Partial<GObject.ConstructorProps<T>>> =
+export type CCProps<T, Props = Partial<GObject.ConstructorProps<T>>> =
     | (MergeProps<Props, Partial<GObjectProps<T>>> & { construct?: never })
     | (Partial<GObjectProps<T>> & { construct: T | (() => T) })
 

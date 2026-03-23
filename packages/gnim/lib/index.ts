@@ -1,4 +1,5 @@
 export {
+    newObject,
     For,
     Fragment,
     Portal,
