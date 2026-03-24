@@ -1,4 +1,4 @@
-use super::css::GnimCssPlugin;
+use crate::plugin::css::GnimCssPlugin;
 use crate::{GNIM_LIBDIR, rolldown_config};
 use std::collections::{HashMap, HashSet};
 use std::{fs, path, sync::Arc};

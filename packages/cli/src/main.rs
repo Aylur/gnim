@@ -1,10 +1,10 @@
 use clap::{Parser, Subcommand};
+use gnim::bundle::{BundleArgs, bundle};
 use gnim::dev::{DevArgs, dev};
 use gnim::run::{RunArgs, run};
 use gnim::schemas::{SchemasArgs, schemas};
 use gnim::types::{TypeArgs, types};
 use rolldown_utils::indexmap::FxIndexMap;
-use std::process;
 
 #[derive(Parser)]
 #[command(version)]
@@ -24,9 +24,8 @@ enum Command {
     Schemas(SchemasArgs),
     /// Startup the Gnim development server
     Dev(DevArgs),
-    // TODO:
-    // Init,
-    // Bundle,
+    /// Bundle TypeScript and asset files into a gresource bundle
+    Bundle(BundleArgs),
 }
 
 fn map(kv: &[(String, String)]) -> FxIndexMap<String, String> {
@@ -34,7 +33,7 @@ fn map(kv: &[(String, String)]) -> FxIndexMap<String, String> {
 }
 
 #[tokio::main]
-async fn main() -> process::ExitCode {
+async fn main() -> std::process::ExitCode {
     let cli = Cli::parse();
 
     gnim::init(gnim::GlobalOptions {
@@ -43,6 +42,7 @@ async fn main() -> process::ExitCode {
             Command::Schemas(args) => Some(map(&args.define)),
             Command::Run(args) => Some(map(&args.define)),
             Command::Dev(args) => Some(map(&args.define)),
+            Command::Bundle(args) => Some(map(&args.define)),
         },
         alias: gnim::GNIM_LIBDIR.map(|dir| {
             rolldown::PathsOutputOption::Fn(std::sync::Arc::new(move |id| {
@@ -70,5 +70,6 @@ async fn main() -> process::ExitCode {
         Command::Schemas(args) => schemas(&args).await,
         Command::Run(args) => run(&args).await,
         Command::Dev(args) => dev(&args).await,
+        Command::Bundle(args) => bundle(&args).await,
     }
 }

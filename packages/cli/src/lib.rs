@@ -1,4 +1,6 @@
+pub mod bundle;
 pub mod dev;
+pub mod plugin;
 pub mod run;
 pub mod schemas;
 pub mod types;

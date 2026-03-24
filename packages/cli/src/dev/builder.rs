@@ -1,6 +1,7 @@
 use super::rolldown_config;
 use super::tracker::{ModuleTracker, ModuleVersions};
 use super::transform::{transform_code, transform_imports};
+use crate::plugin::css::GnimCssPlugin;
 use rolldown::ModuleType;
 use std::borrow::Cow;
 use std::fs;
@@ -30,7 +31,7 @@ pub async fn build(
             treeshake: rolldown::TreeshakeOptions::Boolean(false),
             ..rolldown_config()
         },
-        vec![Arc::new(plugin), Arc::new(super::css::GnimCssPlugin)],
+        vec![Arc::new(plugin), Arc::new(GnimCssPlugin)],
     )
     .expect("failed to create bundler");
 
