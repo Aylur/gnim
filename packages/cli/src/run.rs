@@ -1,8 +1,7 @@
-use crate::gtk4_layer_shell;
-
 use super::{dev_rundir, rolldown_config};
+use crate::gtk4_layer_shell;
 use clap::Args;
-use std::{collections::HashMap, fs, path, process};
+use std::{collections::HashMap, path, process};
 
 #[derive(Args)]
 pub struct RunArgs {
@@ -20,14 +19,12 @@ pub struct RunArgs {
 }
 
 pub async fn run(args: &RunArgs) -> process::ExitCode {
-    let tmpdir = dev_rundir();
-
     let stem = path::Path::new(&args.script)
         .file_stem()
         .and_then(|s| s.to_str())
         .expect("valid file");
 
-    let tmpname = tmpdir
+    let tmpname = dev_rundir()
         .join(format!("{}_{}.js", stem, process::id()))
         .to_string_lossy()
         .to_string();
@@ -71,8 +68,6 @@ pub async fn run(args: &RunArgs) -> process::ExitCode {
         .envs(gjs_env)
         .status()
         .expect("failed to run script");
-
-    fs::remove_file(tmpname).expect("failed to remove tmp file");
 
     status
         .code()

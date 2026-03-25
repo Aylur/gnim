@@ -129,6 +129,5 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
     gjs_task.abort();
     socket_task.abort();
     watcher.close().await.expect("Failed to close watcher");
-    fs::remove_dir_all(dir).ok();
     process::ExitCode::SUCCESS
 }

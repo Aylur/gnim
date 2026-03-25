@@ -1,10 +1,12 @@
+use crate::dev_rundir;
+
 use super::{is_in_path, rolldown_config};
 use clap::Args;
 use quick_xml::events::Event;
 use quick_xml::reader::Reader;
 use quick_xml::writer::Writer;
 use std::io::Cursor;
-use std::{env, fs, path, process};
+use std::{fs, path, process};
 
 #[derive(Args)]
 pub struct SchemasArgs {
@@ -83,11 +85,6 @@ pub async fn schemas(args: &SchemasArgs) -> process::ExitCode {
         None => path::PathBuf::from(&args.directory),
     };
 
-    let tmpdir = match env::var("XDG_RUNTIME_DIR") {
-        Ok(ok) => format!("{ok}/gnim/schemas"),
-        Err(_) => "/tmp".to_owned(),
-    };
-
     let schemas = match fs::read_dir(&args.directory) {
         Ok(entries) => entries
             .filter_map(Result::ok)
@@ -108,7 +105,10 @@ pub async fn schemas(args: &SchemasArgs) -> process::ExitCode {
     for schema in schemas {
         let path = schema.path();
         let stem = path.file_stem().unwrap().to_str().unwrap().to_owned();
-        let tmpjs = format!("{}/{}.js", &tmpdir, &stem);
+        let tmpjs = dev_rundir()
+            .join(format!("{stem}.js"))
+            .to_string_lossy()
+            .to_string();
 
         if let Err(err) = transpile_typescript(path.to_str().unwrap(), tmpjs.as_str()).await {
             eprintln!("{err}");
@@ -124,7 +124,6 @@ pub async fn schemas(args: &SchemasArgs) -> process::ExitCode {
         let mut outfile = path::PathBuf::from(&outdir);
         outfile.push(format!("{stem}.xml"));
         fs::write(outfile, format_xml(xml.as_ref())).expect("failed to write file");
-        fs::remove_file(tmpjs).expect("failed to remove tmp file");
     }
 
     match args.compile {

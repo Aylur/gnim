@@ -1,4 +1,4 @@
-use std::fs::remove_file;
+use std::fs;
 use std::path::PathBuf;
 use std::process;
 use std::sync::Arc;
@@ -13,7 +13,7 @@ pub struct DevSocketArgs {
 }
 
 pub async fn dev_socket(args: DevSocketArgs) {
-    remove_file(&args.path).ok();
+    fs::remove_file(&args.path).ok();
 
     let listener = match UnixListener::bind(&args.path) {
         Ok(l) => Arc::new(l),

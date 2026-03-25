@@ -1,15 +1,21 @@
 use clap::{Parser, Subcommand};
 use gnim::bundle::{BundleArgs, bundle};
 use gnim::dev::{DevArgs, dev};
+use gnim::dev_rundir;
 use gnim::run::{RunArgs, run};
 use gnim::schemas::{SchemasArgs, schemas};
 use gnim::types::{TypeArgs, types};
 use rolldown_utils::indexmap::FxIndexMap;
+use std::fs;
 
 #[derive(Parser)]
 #[command(version)]
 #[command(about)]
 struct Cli {
+    /// Keep temporary and runtime files on exit
+    #[arg(short, long, default_value_t = false)]
+    pub keep_tmp: bool,
+
     #[command(subcommand)]
     command: Command,
 }
@@ -65,11 +71,17 @@ async fn main() -> std::process::ExitCode {
         }),
     });
 
-    match cli.command {
+    let exit_code = match cli.command {
         Command::Types(args) => types(&args).await,
         Command::Schemas(args) => schemas(&args).await,
         Command::Run(args) => run(&args).await,
         Command::Dev(args) => dev(&args).await,
         Command::Bundle(args) => bundle(&args).await,
+    };
+
+    if !cli.keep_tmp {
+        fs::remove_dir_all(dev_rundir()).ok();
     }
+
+    exit_code
 }
