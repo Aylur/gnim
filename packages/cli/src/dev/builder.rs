@@ -1,7 +1,9 @@
 use super::rolldown_config;
+use super::socket::SocketMsg;
 use super::tracker::{ModuleTracker, ModuleVersions};
 use super::transform::{transform_code, transform_imports};
 use crate::plugin::css::GnimCssPlugin;
+use crate::plugin::resource::GnimResourcePlugin;
 use rolldown::ModuleType;
 use std::borrow::Cow;
 use std::fs;
@@ -31,7 +33,11 @@ pub async fn build(
             treeshake: rolldown::TreeshakeOptions::Boolean(false),
             ..rolldown_config()
         },
-        vec![Arc::new(plugin), Arc::new(GnimCssPlugin)],
+        vec![
+            Arc::new(plugin),
+            Arc::new(GnimCssPlugin),
+            Arc::new(GnimResourcePlugin::default()),
+        ],
     )
     .expect("failed to create bundler");
 
@@ -47,7 +53,7 @@ pub async fn build(
 #[derive(Debug)]
 pub struct GnimDevPlugin {
     pub dir: PathBuf,
-    pub socket_tx: broadcast::Sender<String>,
+    pub socket_tx: broadcast::Sender<SocketMsg>,
     pub changed_source: Option<String>,
     pub module_versions: Arc<RwLock<ModuleVersions>>,
 }
@@ -126,16 +132,19 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
             if let rolldown_common::Output::Chunk(chunk) = output {
                 let filename = output.filename();
 
-                if changed
-                    .as_deref()
-                    .is_some_and(|file| chunk.module_ids.iter().any(|id| file == id.as_str()))
+                if let Some(source) = changed.as_deref()
+                    && chunk.module_ids.iter().any(|id| source == id.as_str())
                 {
                     let version = versions.bump(filename);
 
                     match fs::canonicalize(self.dir.join(filename)) {
                         Ok(path) => {
                             self.socket_tx
-                                .send(format!("{} {}", path.to_string_lossy(), version))
+                                .send(SocketMsg {
+                                    source: source.to_string(),
+                                    module: path.to_string_lossy().to_string(),
+                                    version,
+                                })
                                 .ok();
                         }
                         Err(err) => {

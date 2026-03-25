@@ -6,8 +6,15 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::UnixListener;
 use tokio::sync::broadcast::Sender;
 
+#[derive(Clone)]
+pub struct SocketMsg {
+    pub source: String,
+    pub module: String,
+    pub version: u64,
+}
+
 pub struct DevSocketArgs {
-    pub tx: Sender<String>,
+    pub tx: Sender<SocketMsg>,
     pub verbose: bool,
     pub path: PathBuf,
 }
@@ -28,9 +35,13 @@ pub async fn dev_socket(args: DevSocketArgs) {
             Ok((mut stream, _)) => {
                 let mut rx = args.tx.subscribe();
                 tokio::spawn(async move {
-                    while let Ok(path) = rx.recv().await {
-                        let msg = format!("{}\n", path);
-                        if stream.write_all(msg.as_bytes()).await.is_err() {
+                    while let Ok(msg) = rx.recv().await {
+                        let msg_json = format!(
+                            "{{\"source\":{:?},\"module\":{:?},\"version\":{:?}}}\n",
+                            msg.source, msg.module, msg.version,
+                        );
+
+                        if stream.write_all(msg_json.as_bytes()).await.is_err() {
                             if args.verbose {
                                 eprintln!("[dev] failed to write socket");
                             }

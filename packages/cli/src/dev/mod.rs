@@ -10,7 +10,7 @@ use super::{dev_rundir, rolldown_config};
 use clap::Args;
 use runner::{GjsRunnerArgs, gjs_runner};
 use schemas::compile_schemas;
-use socket::{DevSocketArgs, dev_socket};
+use socket::{DevSocketArgs, SocketMsg, dev_socket};
 use std::sync::{Arc, Mutex, RwLock};
 use std::{fs, process};
 use tokio::sync::{broadcast, mpsc};
@@ -42,7 +42,7 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
     };
 
     let dir = dev_rundir();
-    let (socket_tx, _) = broadcast::channel::<String>(16);
+    let (socket_tx, _) = broadcast::channel::<SocketMsg>(16);
     let (gjs_restart_tx, gjs_restart_rx) = mpsc::channel::<()>(1);
     let module_versions: Arc<RwLock<ModuleVersions>> = Arc::default();
     let module_tracker = match ModuleTracker::new(dir.clone(), &canonical_entry).await {

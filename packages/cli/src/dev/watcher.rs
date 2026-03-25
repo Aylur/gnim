@@ -1,3 +1,4 @@
+use super::socket::SocketMsg;
 use super::tracker::{ModuleTracker, ModuleVersions};
 use super::{builder, rolldown_config, schemas::compile_schemas};
 use rolldown::{BundlerConfig, BundlerOptions};
@@ -10,7 +11,7 @@ use tokio::sync::{broadcast, mpsc};
 #[derive(Clone)]
 pub struct DevWatcherArgs {
     pub gjs_restart_tx: mpsc::Sender<()>,
-    pub socket_tx: broadcast::Sender<String>,
+    pub socket_tx: broadcast::Sender<SocketMsg>,
     pub verbose: bool,
     pub canonical_entry: String,
     pub module_tracker: Arc<Mutex<ModuleTracker>>,

@@ -1,4 +1,5 @@
 use crate::plugin::css::GnimCssPlugin;
+use crate::plugin::resource::GnimResourcePlugin;
 use crate::{GNIM_LIBDIR, rolldown_config};
 use std::collections::{HashMap, HashSet};
 use std::{fs, path, sync::Arc};
@@ -63,7 +64,10 @@ impl ModuleTracker {
                 preserve_modules: Some(true),
                 ..rolldown_config()
             },
-            vec![Arc::new(GnimCssPlugin)],
+            vec![
+                Arc::new(GnimCssPlugin),
+                Arc::new(GnimResourcePlugin::default()),
+            ],
         )
         .expect("failed to create bundler");
 

@@ -1,7 +1,7 @@
-use super::{dev_rundir, rolldown_config};
-use crate::gtk4_layer_shell;
+use super::{dev_rundir, gtk4_layer_shell, rolldown_config};
+use crate::plugin::{css::GnimCssPlugin, resource::GnimResourcePlugin};
 use clap::Args;
-use std::{collections::HashMap, path, process};
+use std::{collections::HashMap, path, process, sync::Arc};
 
 #[derive(Args)]
 pub struct RunArgs {
@@ -29,11 +29,17 @@ pub async fn run(args: &RunArgs) -> process::ExitCode {
         .to_string_lossy()
         .to_string();
 
-    let mut bundler = rolldown::Bundler::new(rolldown::BundlerOptions {
-        input: Some(vec![args.script.to_owned().into()]),
-        file: Some(tmpname.clone()),
-        ..rolldown_config()
-    })
+    let mut bundler = rolldown::Bundler::with_plugins(
+        rolldown::BundlerOptions {
+            input: Some(vec![args.script.to_owned().into()]),
+            file: Some(tmpname.clone()),
+            ..rolldown_config()
+        },
+        vec![
+            Arc::new(GnimCssPlugin),
+            Arc::new(GnimResourcePlugin::default()),
+        ],
+    )
     .expect("failed to create bundler");
 
     if let Err(err) = bundler.write().await {

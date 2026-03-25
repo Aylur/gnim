@@ -3,10 +3,35 @@ use colored::Colorize;
 use girgen::generator::{Error, Event, typescript};
 use girgen::{default_dirs, girgen};
 use std::{
+    fs,
     io::{self, Write},
     path, process,
     sync::{self, atomic},
 };
+
+const GNIM_ENV: &str = r#"
+declare module "*?file" {
+  import Gio from "gi://Gio?version=2.0";
+  const file: Gio.File;
+  export default file;
+}
+
+declare module "*.css" {
+  const css: string;
+  export default css;
+}
+
+declare module "*.scss" {
+  const css: string;
+  export default css;
+}
+"#;
+
+const GNIM_PACKAGE: &str = r#"{
+  "name": "gnim",
+  "type": "module",
+  "types": "./env.d.ts"
+}"#;
 
 #[derive(Args)]
 pub struct TypeArgs {
@@ -14,7 +39,7 @@ pub struct TypeArgs {
     #[arg(short, long, default_value_t = false)]
     pub verbose: bool,
     /// Target directory to generate to
-    #[arg(short, long, value_name = "PATH", default_value = "./.gnim/types/gi")]
+    #[arg(short, long, value_name = "PATH", default_value = "./.gnim/types")]
     pub outdir: String,
     /// Lookup these directories for .gir files
     #[arg(short, long, value_name = "PATHS", default_value_t = default_dirs())]
@@ -153,20 +178,30 @@ pub async fn types(args: &TypeArgs) -> process::ExitCode {
     let girgen_args = girgen::Args {
         dirs,
         ignore,
-        outdir: &args.outdir,
+        outdir: &format!("{}/gi", &args.outdir),
         event: on_event,
         generator: typescript::generate,
     };
 
     match girgen(&opts, &girgen_args) {
-        Ok(_) => process::ExitCode::SUCCESS,
+        Ok(_) => (),
         Err(Error::Empty) => {
             eprintln!("nothing to generate");
-            process::ExitCode::FAILURE
+            return process::ExitCode::FAILURE;
         }
         Err(Error::FsError(err)) => {
-            eprintln!("{}", err);
-            process::ExitCode::FAILURE
+            eprintln!("{err}");
+            return process::ExitCode::FAILURE;
         }
     }
+
+    fs::create_dir_all(format!("{}/gnim", &args.outdir)).unwrap();
+
+    fs::write(format!("{}/gnim/env.d.ts", &args.outdir), GNIM_ENV)
+        .expect("Failed to write gnim/env.d.ts");
+
+    fs::write(format!("{}/gnim/package.json", &args.outdir), GNIM_PACKAGE)
+        .expect("Failed to write gnim/package.json");
+
+    process::ExitCode::SUCCESS
 }

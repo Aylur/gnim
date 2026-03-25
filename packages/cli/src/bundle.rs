@@ -22,6 +22,7 @@ pub struct BundleArgs {
 
 pub async fn bundle(args: &BundleArgs) -> process::ExitCode {
     let resources = Arc::new(GnimResourcePlugin::new(Some(args.prefix.clone())));
+
     let js_bundle_target = dev_rundir()
         .join(&args.main_alias)
         .to_string_lossy()

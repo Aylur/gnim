@@ -93,11 +93,16 @@ function initSocket(path: string) {
     function readLoop() {
         input.read_line_async(GLib.PRIORITY_DEFAULT, null, (_, res) => {
             const msg = input.read_line_finish_utf8(res)[0]
-            if (!msg) throw Error("DEV server error")
-            const [filepath, version] = msg.split(" ")
-            if (entry !== filepath) {
-                if (verbose) printerr(`[dev] source ${filepath}?v=${version}`)
-                import(`file://${filepath}?v=${version}`).catch(console.error)
+            if (!msg) throw Error("DEV internal server error")
+            const update = JSON.parse(msg) as {
+                source: string
+                module: string
+                version: number
+            }
+            if (entry !== update.module) {
+                const file = `${update.module}?v=${update.version}`
+                if (verbose) printerr(`[dev] source ${file}`)
+                import(`file://${file}`).catch(console.error)
             }
             readLoop()
         })
