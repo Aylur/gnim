@@ -20,7 +20,7 @@ pub struct TypeArgs {
     #[arg(short, long, value_name = "PATHS", default_value_t = default_dirs())]
     pub dirs: String,
     /// Skip rendering by name and version, e.g "Gtk-4.0"
-    #[arg(short, long, value_name = "GIRS")]
+    #[arg(short, long, value_name = "NAME")]
     pub ignore: Vec<String>,
     /// Generate non versioned imports
     #[arg(long, default_value_t = false)]

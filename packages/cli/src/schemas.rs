@@ -17,7 +17,7 @@ pub struct SchemasArgs {
     #[arg(short, long, value_name = "PATH")]
     pub outdir: Option<path::PathBuf>,
     /// Replace global identifiers with constant expressions
-    #[arg(short, long, value_parser = crate::parse_key_val)]
+    #[arg(short, long, value_name = "KEY=VALUE", value_parser = crate::parse_key_val)]
     pub define: Vec<(String, String)>,
 }
 

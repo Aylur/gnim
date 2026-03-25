@@ -15,7 +15,7 @@ pub struct RunArgs {
     #[arg(long, default_value_t = false)]
     pub gtk4_layer_shell: bool,
     /// Replace global identifiers with constant expressions
-    #[arg(short, long, value_parser = crate::parse_key_val)]
+    #[arg(short, long, value_name = "KEY=VALUE", value_parser = crate::parse_key_val)]
     pub define: Vec<(String, String)>,
 }
 
