@@ -1,4 +1,4 @@
-use lightningcss::{stylesheet, targets};
+use lightningcss::{bundler, stylesheet, targets};
 use rolldown::ModuleType;
 use std::borrow::Cow;
 use std::future::Future;
@@ -21,11 +21,10 @@ impl rolldown_plugin::Plugin for GnimCssPlugin {
         args: &rolldown_plugin::HookTransformArgs<'_>,
     ) -> impl Future<Output = rolldown_plugin::HookTransformReturn> + Send {
         let id = args.id.to_string();
-        let code = args.code.to_string();
 
         async move {
             if id.ends_with(".scss") || id.ends_with(".sass") {
-                let css = grass::from_string(&code, &Default::default())?;
+                let css = grass::from_path(&id, &Default::default())?;
 
                 return Ok(Some(rolldown_plugin::HookTransformOutput {
                     module_type: Some(ModuleType::Js),
@@ -35,14 +34,18 @@ impl rolldown_plugin::Plugin for GnimCssPlugin {
             }
 
             if id.ends_with(".css") {
-                let stylesheet = stylesheet::StyleSheet::parse(
-                    &code,
+                let fs = bundler::FileProvider::new();
+                let mut bundler = bundler::Bundler::new(
+                    &fs,
+                    None,
                     stylesheet::ParserOptions {
                         filename: id.clone(),
                         ..Default::default()
                     },
-                )
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
+                );
+                let stylesheet = bundler.bundle(std::path::Path::new(&id)).map_err(|e| {
+                    std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())
+                })?;
 
                 let result = stylesheet.to_css(stylesheet::PrinterOptions {
                     minify: false,
