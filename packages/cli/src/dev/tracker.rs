@@ -41,6 +41,7 @@ pub struct ModuleTracker {
     pub modules: HashSet<String>,
     pub entry_js: String,
     pub dev_entry_js: String,
+    pub gtk_version: Option<String>,
 }
 
 impl ModuleTracker {
@@ -60,12 +61,12 @@ impl ModuleTracker {
         let mut bundler = rolldown::Bundler::with_plugins(
             rolldown::BundlerOptions {
                 input: Some(vec![prog_entry.clone().into(), dev_entry.clone().into()]),
-                dir: Some(dir.clone().to_string_lossy().to_string()),
+                dir: Some(dir.to_string_lossy().to_string()),
                 preserve_modules: Some(true),
                 ..rolldown_config()
             },
             vec![
-                Arc::new(GnimCssPlugin),
+                Arc::new(GnimCssPlugin::default()),
                 Arc::new(GnimResourcePlugin::default()),
             ],
         )
@@ -82,12 +83,26 @@ impl ModuleTracker {
                     .join("\n"));
             }
         };
+
         let mut modules = HashSet::new();
         let mut entry_js = None;
         let mut dev_entry_js = None;
+        let mut gtk_version = None;
 
         for asset in output.assets {
             if let rolldown_common::Output::Chunk(chunk) = &asset {
+                for import in chunk.imports.iter() {
+                    match import.as_ref() {
+                        "gi://Gtk?version=4.0" | "gi://Gdk?version=4.0" => {
+                            gtk_version = Some("4.0".to_string());
+                        }
+                        "gi://Gtk?version=3.0" | "gi://Gdk?version=3.0" => {
+                            gtk_version = Some("3.0".to_string());
+                        }
+                        _ => (),
+                    }
+                }
+
                 if chunk.is_entry
                     && let Some(id) = chunk.facade_module_id.as_deref()
                 {
@@ -110,8 +125,9 @@ impl ModuleTracker {
 
         Ok(Self {
             modules,
-            entry_js: entry_js.expect("failed to match entry file"),
-            dev_entry_js: dev_entry_js.expect("failed to match dev entry file"),
+            entry_js: entry_js.expect("Failed to match entry module"),
+            dev_entry_js: dev_entry_js.expect("Failed to match dev module"),
+            gtk_version,
         })
     }
 }

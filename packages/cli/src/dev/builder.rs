@@ -25,21 +25,29 @@ pub async fn build(
         files.into_iter().map(|f| f.into()).collect()
     };
 
-    let mut bundler = rolldown::Bundler::with_plugins(
-        rolldown::BundlerOptions {
-            input: Some(inputs),
-            dir: Some(plugin.dir.clone().to_string_lossy().to_string()),
-            preserve_modules: Some(true),
-            treeshake: rolldown::TreeshakeOptions::Boolean(false),
-            ..rolldown_config()
-        },
-        vec![
-            Arc::new(plugin),
-            Arc::new(GnimCssPlugin),
-            Arc::new(GnimResourcePlugin::default()),
-        ],
-    )
-    .expect("failed to create bundler");
+    let mut bundler = {
+        let gtk_version = module_tracker
+            .lock()
+            .expect("failed to lock module_tracker")
+            .gtk_version
+            .clone();
+
+        rolldown::Bundler::with_plugins(
+            rolldown::BundlerOptions {
+                input: Some(inputs),
+                dir: Some(plugin.dir.clone().to_string_lossy().to_string()),
+                preserve_modules: Some(true),
+                treeshake: rolldown::TreeshakeOptions::Boolean(false),
+                ..rolldown_config()
+            },
+            vec![
+                Arc::new(plugin),
+                Arc::new(GnimCssPlugin::new(gtk_version)),
+                Arc::new(GnimResourcePlugin::default()),
+            ],
+        )
+        .expect("failed to create bundler")
+    };
 
     bundler.write().await.map_err(|err| {
         err.into_vec()

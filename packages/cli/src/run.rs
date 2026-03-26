@@ -36,7 +36,7 @@ pub async fn run(args: &RunArgs) -> process::ExitCode {
             ..rolldown_config()
         },
         vec![
-            Arc::new(GnimCssPlugin),
+            Arc::new(GnimCssPlugin::default()),
             Arc::new(GnimResourcePlugin::default()),
         ],
     )

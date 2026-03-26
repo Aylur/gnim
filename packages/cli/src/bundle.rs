@@ -34,7 +34,7 @@ pub async fn bundle(args: &BundleArgs) -> process::ExitCode {
             file: Some(js_bundle_target.clone()),
             ..rolldown_config()
         },
-        vec![Arc::new(GnimCssPlugin), resources.clone()],
+        vec![Arc::new(GnimCssPlugin::default()), resources.clone()],
     )
     .expect("failed to create bundler");
 

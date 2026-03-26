@@ -53,8 +53,9 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
         }
     };
 
-    let entry_js = module_tracker.entry_js.to_string();
-    let dev_entry_js = module_tracker.dev_entry_js.to_string();
+    let entry_js = module_tracker.entry_js.clone();
+    let dev_entry_js = module_tracker.dev_entry_js.clone();
+    let gtk_version = module_tracker.gtk_version.clone();
 
     for file in module_tracker.modules.iter() {
         if file.ends_with(".gschema.ts") || file.ends_with(".gschema.js") {
@@ -101,6 +102,7 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
 
     let mut gjs_task = tokio::spawn({
         gjs_runner(GjsRunnerArgs {
+            gtk_version: gtk_version.clone(),
             verbose: args.verbose,
             socket_path: socket_path.clone(),
             entry_js: entry_js.clone(),

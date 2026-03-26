@@ -5,6 +5,7 @@ use tokio::process::Command;
 use tokio::sync::mpsc::Receiver;
 
 pub struct GjsRunnerArgs {
+    pub gtk_version: Option<String>,
     pub verbose: bool,
     pub socket_path: PathBuf,
     pub entry_js: String,
@@ -25,6 +26,10 @@ pub async fn gjs_runner(args: GjsRunnerArgs) {
 
         if args.verbose {
             extra_env.insert("GNIM_VERBOSE", "true".to_string());
+        }
+
+        if let Some(version) = &args.gtk_version {
+            extra_env.insert("GNIM_GTK_VERSION", version.clone());
         }
 
         if args.gtk4_layer_shell {

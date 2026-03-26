@@ -15,6 +15,12 @@ const verbose = GLib.getenv("GNIM_VERBOSE") === "true"
 const entry = GLib.getenv("GNIM_ENTRY_MODULE")
 const socket = GLib.getenv("GNIM_DEV_SOCK")
 
+type SocketMsg = {
+    source: string
+    module: string
+    version: number
+}
+
 function initRegistry() {
     class StateCtx {
         private dirty = false
@@ -85,33 +91,87 @@ function initRegistry() {
     Object.assign(globalThis, { $$registerComponent })
 }
 
+function initCssSource() {
+    const { Gtk, Gdk } = imports.gi as {
+        Gtk:
+            | typeof import("gi://Gtk?version=4.0").default
+            | typeof import("gi://Gtk?version=3.0").default
+        Gdk:
+            | typeof import("gi://Gdk?version=4.0").default
+            | typeof import("gi://Gdk?version=3.0").default
+    }
+
+    if (Gtk.__version__ === "4.0" && Gdk.__version__ === "4.0") {
+        const display = Gdk.Display.get_default()!
+        const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
+        return function source(id: string, stylesheet: string) {
+            const provider = providers.get(id) ?? Gtk.CssProvider.new()
+            provider.load_from_string(stylesheet)
+            if (!providers.has(id)) {
+                providers.set(id, provider)
+                Gtk.StyleContext.add_provider_for_display(
+                    display,
+                    provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+                )
+            }
+        }
+    }
+
+    if (Gtk.__version__ === "3.0" && Gdk.__version__ === "3.0") {
+        const screen = Gdk.Screen.get_default()!
+        const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
+        return function source(id: string, stylesheet: string) {
+            const encoder = new TextEncoder()
+            const provider = providers.get(id) ?? Gtk.CssProvider.new()
+            provider.load_from_data(encoder.encode(stylesheet))
+            if (!providers.has(id)) {
+                providers.set(id, provider)
+                Gtk.StyleContext.add_provider_for_screen(
+                    screen,
+                    provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+                )
+            }
+        }
+    }
+}
+
 function initSocket(path: string) {
     const client = new Gio.SocketClient()
     const connection = client.connect(new Gio.UnixSocketAddress({ path }), null)
     const input = new Gio.DataInputStream({ baseStream: connection.inputStream })
 
+    let onCssChange: ReturnType<typeof initCssSource> | null = null
+
     function readLoop() {
         input.read_line_async(GLib.PRIORITY_DEFAULT, null, (_, res) => {
             const msg = input.read_line_finish_utf8(res)[0]
             if (!msg) throw Error("DEV internal server error")
-            const update = JSON.parse(msg) as {
-                source: string
-                module: string
-                version: number
-            }
-            if (entry !== update.module) {
+            const update = JSON.parse(msg) as SocketMsg
+
+            if (entry !== update.module && update.version > 0) {
                 const file = `${update.module}?v=${update.version}`
                 if (verbose) printerr(`[dev] source ${file}`)
-                import(`file://${file}`).catch(console.error)
+                import(`file://${file}`)
+                    .then((m) => {
+                        if (update.source.endsWith(".css")) {
+                            if (!onCssChange) onCssChange = initCssSource()!
+                            onCssChange(update.source, m.default as string)
+                        }
+                    })
+                    .catch(console.error)
             }
+
             readLoop()
         })
     }
 
-    // TODO: when do I close these?
-    // input.close(null)
-    // connection.close(null)
     readLoop()
+    // return () => {
+    //     input.close(null)
+    //     connection.close(null)
+    // }
 }
 
 function overrideGObjectRegistration() {
@@ -158,7 +218,7 @@ function overrideGObjectRegistration() {
 
 if (entry && socket) {
     initRegistry()
-    initSocket(socket)
     overrideGObjectRegistration()
+    initSocket(socket)
     import(`file://${entry}`).catch(console.error)
 }

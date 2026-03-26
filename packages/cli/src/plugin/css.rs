@@ -3,8 +3,18 @@ use rolldown::ModuleType;
 use std::borrow::Cow;
 use std::future::Future;
 
-#[derive(Debug)]
-pub struct GnimCssPlugin;
+#[derive(Debug, Default)]
+pub struct GnimCssPlugin {
+    _gtk_version: Option<String>,
+}
+
+impl GnimCssPlugin {
+    pub fn new(gtk_version: Option<String>) -> Self {
+        Self {
+            _gtk_version: gtk_version,
+        }
+    }
+}
 
 impl rolldown_plugin::Plugin for GnimCssPlugin {
     fn name(&self) -> Cow<'static, str> {
