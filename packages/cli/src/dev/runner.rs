@@ -1,4 +1,3 @@
-use crate::gtk4_layer_shell;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::process::Command;
@@ -11,7 +10,6 @@ pub struct GjsRunnerArgs {
     pub entry_js: String,
     pub dev_entry_js: String,
     pub restart_rx: Receiver<()>,
-    pub gtk4_layer_shell: bool,
 }
 
 pub async fn gjs_runner(args: GjsRunnerArgs) {
@@ -30,23 +28,6 @@ pub async fn gjs_runner(args: GjsRunnerArgs) {
 
         if let Some(version) = &args.gtk_version {
             extra_env.insert("GNIM_GTK_VERSION", version.clone());
-        }
-
-        if args.gtk4_layer_shell {
-            if let Some(so) = option_env!("GTK4_LAYER_SHELL_LIBDIR")
-                .map(|dir| format!("{dir}/libgtk4_layer_shell.so"))
-            {
-                extra_env.insert("LD_PRELOAD", so);
-            } else {
-                match gtk4_layer_shell().await {
-                    Ok(so) => {
-                        extra_env.insert("LD_PRELOAD", so);
-                    }
-                    Err(err) => {
-                        eprintln!("[dev] failed to find libgtk4_layer_shell.so: {err}")
-                    }
-                }
-            }
         }
 
         let mut gjs = Command::new("gjs")

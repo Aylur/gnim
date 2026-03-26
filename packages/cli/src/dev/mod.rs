@@ -23,9 +23,6 @@ pub struct DevArgs {
     /// Verbose logging
     #[arg(short, long, default_value_t = false)]
     pub verbose: bool,
-    /// Preload Gtk4LayerShell
-    #[arg(long, default_value_t = false)]
-    pub gtk4_layer_shell: bool,
     /// Replace global identifiers with constant expressions
     #[arg(short, long, value_parser = crate::parse_key_val)]
     pub define: Vec<(String, String)>,
@@ -93,7 +90,6 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
             entry_js: entry_js.clone(),
             dev_entry_js: dev_entry_js.clone(),
             restart_rx: gjs_restart_rx,
-            gtk4_layer_shell: args.gtk4_layer_shell,
         })
     });
 

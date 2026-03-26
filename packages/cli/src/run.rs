@@ -1,7 +1,7 @@
-use super::{dev_rundir, gtk4_layer_shell, rolldown_config};
+use super::{dev_rundir, rolldown_config};
 use crate::plugin::{css::GnimCssPlugin, resource::GnimResourcePlugin};
 use clap::Args;
-use std::{collections::HashMap, path, process, sync::Arc};
+use std::{path, process, sync::Arc};
 
 #[derive(Args)]
 pub struct RunArgs {
@@ -10,9 +10,6 @@ pub struct RunArgs {
     /// Arguments to pass to the script
     #[arg(value_name = "ARGS", num_args = 0..)]
     pub args: Vec<String>,
-    /// Preload Gtk4LayerShell
-    #[arg(long, default_value_t = false)]
-    pub gtk4_layer_shell: bool,
     /// Replace global identifiers with constant expressions
     #[arg(short, long, value_name = "KEY=VALUE", value_parser = crate::parse_key_val)]
     pub define: Vec<(String, String)>,
@@ -50,28 +47,9 @@ pub async fn run(args: &RunArgs) -> Result<(), String> {
     })?;
 
     let gjs_args: Vec<&str> = args.args.iter().map(|s| s.as_ref()).collect();
-    let mut gjs_env: HashMap<&'static str, String> = HashMap::new();
-
-    if args.gtk4_layer_shell {
-        if let Some(so) = option_env!("GTK4_LAYER_SHELL_LIBDIR")
-            .map(|dir| format!("{dir}/libgtk4_layer_shell.so"))
-        {
-            gjs_env.insert("LD_PRELOAD", so);
-        } else {
-            match gtk4_layer_shell().await {
-                Ok(so) => {
-                    gjs_env.insert("LD_PRELOAD", so);
-                }
-                Err(err) => {
-                    eprintln!("[dev] failed to find libgtk4_layer_shell.so: {err}")
-                }
-            }
-        }
-    }
 
     let status = process::Command::new("gjs")
         .args([vec!["-m", &tmpname], gjs_args].concat())
-        .envs(gjs_env)
         .status()
         .expect("Failed to run script");
 
