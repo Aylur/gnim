@@ -46,9 +46,9 @@ pub struct ModuleTracker {
 }
 
 impl ModuleTracker {
-    pub fn sync(&mut self, file: Option<String>) -> Vec<String> {
-        if let Some(file) = file {
-            self.modules.insert(file);
+    pub fn sync(&mut self, module_id: Option<String>) -> Vec<String> {
+        if let Some(id) = module_id {
+            self.modules.insert(id);
             self.modules.retain(|f| std::path::Path::new(f).exists());
         }
 

@@ -1,3 +1,4 @@
+use super::dev::ModuleTracker;
 use super::{dev_rundir, rolldown_config};
 use crate::plugin::{css::GnimCssPlugin, resource::GnimResourcePlugin};
 use clap::Args;
@@ -16,6 +17,8 @@ pub struct RunArgs {
 }
 
 pub async fn run(args: &RunArgs) -> Result<(), String> {
+    let tracker = ModuleTracker::new(&args.script).await?;
+
     let stem = path::Path::new(&args.script)
         .file_stem()
         .and_then(|s| s.to_str())
@@ -33,7 +36,7 @@ pub async fn run(args: &RunArgs) -> Result<(), String> {
             ..rolldown_config()
         },
         vec![
-            Arc::new(GnimCssPlugin::default()),
+            Arc::new(GnimCssPlugin::new(tracker.gtk_version)),
             Arc::new(GnimResourcePlugin::default()),
         ],
     )

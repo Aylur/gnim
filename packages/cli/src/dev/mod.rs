@@ -6,6 +6,8 @@ mod tracker;
 mod transform;
 mod watcher;
 
+pub use tracker::ModuleTracker;
+
 use super::{dev_rundir, rolldown_config};
 use clap::Args;
 use runner::{GjsRunnerArgs, gjs_runner};
@@ -13,7 +15,7 @@ use schemas::compile_schemas;
 use socket::{DevSocketArgs, SocketMsg, dev_socket};
 use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::{broadcast, mpsc};
-use tracker::{ModuleTracker, ModuleVersions};
+use tracker::ModuleVersions;
 use watcher::{DevWatcherArgs, dev_watcher};
 
 #[derive(Args)]
