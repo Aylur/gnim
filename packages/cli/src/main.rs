@@ -6,7 +6,7 @@ use gnim::run::{RunArgs, run};
 use gnim::schemas::{SchemasArgs, schemas};
 use gnim::types::{TypeArgs, types};
 use rolldown_utils::indexmap::FxIndexMap;
-use std::fs;
+use std::{fs, process};
 
 #[derive(Parser)]
 #[command(version)]
@@ -71,7 +71,7 @@ async fn main() -> std::process::ExitCode {
         }),
     });
 
-    let exit_code = match cli.command {
+    let result = match cli.command {
         Command::Types(args) => types(&args).await,
         Command::Schemas(args) => schemas(&args).await,
         Command::Run(args) => run(&args).await,
@@ -83,5 +83,11 @@ async fn main() -> std::process::ExitCode {
         fs::remove_dir_all(dev_rundir()).ok();
     }
 
-    exit_code
+    match result {
+        Ok(_) => process::ExitCode::SUCCESS,
+        Err(err) => {
+            eprintln!("{}", err);
+            process::ExitCode::FAILURE
+        }
+    }
 }

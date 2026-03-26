@@ -10,12 +10,12 @@ pub struct GjsRunnerArgs {
     pub socket_path: PathBuf,
     pub entry_js: String,
     pub dev_entry_js: String,
-    pub rx: Receiver<()>,
+    pub restart_rx: Receiver<()>,
     pub gtk4_layer_shell: bool,
 }
 
 pub async fn gjs_runner(args: GjsRunnerArgs) {
-    let mut restart_rx = args.rx;
+    let mut restart_rx = args.restart_rx;
 
     loop {
         if args.verbose {

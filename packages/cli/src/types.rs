@@ -2,12 +2,9 @@ use clap::Args;
 use colored::Colorize;
 use girgen::generator::{Error, Event, typescript};
 use girgen::{default_dirs, girgen};
-use std::{
-    fs,
-    io::{self, Write},
-    path, process,
-    sync::{self, atomic},
-};
+use std::sync::OnceLock;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{fs, io, io::Write, path};
 
 const GNIM_ENV: &str = r#"
 declare module "*?file" {
@@ -55,11 +52,11 @@ pub struct TypeArgs {
     pub legacy_imports: bool,
 }
 
-static VERBOSE: sync::OnceLock<bool> = sync::OnceLock::new();
+static VERBOSE: OnceLock<bool> = OnceLock::new();
 
 // 9 lib files + index.d.ts + package.json
-static N_GIRS: atomic::AtomicUsize = atomic::AtomicUsize::new(11);
-static N_GENERATED: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
+static N_GIRS: AtomicUsize = AtomicUsize::new(11);
+static N_GENERATED: AtomicUsize = AtomicUsize::new(0);
 
 fn stem(path: &path::Path) -> &str {
     path.file_stem()
@@ -120,12 +117,12 @@ fn on_silent_event(event: Event) {
 
     match event {
         Event::Parsed { file_path: _ } => {
-            let girs = N_GIRS.fetch_add(1, atomic::Ordering::Relaxed) + 1;
+            let girs = N_GIRS.fetch_add(1, Ordering::Relaxed) + 1;
             write!(out, "\r  0/{}\x1b[K", girs).unwrap();
         }
         Event::Failed { repo, err: _ } => {
             if repo.is_some() {
-                let girs = N_GIRS.fetch_sub(1, atomic::Ordering::Relaxed) + 1;
+                let girs = N_GIRS.fetch_sub(1, Ordering::Relaxed) + 1;
                 write!(out, "\r  0/{}\x1b[K", girs).unwrap();
             }
         }
@@ -137,8 +134,8 @@ fn on_silent_event(event: Event) {
             repo: _,
             out_path: _,
         } => {
-            let girs = N_GIRS.load(atomic::Ordering::Relaxed);
-            let gens = N_GENERATED.fetch_add(1, atomic::Ordering::Relaxed) + 1;
+            let girs = N_GIRS.load(Ordering::Relaxed);
+            let gens = N_GENERATED.fetch_add(1, Ordering::Relaxed) + 1;
             write!(out, "\r{:>n$}/{}\x1b[K", gens, girs, n = 3).unwrap();
         }
         Event::Ignored {
@@ -163,7 +160,7 @@ fn on_event(event: Event) {
     }
 }
 
-pub async fn types(args: &TypeArgs) -> process::ExitCode {
+pub async fn types(args: &TypeArgs) -> Result<(), String> {
     VERBOSE.set(args.verbose).unwrap();
 
     let dir_paths: Vec<path::PathBuf> = args.dirs.split(":").map(path::PathBuf::from).collect();
@@ -183,17 +180,10 @@ pub async fn types(args: &TypeArgs) -> process::ExitCode {
         generator: typescript::generate,
     };
 
-    match girgen(&opts, &girgen_args) {
-        Ok(_) => (),
-        Err(Error::Empty) => {
-            eprintln!("nothing to generate");
-            return process::ExitCode::FAILURE;
-        }
-        Err(Error::FsError(err)) => {
-            eprintln!("{err}");
-            return process::ExitCode::FAILURE;
-        }
-    }
+    girgen(&opts, &girgen_args).map_err(|err| match err {
+        Error::Empty => "nothing to generate".to_string(),
+        Error::FsError(error) => error.to_string(),
+    })?;
 
     fs::create_dir_all(format!("{}/gnim", &args.outdir)).unwrap();
 
@@ -203,5 +193,5 @@ pub async fn types(args: &TypeArgs) -> process::ExitCode {
     fs::write(format!("{}/gnim/package.json", &args.outdir), GNIM_PACKAGE)
         .expect("Failed to write gnim/package.json");
 
-    process::ExitCode::SUCCESS
+    Ok(())
 }

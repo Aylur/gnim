@@ -61,31 +61,26 @@ fn format_xml(input: &str) -> String {
     String::from_utf8(writer.into_inner().into_inner()).unwrap()
 }
 
-fn compile(directory: &str) -> process::ExitCode {
+fn compile(directory: &str) -> Result<process::ExitStatus, String> {
     if is_in_path("glib-compile-schemas") {
         let status = process::Command::new("glib-compile-schemas")
             .args([&directory])
             .status();
 
-        if let Err(e) = status {
-            eprintln!("Failed to compile: {e}");
-            return process::ExitCode::FAILURE;
-        }
+        status.map_err(|e| format!("Failed to compile: {e}"))
     } else {
-        eprintln!("Cannot compile: glib-compile-schemas is not found");
-        return process::ExitCode::FAILURE;
+        Err("Cannot compile: glib-compile-schemas is not found".into())
     }
-
-    process::ExitCode::SUCCESS
 }
 
-pub async fn schemas(args: &SchemasArgs) -> process::ExitCode {
+pub async fn schemas(args: &SchemasArgs) -> Result<(), String> {
     let outdir = match args.outdir.as_ref() {
         Some(ok) => path::PathBuf::from(ok),
         None => path::PathBuf::from(&args.directory),
     };
 
     let schemas = match fs::read_dir(&args.directory) {
+        Err(e) => return Err(format!("Failed to read directory: {e}")),
         Ok(entries) => entries
             .filter_map(Result::ok)
             .filter(|e| !e.metadata().map(|m| m.is_dir()).unwrap_or(false))
@@ -94,10 +89,6 @@ pub async fn schemas(args: &SchemasArgs) -> process::ExitCode {
                     name.ends_with(".gschema.ts") || name.ends_with(".gschema.js")
                 })
             }),
-        Err(_) => {
-            eprintln!("failed to read directory");
-            return process::ExitCode::FAILURE;
-        }
     };
 
     fs::create_dir_all(&outdir).expect("Failed to create directory");
@@ -110,10 +101,7 @@ pub async fn schemas(args: &SchemasArgs) -> process::ExitCode {
             .to_string_lossy()
             .to_string();
 
-        if let Err(err) = transpile_typescript(path.to_str().unwrap(), tmpjs.as_str()).await {
-            eprintln!("{err}");
-            return process::ExitCode::FAILURE;
-        };
+        transpile_typescript(path.to_str().unwrap(), tmpjs.as_str()).await?;
 
         let output = process::Command::new("gjs")
             .args(["-m", tmpjs.as_str()])
@@ -126,8 +114,9 @@ pub async fn schemas(args: &SchemasArgs) -> process::ExitCode {
         fs::write(outfile, format_xml(xml.as_ref())).expect("failed to write file");
     }
 
-    match args.compile {
-        true => compile(outdir.as_os_str().to_str().expect("valid outdir")),
-        false => process::ExitCode::SUCCESS,
+    if args.compile {
+        compile(outdir.as_os_str().to_str().expect("valid outdir"))?;
     }
+
+    Ok(())
 }

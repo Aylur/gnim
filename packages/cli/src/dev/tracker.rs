@@ -1,8 +1,8 @@
 use crate::plugin::css::GnimCssPlugin;
 use crate::plugin::resource::GnimResourcePlugin;
-use crate::{GNIM_LIBDIR, rolldown_config};
+use crate::{GNIM_LIBDIR, dev_rundir, rolldown_config};
 use std::collections::{HashMap, HashSet};
-use std::{fs, path, sync::Arc};
+use std::{fs, sync::Arc};
 
 #[derive(Debug, Default)]
 pub struct ModuleVersions(HashMap<String, u64>);
@@ -19,7 +19,7 @@ impl ModuleVersions {
     }
 }
 
-fn get_dev_entry() -> Result<String, String> {
+fn get_dev_entry() -> Option<String> {
     let candidates = [
         Some("./node_modules/gnim/lib/dev.js".to_string()),
         GNIM_LIBDIR.map(|dir| format!("{dir}/lib/dev.js")),
@@ -29,19 +29,20 @@ fn get_dev_entry() -> Result<String, String> {
         if let Ok(path) = fs::canonicalize(candidate)
             && path.exists()
         {
-            return Ok(path.to_string_lossy().to_string());
+            return Some(path.to_string_lossy().to_string());
         }
     }
 
-    Err("Could not find dev entry file. Is Gnim installed?".to_string())
+    None
 }
 
 #[derive(Debug)]
 pub struct ModuleTracker {
     pub modules: HashSet<String>,
     pub entry_js: String,
-    pub dev_entry_js: String,
+    pub dev_entry_js: Option<String>,
     pub gtk_version: Option<String>,
+    pub canonical_entry: String,
 }
 
 impl ModuleTracker {
@@ -54,13 +55,23 @@ impl ModuleTracker {
         self.modules.iter().cloned().collect()
     }
 
-    pub async fn new(dir: path::PathBuf, canonical_entry: &str) -> Result<Self, String> {
-        let prog_entry = canonical_entry.to_string();
-        let dev_entry = get_dev_entry()?;
+    pub async fn new(entry: &str) -> Result<Self, String> {
+        let dir = dev_rundir();
+        let dev_entry = get_dev_entry();
+
+        let prog_entry = fs::canonicalize(entry)
+            .map(|path| path.to_string_lossy().to_string())
+            .map_err(|e| format!("Invalid entry file {e}"))?;
+
+        let mut inputs: Vec<rolldown::InputItem> = vec![prog_entry.clone().into()];
+
+        if let Some(dev_entry) = &dev_entry {
+            inputs.push(dev_entry.clone().into());
+        }
 
         let mut bundler = rolldown::Bundler::with_plugins(
             rolldown::BundlerOptions {
-                input: Some(vec![prog_entry.clone().into(), dev_entry.clone().into()]),
+                input: Some(inputs),
                 dir: Some(dir.to_string_lossy().to_string()),
                 preserve_modules: Some(true),
                 ..rolldown_config()
@@ -93,7 +104,10 @@ impl ModuleTracker {
             if let rolldown_common::Output::Chunk(chunk) = &asset {
                 for import in chunk.imports.iter() {
                     match import.as_ref() {
-                        "gi://Gtk?version=4.0" | "gi://Gdk?version=4.0" => {
+                        "gi://Adw"
+                        | "gi://Adw?version=1"
+                        | "gi://Gtk?version=4.0"
+                        | "gi://Gdk?version=4.0" => {
                             gtk_version = Some("4.0".to_string());
                         }
                         "gi://Gtk?version=3.0" | "gi://Gdk?version=3.0" => {
@@ -106,7 +120,9 @@ impl ModuleTracker {
                 if chunk.is_entry
                     && let Some(id) = chunk.facade_module_id.as_deref()
                 {
-                    if id == dev_entry {
+                    if let Some(dev_entry) = &dev_entry
+                        && id == dev_entry
+                    {
                         dev_entry_js =
                             Some(dir.join(asset.filename()).to_string_lossy().to_string());
                     }
@@ -124,9 +140,10 @@ impl ModuleTracker {
         }
 
         Ok(Self {
+            canonical_entry: prog_entry,
             modules,
             entry_js: entry_js.expect("Failed to match entry module"),
-            dev_entry_js: dev_entry_js.expect("Failed to match dev module"),
+            dev_entry_js,
             gtk_version,
         })
     }

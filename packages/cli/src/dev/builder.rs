@@ -12,14 +12,14 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::broadcast;
 
-pub async fn build(
+pub async fn build_modules(
     module_tracker: Arc<Mutex<ModuleTracker>>,
     plugin: GnimDevPlugin,
 ) -> Result<rolldown::BundleOutput, String> {
     let inputs: Vec<rolldown::InputItem> = {
         let files = module_tracker
             .lock()
-            .expect("failed to lock module_tracker")
+            .expect("Failed to lock module_tracker")
             .sync(plugin.changed_source.clone());
 
         files.into_iter().map(|f| f.into()).collect()
@@ -28,7 +28,7 @@ pub async fn build(
     let mut bundler = {
         let gtk_version = module_tracker
             .lock()
-            .expect("failed to lock module_tracker")
+            .expect("Failed to lock module_tracker")
             .gtk_version
             .clone();
 
@@ -46,7 +46,7 @@ pub async fn build(
                 Arc::new(GnimResourcePlugin::default()),
             ],
         )
-        .expect("failed to create bundler")
+        .expect("Failed to create bundler")
     };
 
     bundler.write().await.map_err(|err| {

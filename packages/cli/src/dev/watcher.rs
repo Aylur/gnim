@@ -31,12 +31,12 @@ impl WatcherEventHandler for DevWatcherArgs {
             }
 
             if path.ends_with(".gschema.ts") || path.ends_with(".gschema.js") {
-                compile_schemas(path).await;
+                compile_schemas(path).await.ok();
                 self.gjs_restart_tx.send(()).await.ok();
                 return;
             }
 
-            let build = builder::build(
+            let build = builder::build_modules(
                 self.module_tracker.clone(),
                 builder::GnimDevPlugin {
                     dir: self.dir.clone(),

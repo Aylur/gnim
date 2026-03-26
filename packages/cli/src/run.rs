@@ -18,11 +18,11 @@ pub struct RunArgs {
     pub define: Vec<(String, String)>,
 }
 
-pub async fn run(args: &RunArgs) -> process::ExitCode {
+pub async fn run(args: &RunArgs) -> Result<(), String> {
     let stem = path::Path::new(&args.script)
         .file_stem()
         .and_then(|s| s.to_str())
-        .expect("valid file");
+        .expect("Invalid filename");
 
     let tmpname = dev_rundir()
         .join(format!("{}_{}.js", stem, process::id()))
@@ -40,14 +40,14 @@ pub async fn run(args: &RunArgs) -> process::ExitCode {
             Arc::new(GnimResourcePlugin::default()),
         ],
     )
-    .expect("failed to create bundler");
+    .expect("Failed to create bundler");
 
-    if let Err(err) = bundler.write().await {
-        for d in err.into_vec() {
-            println!("{}", d.to_diagnostic().to_color_string());
-        }
-        return process::ExitCode::FAILURE;
-    }
+    bundler.write().await.map_err(|err| {
+        err.iter()
+            .map(|d| d.to_diagnostic().to_color_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    })?;
 
     let gjs_args: Vec<&str> = args.args.iter().map(|s| s.as_ref()).collect();
     let mut gjs_env: HashMap<&'static str, String> = HashMap::new();
@@ -73,10 +73,10 @@ pub async fn run(args: &RunArgs) -> process::ExitCode {
         .args([vec!["-m", &tmpname], gjs_args].concat())
         .envs(gjs_env)
         .status()
-        .expect("failed to run script");
+        .expect("Failed to run script");
 
-    status
-        .code()
-        .map(|c| process::ExitCode::from(c as u8))
-        .unwrap_or(process::ExitCode::from(1))
+    match status.code() {
+        None | Some(0) => Ok(()),
+        Some(c) => Err(format!("GJS exited with code {c}")),
+    }
 }

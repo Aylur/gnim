@@ -12,7 +12,6 @@ use runner::{GjsRunnerArgs, gjs_runner};
 use schemas::compile_schemas;
 use socket::{DevSocketArgs, SocketMsg, dev_socket};
 use std::sync::{Arc, Mutex, RwLock};
-use std::{fs, process};
 use tokio::sync::{broadcast, mpsc};
 use tracker::{ModuleTracker, ModuleVersions};
 use watcher::{DevWatcherArgs, dev_watcher};
@@ -32,40 +31,30 @@ pub struct DevArgs {
     pub define: Vec<(String, String)>,
 }
 
-pub async fn dev(args: &DevArgs) -> process::ExitCode {
-    let canonical_entry = match fs::canonicalize(&args.entry) {
-        Ok(ok) => ok.to_string_lossy().to_string(),
-        Err(err) => {
-            eprintln!("Invalid entry file {}", err);
-            return process::ExitCode::FAILURE;
-        }
-    };
-
+pub async fn dev(args: &DevArgs) -> Result<(), String> {
     let dir = dev_rundir();
     let (socket_tx, _) = broadcast::channel::<SocketMsg>(16);
     let (gjs_restart_tx, gjs_restart_rx) = mpsc::channel::<()>(1);
     let module_versions: Arc<RwLock<ModuleVersions>> = Arc::default();
-    let module_tracker = match ModuleTracker::new(dir.clone(), &canonical_entry).await {
-        Ok(ok) => ok,
-        Err(err) => {
-            eprintln!("{err}");
-            return process::ExitCode::FAILURE;
-        }
-    };
+    let module_tracker = ModuleTracker::new(&args.entry).await?;
 
     let entry_js = module_tracker.entry_js.clone();
-    let dev_entry_js = module_tracker.dev_entry_js.clone();
     let gtk_version = module_tracker.gtk_version.clone();
+    let canonical_entry = module_tracker.canonical_entry.clone();
+    let dev_entry_js = module_tracker
+        .dev_entry_js
+        .clone()
+        .ok_or("Could not find dev entry file. Is Gnim installed?".to_string())?;
 
     for file in module_tracker.modules.iter() {
         if file.ends_with(".gschema.ts") || file.ends_with(".gschema.js") {
-            compile_schemas(file).await;
+            compile_schemas(file).await?;
         }
     }
 
     let module_tracker = Arc::new(Mutex::new(module_tracker));
 
-    let initial_build = builder::build(
+    builder::build_modules(
         module_tracker.clone(),
         builder::GnimDevPlugin {
             dir: dir.clone(),
@@ -73,12 +62,8 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
             changed_source: None,
             module_versions: Arc::clone(&module_versions),
         },
-    );
-
-    if let Err(err) = initial_build.await {
-        eprintln!("{err}");
-        return process::ExitCode::FAILURE;
-    }
+    )
+    .await?;
 
     let watcher = dev_watcher(DevWatcherArgs {
         gjs_restart_tx,
@@ -107,7 +92,7 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
             socket_path: socket_path.clone(),
             entry_js: entry_js.clone(),
             dev_entry_js: dev_entry_js.clone(),
-            rx: gjs_restart_rx,
+            restart_rx: gjs_restart_rx,
             gtk4_layer_shell: args.gtk4_layer_shell,
         })
     });
@@ -131,5 +116,5 @@ pub async fn dev(args: &DevArgs) -> process::ExitCode {
     gjs_task.abort();
     socket_task.abort();
     watcher.close().await.expect("Failed to close watcher");
-    process::ExitCode::SUCCESS
+    Ok(())
 }

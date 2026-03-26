@@ -3,15 +3,56 @@ use rolldown::ModuleType;
 use std::borrow::Cow;
 use std::future::Future;
 
+const GTK3_PROVIDER: &str = r#"
+import Gtk from "gi://Gtk?version=3.0"
+import Gdk from "gi://Gdk?version=3.0"
+
+Gtk.init()
+const encoder = new TextEncoder()
+const provider = Gtk.CssProvider.new()
+provider.load_from_data(encoder.encode(stylesheet))
+Gtk.StyleContext.add_provider_for_screen(
+    Gdk.Screen.get_default(),
+    provider,
+    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+)
+"#;
+
+const GTK4_PROVIDER: &str = r#"
+import Gtk from "gi://Gtk?version=4.0"
+import Gdk from "gi://Gdk?version=4.0"
+
+Gtk.init()
+const provider = Gtk.CssProvider.new()
+provider.load_from_string(stylesheet)
+Gtk.StyleContext.add_provider_for_display(
+    Gdk.Display.get_default(),
+    provider,
+    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+)
+"#;
+
 #[derive(Debug, Default)]
 pub struct GnimCssPlugin {
-    _gtk_version: Option<String>,
+    gtk_version: Option<String>,
 }
 
 impl GnimCssPlugin {
     pub fn new(gtk_version: Option<String>) -> Self {
-        Self {
-            _gtk_version: gtk_version,
+        Self { gtk_version }
+    }
+
+    pub fn js_module(&self, css: &str) -> String {
+        match self.gtk_version.as_deref() {
+            Some("4.0") => format!(
+                "const stylesheet = {:?} {} export default stylesheet",
+                css, GTK4_PROVIDER,
+            ),
+            Some("3.0") => format!(
+                "const stylesheet = {:?} {} export default stylesheet",
+                css, GTK3_PROVIDER,
+            ),
+            _ => format!("export default {:?}", css),
         }
     }
 }
@@ -38,7 +79,7 @@ impl rolldown_plugin::Plugin for GnimCssPlugin {
 
                 return Ok(Some(rolldown_plugin::HookTransformOutput {
                     module_type: Some(ModuleType::Js),
-                    code: Some(format!("export default {:?}", css)),
+                    code: Some(self.js_module(&css)),
                     ..Default::default()
                 }));
             }
@@ -71,7 +112,7 @@ impl rolldown_plugin::Plugin for GnimCssPlugin {
 
                 return Ok(Some(rolldown_plugin::HookTransformOutput {
                     module_type: Some(ModuleType::Js),
-                    code: Some(format!("export default {:?}", result.code)),
+                    code: Some(self.js_module(&result.code)),
                     ..Default::default()
                 }));
             }

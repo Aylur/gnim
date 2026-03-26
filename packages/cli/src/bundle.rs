@@ -1,7 +1,7 @@
 use crate::plugin::{css::GnimCssPlugin, resource::GnimResourcePlugin};
 use crate::{dev_rundir, rolldown_config};
 use clap::Args;
-use std::{process, sync::Arc};
+use std::sync::Arc;
 
 #[derive(Args)]
 pub struct BundleArgs {
@@ -20,7 +20,7 @@ pub struct BundleArgs {
     pub prefix: String,
 }
 
-pub async fn bundle(args: &BundleArgs) -> process::ExitCode {
+pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
     let resources = Arc::new(GnimResourcePlugin::new(Some(args.prefix.clone())));
 
     let js_bundle_target = dev_rundir()
@@ -36,21 +36,15 @@ pub async fn bundle(args: &BundleArgs) -> process::ExitCode {
         },
         vec![Arc::new(GnimCssPlugin::default()), resources.clone()],
     )
-    .expect("failed to create bundler");
+    .expect("Failed to create bundler");
 
-    if let Err(err) = bundler.write().await {
-        for d in err.into_vec() {
-            eprintln!("{}", d.to_diagnostic().to_color_string());
-        }
-        return process::ExitCode::FAILURE;
-    }
+    bundler.write().await.map_err(|err| {
+        err.iter()
+            .map(|d| d.to_diagnostic().to_color_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    })?;
 
-    if let Err(err) =
-        resources.generate_gresource(&js_bundle_target, &args.main_alias, &args.outfile)
-    {
-        eprintln!("{err}");
-        return process::ExitCode::FAILURE;
-    }
-
-    process::ExitCode::SUCCESS
+    resources.generate_gresource(&js_bundle_target, &args.main_alias, &args.outfile)?;
+    Ok(())
 }
