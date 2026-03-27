@@ -1,6 +1,6 @@
 use super::rolldown_config;
 use super::socket::SocketMsg;
-use super::tracker::{ModuleTracker, ModuleVersions};
+use super::tracker::ModuleTracker;
 use super::transform::{transform_code, transform_imports};
 use crate::plugin::css::GnimCssPlugin;
 use crate::plugin::resource::GnimResourcePlugin;
@@ -9,20 +9,24 @@ use std::borrow::Cow;
 use std::fs;
 use std::future::Future;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use tokio::sync::broadcast;
 
-pub async fn build_modules(
-    module_tracker: Arc<Mutex<ModuleTracker>>,
-    plugin: GnimDevPlugin,
-) -> Result<rolldown::BundleOutput, String> {
+pub async fn build_modules(plugin: GnimDevPlugin) -> Result<rolldown::BundleOutput, String> {
     let inputs: Vec<rolldown::InputItem> = {
-        let files = module_tracker
-            .lock()
-            .expect("Failed to lock module_tracker")
-            .sync(plugin.changed_source.clone());
+        let files = &plugin
+            .module_tracker
+            .read()
+            .expect("Failed to read module_tracker")
+            .modules;
 
-        files.into_iter().map(|f| f.into()).collect()
+        let mut inputs: Vec<String> = files.keys().cloned().collect();
+
+        if let Some(input) = &plugin.changed_source {
+            inputs.push(input.clone());
+        }
+
+        inputs.into_iter().map(|i| i.into()).collect()
     };
 
     let mut bundler = rolldown::Bundler::with_plugins(
@@ -55,7 +59,7 @@ pub struct GnimDevPlugin {
     pub dir: PathBuf,
     pub socket_tx: broadcast::Sender<SocketMsg>,
     pub changed_source: Option<String>,
-    pub module_versions: Arc<RwLock<ModuleVersions>>,
+    pub module_tracker: Arc<RwLock<ModuleTracker>>,
 }
 
 impl rolldown_plugin::Plugin for GnimDevPlugin {
@@ -103,10 +107,10 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
     ) -> impl Future<Output = rolldown_plugin::HookRenderChunkReturn> + Send {
         let code = args.code.to_string();
         let chunk_filename = args.chunk.filename.to_string();
-        let module_versions = Arc::clone(&self.module_versions);
+        let module_tracker = self.module_tracker.clone();
 
         async move {
-            let versions = module_versions.read().unwrap();
+            let versions = module_tracker.read().unwrap();
             match transform_imports(&code, &chunk_filename, &versions) {
                 Ok(transformed) => Ok(Some(rolldown_plugin::HookRenderChunkOutput {
                     code: transformed,
@@ -125,32 +129,26 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
         _: &rolldown_plugin::PluginContext,
         args: &mut rolldown_plugin::HookWriteBundleArgs,
     ) -> impl Future<Output = rolldown_plugin::HookNoopReturn> + Send {
-        let changed = &self.changed_source;
-        let mut versions = self.module_versions.write().unwrap();
+        let mut tracker = self.module_tracker.write().unwrap();
 
         for output in args.bundle.iter() {
             if let rolldown_common::Output::Chunk(chunk) = output {
                 let filename = output.filename();
 
-                if let Some(source) = changed.as_deref()
+                if let Some(source) = &self.changed_source
                     && chunk.module_ids.iter().any(|id| source == id.as_str())
                 {
-                    let version = versions.bump(filename);
+                    let version = tracker.bump(source, filename);
+                    let js = fs::canonicalize(self.dir.join(filename))
+                        .expect("Failed to canonicalize js chunk");
 
-                    match fs::canonicalize(self.dir.join(filename)) {
-                        Ok(path) => {
-                            self.socket_tx
-                                .send(SocketMsg {
-                                    source: source.to_string(),
-                                    module: path.to_string_lossy().to_string(),
-                                    version,
-                                })
-                                .ok();
-                        }
-                        Err(err) => {
-                            eprintln!("[dev] error {}", err);
-                        }
-                    };
+                    self.socket_tx
+                        .send(SocketMsg {
+                            source: source.to_string(),
+                            module: js.to_string_lossy().to_string(),
+                            version,
+                        })
+                        .ok();
                 }
             }
         }

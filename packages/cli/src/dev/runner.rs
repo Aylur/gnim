@@ -1,7 +1,9 @@
-use std::collections::HashMap;
+use super::tracker::ModuleTracker;
+use serde_json::json;
 use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 use tokio::process::Command;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc;
 
 pub struct GjsRunnerArgs {
     pub gtk_version: Option<String>,
@@ -9,7 +11,8 @@ pub struct GjsRunnerArgs {
     pub socket_path: PathBuf,
     pub entry_js: String,
     pub dev_entry_js: String,
-    pub restart_rx: Receiver<()>,
+    pub restart_rx: mpsc::Receiver<()>,
+    pub module_tracker: Arc<RwLock<ModuleTracker>>,
 }
 
 pub async fn gjs_runner(args: GjsRunnerArgs) {
@@ -20,23 +23,26 @@ pub async fn gjs_runner(args: GjsRunnerArgs) {
             eprintln!("[dev] starting gjs");
         }
 
-        let mut extra_env = HashMap::<&'static str, String>::new();
+        let modules = args
+            .module_tracker
+            .read()
+            .expect("Failed to read module tracker")
+            .modules
+            .clone();
 
-        if args.verbose {
-            extra_env.insert("GNIM_VERBOSE", "true".to_string());
-        }
-
-        if let Some(version) = &args.gtk_version {
-            extra_env.insert("GNIM_GTK_VERSION", version.clone());
-        }
+        let props = json!({
+            "verbose": args.verbose,
+            "gtk": args.gtk_version,
+            "socket": args.socket_path,
+            "entry": args.entry_js,
+            "modules": modules
+        });
 
         let mut gjs = Command::new("gjs")
             .arg("-m")
             .arg(&args.dev_entry_js)
-            .env("GNIM_DEV_SOCK", args.socket_path.to_str().unwrap())
-            .env("GNIM_ENTRY_MODULE", &args.entry_js)
+            .env("GNIM_DEV_PROPS", props.to_string())
             .env("GSETTINGS_SCHEMA_DIR", "./.gnim/schemas")
-            .envs(extra_env)
             .spawn()
             .expect("failed to spawn gjs");
 

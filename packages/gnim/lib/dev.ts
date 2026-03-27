@@ -1,3 +1,4 @@
+import gi from "gi"
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
@@ -11,14 +12,148 @@ import {
     type State,
 } from "./jsx/reactive.js"
 
-const verbose = GLib.getenv("GNIM_VERBOSE") === "true"
-const entry = GLib.getenv("GNIM_ENTRY_MODULE")
-const socket = GLib.getenv("GNIM_DEV_SOCK")
+const props = JSON.parse(GLib.getenv("GNIM_DEV_PROPS")!) as {
+    verbose: boolean
+    gtk?: "3.0" | "4.0"
+    socket: string
+    entry: string
+    modules: Record<string, string>
+}
 
 type SocketMsg = {
     source: string
     module: string
     version: number
+}
+
+let sourceCss: null | ((id: string, stylesheet: string) => void) = null
+
+function initCss() {
+    if (props.gtk === "4.0") {
+        const Gtk = gi.require("Gtk", "4.0")
+        const Gdk = gi.require("Gdk", "4.0")
+        Gtk.init()
+        const display = Gdk.Display.get_default()!
+        const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
+        sourceCss = function (id: string, stylesheet: string) {
+            const provider = providers.get(id) ?? Gtk.CssProvider.new()
+            provider.load_from_string(stylesheet)
+            if (!providers.has(id)) {
+                providers.set(id, provider)
+                Gtk.StyleContext.add_provider_for_display(
+                    display,
+                    provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+                )
+            }
+        }
+    }
+
+    if (props.gtk === "3.0") {
+        const Gtk = gi.require("Gtk", "3.0")
+        const Gdk = gi.require("Gdk", "3.0")
+        // @ts-expect-error girgen should override this
+        Gtk.init(null)
+        const screen = Gdk.Screen.get_default()!
+        const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
+        sourceCss = function (id: string, stylesheet: string) {
+            const encoder = new TextEncoder()
+            const provider = providers.get(id) ?? Gtk.CssProvider.new()
+            provider.load_from_data(encoder.encode(stylesheet))
+            if (!providers.has(id)) {
+                providers.set(id, provider)
+                Gtk.StyleContext.add_provider_for_screen(
+                    screen,
+                    provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+                )
+            }
+        }
+    }
+
+    if (sourceCss) {
+        for (const [id, file] of Object.entries(props.modules)) {
+            if (id.endsWith(".css")) {
+                import(`file://${file}`).then((m) => sourceCss!(id, m.default)).catch(console.error)
+            }
+        }
+    }
+}
+
+function initSocket() {
+    const client = new Gio.SocketClient()
+    const connection = client.connect(new Gio.UnixSocketAddress({ path: props.socket }), null)
+    const input = new Gio.DataInputStream({ baseStream: connection.inputStream })
+
+    function readLoop() {
+        input.read_line_async(GLib.PRIORITY_DEFAULT, null, (_, res) => {
+            const msg = input.read_line_finish_utf8(res)[0]
+            if (!msg) throw Error("DEV internal server error")
+            const { version, source, module: mod } = JSON.parse(msg) as SocketMsg
+
+            if (props.entry !== mod && version > 0) {
+                const file = `${mod}?v=${version}`
+                if (props.verbose) printerr(`[dev] source ${file}`)
+                import(`file://${file}`)
+                    .then((m) => {
+                        if (source.endsWith(".css")) {
+                            sourceCss?.(source, m.default)
+                        }
+                    })
+                    .catch(console.error)
+            }
+
+            readLoop()
+        })
+    }
+
+    readLoop()
+    // return () => {
+    //     input.close(null)
+    //     connection.close(null)
+    // }
+}
+
+function overrideGObjectRegistration() {
+    type Class = { [GObject.GTypeName]?: string; new (): GObject.Object }
+
+    const register = GObject.registerClass
+    const registry = new Map<string, number>()
+
+    function getName(klass: Class) {
+        const name =
+            (GObject.GTypeName in klass && typeof klass[GObject.GTypeName] === "string"
+                ? klass[GObject.GTypeName]
+                : klass.name) || `anonymous_${GLib.uuid_string_random()}`
+
+        return `Gjs_${name}`
+    }
+
+    function versionSuffix(name: string) {
+        const v = (registry.get(name) ?? 0) + 1
+        registry.set(name, v)
+        return v > 1 ? `_HMR_${v}` : ""
+    }
+
+    function registerClass(...args: [Class] | [{ GTypeName?: string }, Class]) {
+        if (args.length === 2) {
+            const [meta, klass] = args
+            if ("GTypeName" in meta && typeof meta.GTypeName === "string") {
+                meta.GTypeName = meta.GTypeName + versionSuffix(meta.GTypeName)
+            } else {
+                const name = getName(klass)
+                meta.GTypeName = name + versionSuffix(name)
+            }
+
+            return register(meta, klass)
+        }
+
+        const [klass] = args
+        const name = getName(klass)
+        return register({ GTypeName: name + versionSuffix(name) }, klass)
+    }
+
+    GObject.registerClass = registerClass
 }
 
 function initRegistry() {
@@ -91,134 +226,8 @@ function initRegistry() {
     Object.assign(globalThis, { $$registerComponent })
 }
 
-function initCssSource() {
-    const { Gtk, Gdk } = imports.gi as {
-        Gtk:
-            | typeof import("gi://Gtk?version=4.0").default
-            | typeof import("gi://Gtk?version=3.0").default
-        Gdk:
-            | typeof import("gi://Gdk?version=4.0").default
-            | typeof import("gi://Gdk?version=3.0").default
-    }
-
-    if (Gtk.__version__ === "4.0" && Gdk.__version__ === "4.0") {
-        const display = Gdk.Display.get_default()!
-        const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
-        return function source(id: string, stylesheet: string) {
-            const provider = providers.get(id) ?? Gtk.CssProvider.new()
-            provider.load_from_string(stylesheet)
-            if (!providers.has(id)) {
-                providers.set(id, provider)
-                Gtk.StyleContext.add_provider_for_display(
-                    display,
-                    provider,
-                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-                )
-            }
-        }
-    }
-
-    if (Gtk.__version__ === "3.0" && Gdk.__version__ === "3.0") {
-        const screen = Gdk.Screen.get_default()!
-        const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
-        return function source(id: string, stylesheet: string) {
-            const encoder = new TextEncoder()
-            const provider = providers.get(id) ?? Gtk.CssProvider.new()
-            provider.load_from_data(encoder.encode(stylesheet))
-            if (!providers.has(id)) {
-                providers.set(id, provider)
-                Gtk.StyleContext.add_provider_for_screen(
-                    screen,
-                    provider,
-                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-                )
-            }
-        }
-    }
-}
-
-function initSocket(path: string) {
-    const client = new Gio.SocketClient()
-    const connection = client.connect(new Gio.UnixSocketAddress({ path }), null)
-    const input = new Gio.DataInputStream({ baseStream: connection.inputStream })
-
-    let onCssChange: ReturnType<typeof initCssSource> | null = null
-
-    function readLoop() {
-        input.read_line_async(GLib.PRIORITY_DEFAULT, null, (_, res) => {
-            const msg = input.read_line_finish_utf8(res)[0]
-            if (!msg) throw Error("DEV internal server error")
-            const update = JSON.parse(msg) as SocketMsg
-
-            if (entry !== update.module && update.version > 0) {
-                const file = `${update.module}?v=${update.version}`
-                if (verbose) printerr(`[dev] source ${file}`)
-                import(`file://${file}`)
-                    .then((m) => {
-                        if (update.source.endsWith(".css")) {
-                            if (!onCssChange) onCssChange = initCssSource()!
-                            onCssChange(update.source, m.default as string)
-                        }
-                    })
-                    .catch(console.error)
-            }
-
-            readLoop()
-        })
-    }
-
-    readLoop()
-    // return () => {
-    //     input.close(null)
-    //     connection.close(null)
-    // }
-}
-
-function overrideGObjectRegistration() {
-    type Class = { [GObject.GTypeName]?: string; new (): GObject.Object }
-
-    const register = GObject.registerClass
-    const registry = new Map<string, number>()
-
-    function getName(klass: Class) {
-        const name =
-            (GObject.GTypeName in klass && typeof klass[GObject.GTypeName] === "string"
-                ? klass[GObject.GTypeName]
-                : klass.name) || `anonymous_${GLib.uuid_string_random()}`
-
-        return `Gjs_${name}`
-    }
-
-    function versionSuffix(name: string) {
-        const v = (registry.get(name) ?? 0) + 1
-        registry.set(name, v)
-        return v > 1 ? `_HMR_${v}` : ""
-    }
-
-    function registerClass(...args: [Class] | [{ GTypeName?: string }, Class]) {
-        if (args.length === 2) {
-            const [meta, klass] = args
-            if ("GTypeName" in meta && typeof meta.GTypeName === "string") {
-                meta.GTypeName = meta.GTypeName + versionSuffix(meta.GTypeName)
-            } else {
-                const name = getName(klass)
-                meta.GTypeName = name + versionSuffix(name)
-            }
-
-            return register(meta, klass)
-        }
-
-        const [klass] = args
-        const name = getName(klass)
-        return register({ GTypeName: name + versionSuffix(name) }, klass)
-    }
-
-    GObject.registerClass = registerClass
-}
-
-if (entry && socket) {
-    initRegistry()
-    overrideGObjectRegistration()
-    initSocket(socket)
-    import(`file://${entry}`).catch(console.error)
-}
+overrideGObjectRegistration()
+initCss()
+initRegistry()
+initSocket()
+import(`file://${props.entry}`).catch(console.error)

@@ -1,4 +1,4 @@
-use super::ModuleVersions;
+use super::ModuleTracker;
 use oxc::allocator::Allocator;
 use oxc::ast::AstBuilder;
 use oxc::ast::ast::*;
@@ -209,7 +209,7 @@ pub fn transform_code(source: &str, id: &str) -> Result<String, String> {
 pub fn transform_imports(
     source: &str,
     chunk_filename: &str,
-    versions: &ModuleVersions,
+    tracker: &ModuleTracker,
 ) -> Result<String, String> {
     let allocator = Allocator::default();
     let source_type = SourceType::mjs();
@@ -233,7 +233,7 @@ pub fn transform_imports(
                 if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
                     transforms.push((
                         idx,
-                        add_version_query(import_source, versions.get(&resolved)),
+                        add_version_query(import_source, tracker.get_version(&resolved)),
                     ));
                 }
             }
@@ -243,7 +243,7 @@ pub fn transform_imports(
                     if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
                         transforms.push((
                             idx,
-                            add_version_query(import_source, versions.get(&resolved)),
+                            add_version_query(import_source, tracker.get_version(&resolved)),
                         ));
                     }
                 }
@@ -253,7 +253,7 @@ pub fn transform_imports(
                 if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
                     transforms.push((
                         idx,
-                        add_version_query(import_source, versions.get(&resolved)),
+                        add_version_query(import_source, tracker.get_version(&resolved)),
                     ));
                 }
             }

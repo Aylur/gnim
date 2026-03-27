@@ -13,9 +13,8 @@ use clap::Args;
 use runner::{GjsRunnerArgs, gjs_runner};
 use schemas::compile_schemas;
 use socket::{DevSocketArgs, SocketMsg, dev_socket};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use tokio::sync::{broadcast, mpsc};
-use tracker::ModuleVersions;
 use watcher::{DevWatcherArgs, dev_watcher};
 
 #[derive(Args)]
@@ -34,7 +33,6 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
     let dir = dev_rundir();
     let (socket_tx, _) = broadcast::channel::<SocketMsg>(16);
     let (gjs_restart_tx, gjs_restart_rx) = mpsc::channel::<()>(1);
-    let module_versions: Arc<RwLock<ModuleVersions>> = Arc::default();
     let module_tracker = ModuleTracker::new(&args.entry).await?;
 
     let entry_js = module_tracker.entry_js.clone();
@@ -45,23 +43,20 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
         .clone()
         .ok_or("Could not find dev entry file. Is Gnim installed?".to_string())?;
 
-    for file in module_tracker.modules.iter() {
+    for (file, _) in module_tracker.modules.iter() {
         if file.ends_with(".gschema.ts") || file.ends_with(".gschema.js") {
             compile_schemas(file).await?;
         }
     }
 
-    let module_tracker = Arc::new(Mutex::new(module_tracker));
+    let module_tracker = Arc::new(RwLock::new(module_tracker));
 
-    builder::build_modules(
-        module_tracker.clone(),
-        builder::GnimDevPlugin {
-            dir: dir.clone(),
-            socket_tx: socket_tx.clone(),
-            changed_source: None,
-            module_versions: Arc::clone(&module_versions),
-        },
-    )
+    builder::build_modules(builder::GnimDevPlugin {
+        dir: dir.clone(),
+        socket_tx: socket_tx.clone(),
+        changed_source: None,
+        module_tracker: module_tracker.clone(),
+    })
     .await?;
 
     let watcher = dev_watcher(DevWatcherArgs {
@@ -69,8 +64,7 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
         socket_tx: socket_tx.clone(),
         verbose: args.verbose,
         canonical_entry,
-        module_tracker,
-        module_versions,
+        module_tracker: module_tracker.clone(),
         dir: dir.clone(),
     });
 
@@ -92,6 +86,7 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
             entry_js: entry_js.clone(),
             dev_entry_js: dev_entry_js.clone(),
             restart_rx: gjs_restart_rx,
+            module_tracker: module_tracker.clone(),
         })
     });
 

@@ -1,23 +1,7 @@
 use crate::plugin::css::GnimCssPlugin;
 use crate::plugin::resource::GnimResourcePlugin;
 use crate::{GNIM_LIBDIR, dev_rundir, rolldown_config};
-use std::collections::{HashMap, HashSet};
-use std::{fs, sync::Arc};
-
-#[derive(Debug, Default)]
-pub struct ModuleVersions(HashMap<String, u64>);
-
-impl ModuleVersions {
-    pub fn bump(&mut self, jsfile: &str) -> u64 {
-        let version = self.0.entry(jsfile.to_string()).or_insert(0);
-        *version += 1;
-        *version
-    }
-
-    pub fn get(&self, jsfile: &str) -> u64 {
-        self.0.get(jsfile).copied().unwrap_or(0)
-    }
-}
+use std::{collections::HashMap, fs, sync::Arc};
 
 fn get_dev_entry() -> Option<String> {
     let candidates = [
@@ -38,21 +22,29 @@ fn get_dev_entry() -> Option<String> {
 
 #[derive(Debug)]
 pub struct ModuleTracker {
-    pub modules: HashSet<String>,
     pub entry_js: String,
     pub dev_entry_js: Option<String>,
     pub gtk_version: Option<String>,
     pub canonical_entry: String,
+    pub modules: HashMap</* id */ String, /* js_module */ String>,
+    pub versions: HashMap</* js_module */ String, u64>,
 }
 
 impl ModuleTracker {
-    pub fn sync(&mut self, module_id: Option<String>) -> Vec<String> {
-        if let Some(id) = module_id {
-            self.modules.insert(id);
-            self.modules.retain(|f| std::path::Path::new(f).exists());
-        }
+    pub fn bump(&mut self, id: &str, js_module: &str) -> u64 {
+        self.modules.insert(id.to_string(), js_module.to_string());
 
-        self.modules.iter().cloned().collect()
+        let version = self.versions.entry(js_module.to_string()).or_insert(0);
+        *version += 1;
+
+        self.modules
+            .retain(|id, _| std::path::Path::new(id).exists());
+
+        *version
+    }
+
+    pub fn get_version(&self, js_module: &str) -> u64 {
+        self.versions.get(js_module).copied().unwrap_or(0)
     }
 
     pub async fn new(entry: &str) -> Result<Self, String> {
@@ -95,7 +87,8 @@ impl ModuleTracker {
             }
         };
 
-        let mut modules = HashSet::new();
+        let mut modules = HashMap::new();
+        let mut versions = HashMap::new();
         let mut entry_js = None;
         let mut dev_entry_js = None;
         let mut gtk_version = None;
@@ -131,20 +124,30 @@ impl ModuleTracker {
                     }
                 }
 
+                let js = asset.filename();
+
                 for module_id in &chunk.module_ids {
                     if !module_id.starts_with("\0") {
-                        modules.insert(module_id.to_string());
+                        let module = fs::canonicalize(dir.join(js))
+                            .expect("Failed to canonicalize js chunk")
+                            .to_string_lossy()
+                            .to_string();
+
+                        modules.insert(module_id.to_string(), module);
                     }
                 }
+
+                versions.insert(js.to_string(), 0);
             }
         }
 
         Ok(Self {
-            canonical_entry: prog_entry,
-            modules,
             entry_js: entry_js.expect("Failed to match entry module"),
             dev_entry_js,
             gtk_version,
+            canonical_entry: prog_entry,
+            modules,
+            versions,
         })
     }
 }

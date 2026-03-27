@@ -1,11 +1,12 @@
 use super::socket::SocketMsg;
-use super::tracker::{ModuleTracker, ModuleVersions};
+use super::tracker::ModuleTracker;
 use super::{builder, rolldown_config, schemas::compile_schemas};
 use rolldown::{BundlerConfig, BundlerOptions};
 use rolldown_common::WatcherChangeKind;
 use rolldown_watcher::{WatchEvent, Watcher, WatcherConfig, WatcherEventHandler};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
+use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
 
 #[derive(Clone)]
@@ -14,8 +15,7 @@ pub struct DevWatcherArgs {
     pub socket_tx: broadcast::Sender<SocketMsg>,
     pub verbose: bool,
     pub canonical_entry: String,
-    pub module_tracker: Arc<Mutex<ModuleTracker>>,
-    pub module_versions: Arc<RwLock<ModuleVersions>>,
+    pub module_tracker: Arc<RwLock<ModuleTracker>>,
     pub dir: PathBuf,
 }
 
@@ -36,18 +36,15 @@ impl WatcherEventHandler for DevWatcherArgs {
                 return;
             }
 
-            let build = builder::build_modules(
-                self.module_tracker.clone(),
-                builder::GnimDevPlugin {
-                    dir: self.dir.clone(),
-                    socket_tx: self.socket_tx.clone(),
-                    changed_source: Some(path.to_string()),
-                    module_versions: Arc::clone(&self.module_versions),
-                },
-            );
+            let build = builder::build_modules(builder::GnimDevPlugin {
+                dir: self.dir.clone(),
+                socket_tx: self.socket_tx.clone(),
+                changed_source: Some(path.to_string()),
+                module_tracker: self.module_tracker.clone(),
+            });
 
             if let Err(err) = build.await {
-                println!("{err}");
+                eprintln!("{err}");
             }
 
             if path == self.canonical_entry {
@@ -67,8 +64,17 @@ pub fn dev_watcher(args: DevWatcherArgs) -> Watcher {
         vec![],
     );
 
-    let watcher = Watcher::new(vec![config], args.clone(), &WatcherConfig::default())
-        .expect("Failed to create watcher");
+    let watcher = Watcher::new(
+        vec![config],
+        args.clone(),
+        &WatcherConfig {
+            // I'm not sure if this is the correct way to do this, but
+            // withouth debounce the change event is emitted twice
+            debounce: Some(Duration::from_millis(100)),
+            ..Default::default()
+        },
+    )
+    .expect("Failed to create watcher");
 
     watcher.run();
     watcher

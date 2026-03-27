@@ -47,9 +47,6 @@ pub struct TypeArgs {
     /// Generate non versioned imports
     #[arg(long, default_value_t = false)]
     pub short_imports: bool,
-    /// Generate legacy imports
-    #[arg(long, default_value_t = false)]
-    pub legacy_imports: bool,
 }
 
 static VERBOSE: OnceLock<bool> = OnceLock::new();
@@ -169,7 +166,6 @@ pub async fn types(args: &TypeArgs) -> Result<(), String> {
 
     let opts = typescript::Opts {
         short_paths: args.short_imports,
-        legacy_imports: args.legacy_imports,
     };
 
     let girgen_args = girgen::Args {

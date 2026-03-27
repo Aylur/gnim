@@ -52,7 +52,8 @@ impl GnimCssPlugin {
                 "const stylesheet = {:?} {} export default stylesheet",
                 css, GTK3_PROVIDER,
             ),
-            _ => format!("export default {:?}", css),
+            // import gi to make the module a side-effect so its tracked on startup
+            _ => format!("import \"gi\"; export default {:?}", css),
         }
     }
 }

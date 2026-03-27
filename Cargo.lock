@@ -952,9 +952,9 @@ dependencies = [
 
 [[package]]
 name = "girgen"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2149b29a94b666a6bf0a2ca08243677b0c93e3c6dcca61887200338ce31cd98f"
+checksum = "bd92e71786a46da4b679ea293607fdfd5f24dd9065dd81c0da4ba305b20ca4ad"
 dependencies = [
  "clap",
  "colored",
@@ -983,6 +983,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_utils",
  "rolldown_watcher",
+ "serde",
  "serde_json",
  "tokio",
 ]
