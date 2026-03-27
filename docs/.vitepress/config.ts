@@ -40,7 +40,8 @@ export default defineConfig({
             {
                 text: "Articles",
                 items: [
-                    { text: "Dev server", link: "/article/dev" },
+                    { text: "Dev server", link: "/article/devserver" },
+                    { text: "Assets", link: "/article/assets" },
                     { text: "Buildable", link: "/article/buildable" },
                 ],
             },
