@@ -28,12 +28,36 @@ type SocketMsg = {
 
 let sourceCss: null | ((id: string, stylesheet: string) => void) = null
 
+function initGtk() {
+    if (props.gtk === "4.0") {
+        gi.require("Gtk", "4.0").init()
+    }
+    if (props.gtk === "3.0") {
+        // @ts-expect-error girgen should override init()
+        gi.require("Gtk", "3.0").init(null)
+    }
+}
+
+function initIcons() {
+    const cwd = GLib.get_current_dir()
+    const icondir = Gio.file_new_build_filenamev([cwd, "data", "icons"])
+
+    if (props.gtk === "4.0") {
+        const display = gi.require("Gdk", "4.0").Display.get_default()!
+        gi.require("Gtk", "4.0")
+            .IconTheme.get_for_display(display)
+            .add_search_path(icondir.get_path()!)
+    }
+
+    if (props.gtk === "3.0") {
+        gi.require("Gtk", "3.0").IconTheme.get_default().append_search_path(icondir.get_path()!)
+    }
+}
+
 function initCss() {
     if (props.gtk === "4.0") {
         const Gtk = gi.require("Gtk", "4.0")
-        const Gdk = gi.require("Gdk", "4.0")
-        Gtk.init()
-        const display = Gdk.Display.get_default()!
+        const display = gi.require("Gdk", "4.0").Display.get_default()!
         const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
         sourceCss = function (id: string, stylesheet: string) {
             const provider = providers.get(id) ?? Gtk.CssProvider.new()
@@ -51,10 +75,7 @@ function initCss() {
 
     if (props.gtk === "3.0") {
         const Gtk = gi.require("Gtk", "3.0")
-        const Gdk = gi.require("Gdk", "3.0")
-        // @ts-expect-error girgen should override this
-        Gtk.init(null)
-        const screen = Gdk.Screen.get_default()!
+        const screen = gi.require("Gdk", "3.0").Screen.get_default()!
         const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
         sourceCss = function (id: string, stylesheet: string) {
             const encoder = new TextEncoder()
@@ -74,7 +95,13 @@ function initCss() {
     if (sourceCss) {
         for (const [id, file] of Object.entries(props.modules)) {
             if (id.endsWith(".css")) {
-                import(`file://${file}`).then((m) => sourceCss!(id, m.default)).catch(console.error)
+                import(`file://${file}`)
+                    .then((m) => {
+                        if (typeof m.default === "string") {
+                            sourceCss!(id, m.default)
+                        }
+                    })
+                    .catch(console.error)
             }
         }
     }
@@ -227,6 +254,8 @@ function initRegistry() {
 }
 
 overrideGObjectRegistration()
+initGtk()
+initIcons()
 initCss()
 initRegistry()
 initSocket()
