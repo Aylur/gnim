@@ -1,3 +1,4 @@
+use crate::dev::ModuleTracker;
 use crate::plugin::{css::GnimCssPlugin, resource::GnimResourcePlugin};
 use crate::{dev_rundir, rolldown_config};
 use clap::Args;
@@ -21,6 +22,7 @@ pub struct BundleArgs {
 }
 
 pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
+    let tracker = ModuleTracker::new(&args.entry).await?;
     let resources = Arc::new(GnimResourcePlugin::new(Some(args.prefix.clone())));
 
     let js_bundle_target = dev_rundir()
@@ -34,7 +36,10 @@ pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
             file: Some(js_bundle_target.clone()),
             ..rolldown_config()
         },
-        vec![Arc::new(GnimCssPlugin::default()), resources.clone()],
+        vec![
+            Arc::new(GnimCssPlugin::new(tracker.gtk_version)),
+            resources.clone(),
+        ],
     )
     .expect("Failed to create bundler");
 
