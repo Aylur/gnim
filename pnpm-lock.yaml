@@ -40,8 +40,8 @@ importers:
   packages/gnim:
     optionalDependencies:
       '@gnim-js/linux-x64':
-        specifier: 2.0.0-alpha.2
-        version: 2.0.0-alpha.2
+        specifier: 2.0.0-alpha.3
+        version: 2.0.0-alpha.3
 
 packages:
 
@@ -266,8 +266,8 @@ packages:
     resolution: {integrity: sha512-bIZEUzOI1jkhviX2cp5vNyXQc6olzb2ohewQubuYlMXZ2Q/XjBO0x0XhGPvc9fjSIiUN0vw+0hq53BJ4eQSJKQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@gnim-js/linux-x64@2.0.0-alpha.2':
-    resolution: {integrity: sha512-ZuCcUaqnUY0IFTy1Q9JcpEWkiAbgSJxdKVmA1ojCNWIeIaNHICnkfGYRV+iSGEKDTU+bQpB4ygXusK/7mVEWNA==}
+  '@gnim-js/linux-x64@2.0.0-alpha.3':
+    resolution: {integrity: sha512-sW6STppcWPaXOU6z06ITL4Nps9HC7yDzeEelqqcZ4famqPfEtYqZpFaaXBIB1F/PBWuYk3U9bUAgRhvHFmKXMA==}
     cpu: [x64]
     os: [linux]
 
@@ -1389,7 +1389,7 @@ snapshots:
       '@eslint/core': 1.1.0
       levn: 0.4.1
 
-  '@gnim-js/linux-x64@2.0.0-alpha.2':
+  '@gnim-js/linux-x64@2.0.0-alpha.3':
     optional: true
 
   '@humanfs/core@0.19.1': {}
