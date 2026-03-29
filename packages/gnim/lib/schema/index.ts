@@ -142,6 +142,10 @@ export class Schema<
             this.gettextDomain = props.gettextDomain
         }
 
+        if (this.path && !this.path.startsWith("/") && !this.path.endsWith("/")) {
+            throw Error("Schema path should start and end with a forward slash '/'")
+        }
+
         if (props instanceof Schema) {
             this[internal] = {
                 typedKeys: new Set(props[internal].typedKeys),
