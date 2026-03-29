@@ -57,9 +57,10 @@ async fn main() -> std::process::ExitCode {
                 let alias = match id {
                     "gnim" => format!("{prefix}/index.js"),
                     "gnim/dbus" => format!("{prefix}/decorators/dbus.js"),
-                    "gnim/fetch" => format!("{prefix}/polyfill/fetch.js"),
                     "gnim/gobject" => format!("{prefix}/decorators/gobject.js"),
+                    "gnim/i18n" => format!("{prefix}/i18n/index.js"),
                     "gnim/schema" => format!("{prefix}/schema/index.js"),
+                    "gnim/fetch" => format!("{prefix}/polyfill/fetch.js"),
                     "gnim/jsx-runtime" => format!("{prefix}/jsx-runtime.js"),
                     "gnim/jsx-dev-runtime" => format!("{prefix}/jsx-dev-runtime.js"),
                     "gnim/gtk4" => format!("{prefix}/renderer/gtk4.js"),

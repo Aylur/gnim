@@ -24,17 +24,21 @@
             "import": "./lib/decorators/dbus.js",
             "types": "./lib/decorators/dbus.d.ts"
         },
-        "./fetch": {
-            "import": "./lib/polyfill/fetch.js",
-            "types": "./lib/polyfill/fetch.d.ts"
-        },
         "./gobject": {
             "import": "./lib/decorators/gobject.js",
             "types": "./lib/decorators/gobject.d.ts"
         },
+        "./i18n": {
+            "import": "./lib/i18n/index.js",
+            "types": "./lib/i18n/index.d.ts"
+        },
         "./schema": {
             "import": "./lib/schema/index.js",
             "types": "./lib/schema/index.d.ts"
+        },
+        "./fetch": {
+            "import": "./lib/polyfill/fetch.js",
+            "types": "./lib/polyfill/fetch.d.ts"
         },
         "./jsx-runtime": {
             "import": "./lib/jsx-runtime.js",
