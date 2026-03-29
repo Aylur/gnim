@@ -1,10 +1,11 @@
 use crate::dev::ModuleTracker;
-use crate::plugin::{css::GnimCssPlugin, resource::GnimResourcePlugin};
+use crate::plugin::css::GnimCssPlugin;
+use crate::plugin::resource::{GResource, GnimResourcePlugin, ResourceFile, generate_resource};
 use crate::{dev_rundir, rolldown_config};
 use clap::Args;
 use std::os::unix::fs::PermissionsExt;
-use std::path;
-use std::{env, fs, sync::Arc};
+use std::path::{Path, PathBuf};
+use std::{env, fs, io, sync::Arc};
 
 #[derive(Args)]
 pub struct BundleArgs {
@@ -24,6 +25,28 @@ pub struct BundleArgs {
     /// Create an executable for a given gresource
     #[arg(short, long)]
     pub exe: bool,
+    /// Extra directories to include in the bundle
+    #[arg(short, long, value_name = "PATH")]
+    pub include: Vec<PathBuf>,
+}
+
+fn walk_recursively(root: &Path) -> io::Result<Vec<PathBuf>> {
+    if root.is_file() {
+        return Ok(vec![root.to_owned()]);
+    }
+
+    fs::read_dir(root)?.try_fold(Vec::new(), |mut acc, entry| {
+        let entry = entry?;
+        let path = entry.path();
+
+        acc.push(path.clone());
+
+        if path.is_dir() {
+            acc.extend(walk_recursively(&path)?);
+        }
+
+        Ok(acc)
+    })
 }
 
 pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
@@ -32,12 +55,12 @@ pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
     }
 
     if args.exe {
-        let outfile = path::Path::new(&args.outfile);
+        let outfile = Path::new(&args.outfile);
         let outdir = outfile.parent().expect("Invalid outfile");
         fs::create_dir_all(outdir).expect("Failed to create directories");
 
         let gresource = {
-            let entry = path::Path::new(&args.entry);
+            let entry = Path::new(&args.entry);
             if entry.is_absolute() {
                 entry.to_path_buf()
             } else {
@@ -58,17 +81,18 @@ pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
         return match gjs {
             None => Err("Failed to find gjs in $PATH".into()),
             Some(gjs) => {
-                let mut content = String::new();
-                content.push_str(&format!("#!{} -m\n", gjs.to_string_lossy()));
-                content.push_str("import Gio from \"gi://Gio\"\n");
-                content.push_str(&format!(
-                    "const r = Gio.Resource.load({:?})\n",
-                    gresource.to_string_lossy(),
-                ));
-                content.push_str("r._register()\n");
-                content.push_str(&format!("await import({:?})\n", main));
+                let content = [
+                    &format!("#!{} -m", gjs.to_string_lossy()),
+                    "import Gio from \"gi://Gio\"",
+                    &format!(
+                        "const r = Gio.Resource.load({:?})",
+                        gresource.to_string_lossy(),
+                    ),
+                    "r._register()",
+                    &format!("await import({:?})", main),
+                ];
 
-                fs::write(outfile, content).expect("Failed to write file");
+                fs::write(outfile, content.join("\n")).expect("Failed to write file");
 
                 let mut perms = fs::metadata(outfile)
                     .expect("Failed to get metadata for outfile")
@@ -109,6 +133,69 @@ pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
             .join("\n")
     })?;
 
-    resources.generate_gresource(&js_bundle_target, &args.main_alias, &args.outfile)?;
+    let extra_files: Vec<ResourceFile> = args
+        .include
+        .iter()
+        .filter_map(|dir| match walk_recursively(dir) {
+            Err(err) => {
+                eprintln!(
+                    "Failed to include {} in the bundle: {}",
+                    dir.to_string_lossy(),
+                    err
+                );
+                None
+            }
+            Ok(files) => {
+                let result: Vec<ResourceFile> = files
+                    .iter()
+                    .filter(|file| file.is_file())
+                    .map(|file| {
+                        let last = dir
+                            .file_name()
+                            .expect("dir must have a last segment")
+                            .to_string_lossy();
+
+                        let rel = file
+                            .strip_prefix(dir)
+                            .expect("file must be inside dir")
+                            .to_string_lossy();
+
+                        let alias = if rel.is_empty() {
+                            format!("{last}")
+                        } else {
+                            format!("{last}/{rel}")
+                        };
+
+                        // example:
+                        //
+                        // dir: "$(pwd)/data/icons"
+                        // file: "$(pwd)/data/icons/path/to/file.svg"
+                        //
+                        // <file alias="icons/path/to/file.svg">$file</file>
+                        ResourceFile {
+                            file: file.to_string_lossy().to_string(),
+                            alias,
+                        }
+                    })
+                    .collect();
+
+                Some(result)
+            }
+        })
+        .flatten()
+        .collect();
+
+    let main = ResourceFile {
+        file: js_bundle_target,
+        alias: args.main_alias.clone(),
+    };
+
+    let resources = &[GResource {
+        prefix: args.prefix.clone(),
+        files: [vec![main], resources.imports(), extra_files].concat(),
+    }];
+
+    generate_resource(resources, &args.outfile)?;
+
     Ok(())
 }

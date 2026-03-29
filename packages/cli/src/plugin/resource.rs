@@ -5,14 +5,61 @@ use std::collections::HashSet;
 use std::future::Future;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
-use std::{fs, iter, process};
+use std::{fs, process};
 
 const FILE_SUFFIX: &str = "?file";
 
-#[derive(Debug, Default, Eq, Hash, PartialEq)]
-struct ResourceFile {
-    file: String,
-    alias: String,
+#[derive(Debug, Clone)]
+pub struct GResource {
+    pub prefix: String,
+    pub files: Vec<ResourceFile>,
+}
+
+#[derive(Debug, Clone, Default, Eq, Hash, PartialEq)]
+pub struct ResourceFile {
+    pub file: String,
+    pub alias: String,
+}
+
+pub fn generate_resource(gresources: &[GResource], outfile: &str) -> Result<(), String> {
+    let resources: Vec<String> = gresources
+        .iter()
+        .map(|r| {
+            let files: Vec<String> = r
+                .files
+                .iter()
+                .map(|f| format!("<file alias={:?}>{}</file>", f.alias, f.file))
+                .collect();
+
+            format!(
+                "<gresource prefix={:?}>{}</gresource>",
+                r.prefix,
+                files.join("")
+            )
+        })
+        .collect();
+
+    let xml_file = dev_rundir()
+        .join("gresource.xml")
+        .to_string_lossy()
+        .to_string();
+
+    let xml_contents = format!("<gresources>{}</gresources>", resources.join(""));
+    fs::write(&xml_file, xml_contents).expect("Failed to write gresource.xml");
+
+    if is_in_path("glib-compile-resources") {
+        let status = process::Command::new("glib-compile-resources")
+            .args(["--target", outfile, &xml_file])
+            .status();
+
+        if let Err(e) = status {
+            return Err(format!("Failed to compile: {e}"));
+        }
+    } else {
+        return Err("Cannot compile: glib-compile-resources is not found".to_string());
+    }
+
+    Ok(())
 }
 
 #[derive(Debug, Default)]
@@ -37,53 +84,8 @@ impl GnimResourcePlugin {
         }
     }
 
-    pub fn generate_gresource(
-        &self,
-        main_js: &str,
-        main_alias: &str,
-        target: &str,
-    ) -> Result<(), String> {
-        let imports = self.imports.read().unwrap();
-
-        let main = ResourceFile {
-            file: main_js.to_string(),
-            alias: main_alias.to_string(),
-        };
-
-        let files = imports
-            .iter()
-            .chain(iter::once(&main))
-            .map(|f| format!("<file alias={:?}>{}</file>", f.alias, f.file));
-
-        let open = format!(
-            "<gresources> <gresource prefix={:?}>",
-            self.prefix.as_ref().unwrap()
-        );
-
-        let content = files.collect::<Vec<_>>().join("");
-        let close = "</gresource> </gresources>";
-
-        let xml_content = format!("{open}{content}{close}");
-        let xml_file = dev_rundir()
-            .join("gresource.xml")
-            .to_string_lossy()
-            .to_string();
-
-        fs::write(&xml_file, xml_content).expect("Failed to write gresource.xml");
-
-        if is_in_path("glib-compile-resources") {
-            let status = process::Command::new("glib-compile-resources")
-                .args(["--target", target, &xml_file])
-                .status();
-
-            if let Err(e) = status {
-                return Err(format!("Failed to compile: {e}"));
-            }
-        } else {
-            return Err("Cannot compile: glib-compile-resources is not found".to_string());
-        }
-
-        Ok(())
+    pub fn imports(&self) -> Vec<ResourceFile> {
+        self.imports.read().unwrap().iter().cloned().collect()
     }
 }
 
