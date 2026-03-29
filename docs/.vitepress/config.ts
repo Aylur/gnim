@@ -72,4 +72,10 @@ export default defineConfig({
             text: "Last updated",
         },
     },
+
+    markdown: {
+        languageAlias: {
+            meson: "py",
+        },
+    },
 })

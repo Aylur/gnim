@@ -28,7 +28,7 @@ import { programInvocationName, programArgs } from "system"
 class MyApp extends Gtk.Application {
   constructor() {
     super({
-      applicationId: "my.awesome.app",
+      applicationId: "com.example.MyApp",
       flags: Gio.ApplicationFlags.FLAGS_NONE,
     })
   }
@@ -53,7 +53,7 @@ import { createRoot } from "./jsx/scope"
 import { programInvocationName, programArgs } from "system"
 
 export const app = new Gtk.Application({
-  applicationId: "my.awesome.app",
+  applicationId: "com.example.MyApp",
   flags: Gio.ApplicationFlags.NON_UNIQUE,
 })
 
@@ -104,11 +104,11 @@ class MyApp extends Gtk.Application {
 If you want to persist some data, for example some setting values, Gtk provides
 you the [Gio.Settings](https://docs.gtk.org/gio/class.Settings.html) API which
 is a way to store key value pairs in a predefined schema. Gnim provides a
-type-safe wrapper over this API which at dev time will automatically compile the
-store and provide it to GJS.
+type-safe wrapper over this API which during development will automatically
+compile the store and provide it to GJS.
 
 First, define a schema in `<app-id>.gschema.ts`, for example
-`my.awesome.app.gschema.ts`.
+`com.example.MyApp.gschema.ts`.
 
 ```ts
 import GLib from "gi://GLib?version=2.0"
@@ -118,8 +118,8 @@ const myFlags = new Flags("my.flags", ["one", "two"])
 const myEnum = new Enum("my.enum", ["one", "two"])
 
 export const schema = new Schema({
-  id: "my.awesome.app",
-  path: "/my/awesome/app/",
+  id: "com.example.MyApp",
+  path: "/com/example/myapp/",
 })
   .key("my-key", "s", {
     default: "",
@@ -151,7 +151,7 @@ You can then instantiate a settings object with
 with a setter and Accessor pair for each key.
 
 ```ts
-import { schema } from "./my.awesome.app.gschema"
+import { schema } from "./com.example.MyApp.gschema"
 
 const settings = createSettings(schema)
 
@@ -187,7 +187,7 @@ First define an interface.
 ```ts
 import { Service, iface, method } from "gnim/dbus"
 
-@iface("my.awesome.app.MyService")
+@iface("com.example.MyApp.MyService")
 class MyService extends Service {
   @method("s") MyMethod(arg: string) {
     console.log("MyMethod has been invoked: ", arg)
@@ -203,7 +203,7 @@ class MyApp extends Gtk.Application {
   private service: MyService
 
   constructor() {
-    super({ applicationId: "my.awesome.app" })
+    super({ applicationId: "com.example.MyApp" })
     this.service = new MyService()
   }
 
@@ -214,8 +214,8 @@ class MyApp extends Gtk.Application {
 
   vfunc_activate(): void {
     this.service.serve({
-      name: "my.awesome.app",
-      objectPath: "/my/awesome/app/MyService",
+      name: "com.example.MyApp",
+      objectPath: "/com/example/MyApp/MyService",
     })
   }
 }
@@ -226,8 +226,8 @@ Now you can invoke this from other processes.
 ```sh
 gdbus call \
   --session \
-  --dest my.awesome.app \
-  --object-path /my/awesome/app/MyService \
-  --method my.awesome.app.MyService.MyMethod \
+  --dest com.example.MyApp \
+  --object-path /com/example/MyApp/MyService \
+  --method com.example.MyApp.MyService.MyMethod \
   'Hello World!'
 ```

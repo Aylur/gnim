@@ -92,8 +92,8 @@ const myFlags = new Flags("my.flags", ["one", "two"])
 const myEnum = new Enum("my.enum", ["one", "two"])
 
 export const schema = new Schema({
-  id: "my.awesome.app",
-  path: "/my/awesome/app/",
+  id: "com.example.MyApp",
+  path: "/com/example/myapp/",
 })
   .key("my-key", "s", {
     default: "",
@@ -116,7 +116,7 @@ export default defineSchemaList([schema])
 ```
 
 ```ts
-import { schema } from "./my.awesome.app.gschema"
+import { schema } from "./com.example.MyApp.gschema"
 import { createSettings } from "gnim-schemas"
 
 const settings = createSettings(schema)

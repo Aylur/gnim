@@ -45,7 +45,7 @@ function Image() {
 }
 ```
 
-At development time using `gnim dev` the file will point to the file on the
+During development using `gnim dev` the file will point to the file on the
 filesystem and its URI will have a `file://` prefix.
 
 After bundling with `gnim bundle` the fill will point to the resource location

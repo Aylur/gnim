@@ -5,7 +5,7 @@ While GTK has its own
 lackluster.
 [Blueprint](https://gnome.pages.gitlab.gnome.org/blueprint-compiler/) tries to
 improve upon it, but it is still not as convenient as JSX. Gnim aims to bring
-the kind of developer experience to GJS that libraries like Reactoffer for the
+the kind of developer experience to GJS that libraries like React offers for the
 web.
 
 > [!WARNING] Gnim is not React
