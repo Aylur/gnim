@@ -97,7 +97,7 @@ meson install -C build
 >
 > The `prefix` option defaults to `/usr/local` which is usually not setup system
 > wide on most distributions. You might want to setup meson with the `/usr`
-> prefix, but keep in mind that your system pacakge manager will not be aware of
+> prefix, but keep in mind that your system package manager will not be aware of
 > you installing a package manually.
 >
 > ```sh

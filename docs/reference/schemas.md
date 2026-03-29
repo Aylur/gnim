@@ -1,6 +1,6 @@
 # Schemas
 
-A type-safe abstarction over
+A type-safe abstraction over
 [Gio.Settings](https://docs.gtk.org/gio/class.Settings.html).
 
 ```ts

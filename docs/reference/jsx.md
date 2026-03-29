@@ -46,7 +46,7 @@ naturally using JSX syntax. For example, this applies to types like
 
 > [!IMPORTANT] Accessor children should be primitive types only
 >
-> Due to how instantion order works you should only pass primitive types as
+> Due to how instantiation order works you should only pass primitive types as
 > children using Accessors. If you capture a JSX expression in an Accessor and
 > try to pass it as children it will break the scoping mechanism and contexts
 > are lost.

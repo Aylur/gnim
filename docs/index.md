@@ -8,7 +8,7 @@ Library that brings JSX, reactivity and type-safety to GNOME JavaScript.
   extensions
 - [GObject decorators](/reference/gobject) for a convenient way for subclassing
   GObjects
-- [DBus decorators](/reference/dbus) for a implementing DBus services and
+- [DBus decorators](/reference/dbus) for implementing DBus services and
   proxies
 
 ## Obligatory Counter Example

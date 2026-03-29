@@ -45,7 +45,7 @@ const n: Accessor<number>
 const s: Accessor<string> = n((v) => v.toString())
 ```
 
-The `.as()` method exists mostly for legacy reasons, but its a lightweight
+The `.as()` method exists mostly for legacy reasons, but it's a lightweight
 version of the above shorthand feature: It simply maps the value without doing
 any memoization or validation.
 

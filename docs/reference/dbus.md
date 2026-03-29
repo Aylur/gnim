@@ -176,7 +176,7 @@ class MyService {
 
   @method(["s", "i"], ["s"])
   SimpleReturn(arg0: string, arg1: number): [string] {
-    return ["return valule"]
+    return ["return value"]
   }
 }
 ```
@@ -207,7 +207,7 @@ class MyService {
 
   @methodAsync(["s", "i"], ["s"])
   async SimpleReturn(arg0: string, arg1: number): Promise<[string]> {
-    return ["return valule"]
+    return ["return value"]
   }
 }
 ```

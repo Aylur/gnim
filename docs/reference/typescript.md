@@ -9,7 +9,7 @@ We have annotations for:
 - signals
 - readable properties
 - writable properties
-- contstruct-only properties
+- construct-only properties
 
 When implementing a GObject subclass you might want to annotate a subset of
 these or all of these depending on usecase.
@@ -105,7 +105,7 @@ instance.connect("my-detailed-signal::detail", (source, arg) => {
 ```
 
 Due to how TypeScript `this` type works, you need to annotate `this` or use a
-typecast to make correctly infer types withing the class.
+typecast to correctly infer types within the class.
 
 ```ts
 class MyClass {

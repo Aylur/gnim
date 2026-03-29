@@ -550,8 +550,8 @@ function MyWindow() {
 }
 ```
 
-Everything in a Gnim render tree is living inside an Effect and can be nestedYou
-can call `onCleanup()` in any scope and it will run when that scope is triggered
+Everything in a Gnim render tree is living inside an Effect and can be nested.
+You can call `onCleanup()` in any scope and it will run when that scope is triggered
 to re-evaluate and when it is disposed.
 
 ```tsx

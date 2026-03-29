@@ -106,7 +106,7 @@ implement some common layouts:
   ```
 
 - [`Overlay`](https://docs.gtk.org/gtk4/class.Overlay.html) which has a single
-  child that dictates the size of the widget and positions each children on top.
+  child that dictates the size of the widget and positions each child on top.
 
   ```ts
   const overlay = new Gtk.Overlay()
