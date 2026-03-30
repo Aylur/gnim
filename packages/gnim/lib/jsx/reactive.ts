@@ -602,18 +602,18 @@ type Prop<O, K> = O extends GObject.Object
 type NProp<O, K> = NonNullable<Prop<O, K>>
 
 /**
- * Reactively reference a {@link GObject.Object}'s registered property.
+ * Reactively read a {@link GObject.Object}'s registered property.
  *
  * @param object The {@link GObject.Object} to create the {@link Accessor} on.
  * @param property One of its registered properties.
  * @returns Accessor which references the property value
  */
-export function ref<O extends GObject.Object, P extends PropKeys<O>>(
+export function bind<O extends GObject.Object, P extends PropKeys<O>>(
     object: O,
     property: P,
 ): Accessor<Prop<O, P>>
 
-export function ref<
+export function bind<
     O extends GObject.Object,
     P1 extends PropKeys<O>,
     P2 extends PropKeys<NProp<O, P1>>,
@@ -623,7 +623,7 @@ export function ref<
     property2: P2,
 ): Accessor<null extends Prop<O, P1> ? Prop<NProp<O, P1>, P2> | null : Prop<NProp<O, P1>, P2>>
 
-export function ref<
+export function bind<
     O extends GObject.Object,
     P1 extends PropKeys<O>,
     P2 extends PropKeys<NProp<O, P1>>,
@@ -641,7 +641,7 @@ export function ref<
           : Prop<NProp<NProp<O, P1>, P2>, P3>
 >
 
-export function ref<
+export function bind<
     O extends GObject.Object,
     P1 extends PropKeys<O>,
     P2 extends PropKeys<NProp<O, P1>>,
@@ -663,7 +663,7 @@ export function ref<
             : Prop<NProp<NProp<NProp<O, P1>, P2>, P3>, P4>
 >
 
-export function ref<T>(object: GObject.Object, key: string, ...props: string[]): Accessor<T> {
+export function bind<T>(object: GObject.Object, key: string, ...props: string[]): Accessor<T> {
     if (props.length === 0) {
         function subscribe(callback: Fn): Fn {
             const id = connect(object, `notify::${key}`, () => callback())
@@ -688,9 +688,9 @@ export function ref<T>(object: GObject.Object, key: string, ...props: string[]):
     }
 
     return createComputed(() => {
-        let v = ref(object as any, key)()
+        let v = bind(object as any, key)()
         for (const prop of props) {
-            if (prop) v = v !== null ? ref(v, prop)() : null
+            if (prop) v = v !== null ? bind(v, prop)() : null
         }
         return v
     })

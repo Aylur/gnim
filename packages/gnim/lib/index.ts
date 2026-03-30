@@ -1,7 +1,7 @@
 export {
-    newObject,
     For,
     Fragment,
+    newObject,
     Portal,
     With,
     type CC,
@@ -10,6 +10,7 @@ export {
     type JSX,
 } from "./jsx/element.js"
 export {
+    bind,
     computed,
     connectSignal,
     createContext,
@@ -19,7 +20,6 @@ export {
     getScope,
     isAccessor,
     onCleanup,
-    ref,
     type Accessed,
     type Accessor,
     type Context,
