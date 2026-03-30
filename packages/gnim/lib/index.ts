@@ -16,6 +16,7 @@ export {
     createContext,
     createRoot,
     createState,
+    createStore,
     effect,
     getScope,
     isAccessor,

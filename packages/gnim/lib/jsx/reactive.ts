@@ -1,6 +1,6 @@
 import GObject from "gi://GObject?version=2.0"
 import { resolveNode, type GnimNode } from "./element.js"
-import { connect, disconnect, type Keyof } from "../util.js"
+import { connect, disconnect, kebabcase, type Keyof } from "../util.js"
 
 type Fn = () => void
 
@@ -593,12 +593,86 @@ export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>
     return createAccessor(get, subscribe)
 }
 
-type PropKeys<O> = O extends GObject.Object ? Keyof<O["$readableProperties"]> : never
+type Store<S = Record<PropertyKey, unknown>> = S & {
+    $readableProperties: S
+    subscribe(key: keyof S, callback: Fn): Fn
+}
+
+/**
+ * Create a store where each field is replaced with a reactive accessor.
+ *
+ * @example
+ *
+ * ```
+ * const myStore = createStore({
+ *   value: 0,
+ *   get double() {
+ *     return this.value * 2
+ *   },
+ *   nestedStore: createStore({
+ *     value: "",
+ *   }),
+ * })
+ * ```
+ */
+export function createStore<S extends Record<PropertyKey, any>>(store: S): Store<S> {
+    const obj = {}
+    const properties = Object.entries(Object.getOwnPropertyDescriptors(store))
+    const accessors: Record<PropertyKey, Accessor> = {}
+
+    for (const [key, desc] of properties) {
+        if ("value" in desc) {
+            const [get, set] = createState(desc.value)
+            accessors[key] = get
+            Object.defineProperty(obj, key, {
+                get,
+                set,
+                enumerable: true,
+            })
+        } else if ("get" in desc) {
+            Object.defineProperty(obj, key, {
+                get: createComputed(desc.get!.bind(obj)),
+                set: desc.set,
+                enumerable: true,
+            })
+        } else {
+            Object.defineProperty(obj, key, desc)
+        }
+    }
+
+    Object.assign(obj, {
+        subscribe(key: PropertyKey, callback: Fn): Fn {
+            return accessors[key].subscribe(callback)
+        },
+    })
+
+    return obj as Store<S>
+}
+
+type Bindable = GObject.Object | Store
+
+type PropKeys<O> = O extends GObject.Object
+    ? [Keyof<O["$readableProperties"]>] extends [never]
+        ? Keyof<O>
+        : Keyof<O["$readableProperties"]>
+    : O extends Store
+      ? keyof O["$readableProperties"]
+      : never
+
 type Prop<O, K> = O extends GObject.Object
-    ? K extends PropKeys<O>
-        ? O["$readableProperties"][K]
-        : never
-    : never
+    ? [Keyof<O["$readableProperties"]>] extends [never]
+        ? K extends Keyof<O>
+            ? O[K]
+            : never
+        : K extends Keyof<O["$readableProperties"]>
+          ? O["$readableProperties"][K]
+          : never
+    : O extends Store
+      ? K extends Keyof<O["$readableProperties"]>
+          ? O["$readableProperties"][K]
+          : never
+      : never
+
 type NProp<O, K> = NonNullable<Prop<O, K>>
 
 /**
@@ -608,23 +682,19 @@ type NProp<O, K> = NonNullable<Prop<O, K>>
  * @param property One of its registered properties.
  * @returns Accessor which references the property value
  */
-export function bind<O extends GObject.Object, P extends PropKeys<O>>(
+export function bind<O extends Bindable, P extends PropKeys<O>>(
     object: O,
     property: P,
 ): Accessor<Prop<O, P>>
 
-export function bind<
-    O extends GObject.Object,
-    P1 extends PropKeys<O>,
-    P2 extends PropKeys<NProp<O, P1>>,
->(
+export function bind<O extends Bindable, P1 extends PropKeys<O>, P2 extends PropKeys<NProp<O, P1>>>(
     object: O,
     property1: P1,
     property2: P2,
 ): Accessor<null extends Prop<O, P1> ? Prop<NProp<O, P1>, P2> | null : Prop<NProp<O, P1>, P2>>
 
 export function bind<
-    O extends GObject.Object,
+    O extends Bindable,
     P1 extends PropKeys<O>,
     P2 extends PropKeys<NProp<O, P1>>,
     P3 extends PropKeys<NProp<NProp<O, P1>, P2>>,
@@ -642,7 +712,7 @@ export function bind<
 >
 
 export function bind<
-    O extends GObject.Object,
+    O extends Bindable,
     P1 extends PropKeys<O>,
     P2 extends PropKeys<NProp<O, P1>>,
     P3 extends PropKeys<NProp<NProp<O, P1>, P2>>,
@@ -663,34 +733,44 @@ export function bind<
             : Prop<NProp<NProp<NProp<O, P1>, P2>, P3>, P4>
 >
 
-export function bind<T>(object: GObject.Object, key: string, ...props: string[]): Accessor<T> {
+export function bind(object: Bindable, key: PropertyKey, ...props: string[]): Accessor {
     if (props.length === 0) {
-        function subscribe(callback: Fn): Fn {
-            const id = connect(object, `notify::${key}`, () => callback())
-            return () => disconnect(object, id)
-        }
+        if (object instanceof GObject.Object && typeof key === "string") {
+            const name = kebabcase(key)
 
-        function get(): T {
-            if (object instanceof GObject.Object) {
-                const getter = `get_${key.replaceAll("-", "_")}` as keyof typeof object
-
-                if (getter in object && typeof object[getter] === "function") {
-                    return (object[getter] as () => unknown)() as T
-                }
-
-                if (key in object) return object[key as keyof typeof object] as T
+            function subscribe(callback: Fn): Fn {
+                const id = connect(object as GObject.Object, `notify::${name}`, () => callback())
+                return () => disconnect(object as GObject.Object, id)
             }
 
-            throw Error(`cannot get property "${key}" on "${object}"`)
-        }
+            function get() {
+                const getter = `get_${name.replaceAll("-", "_")}` as keyof typeof object
 
-        return createAccessor(get, subscribe)
+                if (getter in object && typeof object[getter] === "function") {
+                    return (object[getter] as () => unknown)()
+                }
+
+                if (key in object) return object[key as keyof typeof object]
+                if (name in object) return object[name as keyof typeof object]
+
+                throw Error(`cannot get property "${key as string}" on "${object}"`)
+            }
+
+            return createAccessor(get, subscribe)
+        } else if ("subscribe" in object) {
+            return createAccessor(
+                () => object[key],
+                (callback) => object.subscribe(key, callback),
+            )
+        } else {
+            throw Error("something went wrong: should be unreachable")
+        }
     }
 
     return createComputed(() => {
-        let v = bind(object as any, key)()
+        let v = bind(object, key)()
         for (const prop of props) {
-            if (prop) v = v !== null ? bind(v, prop)() : null
+            v = v !== null ? bind(v as Bindable, prop)() : null
         }
         return v
     })
