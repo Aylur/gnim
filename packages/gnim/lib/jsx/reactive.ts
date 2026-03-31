@@ -15,6 +15,7 @@ export const devHooks: DevHooks = {
 const noop = () => {}
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
+export type MaybeAccessor<T> = T | Accessor<T>
 
 /**
  * Accessors are the base of Gnim's reactive system.
@@ -807,4 +808,28 @@ export function connectSignal<O extends GObject.Object, S extends Keyof<SignalsO
 ): void {
     const id = connect(object, signal, (_, ...args) => handler(...args))
     onCleanup(() => disconnect(object, id))
+}
+
+/**
+ * Maps a MaybeAccessor to an Accessor with an optional fallback value.
+ *
+ * @example
+ *
+ * ```ts
+ * const props: {
+ *   optional?: MaybeAccessor<string>
+ *   required: MaybeAccessor<string>
+ * }
+ *
+ * const optional: Accessor<string> = accessor(props.optional, "")
+ * const required: Accessor<string> = accessor(props.required)
+ * ```
+ *
+ */
+export function prop<T>(value: MaybeAccessor<T>): Accessor<T>
+
+export function prop<T>(value: MaybeAccessor<T>, fallback: NonNullable<T>): Accessor<NonNullable<T>>
+
+export function prop<T>(value: T, fallback?: unknown) {
+    return isAccessor(value) ? value((v) => v ?? fallback) : createAccessor(() => value ?? fallback)
 }
