@@ -3,28 +3,23 @@ use crate::plugin::css::GnimCssPlugin;
 use crate::plugin::resource::{GResource, GnimResourcePlugin, ResourceFile, generate_resource};
 use crate::{dev_rundir, rolldown_config};
 use clap::Args;
-use std::os::unix::fs::PermissionsExt;
+use rolldown_utils::replace_all_placeholder::ReplaceAllPlaceholder;
 use std::path::{Path, PathBuf};
-use std::{env, fs, io, sync::Arc};
+use std::{fs, io, sync::Arc};
 
 #[derive(Args)]
 pub struct BundleArgs {
-    /// Entry module or gresource location for the executable
+    /// Entry module
     pub entry: String,
-    /// Output file
-    pub outfile: String,
+    /// Output target
+    #[arg(short, long)]
+    pub outfile: Option<String>,
+    /// Application ID in reverse DNS format
+    #[arg(long)]
+    pub id: Option<String>,
     /// Replace global identifiers with constant expressions
     #[arg(short, long, value_name = "KEY=VALUE", value_parser = crate::parse_key_val)]
     pub define: Vec<(String, String)>,
-    /// Alias used in the gresource for the main js module
-    #[arg(short, long, value_name = "NAME", default_value_t = String::from("main.js"))]
-    pub main_alias: String,
-    /// Path prefix used in the gresource
-    #[arg(short, long, value_name = "PATH", default_value_t = String::from("/"))]
-    pub prefix: String,
-    /// Create an executable for a given gresource
-    #[arg(short, long)]
-    pub exe: bool,
     /// Extra directories to include in the bundle
     #[arg(short, long, value_name = "PATH")]
     pub include: Vec<PathBuf>,
@@ -50,68 +45,17 @@ fn walk_recursively(root: &Path) -> io::Result<Vec<PathBuf>> {
 }
 
 pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
-    if !args.prefix.ends_with("/") || !args.prefix.starts_with("/") {
-        return Err("prefix should end and start with a slash '/'".into());
-    }
+    let mainjs = "main.js";
 
-    if args.exe {
-        let outfile = Path::new(&args.outfile);
-        let outdir = outfile.parent().expect("Invalid outfile");
-        fs::create_dir_all(outdir).expect("Failed to create directories");
+    let resource_prefix = match &args.id {
+        Some(id) => format!("/{}/", id.clone().replace_all(".", "/")),
+        None => "/".to_string(),
+    };
 
-        let gresource = {
-            let entry = Path::new(&args.entry);
-            if entry.is_absolute() {
-                entry.to_path_buf()
-            } else {
-                env::current_dir()
-                    .expect("Failed to read current_dir")
-                    .join(entry)
-            }
-        };
-
-        let gjs = env::var_os("PATH").and_then(|paths| {
-            env::split_paths(&paths)
-                .map(|dir| dir.join("gjs"))
-                .find(|path| path.is_file())
-        });
-
-        let main = format!("resource://{}{}", args.prefix, args.main_alias);
-
-        return match gjs {
-            None => Err("Failed to find gjs in $PATH".into()),
-            Some(gjs) => {
-                let content = [
-                    &format!("#!{} -m", gjs.to_string_lossy()),
-                    "import Gio from \"gi://Gio\"",
-                    &format!(
-                        "const r = Gio.Resource.load({:?})",
-                        gresource.to_string_lossy(),
-                    ),
-                    "r._register()",
-                    &format!("await import({:?})", main),
-                ];
-
-                fs::write(outfile, content.join("\n")).expect("Failed to write file");
-
-                let mut perms = fs::metadata(outfile)
-                    .expect("Failed to get metadata for outfile")
-                    .permissions();
-                perms.set_mode(perms.mode() | 0o111);
-                fs::set_permissions(outfile, perms).expect("Failed set file permissions");
-
-                Ok(())
-            }
-        };
-    }
-
+    let outfile = Path::new(args.outfile.as_deref().unwrap_or("gresource"));
     let tracker = ModuleTracker::new(&args.entry).await?;
-    let resources = Arc::new(GnimResourcePlugin::new(Some(args.prefix.clone())));
-
-    let js_bundle_target = dev_rundir()
-        .join(&args.main_alias)
-        .to_string_lossy()
-        .to_string();
+    let resources = Arc::new(GnimResourcePlugin::new(Some(resource_prefix.clone())));
+    let js_bundle_target = dev_rundir().join(mainjs).to_string_lossy().to_string();
 
     let mut bundler = rolldown::Bundler::with_plugins(
         rolldown::BundlerOptions {
@@ -187,15 +131,15 @@ pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
 
     let main = ResourceFile {
         file: js_bundle_target,
-        alias: args.main_alias.clone(),
+        alias: mainjs.to_string(),
     };
 
     let resources = &[GResource {
-        prefix: args.prefix.clone(),
+        prefix: resource_prefix.clone(),
         files: [vec![main], resources.imports(), extra_files].concat(),
     }];
 
-    generate_resource(resources, &args.outfile)?;
+    generate_resource(resources, outfile)?;
 
     Ok(())
 }

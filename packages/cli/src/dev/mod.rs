@@ -9,11 +9,13 @@ mod watcher;
 pub use tracker::ModuleTracker;
 
 use super::{dev_rundir, rolldown_config};
+use crate::is_in_path;
 use clap::Args;
 use runner::{GjsRunnerArgs, gjs_runner};
 use schemas::compile_schemas;
 use socket::{DevSocketArgs, SocketMsg, dev_socket};
 use std::sync::{Arc, RwLock};
+use std::{fs, path, process};
 use tokio::sync::{broadcast, mpsc};
 use watcher::{DevWatcherArgs, dev_watcher};
 
@@ -27,6 +29,9 @@ pub struct DevArgs {
     /// Replace global identifiers with constant expressions
     #[arg(short, long, value_parser = crate::parse_key_val)]
     pub define: Vec<(String, String)>,
+    /// Application ID in reverse DNS format
+    #[arg(short, long)]
+    pub id: Option<String>,
 }
 
 pub async fn dev(args: &DevArgs) -> Result<(), String> {
@@ -78,8 +83,15 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
         })
     });
 
+    if let Some(app_id) = &args.id
+        && let Err(err) = init_translations(app_id)
+    {
+        eprintln!("Failed to init translations {err}")
+    }
+
     let mut gjs_task = tokio::spawn({
         gjs_runner(GjsRunnerArgs {
+            application_id: args.id.clone(),
             gtk_version: gtk_version.clone(),
             verbose: args.verbose,
             socket_path: socket_path.clone(),
@@ -109,5 +121,47 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
     gjs_task.abort();
     socket_task.abort();
     watcher.close().await.expect("Failed to close watcher");
+    Ok(())
+}
+
+fn init_translations(app_id: &str) -> Result<(), String> {
+    let Ok(podir) = fs::canonicalize("po") else {
+        eprintln!("not po");
+        return Ok(());
+    };
+
+    let translations: Vec<path::PathBuf> = fs::read_dir(podir)
+        .map_err(|err| err.to_string())?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().map(|e| e == "po").unwrap_or(false))
+        .collect();
+
+    if !translations.is_empty() && !is_in_path("msgfmt") {
+        return Err("msgfmt is not in $PATH".to_string());
+    }
+
+    for translation in translations {
+        if let Some(stem) = translation.file_stem() {
+            let locale = stem.to_string_lossy();
+            let localedir = dev_rundir()
+                .join("locale")
+                .join(locale.to_string())
+                .join("LC_MESSAGES");
+
+            fs::create_dir_all(&localedir).expect("Failed to write directory");
+
+            let status = process::Command::new("msgfmt")
+                .arg(&translation)
+                .arg("-o")
+                .arg(localedir.join(format!("{}.mo", app_id)))
+                .status();
+
+            if let Err(err) = status {
+                eprintln!("{err}")
+            }
+        }
+    }
+
     Ok(())
 }

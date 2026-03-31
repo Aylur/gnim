@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use gnim::bundle::{BundleArgs, bundle};
 use gnim::dev::{DevArgs, dev};
 use gnim::dev_rundir;
+use gnim::exe::{ExeArgs, exe};
 use gnim::run::{RunArgs, run};
 use gnim::schemas::{SchemasArgs, schemas};
 use gnim::types::{TypeArgs, types};
@@ -32,6 +33,8 @@ enum Command {
     Dev(DevArgs),
     /// Bundle TypeScript and asset files into a gresource bundle
     Bundle(BundleArgs),
+    /// Create an executable script for a gresource bundle
+    Exe(ExeArgs),
 }
 
 fn map(kv: &[(String, String)]) -> FxIndexMap<String, String> {
@@ -49,6 +52,7 @@ async fn main() -> std::process::ExitCode {
             Command::Run(args) => Some(map(&args.define)),
             Command::Dev(args) => Some(map(&args.define)),
             Command::Bundle(args) => Some(map(&args.define)),
+            Command::Exe(_) => None,
         },
         alias: gnim::GNIM_LIBDIR.map(|dir| {
             rolldown::PathsOutputOption::Fn(std::sync::Arc::new(move |id| {
@@ -78,6 +82,7 @@ async fn main() -> std::process::ExitCode {
         Command::Run(args) => run(&args).await,
         Command::Dev(args) => dev(&args).await,
         Command::Bundle(args) => bundle(&args).await,
+        Command::Exe(args) => exe(&args).await,
     };
 
     if !cli.keep_tmp {

@@ -1,4 +1,5 @@
 use super::tracker::ModuleTracker;
+use crate::dev_rundir;
 use serde_json::json;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
@@ -6,6 +7,7 @@ use tokio::process::Command;
 use tokio::sync::mpsc;
 
 pub struct GjsRunnerArgs {
+    pub application_id: Option<String>,
     pub gtk_version: Option<String>,
     pub verbose: bool,
     pub socket_path: PathBuf,
@@ -17,6 +19,7 @@ pub struct GjsRunnerArgs {
 
 pub async fn gjs_runner(args: GjsRunnerArgs) {
     let mut restart_rx = args.restart_rx;
+    let rundir = dev_rundir();
 
     loop {
         if args.verbose {
@@ -31,11 +34,13 @@ pub async fn gjs_runner(args: GjsRunnerArgs) {
             .clone();
 
         let props = json!({
+            "applicationId": args.application_id,
             "verbose": args.verbose,
             "gtk": args.gtk_version,
             "socket": args.socket_path,
             "entry": args.entry_js,
-            "modules": modules
+            "modules": modules,
+            "rundir": rundir.to_string_lossy(),
         });
 
         let mut gjs = Command::new("gjs")

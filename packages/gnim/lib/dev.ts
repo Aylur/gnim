@@ -1,4 +1,5 @@
 import gi from "gi"
+import Gettext from "gettext"
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
@@ -13,11 +14,13 @@ import {
 } from "./jsx/reactive.js"
 
 const props = JSON.parse(GLib.getenv("GNIM_DEV_PROPS")!) as {
+    applicationId?: string
     verbose: boolean
     gtk?: "3.0" | "4.0"
     socket: string
     entry: string
     modules: Record<string, string>
+    rundir: string
 }
 
 type SocketMsg = {
@@ -35,6 +38,13 @@ function initGtk() {
     if (props.gtk === "3.0") {
         // @ts-expect-error girgen should override init()
         gi.require("Gtk", "3.0").init(null)
+    }
+}
+
+function initGettext() {
+    if (props.applicationId) {
+        const localedir = Gio.file_new_build_filenamev([props.rundir, "locale"])
+        Gettext.bindtextdomain(props.applicationId, localedir.get_path()!)
     }
 }
 
@@ -255,8 +265,10 @@ function initRegistry() {
 
 overrideGObjectRegistration()
 initGtk()
+initGettext()
 initIcons()
 initCss()
 initRegistry()
 initSocket()
+
 import(`file://${props.entry}`).catch(console.error)

@@ -38,12 +38,9 @@ export interface GettextDomain {
     pgettext<const S extends string>(msgctxt: string, msgid: S): Text<S>
 }
 
-export function createDomain(domain?: null | string | Gettext.GettextDomain): GettextDomain {
+export function createDomain(domain: string | Gettext.GettextDomain): GettextDomain {
     if (typeof domain === "string") {
         domain = Gettext.domain(domain)
-    }
-    if (!domain) {
-        domain = Gettext.domain(null as unknown as string)
     }
 
     const { gettext } = domain

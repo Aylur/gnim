@@ -21,7 +21,10 @@ pub struct ResourceFile {
     pub alias: String,
 }
 
-pub fn generate_resource(gresources: &[GResource], outfile: &str) -> Result<(), String> {
+pub fn generate_resource(
+    gresources: &[GResource],
+    outfile: impl AsRef<Path>,
+) -> Result<(), String> {
     let resources: Vec<String> = gresources
         .iter()
         .map(|r| {
@@ -49,7 +52,7 @@ pub fn generate_resource(gresources: &[GResource], outfile: &str) -> Result<(), 
 
     if is_in_path("glib-compile-resources") {
         let status = process::Command::new("glib-compile-resources")
-            .args(["--target", outfile, &xml_file])
+            .args(["--target", outfile.as_ref().to_str().unwrap(), &xml_file])
             .status();
 
         if let Err(e) = status {
