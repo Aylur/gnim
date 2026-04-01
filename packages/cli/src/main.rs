@@ -56,6 +56,13 @@ async fn main() -> std::process::ExitCode {
         },
         alias: gnim::GNIM_LIBDIR.map(|dir| {
             rolldown::PathsOutputOption::Fn(std::sync::Arc::new(move |id| {
+                if let Ok(path) = fs::canonicalize("node_modules/gnim")
+                    && path.exists()
+                {
+                    let res = id.to_string();
+                    return Box::pin(async move { Ok(res) });
+                }
+
                 // synced with package.json exports
                 let prefix = format!("file://{dir}/lib");
                 let alias = match id {
