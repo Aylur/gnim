@@ -13,6 +13,8 @@ export const devHooks: DevHooks = {
 }
 
 const noop = () => {}
+const AccessStack = new Array<Set<Accessor>>()
+let EffectDepth = 0
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 export type MaybeAccessor<T> = T | Accessor<T>
@@ -23,14 +25,6 @@ export type MaybeAccessor<T> = T | Accessor<T>
  * when they change the reader is notified.
  */
 export interface Accessor<T = unknown> {
-    /**
-     * Create a computed value which tracks `this` and invalidates the value
-     * whenever it changes. The result is cached and is only computed on access.
-     *
-     * @returns A new {@link Accessor} for the computed value.
-     */
-    <R = T>(compute: (value: T) => R): Accessor<R>
-
     /**
      * Get the current value and track it as a dependency in reactive scopes.
      * @returns The current value.
@@ -243,9 +237,6 @@ export function createRoot<T>(fn: (dispose: Fn) => T, parent?: Scope) {
     return scope.run(() => fn(() => scope.dispose()))
 }
 
-const AccessStack = new Array<Set<Accessor>>()
-let EffectDepth = 0
-
 export function isAccessor(instance: unknown): instance is Accessor {
     return (
         typeof instance === "function" &&
@@ -262,17 +253,7 @@ export function createAccessor<T>(
     get: () => T,
     subscribe: (callback: Fn) => Fn = () => noop,
 ): Accessor<T> {
-    function access(): T
-    function access<R = T>(compute?: (value: T) => R): Accessor<R>
-    function access<R = T>(compute?: (value: T) => R): Accessor<R> | T {
-        if (typeof compute === "function") {
-            return createComputed(() => {
-                const value = get()
-                AccessStack.at(-1)?.add(accessor)
-                return untrack(() => compute(value))
-            })
-        }
-
+    function access(): T {
         AccessStack.at(-1)?.add(accessor)
         return get()
     }
@@ -334,11 +315,7 @@ export function createState<T>(init: T, options?: StateOptions<NoInfer<T>>): Sta
     }
 
     function set(newValue: unknown): void {
-        const value: T = isAccessor(newValue)
-            ? newValue
-            : typeof newValue === "function"
-              ? newValue(currentValue)
-              : newValue
+        const value: T = typeof newValue === "function" ? newValue(currentValue) : newValue
 
         if (!equals(currentValue, value)) {
             currentValue = value
@@ -487,6 +464,21 @@ type EffectOptions = {
     immediate?: boolean
 }
 
+const EffectQueue = new Set<Fn>()
+let EffectsPending = false
+function queueEffect(fn: Fn) {
+    EffectQueue.add(fn)
+    if (!EffectsPending) {
+        EffectsPending = true
+        Promise.resolve().then(() => {
+            EffectsPending = false
+            const effects = Array.from(EffectQueue)
+            EffectQueue.clear()
+            effects.forEach((fn) => fn())
+        })
+    }
+}
+
 /**
  * Schedule a function which tracks reactive values accessed within
  * and re-runs whenever they change.
@@ -499,18 +491,20 @@ export function effect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions) {
     let currentScope = new Scope(parentScope)
 
     function syncEffect() {
+        EffectQueue.delete(syncEffect)
         EffectDepth++
         currentScope.dispose()
         currentScope = new Scope(parentScope)
 
         const [value, deps] = currentScope.run(() => push(() => fn(currentValue)))
 
-        currentDeps = diff(currentDeps, deps, syncEffect)
+        currentDeps = diff(currentDeps, deps, () => queueEffect(syncEffect))
         currentValue = value
         EffectDepth--
     }
 
     function dispose() {
+        EffectQueue.delete(syncEffect)
         currentDeps.forEach((cb) => cb())
         currentDeps.clear()
         currentScope.dispose()
@@ -632,7 +626,7 @@ export function createStore<S extends Record<PropertyKey, any>>(store: S): Store
             })
         } else if ("get" in desc) {
             Object.defineProperty(obj, key, {
-                get: createComputed(desc.get!.bind(obj)),
+                get: computed(desc.get!.bind(obj)),
                 set: desc.set,
                 enumerable: true,
             })
@@ -831,5 +825,7 @@ export function prop<T>(value: MaybeAccessor<T>): Accessor<T>
 export function prop<T>(value: MaybeAccessor<T>, fallback: NonNullable<T>): Accessor<NonNullable<T>>
 
 export function prop<T>(value: T, fallback?: unknown) {
-    return isAccessor(value) ? value((v) => v ?? fallback) : createAccessor(() => value ?? fallback)
+    return isAccessor(value)
+        ? createComputed(() => value() ?? fallback)
+        : createAccessor(() => value ?? fallback)
 }
