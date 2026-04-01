@@ -25,7 +25,7 @@ jobs:
                   cache: "pnpm"
 
             - name: Install dependencies
-              run: pnpm install --frozen-lockfile
+              run: pnpm -r install --frozen-lockfile
 
             # TODO: get .gir files from a faster source, no need to pull everything
             - name: Install Gtk deps
@@ -35,7 +35,7 @@ jobs:
 
             - name: Generate types
               run: |
-                  ./node_modules/@gnim-js/linux-x64/gnim types -d /usr/share/gir-1.0
+                  ./packages/gnim/node_modules/@gnim-js/linux-x64/gnim types -d /usr/share/gir-1.0
 
             - name: Lint
               run: pnpm lint
