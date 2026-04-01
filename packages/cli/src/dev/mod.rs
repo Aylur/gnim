@@ -126,7 +126,6 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
 
 fn init_translations(app_id: &str) -> Result<(), String> {
     let Ok(podir) = fs::canonicalize("po") else {
-        eprintln!("not po");
         return Ok(());
     };
 
