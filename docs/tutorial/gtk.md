@@ -9,8 +9,6 @@ To run Gtk, you will have to initialize it, create widgets, and run a GLib main
 loop. Alternatively you can use `Gio.Application` and its various subclasses
 such as `Gtk.Application`.
 
-::: code-group
-
 ```ts [GLib MainLoop]
 import GLib from "gi://GLib?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
@@ -24,22 +22,6 @@ const loop = GLib.MainLoop.new(null, false)
 
 loop.runAsync()
 ```
-
-```ts [Gtk Application]
-import Gtk from "gi://Gtk?version=4.0"
-
-const app = new Gtk.Application()
-
-app.connect("activate", () => {
-  // create widgets here
-  // app will quit automatically when the number
-  // of windows drops to 0
-})
-
-app.runAsync(null)
-```
-
-:::
 
 ## Your first widget
 
@@ -73,6 +55,23 @@ win.connect("close-request", () => loop.quit())
 win.present()
 ```
 
+> [!TIP]
+>
+> Its best practice to mark translatable text as translatable from the
+> beginning.
+>
+> ```ts
+> import { gettext: t } from "gettext"
+>
+> const win = new Gtk.Window({
+>   title: t("My App"),
+> })
+>
+> const label = new Gtk.Label({
+>   label: t("Hello World"),
+> })
+> ```
+
 ## Layout system
 
 Gtk uses [LayoutManagers](https://docs.gtk.org/gtk4/class.LayoutManager.html) to
@@ -86,6 +85,7 @@ implement some common layouts:
   ```ts
   const box = new Gtk.Box({
     orientation: Gtk.Orientation.HORIZONTAL,
+    spacing: 8,
   })
 
   box.append(Gtk.Label.new("1"))

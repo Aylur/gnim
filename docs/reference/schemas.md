@@ -19,8 +19,8 @@ Using the `Schema` class you can use the builder pattern to define schemas.
 
 ```ts
 const schema = new Schema({
-  id: "app.gnim.example",
-  path: "/app/gnim/example/",
+  id: "com.example.MyApp",
+  path: "/com/example/MyApp/",
 })
   .key("my-key", "s", {
     summary: "Simple string key",
@@ -38,11 +38,12 @@ export default defineSchemaList([schema])
 
 Running `gnim schemas ./path/to/directory` will turn each file in the directory
 with `.gschema.ts` extension into a corresponding `.gschema.xml` file which then
-can be integrated into build pipelines, for example Meson.
+can be integrated into build pipelines, for example
+[Meson](/tutorial/packaging#meson).
 
 ```xml
 <schemalist>
-  <schema id="app.gnim.example" path="/app/gnim/example/">
+  <schema id="com.example.MyApp" path="/com/example/MyApp/">
     <key name="my-key" type="s">
       <summary>Simple string key</summary>
       <default><![CDATA[ '' ]]></default>
@@ -75,7 +76,7 @@ The `createSettings` function can consume schemas and turn them into objects
 that will have an Accessor and setter function for each defined key.
 
 ```ts
-import { schema } from "./myschema.gschema"
+import { schema } from "./com.example.MyApp.gschema"
 import { createSettings } from "gnim/schema"
 
 const settings = createSettings(schema)

@@ -12,6 +12,8 @@ The `gnim dev` command is a simple HMR implementation which
   updating the slots that the type is used in. To update slots you also need to
   trigger HMR in the components that use the class.
 - intercepts `.css` imports and adds css providers to Gtk.
+- compiles `.po` translation files and provides them to the runtime on startup
+  using the given application id.
 
 When a component's implementation changes, it will cleanup the previous effects
 and will simply re-instantiate the widgets. It does not do any diffing
@@ -40,9 +42,9 @@ export default Comp
 
 ### CSS
 
-Currently CSS imports are not tracked only the root file is tracked that is
-imported from TypeScript code. When updating `component.css` its also required
-to save `style.css` to trigger HMR.
+Currently CSS transitive imports are not tracked, only the root CSS file is
+tracked that is imported from TypeScript code. When updating `component.css` its
+also required to save `style.css` to trigger HMR.
 
 ```css
 /* style.css */
@@ -58,3 +60,8 @@ button {
 
 When removing a CSS import, it will not remove the corresponding provider. As a
 workaround, trigger HMR with an empty CSS file before removing the import.
+
+### Translations
+
+Translation `.po` files are not tracked. The dev server needs to be restarted on
+translation changes.

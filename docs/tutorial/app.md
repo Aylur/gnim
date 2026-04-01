@@ -20,6 +20,7 @@ handlers, or create a subclass and implement its methods.
 ```ts [Subclassing]
 import Gtk from "gi://Gtk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
+import GLib from "gi://GLib?version=2.0"
 import { register } from "gnim/gobject"
 import { render } from "gnim/gtk4"
 import { programInvocationName, programArgs } from "system"
@@ -31,6 +32,9 @@ class MyApp extends Gtk.Application {
       applicationId: "com.example.MyApp",
       flags: Gio.ApplicationFlags.FLAGS_NONE,
     })
+
+    GLib.set_prgname("example-myapp")
+    GLib.set_application_name("My App")
   }
 
   vfunc_activate(): void {
@@ -47,14 +51,18 @@ app.runAsync([programInvocationName, ...programArgs])
 ```
 
 ```ts [Without subclassing]
-import Gtk from "gi://Gtk"
-import Gio from "gi://Gio"
-import { createRoot } from "./jsx/scope"
+import Gtk from "gi://Gtk?version=4.0"
+import Gio from "gi://Gio?version=2.0"
+import GLib from "gi://GLib?version=2.0"
+import { render } from "gnim/gtk4"
 import { programInvocationName, programArgs } from "system"
+
+GLib.set_prgname("example-myapp")
+GLib.set_application_name("My App")
 
 export const app = new Gtk.Application({
   applicationId: "com.example.MyApp",
-  flags: Gio.ApplicationFlags.NON_UNIQUE,
+  flags: Gio.ApplicationFlags.FLAGS_NONE,
 })
 
 app.connect("activate", () => {
@@ -68,6 +76,11 @@ app.runAsync([programInvocationName, ...programArgs])
 ```
 
 :::
+
+> [!TIP]
+>
+> [Application ID](https://developer.gnome.org/documentation/tutorials/application-id.html)
+> should be in reverse DNS style.
 
 The main benefit of using an application is that in most cases you want a single
 instance of your app running and every subsequent invocation to do something on
@@ -143,8 +156,8 @@ export default defineSchemaList([schema])
 
 > [!NOTE]
 >
-> [`GLib.Variant`](https://docs.gtk.org/glib/gvariant-format-strings.html) is
-> GLib's serialized format similar to JSON but with types.
+> [`GLib.Variant`](/article/gvariant) is GLib's serialized format similar to
+> JSON but with types.
 
 You can then instantiate a settings object with
 [`createSettings`](/reference/schemas#using-schemas) which returns an object

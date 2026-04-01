@@ -23,7 +23,6 @@ import {
   property,
   method,
   methodAsync,
-  property,
   signal,
 } from "gnim/dbus"
 
@@ -248,7 +247,7 @@ Registers a DBus signal.
 ```ts
 type Param = string | { name: string; type: string }
 
-function method(...parameters: Param[])
+function signal(...parameters: Param[])
 ```
 
 Example

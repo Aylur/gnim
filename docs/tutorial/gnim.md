@@ -231,6 +231,8 @@ function MyButton() {
 Using JSX, a custom widget will always have a single object as its parameter.
 
 ```ts
+import { type GnimNode } from "gnim"
+
 type Props = {
   myprop: string
   children?: GnimNode
@@ -274,9 +276,9 @@ signals or observables in some other libraries)</span> through the
 [`Accessor`](/reference/primitives) interface. The most common primitives you
 will use is [`createState`](/reference/primitives#createstate),
 [`computed`](/reference/primitives#computed) and
-[`ref`](/reference/primitives#ref). `createState` is used to create a writable
-reactive value, `computed` is used to derive reactive values and `ref` is used
-to hook into GObject properties.
+[`bind`](/reference/primitives#bind). `createState` is used to create writable
+reactive values, `computed` is used to derive reactive values and `bind` is used
+to hook into GObject properties and stores.
 
 :::code-group
 
@@ -302,7 +304,7 @@ function Counter() {
 
 ```tsx [GObject example]
 import { Object, register, property } from "gnim/gobject"
-import { ref, computed } from "gnim"
+import { bind, computed } from "gnim"
 
 @register
 class CountStore extends Object {
@@ -316,7 +318,31 @@ function Counter() {
     counter.count += 1
   }
 
-  const count = ref(counter, "count")
+  const count = bind(counter, "count")
+  const label = computed(() => count().toString())
+
+  return (
+    <Box>
+      <Label label={label} />
+      <Button onClicked={increment}>Click to increment</Button>
+    </Box>
+  )
+}
+```
+
+```tsx [Store example]
+import { createStore, bind, computed } from "gnim"
+
+const countStore = createStore({
+  count: 0,
+})
+
+function Counter() {
+  function increment() {
+    counter.count += 1
+  }
+
+  const count = bind(counter, "count")
   const label = computed(() => count().toString())
 
   return (
@@ -332,15 +358,16 @@ function Counter() {
 
 > [!TIP]
 >
-> There is a shorthand syntax for computed values that only have a single
-> dependency
+> In a lot of cases you will need to convert values to the required type to pass
+> them as GTK widget properties in which case you can use the `.as()` method on
+> accessors.
 >
-> ```ts
+> ```tsx
 > let value: Accessor<number>
 >
-> // these two are equivalent
-> const double = computed(() => value() * 2)
-> const double = value((v) => v * 2)
+> <Gtk.Label label={computed(() => value().toString())} />
+> <Gtk.Label label={value.as(v => v.toString())} />
+> <Gtk.Label label={value.as(String)} />
 > ```
 
 ## Dynamic rendering
@@ -349,16 +376,14 @@ When you want to render based on a reactive value, you can use the `<With>`
 component to "unwrap" the Accessor.
 
 ```tsx
-import { With, Accessor } from "gnim"
+import { With, type Accessor } from "gnim"
 
 let value: Accessor<{ member: string } | null>
 
 return (
-  <Box>
-    <With value={value}>
-      {(value) => value && <Label label={value.member} />}
-    </With>
-  </Box>
+  <With value={value}>
+    {(value) => value && <Label label={value.member} />}
+  </With>
 )
 ```
 
@@ -366,17 +391,13 @@ return (
 >
 > In a lot of cases it is better to always render the component and set its
 > `visible` property instead.
-
-```tsx
-const member = computed(() => value()?.member || "")
-const shouldShow = computed(() => member() !== "")
-
-return (
-  <Box>
-    <Label visible={shouldShow} label={member} />
-  </Box>
-)
-```
+>
+> ```tsx
+> const member = computed(() => value()?.member || "")
+> const shouldShow = computed(() => member() !== "")
+>
+> return <Label visible={shouldShow} label={member} />
+> ```
 
 ## Dynamic list rendering
 
@@ -387,16 +408,14 @@ new items are inserted while widgets associated with removed items are disposed.
 ```tsx
 import { For, Accessor } from "gnim"
 
-let list: Accessor<Array<any>>
+let list: Accessor<Array<T>>
 
 return (
-  <Box>
-    <For each={list}>
-      {(item, index: Accessor<number>) => (
-        <Label label={index((i) => `${i}. ${item}`)} />
-      )}
-    </For>
-  </Box>
+  <For each={list}>
+    {(item: T, index: Accessor<number>) => (
+      <Label label={index((i) => `${i}. ${item}`)} />
+    )}
+  </For>
 )
 ```
 
@@ -426,11 +445,14 @@ setMessage("World") // output: 1, "World"
 ```
 
 If you wish to read a value without tracking it as a dependency you can use the
-`.peek()` method.
+`.peek()` method or the `untrack()` function.
 
 ```ts
+import { untrack } from "gnim"
+
 effect(() => {
   console.log(count(), message.peek())
+  console.log(untrack(() => message()))
 })
 
 setCount(1) // output: 1, "Hello"
@@ -474,7 +496,7 @@ life-cycle with `createRoot`.
 ```ts
 const globalObject: GObject.Object
 
-const field = ref(globalObject, "field")
+const field = bind(globalObject, "field")
 
 createRoot((dispose) => {
   effect(() => {
@@ -491,7 +513,7 @@ Do not use an effect to synchronise state.
 
 ```ts
 const [count, setCount] = createState(1)
-// [!code --:5]
+// [!code --:4]
 const [double, setDouble] = createState(count() * 2)
 effect(() => {
   setDouble(count() * 2)
@@ -504,7 +526,7 @@ Same logic applies when an Accessor is passed as a prop.
 
 ```ts
 function Counter(props: { count: Accessor<number> }) {
-  // [!code --:5]
+  // [!code --:4]
   const [double, setDouble] = createState(props.count() * 2)
   effect(() => {
     setDouble(props.count() * 2)
@@ -551,8 +573,8 @@ function MyWindow() {
 ```
 
 Everything in a Gnim render tree is living inside an Effect and can be nested.
-You can call `onCleanup()` in any scope and it will run when that scope is triggered
-to re-evaluate and when it is disposed.
+You can call `onCleanup()` in any scope and it will run when that scope is
+triggered to re-evaluate and when it is disposed.
 
 ```tsx
 function Timer() {

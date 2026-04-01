@@ -2,7 +2,7 @@ import { defineConfig } from "vitepress"
 
 export default defineConfig({
     title: "Gnim",
-    description: "Library which brings type-safety, JSX and reactivity to GNOME JavaScript.",
+    description: "Library that brings JSX, reactivity and type-safety to GNOME JavaScript.",
 
     cleanUrls: true,
 
@@ -22,6 +22,7 @@ export default defineConfig({
                     { text: "Gtk", link: "/tutorial/gtk" },
                     { text: "Gnim", link: "/tutorial/gnim" },
                     { text: "App", link: "/tutorial/app" },
+                    { text: "Translations", link: "/tutorial/i18n" },
                     { text: "Packaging", link: "/tutorial/packaging" },
                 ],
             },
@@ -43,6 +44,21 @@ export default defineConfig({
                     { text: "Dev server", link: "/article/devserver" },
                     { text: "Assets", link: "/article/assets" },
                     { text: "Buildable", link: "/article/buildable" },
+                    { text: "Web framework comparisons", link: "/article/comparisons" },
+                    { text: "GLib.Variant", link: "/article/gvariant" },
+                ],
+            },
+            {
+                text: "Resources",
+                items: [
+                    { text: "GJS Guide", link: "https://gjs.guide/" },
+                    { text: "GJS Docs", link: "https://gjs-docs.gnome.org/" },
+                    {
+                        text: "Gnome Dev Docs",
+                        link: "https://developer.gnome.org/documentation/tutorials/beginners/getting_started.html",
+                    },
+                    { text: "Gtk4 Book", link: "https://rmnvgr.gitlab.io/gtk4-gjs-book/" },
+                    { text: "Workbench", link: "https://flathub.org/en/apps/re.sonny.Workbench" },
                 ],
             },
         ],

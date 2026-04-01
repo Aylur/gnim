@@ -6,11 +6,10 @@ reactive scopes so that when they change the reader is notified.
 
 ```ts
 interface Accessor<T> {
-  <R = T>(compute: (value: T) => R): Accessor<R>
   (): T
   as<R = T>(fn: (value: T) => R): Accessor<R>
   peek(): T
-  subscribe(callback: Callback): DisposeFn
+  subscribe(callback: () => void): () => void
 }
 ```
 
@@ -38,16 +37,13 @@ unsubscribe()
 > The subscribe method is not scope aware. Do not forget to clean them up when
 > no longer needed. Alternatively, use an [`effect`](#effect) instead.
 
-Accessors have a shorthand to create [`computed`](#computed) values.
+The `.as()` can be used to simply map the value without doing any memoization or
+validation.
 
 ```ts
 const n: Accessor<number>
-const s: Accessor<string> = n((v) => v.toString())
+const s: Accessor<string> = n.as((v) => v.toString())
 ```
-
-The `.as()` method exists mostly for legacy reasons, but it's a lightweight
-version of the above shorthand feature: It simply maps the value without doing
-any memoization or validation.
 
 ### `createState`
 
@@ -123,40 +119,43 @@ let b: Accessor<number>
 const c: Accessor<number> = computed(() => a() + b())
 ```
 
-> [!TIP]
->
-> There is a shorthand for single dependency computed values. There is a small
-> difference between them however: `computed` memoizes using an equality check,
-> the shorthand syntax only caches its result but won't validate the next value.
->
-> ```ts
-> let a: Accessor<string>
-> const b = computed(() => `transformed ${a()}`)
-> const b = a((v) => `transformed ${v}`)
-> ```
+### `untrack`
 
-### `ref`
-
-Creates an `Accessor` on a `GObject.Object`'s `property`.
+Alternative to `.peek()`: it lets you read `Accessor` values without tracking
+them.
 
 ```ts
-function ref<T extends GObject.Object, P extends keyof T>(
+let value: Accessor<T>
+
+const a = value.peek()
+const b = untrack(() => value())
+```
+
+### `bind`
+
+Creates an `Accessor` on a `GObject.Object`'s `property` or a
+[Store](#createStore).
+
+```ts
+type Bindable = Store | GObject.Object
+
+function bind<T extends Bindable, P extends PropKeys<T>>(
   object: T,
-  property: Extract<P, string>,
+  property: P,
 ): Accessor<T[P]>
 ```
 
 > [!IMPORTANT]
 >
-> The above declaration is simplified to be more readable. In reality `ref`
-> depends on the [`$readableProperties`](/reference/typescript#type-annotations)
-> annotation.
+> `bind` infers available properties from the
+> [`$readableProperties`](/reference/typescript#type-annotations) annotation and
+> falls back to `keyof T` when it's empty or missing.
 
 Example:
 
 ```ts
 const styleManager = Adw.StyleManager.get_default()
-const style = ref(styleManager, "color-scheme")
+const style = bind(styleManager, "color-scheme")
 ```
 
 It also supports nested bindings.
@@ -170,14 +169,13 @@ interface Inner extends GObject.Object {
   field: string
 }
 
-const value: Accessor<string | null> = ref(outer, "nested", "field")
+const value: Accessor<string | null> = bind(outer, "nested", "field")
 ```
 
 ### `effect`
 
-Schedule a function to run after the current `Scope` created with
-[`createRoot`](#createroot) returns, tracking dependencies and re-running the
-function whenever they change.
+Schedule a function to run after the current `Scope` returns, tracking
+dependencies and re-running the function whenever they change.
 
 ```ts
 function effect(fn: () => void): void
@@ -224,10 +222,92 @@ connectSignal(object, "signal", (...args) => {
 })
 ```
 
+### `createStore`
+
+Creates an object where each field is replaced with a reactive accessor.
+
+```ts
+const store = createStore({
+  value: 0,
+  get double() {
+    return this.value * 2
+  },
+})
+```
+
+::: details Stores under the hood
+
+The above example can be thought of as a set of values created with
+`createState` and `computed` exposed through object property accessors.
+
+```ts
+function createMyStore() {
+  const [value, setValue] = createState(0)
+  const double = computed(() => value() * 2)
+
+  return {
+    get value() {
+      return value()
+    },
+    set value(v) {
+      setValue(v)
+    },
+    get double() {
+      return double()
+    },
+  }
+}
+```
+
+:::
+
+Accessing store values are reactive.
+
+```ts
+const v = computed(() => store.value)
+
+effect(() => {
+  console.log(store.value)
+})
+```
+
+To read a store value in a reactive scope without tracking it as a dependency
+use [`untrack`](#untrack).
+
+```ts
+effect(() => {
+  console.log(untrack(() => store.value))
+})
+```
+
+To pass them as reactive props you can use [`bind`](#bind)
+
+```tsx
+<Component value={bind(store, "value")} />
+```
+
+> [!IMPORTANT] Nested stores
+>
+> When mutating a value which is a nested store make sure to use `createStore`
+> to not lose reactivity.
+>
+> ```ts
+> const store = createStore({
+>   value: 0,
+>   nested: createStore({
+>     value: 0,
+>   }),
+> })
+>
+> store.nested = createStore({
+>   ...store.nested,
+> })
+> ```
+
 ## Scopes and Life cycle
 
-A [scope](/tutorial/gnim.md#scopes) is essentially a global object which holds
-cleanup functions and context values.
+A scope is essentially a global object which holds cleanup functions and context
+values.
 
 ```js
 let scope = new Scope()

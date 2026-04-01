@@ -86,7 +86,7 @@ into existing tooling.
 
 ```ts
 import GLib from "gi://GLib?version=2.0"
-import { defineSchemaList, Schema, Enum, Flags } from "gnim-schemas"
+import { defineSchemaList, Schema, Enum, Flags } from "gnim/schema"
 
 const myFlags = new Flags("my.flags", ["one", "two"])
 const myEnum = new Enum("my.enum", ["one", "two"])
@@ -117,7 +117,7 @@ export default defineSchemaList([schema])
 
 ```ts
 import { schema } from "./com.example.MyApp.gschema"
-import { createSettings } from "gnim-schemas"
+import { createSettings } from "gnim/schema"
 
 const settings = createSettings(schema)
 
@@ -126,4 +126,39 @@ effect(() => {
 })
 
 settings.setMyKey("hello")
+```
+
+## Text formatting
+
+Type-safe text formatting that warns you on missing slots.
+
+```tsx
+import { createDomain, fmt } from "gnim/i18n"
+
+const { gettext: t, ngettext: n } = createDomain("com.example.MyApp")
+
+function App() {
+  const [count, setCount] = createState(0)
+
+  return (
+    <Gtk.Button onClicked={() => setCount((c) => c + 1)}>
+      <Gtk.Label label={t("Click Me!")} />
+      <Gtk.Label
+        label={count.as((c) =>
+          fmt(n("Clicked once", "Clicked {{count}} times", c), { count: c }),
+        )}
+      />
+    </Gtk.Button>
+  )
+}
+```
+
+## Asset handling
+
+Import assets that are automatically bundled with zero setup.
+
+```tsx
+import image from "./assets/image?file"
+
+return <Gtk.Picture file={image} />
 ```

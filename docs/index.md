@@ -8,8 +8,7 @@ Library that brings JSX, reactivity and type-safety to GNOME JavaScript.
   extensions
 - [GObject decorators](/reference/gobject) for a convenient way for subclassing
   GObjects
-- [DBus decorators](/reference/dbus) for implementing DBus services and
-  proxies
+- [DBus decorators](/reference/dbus) for implementing DBus services and proxies
 
 ## Obligatory Counter Example
 
@@ -27,7 +26,7 @@ function Counter() {
 
   return (
     <Gtk.Box spacing={8}>
-      <Gtk.Label label={count((c) => c.toString())} />
+      <Gtk.Label label={count.as(String)} />
       <Gtk.Button onClicked={increment}>Increment</Gtk.Button>
     </Gtk.Box>
   )

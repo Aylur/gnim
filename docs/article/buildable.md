@@ -97,7 +97,7 @@ export class Grid extends Gtk.Grid implements Buildable {
 
 > [!NOTE]
 >
-> This implementation does not handle every usecase since its possible that
+> This implementation does not handle every use case since it's possible that
 > `appendChild` is called with a new widget after its already a child of a Grid.
 > It would also require a widget recreation to move the widget around. To
 > support reactive position and child properties you can implement

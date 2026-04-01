@@ -16,7 +16,7 @@ libraries.
 > GJS is **not** Node, **not** Deno, and **not** Bun. GJS does not implement
 > some common Web APIs you might be used to from these other runtimes such as
 > `fetch`. The standard library of GJS comes from
-> [`GLib`](https://docs.gtk.org/glib/), [`Gio`](https://docs.gtk.org/gio//) and
+> [`GLib`](https://docs.gtk.org/glib/), [`Gio`](https://docs.gtk.org/gio/) and
 > [`GObject`](https://docs.gtk.org/gobject/) which are libraries written in C
 > and exposed to GJS through
 > [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) using
@@ -45,7 +45,6 @@ sudo apt install libgjs-dev libgtk-4-dev npm
 ```
 
 ```nix [Nix]
-# flake.nix
 {
   inputs.nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
@@ -58,6 +57,7 @@ sudo apt install libgjs-dev libgtk-4-dev npm
     devShells = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
     in {
+      # [!code focus:10]
       # enter this shell using `nix develop`
       default = pkgs.mkShell {
         packages = with pkgs; [

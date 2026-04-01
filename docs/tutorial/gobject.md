@@ -5,13 +5,6 @@ oriented concepts in C which GJS will call into using GObject Introspection.
 
 ## GObject Construction
 
-::: tip
-
-In rare cases, like the `Gio.File` interface, objects can not be constructed
-with the `new` operator and a constructor method must always be used.
-
-:::
-
 The most common way to create a GObject instance is using the `new` operator.
 When constructing a GObject this way, you can pass a dictionary of properties:
 
@@ -27,6 +20,11 @@ Many classes also have static constructor methods you can use directly:
 ```ts
 const labelWidget = Gtk.Label.new("Text")
 ```
+
+> [!TIP]
+>
+> In rare cases, like the `Gio.File` interface, objects can not be constructed
+> with the `new` operator and a constructor method must always be used.
 
 ## Signals
 
@@ -77,13 +75,6 @@ selectLabel.connect("move-cursor", (label, step, count, extendSelection) => {
 
 ### Callback Return Values
 
-::: warning
-
-A callback with no return value will implicitly return `undefined`, while an
-`async` function will implicitly return a `Promise`.
-
-:::
-
 Some signals expect a return value, usually a `boolean`. The type and behavior
 of the return value will be described in the documentation for the signal.
 
@@ -102,6 +93,11 @@ linkLabel.connect("activate-link", (label, uri) => {
   return false
 })
 ```
+
+> [!WARNING]
+>
+> A callback with no return value will implicitly return `undefined`, while an
+> `async` function will implicitly return a `Promise`.
 
 Using an `async` function as a signal handler will return an implicit `Promise`,
 which will be coerced to a _truthy_ value. If necessary, use a traditional

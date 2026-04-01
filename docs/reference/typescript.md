@@ -90,7 +90,10 @@ class MyClass extends GObject.Object {
 }
 ```
 
-`connect`, `emit` and `notify` methods will infer from these annotations.
+Methods such as `connect()`, `emit()`, `notify()` and functions such as
+[`bind()`](/reference/primitives#bind) and
+[`connectSignal()`](/reference/primitives#connectsignal) will infer from these
+annotations.
 
 ```ts
 const instance = new MyClass()
@@ -102,6 +105,12 @@ instance.connect("my-signal", (source, arg) => {
 instance.connect("my-detailed-signal::detail", (source, arg) => {
   console.log(arg)
 })
+
+connectSignal(instance, "my-signal", (arg) => {
+  console.log(arg)
+})
+
+const myProp = ref(instance, "my-prop")
 ```
 
 Due to how TypeScript `this` type works, you need to annotate `this` or use a
@@ -136,38 +145,15 @@ declare module "gi://Gtk" {
 :::
 
 You can also use the `--short-imports` flag when generating types to do it
-automatically, which will generate an alias for each namespace that only has one
-version available.
+automatically, which will generate an alias for each namespace.
 
-```sh
-gnim types -i Gtk-3.0 -i Gdk-3.0 --short-imports
-```
-
-## Legacy imports
-
-To declare imports on the legacy `imports.gi` module system, you can augment the
-`LegacyGiImports` interface:
-
-:::code-group
-
-```ts [env.d.ts]
-declare global {
-  interface LegacyGiImports {
-    Gtk: typeof import("gi://Gtk?version=4.0").default
-    Adw: typeof import("gi://Adw?version=1").default
-  }
-}
-```
-
-:::
-
-You can also use the `--legacy-imports` flag when generating types to do it
-automatically, which will generate an alias for each namespace that only has one
-version available.
-
-```sh
-gnim types -i Gtk-3.0 -i Gdk-3.0 --legacy-imports
-```
+> [!TIP]
+>
+> To target specific versions you can ignore other versions.
+>
+> ```sh
+> gnim types -i Gtk-3.0 -i Gdk-3.0 --short-imports
+> ```
 
 ## Escape hatches
 

@@ -54,21 +54,14 @@ naturally using JSX syntax. For example, this applies to types like
 > ```tsx
 > let str: Accessor<string>
 >
-> // Don't do this
 > function Comp() {
 >   return (
 >     <Gtk.Button>
+>       // [!code --:3]
 >       {str((s) => (
 >         <Gtk.Label label={s} />
 >       ))}
->     </Gtk.Button>
->   )
-> }
->
-> // Use the `With` component
-> function Comp() {
->   return (
->     <Gtk.Button>
+>       // [!code ++]
 >       <With value={str}>{(s) => <Gtk.Label label={s} />}</With>
 >     </Gtk.Button>
 >   )
@@ -203,19 +196,31 @@ return (
 
 ### Inline CSS
 
-Using the Gtk4 renderer there is an additional `css` property available on Class
-components that inherit from `Gtk.Widget`. It is mostly meant to be used as a
-debugging tool, e.g. with `css="border: 1px solid red;"`.
+There is an additional `css` property available on Class components that inherit
+from `Gtk.Widget`. It is mostly meant to be used as a debugging tool, e.g. with
+`css="border: 1px solid red;"`.
 
 ```tsx
 <Gtk.Button css="border: 1px solid red;" />
 ```
 
-Using the Gtk3 renderer additionally to `css` there is `class` property which
-sets class names on `Gtk.Widget` instances.
+### Class names
+
+The `class` property is available on Class components that inherit from
+`Gtk.Widget`. It is an alternative to Gtk4 `cssClasses`
+<span style="opacity: 0.6">(Gtk3 does not have a property for class
+names)</span> property which can take class names in various forms.
 
 ```tsx
-<Gtk.Button class="flat" />
+const name: string | Accessor<string> | string[] | Accessor<string[]>
+
+return (
+  <Gtk.Button
+    class="class1 class2"
+    class={name}
+    class={["class1 class2", name]}
+  />
+)
 ```
 
 ## Function Components
@@ -225,28 +230,24 @@ handled in user code.
 
 > [!TIP]
 >
-> To make reusable function components more convenient to use, you should
-> annotate props as either static or reactive and handle both cases as if it was
-> reactive.
->
-> ```ts
-> type $<T> = T | Accessor<T>
-> const $ = <T>(value: $<T>): Accessor<T> =>
->   isAccessor(value) ? value : createAccessor(() => value)
-> ```
+> In Gnim, props have to be explicitly declared as reactive due to GObjects
+> having possible `construct-only` properties that cannot be mutated after
+> instantiation.
 
 ```tsx
+import { prop, MaybeAccessor } from "gnim"
+
 function Counter(props: {
-  count?: $<number>
+  count?: MaybeAccessor<number>
   onClicked?: () => void
   children?: GnimNode
 }) {
-  const count = $(props.count)((v) => v ?? 0)
+  const count = prop(props.count, 0)
 
   return (
     <Gtk.Button onClicked={props.onClicked}>
       <Gtk.Box>
-        {count}
+        <Gtk.Label label={count.as(String)} />
         {props.children}
       </Gtk.Box>
     </Gtk.Button>
@@ -272,9 +273,15 @@ return (
 
 > [!TIP]
 >
-> In a lot of cases, it is better to always render the component and set its
-> `visible` property instead. Only use `With` when the inner value is nullable
-> and you can't define a fallback value.
+> In a lot of cases it is better to always render the component and set its
+> `visible` property instead.
+>
+> ```tsx
+> const member = computed(() => value()?.member || "")
+> const shouldShow = computed(() => member() !== "")
+>
+> return <Label visible={shouldShow} label={member} />
+> ```
 
 ### List rendering
 
@@ -283,11 +290,11 @@ the array changes, it is compared with its previous state. Widgets for new items
 are inserted, while widgets associated with removed items are removed.
 
 ```tsx
-let list: Accessor<Iterable<any>>
+let list: Accessor<Iterable<T>>
 
 return (
   <For each={list}>
-    {(item, index: Accessor<number>) => (
+    {(item: T, index: Accessor<number>) => (
       <Gtk.Label label={index((i) => `${i}. ${item}`)} />
     )}
   </For>
