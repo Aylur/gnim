@@ -122,8 +122,8 @@ export function signal(
 ) => void
 
 export function signal<
-    Params extends TypeParameter[],
-    Return extends TypeParameter = typeof GObject.VoidType,
+    const Params extends TypeParameter[],
+    const Return extends TypeParameter = typeof GObject.VoidType,
 >(
     paramtypes: Params,
     returntype?: Return,
