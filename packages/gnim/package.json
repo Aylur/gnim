@@ -1,6 +1,6 @@
 {
     "name": "gnim",
-    "version": "2.0.0-alpha.4",
+    "version": "2.0.0-alpha.5",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
@@ -13,7 +13,7 @@
         "gnim": "bin/gnim.js"
     },
     "optionalDependencies": {
-        "@gnim-js/linux-x64": "2.0.0-alpha.4"
+        "@gnim-js/linux-x64": "2.0.0-alpha.5"
     },
     "exports": {
         ".": {

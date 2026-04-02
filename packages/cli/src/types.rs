@@ -39,10 +39,10 @@ pub struct TypeArgs {
     #[arg(short, long, value_name = "PATH", default_value = "./.gnim/types")]
     pub outdir: String,
     /// Lookup these directories for .gir files
-    #[arg(short, long, value_name = "PATHS", default_value_t = default_dirs())]
-    pub dirs: String,
+    #[arg(short, long, value_name = "PATHS", default_values_os_t = default_dirs())]
+    pub dirs: Vec<path::PathBuf>,
     /// Skip rendering by name and version, e.g "Gtk-4.0"
-    #[arg(short, long, value_name = "NAME")]
+    #[arg(short, long, value_name = "NAMESPACE")]
     pub ignore: Vec<String>,
     /// Generate non versioned imports
     #[arg(long, default_value_t = false)]
@@ -160,8 +160,7 @@ fn on_event(event: Event) {
 pub async fn types(args: &TypeArgs) -> Result<(), String> {
     VERBOSE.set(args.verbose).unwrap();
 
-    let dir_paths: Vec<path::PathBuf> = args.dirs.split(":").map(path::PathBuf::from).collect();
-    let dirs = &dir_paths.iter().map(|p| p.as_path()).collect::<Vec<_>>();
+    let dirs = &args.dirs.iter().map(|p| p.as_path()).collect::<Vec<_>>();
     let ignore = &args.ignore.iter().map(|i| i.as_ref()).collect::<Vec<_>>();
 
     let opts = typescript::Opts {
