@@ -11,7 +11,6 @@
         "declaration": true,
         "inlineSourceMap": true,
         "outDir": "build",
-        "removeComments": true,
         "skipLibCheck": true,
         "rootDir": ".",
 
