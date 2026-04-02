@@ -8,6 +8,7 @@ const priv = Symbol("gobject private")
 
 export const { Object } = GObject
 export type Object = GObject.Object
+export type ConstructorProps<Class> = GObject.ConstructorProps<Class>
 
 export namespace Object {
     export type SignalSignatures = GObject.Object.SignalSignatures
