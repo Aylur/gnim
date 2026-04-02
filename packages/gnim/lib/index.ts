@@ -13,6 +13,7 @@ export {
     bind,
     computed,
     connectSignal,
+    createAccessor,
     createContext,
     createRoot,
     createState,
