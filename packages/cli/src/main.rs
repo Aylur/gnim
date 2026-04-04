@@ -74,7 +74,7 @@ async fn main() -> std::process::ExitCode {
                     "gnim/fetch" => format!("{prefix}/polyfill/fetch.js"),
                     "gnim/jsx-runtime" => format!("{prefix}/jsx-runtime.js"),
                     "gnim/jsx-dev-runtime" => format!("{prefix}/jsx-dev-runtime.js"),
-                    "gnim/gtk4" => format!("{prefix}/renderer/gtk4.js"),
+                    "gnim/gtk4" => format!("{prefix}/renderer/gtk4/index.js"),
                     _ => id.to_string(),
                 };
 

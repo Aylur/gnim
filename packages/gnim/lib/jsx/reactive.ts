@@ -232,7 +232,7 @@ function onMount(fn: Fn) {
  * })
  * ```
  */
-export function createRoot<T>(fn: (dispose: Fn) => T, parent?: Scope) {
+export function createRoot<T>(fn: (dispose: Fn) => T, parent?: Scope | null) {
     const scope = new Scope(parent)
     return scope.run(() => fn(() => scope.dispose()))
 }

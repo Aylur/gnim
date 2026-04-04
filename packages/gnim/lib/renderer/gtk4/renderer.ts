@@ -1,10 +1,10 @@
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
-import { newObject, type CC, type CCProps, type FC, type Props } from "../jsx/element.js"
-import { createRenderer, appendChild, removeChild, setChildren } from "../jsx/render.js"
-import { computed, isAccessor, type Accessor } from "../jsx/reactive.js"
-import { setProperty } from "../util.js"
+import { newObject, type CC, type CCProps, type FC, type Props } from "../../jsx/element.js"
+import { createRenderer, appendChild, removeChild, setChildren } from "../../jsx/render.js"
+import { computed, isAccessor, type MaybeAccessor } from "../../jsx/reactive.js"
+import { setProperty } from "../../util.js"
 
 const dummyBuilder = new Gtk.Builder()
 const slotType = Symbol("gnim.gtk4.slot")
@@ -31,7 +31,7 @@ function setCss(object: GObject.Object, css: string) {
     Object.assign(object, { [cssprovider]: provider })
 }
 
-function flattenClassList(classList: unknown): MaybeReactive<string> {
+function flattenClassList(classList: unknown): MaybeAccessor<string> {
     if (typeof classList === "string") return classList
     if (isAccessor(classList)) return flattenClassList(classList())
     if (Array.isArray(classList)) return classList.map(flattenClassList).join(" ")
@@ -190,15 +190,14 @@ export const { render } = createRenderer({
     },
 })
 
-type MaybeReactive<T> = T | Accessor<T>
 export type ClassValue = string | number | null | boolean | undefined | ClassValue[]
-export type ClassList = MaybeReactive<ClassValue> | MaybeReactive<ClassList[]>
+export type ClassList = MaybeAccessor<ClassValue> | MaybeAccessor<ClassList[]>
 
 declare module "gnim" {
     namespace JSX {
         interface IntrinsicClassAttributes<T> {
             slot?: string
-            css?: T extends Gtk.Widget ? MaybeReactive<string> : never
+            css?: T extends Gtk.Widget ? MaybeAccessor<string> : never
             class?: T extends Gtk.Widget ? ClassList : never
         }
     }

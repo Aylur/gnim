@@ -49,8 +49,8 @@
             "types": "./lib/jsx-dev-runtime.d.ts"
         },
         "./gtk4": {
-            "import": "./lib/renderer/gtk4.js",
-            "types": "./lib/renderer/gtk4.d.ts"
+            "import": "./lib/renderer/gtk4/index.js",
+            "types": "./lib/renderer/gtk4/index.d.ts"
         }
     },
     "files": [
