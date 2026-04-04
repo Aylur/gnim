@@ -7,7 +7,7 @@ use std::{env, fs, path::Path};
 pub struct ExeArgs {
     /// The gresource bundle
     pub gresource: String,
-    /// Output target
+    /// Output target, if omitted stdout is used
     #[arg(short, long)]
     pub outfile: Option<String>,
     /// Application ID in reverse DNS format
@@ -35,13 +35,6 @@ pub async fn exe(args: &ExeArgs) -> Result<(), String> {
         Some(id) => format!("/{}/", id.clone().replace_all(".", "/")),
         None => "/".to_string(),
     };
-
-    let outfile = Path::new(args.outfile.as_deref().unwrap_or(mainjs));
-
-    let outdir = outfile
-        .parent()
-        .expect("Outfile must have a parent directory");
-    fs::create_dir_all(outdir).expect("Failed to create directories");
 
     let gresource = {
         let entry = Path::new(&args.gresource);
@@ -76,15 +69,27 @@ pub async fn exe(args: &ExeArgs) -> Result<(), String> {
             "await import({:?})",
             format!("resource://{}{}", resource_prefix, mainjs)
         ),
-    ];
+    ]
+    .join("\n");
 
-    fs::write(outfile, content.join("\n")).expect("Failed to write file");
+    if let Some(out) = &args.outfile {
+        let outfile = Path::new(&out);
 
-    let mut perms = fs::metadata(outfile)
-        .expect("Failed to get metadata for outfile")
-        .permissions();
-    perms.set_mode(perms.mode() | 0o111);
-    fs::set_permissions(outfile, perms).expect("Failed set file permissions");
+        let outdir = outfile
+            .parent()
+            .expect("Target must have a parent directory");
+
+        fs::create_dir_all(outdir).expect("Failed to create directories");
+        fs::write(outfile, content).expect("Failed to write file");
+
+        let mut perms = fs::metadata(outfile)
+            .expect("Failed to get metadata for outfile")
+            .permissions();
+        perms.set_mode(perms.mode() | 0o111);
+        fs::set_permissions(outfile, perms).expect("Failed set file permissions");
+    } else {
+        println!("{content}");
+    }
 
     Ok(())
 }
