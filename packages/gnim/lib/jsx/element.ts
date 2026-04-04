@@ -1,3 +1,4 @@
+import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import {
     connect,
@@ -10,12 +11,13 @@ import {
 } from "../util.js"
 import {
     computed,
+    createAccessor,
+    createState,
     effect,
     getScope,
     isAccessor,
     onCleanup,
     Scope,
-    createState,
     untrack,
     type Accessor,
     type State,
@@ -274,10 +276,36 @@ export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<Gni
     }
 }
 
-export type ForProps<Item, Key = Item> = {
+function modelToAccessor<T>(model: Gio.ListModel) {
+    function* getModelItems() {
+        let index = 0
+        let item = model.get_item(index)
+        while (item !== null) {
+            yield item
+            item = model.get_item(++index)
+        }
+    }
+
+    return createAccessor(
+        () => [...getModelItems()] as T[],
+        (callback) => {
+            const id = model.connect("items-changed", callback)
+            return () => model.disconnect(id)
+        },
+    )
+}
+
+type ForEachProps<Item> = {
     each: Accessor<Iterable<Item>>
     children: (item: Item, index: Accessor<number>) => GnimNode
+}
 
+type ForModelProps<Item> = {
+    each: Gio.ListModel
+    children: (item: Item, index: Accessor<number>) => GnimNode
+}
+
+export type ForProps<Item, Key = Item> = (ForEachProps<Item> | ForModelProps<Item>) & {
     /**
      * Function that generates the key for each item.
      * By default the items are the keys themselves.
@@ -296,7 +324,6 @@ export type ForProps<Item, Key = Item> = {
  * </For>
  * ```
  */
-// TODO: support Gio.ListModel
 export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
     const { each, children: mkChild, id = (item: Item) => item } = props
 
@@ -305,6 +332,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
 
     const currentScope = getScope()
     const map = new Map<Item | Key, MapItem>()
+    const model = each instanceof Gio.ListModel ? modelToAccessor<Item>(each) : each
 
     onCleanup(() => {
         for (const value of map.values()) {
@@ -315,7 +343,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
     })
 
     return computed(() => {
-        const items = [...each()]
+        const items = [...model()]
         const ids = items.map(id)
         const idSet = new Set(ids)
 
