@@ -1,5 +1,5 @@
 {
-    "name": "gnim-gtk4",
+    "name": "@gnim-js/gtk4",
     "version": "2.0.0-alpha.0",
     "type": "module",
     "author": "Aylur",

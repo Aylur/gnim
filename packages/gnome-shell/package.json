@@ -1,5 +1,5 @@
 {
-    "name": "gnim-gnome-shell",
+    "name": "@gnim-js/gnome-shell",
     "version": "2.0.0-alpha.0",
     "type": "module",
     "author": "Aylur",
