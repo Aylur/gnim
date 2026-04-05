@@ -1,4 +1,4 @@
-export { render } from "./renderer"
+export { render, getSlot } from "./renderer.js"
 export {
     keyframes,
     style,
@@ -6,4 +6,4 @@ export {
     type CssProperty,
     type Keyframes,
     type Style,
-} from "./style"
+} from "./style.js"

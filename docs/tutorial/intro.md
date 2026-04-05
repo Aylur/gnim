@@ -80,7 +80,7 @@ sudo apt install libgjs-dev libgtk-4-dev npm
    ```sh
    mkdir gnim-app
    cd gnim-app
-   npm install gnim
+   npm install gnim gnim-gtk4
    ```
 
 2. Configure `tsconfig.json`
@@ -134,7 +134,7 @@ sudo apt install libgjs-dev libgtk-4-dev npm
    ```tsx
    // src/main.tsx
    import Gtk from "gi://Gtk?version=4.0"
-   import { render } from "gnim/gtk4"
+   import { render } from "gnim-gtk4"
 
    function App() {
      return <Gtk.Window visible>hello</Gtk.Window>

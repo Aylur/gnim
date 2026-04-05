@@ -4,8 +4,8 @@ Library that brings JSX, reactivity and type-safety to GNOME JavaScript.
 
 ## Templates
 
-- [gnome-extension](https://github.com/Aylur/gnome-shell-extension-template/)
 - [gtk4](https://github.com/Aylur/gnim-gtk4-template/)
+- [gnome-extension](https://github.com/Aylur/gnome-shell-extension-template/)
 
 ## JSX and reactivity
 

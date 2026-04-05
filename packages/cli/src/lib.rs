@@ -8,8 +8,6 @@ pub mod types;
 
 use std::{path::PathBuf, sync::OnceLock};
 
-pub static GNIM_LIBDIR: Option<&str> = option_env!("GNIM_LIBDIR");
-
 static GLOBAL_OPTIONS: OnceLock<GlobalOptions> = OnceLock::new();
 
 #[derive(Default)]

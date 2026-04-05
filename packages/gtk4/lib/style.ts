@@ -1,7 +1,8 @@
 import Gdk from "gi://Gdk?version=4.0"
 import Gtk from "gi://Gtk?version=4.0"
-import { computed, onCleanup, type Accessor, type MaybeAccessor } from "../../jsx/reactive.js"
-import type { Prettify } from "../../util.js"
+import { computed, onCleanup, type Accessor, type MaybeAccessor } from "gnim"
+
+type Prettify<T> = { [K in keyof T]: T[K] } & {}
 
 Gtk.init()
 

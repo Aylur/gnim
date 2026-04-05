@@ -1,12 +1,12 @@
 use crate::plugin::css::GnimCssPlugin;
 use crate::plugin::resource::GnimResourcePlugin;
-use crate::{GNIM_LIBDIR, dev_rundir, rolldown_config};
+use crate::{dev_rundir, rolldown_config};
 use std::{collections::HashMap, fs, sync::Arc};
 
 fn get_dev_entry() -> Option<String> {
     let candidates = [
-        Some("./node_modules/gnim/lib/dev.js".to_string()),
-        GNIM_LIBDIR.map(|dir| format!("{dir}/lib/dev.js")),
+        Some("./node_modules/gnim/dist/lib/dev.js".to_string()),
+        option_env!("GNIM_DATADIR").map(|dir| format!("{dir}/gnim/dist/lib/dev.js")),
     ];
 
     for candidate in candidates.into_iter().flatten() {

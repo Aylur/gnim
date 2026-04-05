@@ -7,6 +7,7 @@ export {
     type CC,
     type FC,
     type GnimNode,
+    type CCProps,
     type JSX,
 } from "./jsx/element.js"
 export {

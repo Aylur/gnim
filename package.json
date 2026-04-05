@@ -9,21 +9,20 @@
         "url": "https://ko-fi.com/aylur"
     },
     "scripts": {
-        "lint": "cd packages/gnim ; eslint . --fix",
-        "clean": "./scripts.nu clean",
+        "clean": "git clean -Xdf",
         "types": "./scripts.nu types",
-        "build": "./scripts.nu build",
+        "build:cli": "./scripts.nu build:cli",
         "docs:dev": "vitepress dev docs",
         "docs:build": "vitepress build docs"
     },
     "devDependencies": {
-        "@eslint/js": "latest",
         "@types/node": "latest",
-        "eslint": "latest",
         "nushell": "latest",
-        "typescript": "latest",
-        "typescript-eslint": "latest",
         "vitepress": "2.0.0-alpha.16"
+    },
+    "dependencies": {
+        "@vercel/analytics": "^2.0.1",
+        "vue": "^3.5.30"
     },
     "prettier": {
         "semi": false,
@@ -42,9 +41,5 @@
                 }
             }
         ]
-    },
-    "dependencies": {
-        "@vercel/analytics": "^2.0.1",
-        "vue": "^3.5.30"
     }
 }

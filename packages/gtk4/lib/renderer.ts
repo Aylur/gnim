@@ -1,14 +1,28 @@
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
-import { newObject, type CC, type CCProps, type FC, type Props } from "../../jsx/element.js"
-import { createRenderer, appendChild, removeChild, setChildren } from "../../jsx/render.js"
-import { computed, isAccessor, type MaybeAccessor } from "../../jsx/reactive.js"
-import { setProperty } from "../../util.js"
+import {
+    appendChild,
+    computed,
+    createRenderer,
+    isAccessor,
+    newObject,
+    removeChild,
+    setChildren,
+    type CCProps,
+    type MaybeAccessor,
+} from "gnim"
 
 const dummyBuilder = new Gtk.Builder()
 const slotType = Symbol("gnim.gtk4.slot")
 const cssprovider = Symbol("gnim.gtk4.cssprovider")
+
+function snakecase(str: string) {
+    return str
+        .replace(/([a-z])([A-Z])/g, "$1-$2")
+        .replaceAll("-", "_")
+        .toLowerCase()
+}
 
 function setCss(object: GObject.Object, css: string) {
     if (!(object instanceof Gtk.Widget)) {
@@ -80,7 +94,7 @@ export const { render } = createRenderer({
             this.destroyChild(parent, child)
         }
     },
-    destroyChild(parent: GObject.Object, child: GObject.Object) {
+    destroyChild(parent, child) {
         if (parent instanceof Gio.Application && child instanceof Gtk.Window) {
             child.destroy()
         }
@@ -91,7 +105,7 @@ export const { render } = createRenderer({
     //
     // if there is a usecase for either of these two that does something else than
     // we expect it to do here in a JSX context we have to check for known instances
-    removeChild(parent: GObject.Object, child: GObject.Object) {
+    removeChild(parent, child) {
         if (removeChild in parent && typeof parent[removeChild] === "function") {
             if (parent[removeChild](child)) return
         }
@@ -114,7 +128,7 @@ export const { render } = createRenderer({
 
         throw Error(`cannot remove ${child} from ${parent}`)
     },
-    appendChild(parent: GObject.Object, child: GObject.Object) {
+    appendChild(parent, child) {
         if (appendChild in parent && typeof parent[appendChild] === "function") {
             if (parent[appendChild](child)) return
         }
@@ -166,7 +180,7 @@ export const { render } = createRenderer({
 
         throw Error(`cannot add ${child} to ${parent}`)
     },
-    prepareProps(object: CC, props: Props) {
+    prepareProps(object, props) {
         if (object.prototype instanceof GObject.Object && "class" in props) {
             const cn = props.class
             props.class = computed(() => flattenClassList(cn))
@@ -183,9 +197,21 @@ export const { render } = createRenderer({
             return object.set_css_classes(value.split(/\s+/))
         }
 
-        setProperty(object, key, value)
+        const getter = `get_${snakecase(key)}` as keyof typeof object
+
+        let current: unknown
+
+        if (getter in object && typeof object[getter] === "function") {
+            current = (object[getter] as () => unknown)()
+        } else {
+            current = object[key as keyof typeof object]
+        }
+
+        if (!Object.is(current, value)) {
+            Object.assign(object, { [key]: value })
+        }
     },
-    resolveTag(tag: string): CC | FC {
+    resolveTag(tag) {
         throw Error(`unresolved JSX tag: "${tag}"`)
     },
 })
@@ -194,6 +220,7 @@ export type ClassValue = string | number | null | boolean | undefined | ClassVal
 export type ClassList = MaybeAccessor<ClassValue> | MaybeAccessor<ClassList[]>
 
 declare module "gnim" {
+    // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace JSX {
         interface IntrinsicClassAttributes<T> {
             slot?: string

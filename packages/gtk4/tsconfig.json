@@ -12,11 +12,12 @@
         "inlineSourceMap": true,
         "outDir": "dist",
         "skipLibCheck": true,
+        "rootDir": "./lib",
 
         "strict": true,
         "moduleResolution": "Bundler",
-        "types": ["node", "gi"],
-        "typeRoots": ["../../.gnim/types", "./node_modules/@types"]
+        "types": ["gi"],
+        "typeRoots": ["../../.gnim/types"]
     },
-    "include": ["./lib/**/*", "./bin/**/*"]
+    "include": ["./lib/**/*"]
 }

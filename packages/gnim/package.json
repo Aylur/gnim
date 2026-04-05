@@ -1,61 +1,81 @@
 {
     "name": "gnim",
-    "version": "2.0.0-alpha.5",
+    "version": "2.0.0-alpha.6",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
+    "homepage": "https://gnimjs.dev/",
     "repository": "github:Aylur/gnim",
     "funding": {
         "type": "kofi",
         "url": "https://ko-fi.com/aylur"
     },
     "bin": {
-        "gnim": "bin/gnim.js"
+        "gnim": "bin/gnim.ts"
+    },
+    "scripts": {
+        "build": "tsc",
+        "lint": "eslint ."
     },
     "optionalDependencies": {
-        "@gnim-js/linux-x64": "2.0.0-alpha.5"
+        "@gnim-js/linux-x64": "2.0.0-alpha.6"
+    },
+    "devDependencies": {
+        "@types/node": "latest",
+        "@eslint/js": "latest",
+        "eslint": "latest",
+        "typescript": "latest",
+        "typescript-eslint": "latest"
     },
     "exports": {
-        ".": {
-            "import": "./lib/index.js",
-            "types": "./lib/index.d.ts"
-        },
-        "./dbus": {
-            "import": "./lib/decorators/dbus.js",
-            "types": "./lib/decorators/dbus.d.ts"
-        },
-        "./gobject": {
-            "import": "./lib/decorators/gobject.js",
-            "types": "./lib/decorators/gobject.d.ts"
-        },
-        "./i18n": {
-            "import": "./lib/i18n/index.js",
-            "types": "./lib/i18n/index.d.ts"
-        },
-        "./schema": {
-            "import": "./lib/schema/index.js",
-            "types": "./lib/schema/index.d.ts"
-        },
-        "./fetch": {
-            "import": "./lib/polyfill/fetch.js",
-            "types": "./lib/polyfill/fetch.d.ts"
-        },
-        "./jsx-runtime": {
-            "import": "./lib/jsx-runtime.js",
-            "types": "./lib/jsx-runtime.d.ts"
-        },
-        "./jsx-dev-runtime": {
-            "import": "./lib/jsx-dev-runtime.js",
-            "types": "./lib/jsx-dev-runtime.d.ts"
-        },
-        "./gtk4": {
-            "import": "./lib/renderer/gtk4/index.js",
-            "types": "./lib/renderer/gtk4/index.d.ts"
+        ".": "./lib/index.ts",
+        "./dbus": "./lib/decorators/dbus.ts",
+        "./gobject": "./lib/decorators/gobject.ts",
+        "./i18n": "./lib/i18n/index.ts",
+        "./schema": "./lib/schema/index.ts",
+        "./fetch": "./lib/polyfill/fetch.ts",
+        "./jsx-runtime": "./lib/jsx-runtime.ts",
+        "./jsx-dev-runtime": "./lib/jsx-dev-runtime.ts"
+    },
+    "publishConfig": {
+        "bin": "dist/lib/gnim.js",
+        "exports": {
+            ".": {
+                "import": "./dist/lib/index.js",
+                "types": "./dist/lib/index.d.ts"
+            },
+            "./dbus": {
+                "import": "./dist/lib/decorators/dbus.js",
+                "types": "./dist/lib/decorators/dbus.d.ts"
+            },
+            "./gobject": {
+                "import": "./dist/lib/decorators/gobject.js",
+                "types": "./dist/lib/decorators/gobject.d.ts"
+            },
+            "./i18n": {
+                "import": "./dist/lib/i18n/index.js",
+                "types": "./dist/lib/i18n/index.d.ts"
+            },
+            "./schema": {
+                "import": "./dist/lib/schema/index.js",
+                "types": "./dist/lib/schema/index.d.ts"
+            },
+            "./fetch": {
+                "import": "./dist/lib/polyfill/fetch.js",
+                "types": "./dist/lib/polyfill/fetch.d.ts"
+            },
+            "./jsx-runtime": {
+                "import": "./dist/lib/jsx-runtime.js",
+                "types": "./dist/lib/jsx-runtime.d.ts"
+            },
+            "./jsx-dev-runtime": {
+                "import": "./dist/lib/jsx-dev-runtime.js",
+                "types": "./dist/lib/jsx-dev-runtime.d.ts"
+            }
         }
     },
     "files": [
-        "bin",
-        "lib"
+        "dist"
     ],
     "engines": {
         "gjs": ">=1.83.0"

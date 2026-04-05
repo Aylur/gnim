@@ -54,7 +54,7 @@ async fn main() -> std::process::ExitCode {
             Command::Bundle(args) => Some(map(&args.define)),
             Command::Exe(_) => None,
         },
-        alias: gnim::GNIM_LIBDIR.map(|dir| {
+        alias: option_env!("GNIM_DATADIR").map(|dir| {
             rolldown::PathsOutputOption::Fn(std::sync::Arc::new(move |id| {
                 if let Ok(path) = fs::canonicalize("node_modules/gnim")
                     && path.exists()
@@ -64,17 +64,19 @@ async fn main() -> std::process::ExitCode {
                 }
 
                 // synced with package.json exports
-                let prefix = format!("file://{dir}/lib");
+                let gnim = format!("file://{dir}/gnim/dist/lib");
+
                 let alias = match id {
-                    "gnim" => format!("{prefix}/index.js"),
-                    "gnim/dbus" => format!("{prefix}/decorators/dbus.js"),
-                    "gnim/gobject" => format!("{prefix}/decorators/gobject.js"),
-                    "gnim/i18n" => format!("{prefix}/i18n/index.js"),
-                    "gnim/schema" => format!("{prefix}/schema/index.js"),
-                    "gnim/fetch" => format!("{prefix}/polyfill/fetch.js"),
-                    "gnim/jsx-runtime" => format!("{prefix}/jsx-runtime.js"),
-                    "gnim/jsx-dev-runtime" => format!("{prefix}/jsx-dev-runtime.js"),
-                    "gnim/gtk4" => format!("{prefix}/renderer/gtk4/index.js"),
+                    "gnim" => format!("{gnim}/index.js"),
+                    "gnim/dbus" => format!("{gnim}/decorators/dbus.js"),
+                    "gnim/gobject" => format!("{gnim}/decorators/gobject.js"),
+                    "gnim/i18n" => format!("{gnim}/i18n/index.js"),
+                    "gnim/schema" => format!("{gnim}/schema/index.js"),
+                    "gnim/fetch" => format!("{gnim}/polyfill/fetch.js"),
+                    "gnim/jsx-runtime" => format!("{gnim}/jsx-runtime.js"),
+                    "gnim/jsx-dev-runtime" => format!("{gnim}/jsx-dev-runtime.js"),
+                    "gnim-gtk4" => format!("file://{dir}/gnim-gtk4/dist/index.js"),
+                    "gnim-gtk3" => format!("file://{dir}/gnim-gtk3/dist/index.js"),
                     _ => id.to_string(),
                 };
 

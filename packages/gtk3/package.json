@@ -1,0 +1,50 @@
+{
+    "name": "gnim-gtk3",
+    "version": "2.0.0-alpha.0",
+    "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "homepage": "https://gnimjs.dev/",
+    "repository": "github:Aylur/gnim",
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "scripts": {
+        "build": "tsc",
+        "lint": "eslint ."
+    },
+    "dependencies": {
+        "gnim": "workspace:^"
+    },
+    "devDependencies": {
+        "@eslint/js": "latest",
+        "eslint": "latest",
+        "typescript": "latest",
+        "typescript-eslint": "latest"
+    },
+    "exports": {
+        ".": "./index.ts"
+    },
+    "publishConfig": {
+        "exports": {
+            ".": {
+                "import": "./dist/index.js",
+                "types": "./dist/index.d.ts"
+            }
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "engines": {
+        "gjs": ">=1.83.0"
+    },
+    "keywords": [
+        "GJS",
+        "Gnim",
+        "Gnome",
+        "GTK",
+        "JSX"
+    ]
+}
