@@ -2,3 +2,4 @@ packages:
     - "packages/gnim"
     - "packages/gtk4"
     - "packages/gtk3"
+    - "packages/gnome-shell"
