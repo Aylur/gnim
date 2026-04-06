@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=My Awesome Application
+Comment=Do awesome stuff
+Icon=@app_id@
+Exec=@exe@
+Type=Application

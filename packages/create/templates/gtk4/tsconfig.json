@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "lib": ["ES2024"],
+    "outDir": "dist",
+    "strict": true,
+    "moduleResolution": "Bundler",
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "gnim",
+    "typeRoots": ["./.gnim/types"]
+  },
+  "include": ["./src/**/*"]
+}

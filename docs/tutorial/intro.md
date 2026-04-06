@@ -22,7 +22,7 @@ libraries.
 > [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) using
 > [GObject Introspection](https://gi.readthedocs.io/en/latest/)
 
-## Creating a new project
+## Installing system dependencies
 
 You will need the following dependencies installed:
 
@@ -74,6 +74,14 @@ sudo apt install libgjs-dev libgtk-4-dev npm
 ```
 
 :::
+
+## Using a template
+
+```sh
+npm create gnim
+```
+
+## Creating a new project manually
 
 1. Create a project directory and install gnim
 

@@ -1,0 +1,56 @@
+{
+    "name": "create-gnim",
+    "version": "2.0.0-alpha.1",
+    "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "homepage": "https://gnimjs.dev/",
+    "repository": "github:Aylur/gnim",
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "devDependencies": {
+        "@eslint/js": "latest",
+        "eslint": "latest",
+        "typescript": "latest",
+        "typescript-eslint": "latest"
+    },
+    "scripts": {
+        "build": "tsc"
+    },
+    "bin": "bin/index.ts",
+    "publishConfig": {
+        "bin": "dist/index.js"
+    },
+    "files": [
+        "dist",
+        "templates"
+    ],
+    "engines": {
+        "gjs": ">=1.83.0"
+    },
+    "keywords": [
+        "GJS",
+        "Gnim",
+        "Gnome",
+        "GTK",
+        "JSX"
+    ],
+    "dependencies": {
+        "@clack/prompts": "^1.2.0"
+    },
+    "prettier": {
+        "semi": false,
+        "tabWidth": 4,
+        "overrides": [
+            {
+                "files": "./templates/**/*",
+                "options": {
+                    "tabWidth": 2,
+                    "printWidth": 80
+                }
+            }
+        ]
+    }
+}

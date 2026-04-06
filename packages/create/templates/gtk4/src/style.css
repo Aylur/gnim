@@ -1,0 +1,9 @@
+/* https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/css-variables.html */
+
+button.increment {
+  color: var(--accent-color);
+}
+
+button.decrement {
+  color: var(--destructive-color);
+}
