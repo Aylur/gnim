@@ -1,62 +1,29 @@
 {
-    "name": "gnim",
-    "version": "1.9.0",
+    "private": true,
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/Aylur/gnim.git"
-    },
+    "repository": "github:Aylur/gnim",
     "funding": {
         "type": "kofi",
         "url": "https://ko-fi.com/aylur"
     },
     "scripts": {
-        "build": "./scripts/build.sh",
-        "lint": "eslint . --fix",
+        "clean": "git clean -Xdf",
+        "types": "./scripts.nu types",
+        "build:cli": "./scripts.nu build:cli",
         "docs:dev": "vitepress dev docs",
-        "docs:build": "vitepress build docs",
-        "docs:preview": "vitepress preview docs"
+        "docs:build": "vitepress build docs"
     },
     "devDependencies": {
-        "@eslint/js": "latest",
-        "@girs/adw-1": "latest",
-        "@girs/clutter-16": "latest",
-        "@girs/gtk-3.0": "latest",
-        "@girs/gtk-4.0": "latest",
-        "@girs/soup-3.0": "latest",
-        "@girs/shell-16": "latest",
-        "@girs/st-16": "latest",
-        "@girs/gnome-shell": "latest",
-        "@girs/gjs": "latest",
-        "esbuild": "latest",
-        "eslint": "latest",
-        "typescript": "latest",
-        "typescript-eslint": "latest",
-        "vitepress": "latest"
+        "@types/node": "latest",
+        "nushell": "latest",
+        "vitepress": "2.0.0-alpha.16"
     },
-    "exports": {
-        ".": "./dist/index.ts",
-        "./dbus": "./dist/dbus.ts",
-        "./fetch": "./dist/fetch.ts",
-        "./gobject": "./dist/gobject.ts",
-        "./gnome/jsx-runtime": "./dist/gnome/jsx-runtime.ts",
-        "./gtk3/jsx-runtime": "./dist/gtk3/jsx-runtime.ts",
-        "./gtk4/jsx-runtime": "./dist/gtk4/jsx-runtime.ts"
+    "dependencies": {
+        "@vercel/analytics": "^2.0.1",
+        "vue": "^3.5.30"
     },
-    "files": [
-        "dist"
-    ],
-    "engines": {
-        "gjs": ">=1.79.0"
-    },
-    "keywords": [
-        "GJS",
-        "Gnome",
-        "GTK",
-        "JSX"
-    ],
     "prettier": {
         "semi": false,
         "tabWidth": 4,
@@ -74,5 +41,12 @@
                 }
             }
         ]
-    }
+    },
+    "workspaces": [
+        "packages/gnim",
+        "packages/gtk4",
+        "packages/gtk3",
+        "packages/gnome-shell",
+        "packages/create"
+    ]
 }

@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "experimentalDecorators": true,
+        "verbatimModuleSyntax": true,
+        "erasableSyntaxOnly": true,
+
+        "module": "ES2022",
+        "target": "ES2020",
+        "lib": ["ES2022"],
+
+        "declaration": true,
+        "inlineSourceMap": true,
+        "outDir": "dist",
+        "skipLibCheck": true,
+        "rootDir": "./lib",
+
+        "strict": true,
+        "moduleResolution": "Bundler",
+        "types": ["gi"],
+        "typeRoots": ["../../.gnim/types"]
+    },
+    "include": ["./lib/**/*"]
+}

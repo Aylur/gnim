@@ -7,7 +7,7 @@ where `Gtk.Application` comes in, which does most of the heavy lifting.
 
 > [!TIP]
 >
-> In case you are writing an Adwiata application you want to use
+> In case you are writing an Adwaita application you want to use
 > `Adw.Application`.
 
 ## `Gtk.Application`
@@ -18,26 +18,31 @@ handlers, or create a subclass and implement its methods.
 ::: code-group
 
 ```ts [Subclassing]
-import Gtk from "gi://Gtk"
-import Gio from "gi://Gio"
-import { register } from "./gobject"
-import { createRoot } from "./jsx/scope"
+import Gtk from "gi://Gtk?version=4.0"
+import Gio from "gi://Gio?version=2.0"
+import GLib from "gi://GLib?version=2.0"
+import { register } from "gnim/gobject"
+import { render } from "gnim/gtk4"
 import { programInvocationName, programArgs } from "system"
 
-@register()
+@register
 class MyApp extends Gtk.Application {
   constructor() {
     super({
-      applicationId: "my.awesome.app",
+      applicationId: "com.example.MyApp",
       flags: Gio.ApplicationFlags.FLAGS_NONE,
     })
+
+    GLib.set_prgname("example-myapp")
+    GLib.set_application_name("My App")
   }
 
   vfunc_activate(): void {
-    createRoot((dispose) => {
-      this.connect("shutdown", dispose)
+    const dispose = render(() => {
       // show windows here
-    })
+    }, this)
+
+    this.connect("shutdown", dispose)
   }
 }
 
@@ -46,27 +51,36 @@ app.runAsync([programInvocationName, ...programArgs])
 ```
 
 ```ts [Without subclassing]
-import Gtk from "gi://Gtk"
-import Gio from "gi://Gio"
-import { createRoot } from "./jsx/scope"
+import Gtk from "gi://Gtk?version=4.0"
+import Gio from "gi://Gio?version=2.0"
+import GLib from "gi://GLib?version=2.0"
+import { render } from "gnim/gtk4"
 import { programInvocationName, programArgs } from "system"
 
+GLib.set_prgname("example-myapp")
+GLib.set_application_name("My App")
+
 export const app = new Gtk.Application({
-  applicationId: "my.awesome.app",
-  flags: Gio.ApplicationFlags.NON_UNIQUE,
+  applicationId: "com.example.MyApp",
+  flags: Gio.ApplicationFlags.FLAGS_NONE,
 })
 
 app.connect("activate", () => {
-  createRoot((dispose) => {
+  const dispose = render(() => {
     app.connect("shutdown", dispose)
     // show windows here
-  })
+  }, app)
 })
 
 app.runAsync([programInvocationName, ...programArgs])
 ```
 
 :::
+
+> [!TIP]
+>
+> [Application ID](https://developer.gnome.org/documentation/tutorials/application-id.html)
+> should be in reverse DNS style.
 
 The main benefit of using an application is that in most cases you want a single
 instance of your app running and every subsequent invocation to do something on
@@ -83,10 +97,16 @@ class MyApp extends Gtk.Application {
       return this.window.present()
     }
 
-    createRoot((dispose) => {
+    const dispose = render(() => {
       this.connect("shutdown", dispose)
 
-      return <Gtk.Window $={(self) => (this.window = self).present()} />
+      effect(() => {
+        this.window.present()
+      })
+
+      return (
+        <Gtk.Window application={this} ref={(self) => (this.window = self)} />
+      )
     })
   }
 }
@@ -96,67 +116,71 @@ class MyApp extends Gtk.Application {
 
 If you want to persist some data, for example some setting values, Gtk provides
 you the [Gio.Settings](https://docs.gtk.org/gio/class.Settings.html) API which
-is a way to store key value pairs in a predefined schema.
+is a way to store key value pairs in a predefined schema. Gnim provides a
+type-safe wrapper over this API which during development will automatically
+compile the store and provide it to GJS.
 
-First you have to define a schema in XML format named `<id>.gschema.xml` so in
-our case `my.awesome.app.gschema.xml`.
-
-```xml
-<schemalist>
-  <schema path="/my/awesome/app/" id="my.awesome.app">
-    <key name="simple-string" type="s">
-      <default>'default value in gvariant serialized format'</default>
-    </key>
-    <key name="string-dictionary" type="a{ss}">
-      <default>
-        <![CDATA[
-          {
-            'key1': 'value1',
-            'key2': 'value2'
-          }
-        ]]>
-      </default>
-    </key>
-  </schema>
-</schemalist>
-```
-
-Then you have to install it to `<prefix>/<datadir>/glib-2.0/schemas` which is
-usually `/usr/share/glib-2.0/schemas`. As a last step you have to compile it
-before writing/reading it.
-
-```sh
-cp my.awesome.app.gschema.xml /usr/share/glib-2.0/schemas
-glib-compile-schemas /usr/share/glib-2.0/schemas
-```
-
-> [!TIP]
->
-> You usually don't install it manually. Instead, you do it as part of your
-> build and install phase using a build tool such as meson as shown in the
-> [packaging](./packaging) section.
-
-You can then create a `Gio.Settings` and optionally wrap it in a
-[`createSettings`](../jsx#createsettings).
+First, define a schema in `<app-id>.gschema.ts`, for example
+`com.example.MyApp.gschema.ts`.
 
 ```ts
-const settings = new Gio.Settings({ schemaId: "my.awesome.app" })
+import GLib from "gi://GLib?version=2.0"
+import { defineSchemaList, Schema, Enum, Flags } from "gnim/schema"
 
-const { simpleString, setSimpleString } = createSettings(settings, {
-  "simple-string": "s",
-  "string-dictionary": "a{ss}",
+const myFlags = new Flags("my.flags", ["one", "two"])
+const myEnum = new Enum("my.enum", ["one", "two"])
+
+export const schema = new Schema({
+  id: "com.example.MyApp",
+  path: "/com/example/myapp/",
+})
+  .key("my-key", "s", {
+    default: "",
+    summary: "Simple string key",
+  })
+  .key("complex-key", "a{sv}", {
+    default: {
+      key: GLib.Variant.new("s", "value"),
+    },
+    summary: "Variant dict key",
+  })
+  .key("enum-key", myEnum, {
+    default: "one",
+  })
+  .key("flags-key", myFlags, {
+    default: ["one", "two"],
+  })
+
+export default defineSchemaList([schema])
+```
+
+> [!NOTE]
+>
+> [`GLib.Variant`](/article/gvariant) is GLib's serialized format similar to
+> JSON but with types.
+
+You can then instantiate a settings object with
+[`createSettings`](/reference/schemas#using-schemas) which returns an object
+with a setter and Accessor pair for each key.
+
+```ts
+import { schema } from "./com.example.MyApp.gschema"
+
+const settings = createSettings(schema)
+
+effect(() => {
+  console.log(settings.myKey())
 })
 
-console.log(simpleString.get())
-setSimpleString("new value")
+settings.setMyKey("new value")
 ```
 
 ## Exposing a D-Bus interface
 
 If you want other apps or processes to communicate with your application, the
 standard way to do IPC on Linux is via D-Bus. Gnim offers a convenient
-[decorator API](../dbus) that lets you easily implement interfaces for your app
-through D-Bus.
+[decorator API](/reference/dbus) that lets you easily implement services for
+your app through D-Bus.
 
 At a very high level, D-Bus lets you export _objects_ that have _interfaces_ on
 a system bus, identified by a _name_.
@@ -176,7 +200,7 @@ First define an interface.
 ```ts
 import { Service, iface, method } from "gnim/dbus"
 
-@iface("my.awesome.app.MyService")
+@iface("com.example.MyApp.MyService")
 class MyService extends Service {
   @method("s") MyMethod(arg: string) {
     console.log("MyMethod has been invoked: ", arg)
@@ -187,12 +211,12 @@ class MyService extends Service {
 Then instantiate it and export it.
 
 ```ts
-@register()
+@register
 class MyApp extends Gtk.Application {
   private service: MyService
 
   constructor() {
-    super({ applicationId: "my.awesome.app" })
+    super({ applicationId: "com.example.MyApp" })
     this.service = new MyService()
   }
 
@@ -203,8 +227,8 @@ class MyApp extends Gtk.Application {
 
   vfunc_activate(): void {
     this.service.serve({
-      name: "my.awesome.app",
-      objectPath: "/my/awesome/app/MyService",
+      name: "com.example.MyApp",
+      objectPath: "/com/example/MyApp/MyService",
     })
   }
 }
@@ -215,8 +239,8 @@ Now you can invoke this from other processes.
 ```sh
 gdbus call \
   --session \
-  --dest my.awesome.app \
-  --object-path /my/awesome/app/MyService \
-  --method my.awesome.app.MyService.MyMethod \
+  --dest com.example.MyApp \
+  --object-path /com/example/MyApp/MyService \
+  --method com.example.MyApp.MyService.MyMethod \
   'Hello World!'
 ```

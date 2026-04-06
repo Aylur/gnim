@@ -1,16 +1,9 @@
 # GObject
 
-Before jumping into Gtk, you have to understand a few concepts about
-`GObject.Object` which is the base type everything inherits from.
+GObject is the base library Gtk is built upon. GObject implements object
+oriented concepts in C which GJS will call into using GObject Introspection.
 
 ## GObject Construction
-
-::: tip
-
-In rare cases, like the `Gio.File` interface, objects can not be constructed
-with the `new` operator and a constructor method must always be used.
-
-:::
 
 The most common way to create a GObject instance is using the `new` operator.
 When constructing a GObject this way, you can pass a dictionary of properties:
@@ -27,6 +20,11 @@ Many classes also have static constructor methods you can use directly:
 ```ts
 const labelWidget = Gtk.Label.new("Text")
 ```
+
+> [!TIP]
+>
+> In rare cases, like the `Gio.File` interface, objects can not be constructed
+> with the `new` operator and a constructor method must always be used.
 
 ## Signals
 
@@ -77,13 +75,6 @@ selectLabel.connect("move-cursor", (label, step, count, extendSelection) => {
 
 ### Callback Return Values
 
-::: warning
-
-A callback with no return value will implicitly return `undefined`, while an
-`async` function will implicitly return a `Promise`.
-
-:::
-
 Some signals expect a return value, usually a `boolean`. The type and behavior
 of the return value will be described in the documentation for the signal.
 
@@ -102,6 +93,11 @@ linkLabel.connect("activate-link", (label, uri) => {
   return false
 })
 ```
+
+> [!WARNING]
+>
+> A callback with no return value will implicitly return `undefined`, while an
+> `async` function will implicitly return a `Promise`.
 
 Using an `async` function as a signal handler will return an implicit `Promise`,
 which will be coerced to a _truthy_ value. If necessary, use a traditional
@@ -130,15 +126,13 @@ or GObject get and set methods.
 const invisibleLabel = new Gtk.Label({
   visible: false,
 })
+
 let visible
 
-// Three different ways to get or set properties
 visible = invisibleLabel.visible
-visible = invisibleLabel["visible"]
 visible = invisibleLabel.get_visible()
 
 invisibleLabel.visible = false
-invisibleLabel["visible"] = false
 invisibleLabel.set_visible(false)
 ```
 
@@ -148,8 +142,9 @@ are accessed differently depending on the situation:
 ```ts
 const markupLabel = new Gtk.Label({
   label: "<i>Italics</i>",
-  use_markup: true,
+  useMarkup: true,
 })
+
 let useMarkup
 
 // If using native accessors, you can use `underscore_case` or `camelCase`
@@ -165,6 +160,12 @@ useMarkup = markupLabel.get_use_markup()
 markupLabel.set_use_markup(true)
 ```
 
+> [!IMPORTANT]
+>
+> Gnim, by convention only uses `camelCase` where appropriate so type
+> annotations might be intentionally missing. For example while
+> `markupLabel["use-markup"]` works at runtime, types are not generated for it.
+
 ### Property Change Notification
 
 Most GObject properties will emit
@@ -178,4 +179,26 @@ const changingLabel = Gtk.Label.new("Original Label")
 const labelId = changingLabel.connect("notify::label", (object, _pspec) => {
   console.log(`New label is "${object.label}"`)
 })
+```
+
+## Subclassing GObject
+
+Implementing a GObject in a Gnim app is usually not necessary since you will
+mostly be using function components. However, Gnim provides an abstraction over
+[GJS's API](https://gjs.guide/guides/gobject/subclassing.html) using
+[decorators](/reference/gobject).
+
+```ts
+import GObject from "gi://GObject?version=2.0"
+import { register, property, signal } from "gnim/gobject"
+
+@register
+class MyObj extends GObject.Object {
+  @property myProp: string = ""
+
+  @signal
+  mySignal(a: string, b: number): void {
+    // default handler
+  }
+}
 ```

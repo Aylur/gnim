@@ -1,116 +1,98 @@
 # Gnim
 
-While GTK has its own templating system, it lacks in the DX department.
+While GTK has its own
+[templating system](https://docs.gtk.org/gtk4/class.Builder.html), its DX is
+lackluster.
 [Blueprint](https://gnome.pages.gitlab.gnome.org/blueprint-compiler/) tries to
-solve this, but it is still not as convenient as JSX. Gnim aims to bring the
-kind of developer experience to GJS that libraries like React and Solid offer
-for the web.
+improve upon it, but it is still not as convenient as JSX. Gnim aims to bring
+the kind of developer experience to GJS that libraries like React offers for the
+web.
 
 > [!WARNING] Gnim is not React
 >
 > While some concepts are the same, Gnim has nothing in common with React other
 > than the JSX syntax.
 
-## Scopes
-
-Before jumping into JSX, you have to understand the concept of scopes first. A
-scope's purpose in Gnim is to collect cleanup functions and hold context values.
-
-A scope is essentially an object that synchronously executed code has access to.
+Consider the following example:
 
 ```ts
-let scope: Scope | null = null
+let win: Gtk.Window
 
-function printScope() {
-  print(scope)
-}
+function Box() {
+  let counter = 0
 
-function nested() {
-  printScope() // scope
-
-  setTimeout(() => {
-    // this block of code gets executed after the last line
-    // at which point scope no longer exists
-    printScope() // null
+  const button = new Gtk.Button()
+  const icon = new Gtk.Image({
+    iconName: "system-search-symbolic",
   })
-}
+  const label = new Gtk.Label({
+    label: `clicked ${counter} times`,
+  })
+  const box = new Gtk.Box({
+    orientation: Gtk.Orientation.VERTICAL,
+  })
 
-function main() {
-  printScope() // scope
-  nested()
-}
-
-scope = new Scope()
-
-// at this point synchronously executed code can access scope
-main()
-
-scope = null
-```
-
-The reason we need scopes is so that Gnim can cleanup any kind of gobject
-connection, signal subscription and effect.
-
-![Scope Diagram](/scope-dark.svg){.dark-only}
-![Scope Diagram](/scope-light.svg){.light-only}
-
-<style>
-html:not(.dark) .dark-only { display: none !important; }
-html.dark .light-only { display: none !important; }
-</style>
-
-In this example we want to render a list based on `State2`. It is accomplished
-by running each `Child` in their own scope so that when they need to be removed
-we can just cleanup the scope. This behaviour also cascades: if the root scope
-were to be cleaned up the nested scope would also be cleaned up as a result.
-
-Gnim manages scopes for you, the only scope you need to take care of is the
-root, which is usually tied to a window or the application.
-
-:::code-group
-
-```ts [Root tied to a window Window]
-import { createRoot } from "gnim"
-
-const win = createRoot((dispose) => {
-  const win = new Gtk.Window()
-  win.connect("close-request", dispose)
-  return win
-})
-```
-
-```ts [Root tied to the Application]
-import { createRoot } from "gnim"
-
-class App extends Gtk.Application {
-  vfunc_activate() {
-    createRoot((dispose) => {
-      this.connect("shutdown", dispose)
-      new Gtk.Window()
-    })
+  function onClicked() {
+    label.label = `clicked ${counter} times`
   }
+
+  button.set_child(icon)
+  box.append(button)
+  box.append(label)
+  button.connect("clicked", onClicked)
+  return box
 }
+
+win.set_child(Box())
 ```
 
-:::
+Can be written as
 
-To attach a cleanup function to the current scope, simply use `onCleanup`.
+```tsx
+let win: Gtk.Window
 
-```ts
-import { onCleanup } from "gnim"
+function Box() {
+  const [counter, setCounter] = createState(0)
+  const label = computed(() => `clicked ${counter()} times`)
 
-function fn() {
-  onCleanup(() => {
-    console.log("scope cleaned up")
-  })
+  function onClicked() {
+    setCounter((c) => c + 1)
+  }
+
+  return (
+    <Gtk.Box orientation={Gtk.Orientation.VERTICAL}>
+      <Gtk.Button onClicked={onClicked}>
+        <Gtk.Image iconName="system-search-symbolic" />
+      </Gtk.Button>
+      <Gtk.Label label={label} />
+    </Gtk.Box>
+  )
 }
+
+render(Box, win)
+```
+
+## Entry point
+
+To instantiate JSX you have to render it into a parent object which is done
+using the `render()` function. The render function returns a cleanup function
+which when invoked will detach widgets from the parent and dispose them.
+
+```jsx
+import { render } from "gnim/gtk4"
+
+const app: Gtk.Application
+
+const dispose = render(() => <Gtk.Window />, app)
+
+app.connect("shutdown", dispose)
 ```
 
 ## JSX Markup
 
 JSX is a syntax extension to JavaScript. It is simply a syntactic sugar for
 function composition. In Gnim, JSX is also used to enhance
-[GObject construction](../jsx#class-components).
+[GObject construction](/reference/jsx#class-components).
 
 ### Creating and nesting widgets
 
@@ -140,7 +122,7 @@ function MyWindow() {
 ```
 
 Notice that widgets start with a capital letter. Lower case widgets are
-[intrinsic elements](../jsx#intrinsic-elements)
+[intrinsic elements](/reference/jsx#intrinsic-elements)
 
 ### Displaying Data
 
@@ -172,12 +154,12 @@ For example, you can use an if statement to conditionally include JSX:
 
 ```tsx
 function MyWidget() {
-  let content
+  let content: GnimNode
 
   if (condition) {
-    content = <True />
+    content = <TrueComponent />
   } else {
-    content = <False />
+    content = <FalseComponent />
   }
 
   return <Gtk.Box>{content}</Gtk.Box>
@@ -190,7 +172,7 @@ You can also inline a
 
 ```tsx
 function MyWidget() {
-  return <Gtk.Box>{condition ? <True /> : <False />}</Gtk.Box>
+  return <Gtk.Box>{condition ? <TrueComponent /> : <FalseComponent />}</Gtk.Box>
 }
 ```
 
@@ -199,7 +181,7 @@ When you don’t need the `else` branch, you can also use a shorter
 
 ```tsx
 function MyWidget() {
-  return <Gtk.Box>{condition && <True />}</Gtk.Box>
+  return <Gtk.Box>{condition && <TrueComponent />}</Gtk.Box>
 }
 ```
 
@@ -249,9 +231,11 @@ function MyButton() {
 Using JSX, a custom widget will always have a single object as its parameter.
 
 ```ts
+import { type GnimNode } from "gnim"
+
 type Props = {
   myprop: string
-  children?: JSX.Element | Array<JSX.Element>
+  children?: GnimNode
 }
 
 function MyWidget({ myprop, children }: Props) {
@@ -261,13 +245,13 @@ function MyWidget({ myprop, children }: Props) {
 
 > [!TIP]
 >
-> `JSX.Element` is an alias to `GObject.Object`
+> `GnimNode` is anything that can be rendered using JSX.
 
 The `children` property is a special one which is used to pass the children
 given in the JSX expression.
 
 ```tsx
-// `children` prop of MyWidget is the Box
+// `children` prop of MyWidget is a single GnimNode
 return (
   <MyWidget myprop="hello">
     <Gtk.Box />
@@ -276,7 +260,7 @@ return (
 ```
 
 ```tsx
-// `children` prop of MyWidget is [Box, Box]
+// `children` prop of MyWidget is a tuple [GnimNode, GnimNode]
 return (
   <MyWidget myprop="hello">
     <Gtk.Box />
@@ -289,26 +273,25 @@ return (
 
 State is managed using reactive values <span style="opacity: 0.6">(also known as
 signals or observables in some other libraries)</span> through the
-[`Accessor`](../jsx#state-management) class. The most common primitives you will
-use is [`createState`](../jsx#createstate),
-[`createBinding`](../jsx#createbinding) and
-[`createComputed`](../jsx#createcomputed). `createState` is a writable reactive
-value, `createBinding` is used to hook into GObject properties and
-`createComputed` is used to derive values.
+[`Accessor`](/reference/primitives) interface. The most common primitives you
+will use is [`createState`](/reference/primitives#createstate),
+[`computed`](/reference/primitives#computed) and
+[`bind`](/reference/primitives#bind). `createState` is used to create writable
+reactive values, `computed` is used to derive reactive values and `bind` is used
+to hook into GObject properties and stores.
 
 :::code-group
 
 ```tsx [State example]
-import { createState } from "gnim"
+import { createState, computed } from "gnim"
 
 function Counter() {
   const [count, setCount] = createState(0)
+  const label = computed(() => count().toString())
 
   function increment() {
     setCount((v) => v + 1)
   }
-
-  const label = count((num) => num.toString())
 
   return (
     <Box>
@@ -320,23 +303,47 @@ function Counter() {
 ```
 
 ```tsx [GObject example]
-import GObject, { register, property } from "gnim/gobject"
-import { createBinding } from "gnim"
+import { Object, register, property } from "gnim/gobject"
+import { bind, computed } from "gnim"
 
-@register()
-class CountStore extends GObject.Object {
-  @property(Number) counter = 0
+@register
+class CountStore extends Object {
+  @property count: number = 0
 }
 
 function Counter() {
-  const count = new CountStore()
+  const counter = new CountStore()
 
   function increment() {
-    count.counter += 1
+    counter.count += 1
   }
 
-  const counter = createBinding(count, "counter")
-  const label = counter((num) => num.toString())
+  const count = bind(counter, "count")
+  const label = computed(() => count().toString())
+
+  return (
+    <Box>
+      <Label label={label} />
+      <Button onClicked={increment}>Click to increment</Button>
+    </Box>
+  )
+}
+```
+
+```tsx [Store example]
+import { createStore, bind, computed } from "gnim"
+
+const countStore = createStore({
+  count: 0,
+})
+
+function Counter() {
+  function increment() {
+    counter.count += 1
+  }
+
+  const count = bind(counter, "count")
+  const label = computed(() => count().toString())
 
   return (
     <Box>
@@ -349,25 +356,34 @@ function Counter() {
 
 :::
 
-Accessors can be called as a function which lets you transform its value. In the
-case of a `Gtk.Label` in this example, its label property expects a string, so
-it needs to be turned into a string first.
+> [!TIP]
+>
+> In a lot of cases you will need to convert values to the required type to pass
+> them as GTK widget properties in which case you can use the `.as()` method on
+> accessors.
+>
+> ```tsx
+> let value: Accessor<number>
+>
+> <Gtk.Label label={computed(() => value().toString())} />
+> <Gtk.Label label={value.as(v => v.toString())} />
+> <Gtk.Label label={value.as(String)} />
+> ```
 
 ## Dynamic rendering
 
-When you want to render based on a value, you can use the `<With>` component.
+When you want to render based on a reactive value, you can use the `<With>`
+component to "unwrap" the Accessor.
 
 ```tsx
-import { With, Accessor } from "gnim"
+import { With, type Accessor } from "gnim"
 
 let value: Accessor<{ member: string } | null>
 
 return (
-  <Box>
-    <With value={value}>
-      {(value) => value && <Label label={value.member} />}
-    </With>
-  </Box>
+  <With value={value}>
+    {(value) => value && <Label label={value.member} />}
+  </With>
 )
 ```
 
@@ -375,43 +391,33 @@ return (
 >
 > In a lot of cases it is better to always render the component and set its
 > `visible` property instead.
-
-<!-- -->
-
-> [!WARNING]
 >
-> When the value changes and the widget is re-constructed, the previous one is
-> removed from the parent component and the new one is _appended_. Order of
-> widgets are _not_ kept, so make sure to wrap `<With>` in a container to avoid
-> it. This is due to Gtk not having a generic API on containers to sort widgets.
+> ```tsx
+> const member = computed(() => value()?.member || "")
+> const shouldShow = computed(() => member() !== "")
+>
+> return <Label visible={shouldShow} label={member} />
+> ```
 
 ## Dynamic list rendering
 
-The `<For>` component let's you render based on an array dynamically. Each time
-the array changes it is compared with its previous state. Widgets for new items
-are inserted while widgets associated with removed items are removed.
+The `<For>` component let's you render based on a reactive array dynamically.
+Each time the array changes it is compared with its previous state. Widgets for
+new items are inserted while widgets associated with removed items are disposed.
 
 ```tsx
 import { For, Accessor } from "gnim"
 
-let list: Accessor<Array<any>>
+let list: Accessor<Array<T>>
 
 return (
-  <Box>
-    <For each={list}>
-      {(item, index: Accessor<number>) => (
-        <Label label={index.as((i) => `${i}. ${item}`)} />
-      )}
-    </For>
-  </Box>
+  <For each={list}>
+    {(item: T, index: Accessor<number>) => (
+      <Label label={index((i) => `${i}. ${item}`)} />
+    )}
+  </For>
 )
 ```
-
-> [!WARNING]
->
-> Similarly to `<With>`, when the list changes and a new item is added, it is
-> simply **appended** to the parent. Order of sibling widgets are _not_ kept, so
-> make sure to wrap `<For>` in a container to avoid this.
 
 ## Effects
 
@@ -422,30 +428,34 @@ escape hatch rather than a tool you should use frequently. In particular, avoid
 using it to synchronise state. See
 [when not to use an effect](#when-not-to-use-an-effect) for alternatives.
 
-The `createEffect` primitive runs the given function tracking reactive values
-accessed within and re-runs it whenever any of its dependencies change.
+The `effect` primitive runs the given function tracking reactive values accessed
+within and re-runs it whenever any of its dependencies change.
 
 ```ts
 const [count, setCount] = createState(0)
 const [message, setMessage] = createState("Hello")
 
-createEffect(() => {
+effect(() => {
   console.log(count(), message())
 })
 
-setCount(1) // Output: 1, "Hello"
-setMessage("World") // Output: 1, "World"
+// initial output: 0, "Hello"
+setCount(1) // output: 1, "Hello"
+setMessage("World") // output: 1, "World"
 ```
 
 If you wish to read a value without tracking it as a dependency you can use the
-`.peek()` method.
+`.peek()` method or the `untrack()` function.
 
 ```ts
-createEffect(() => {
+import { untrack } from "gnim"
+
+effect(() => {
   console.log(count(), message.peek())
+  console.log(untrack(() => message()))
 })
 
-setCount(1) // Output: 1, "Hello"
+setCount(1) // output: 1, "Hello"
 setMessage("World") // nothing happens
 ```
 
@@ -456,9 +466,9 @@ allows each effect to independently track its own dependencies, without
 affecting the effect that it is nested within.
 
 ```ts
-createEffect(() => {
+effect(() => {
   console.log("Outer effect")
-  createEffect(() => console.log("Inner effect"))
+  effect(() => console.log("Inner effect"))
 })
 ```
 
@@ -469,9 +479,9 @@ the inner effect changes, it will trigger only the inner effect to re-run, not
 the outer one.
 
 ```ts
-createEffect(() => {
+effect(() => {
   console.log("Outer effect")
-  createEffect(() => {
+  effect(() => {
     // when count changes, only this effect will re-run
     console.log(count())
   })
@@ -486,10 +496,10 @@ life-cycle with `createRoot`.
 ```ts
 const globalObject: GObject.Object
 
-const field = createBinding(globalObject, "field")
+const field = bind(globalObject, "field")
 
 createRoot((dispose) => {
-  createEffect(() => {
+  effect(() => {
     console.log("field is", field())
   })
 
@@ -503,40 +513,27 @@ Do not use an effect to synchronise state.
 
 ```ts
 const [count, setCount] = createState(1)
-// [!code --:5]
+// [!code --:4]
 const [double, setDouble] = createState(count() * 2)
-createEffect(() => {
+effect(() => {
   setDouble(count() * 2)
 })
 // [!code ++]
-const double = createComputed(() => count() * 2)
+const double = computed(() => count() * 2)
 ```
 
 Same logic applies when an Accessor is passed as a prop.
 
 ```ts
 function Counter(props: { count: Accessor<number> }) {
-  // [!code --:5]
+  // [!code --:4]
   const [double, setDouble] = createState(props.count() * 2)
-  createEffect(() => {
+  effect(() => {
     setDouble(props.count() * 2)
   })
   // [!code ++]
-  const double = createComputed(() => props.count() * 2)
+  const double = computed(() => props.count() * 2)
 }
-```
-
-Do not use an effect to track values from `GObject` signals.
-
-```ts
-// [!code --:5]
-const [count, setCount] = createState(1)
-const id = gobject.connect("signal", () => {
-  setCount(gobject.prop)
-})
-onCleanup(() => gobject.disconnect(id))
-// [!code ++:1]
-const count = createConnection(0, [gobject, "signal", () => gobject.prop])
 ```
 
 Avoid using an effect for event specific logic.
@@ -545,13 +542,49 @@ Avoid using an effect for event specific logic.
 function TextEntry() {
   const [url, setUrl] = createState("")
   // [!code --:3]
-  createEffect(() => {
+  effect(() => {
     fetch(url())
   })
 
   function onTextEntered(entry: Gtk.Entry) {
     setUrl(entry.text)
-    fetch(url.peek()) // [!code ++]
+    fetch(entry.text) // [!code ++]
   }
+}
+```
+
+## Lifecycles
+
+There are only a few Lifecycle functions in Gnim as everything lives and dies by
+the reactive system. The reactive system updates synchronously, so the only
+scheduling comes down to Effects which are scheduled to the end of reactive
+scopes to make sure every widget ref is alive.
+
+```tsx
+function MyWindow() {
+  let win: Gtk.Window
+
+  effect(() => {
+    win.present()
+  })
+
+  return <Gtk.Window ref={(self) => (win = self)} />
+}
+```
+
+Everything in a Gnim render tree is living inside an Effect and can be nested.
+You can call `onCleanup()` in any scope and it will run when that scope is
+triggered to re-evaluate and when it is disposed.
+
+```tsx
+function Timer() {
+  const [count, setCount] = createState(0)
+  const interval = setInterval(() => setCount(count() + 1), 1000)
+  onCleanup(() => clearInterval(interval))
+
+  effect(() => {
+    console.log("count is", count())
+    onCleanup(() => console.log("runs on every tick"))
+  })
 }
 ```

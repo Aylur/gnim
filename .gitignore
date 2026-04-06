@@ -1,6 +1,9 @@
 node_modules/
 build/
 dist/
+target/
+result
+result-dev/
 docs/.vitepress/dist
 docs/.vitepress/cache
-demo.tsx
+.gnim/

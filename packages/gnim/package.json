@@ -1,0 +1,89 @@
+{
+    "name": "gnim",
+    "version": "2.0.0-alpha.7",
+    "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "homepage": "https://gnimjs.dev/",
+    "repository": "github:Aylur/gnim",
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "bin": {
+        "gnim": "bin/gnim.ts"
+    },
+    "scripts": {
+        "build": "tsc",
+        "lint": "eslint ."
+    },
+    "optionalDependencies": {
+        "@gnim-js/linux-x64": "2.0.0-alpha.6"
+    },
+    "devDependencies": {
+        "@types/node": "latest",
+        "@eslint/js": "latest",
+        "eslint": "latest",
+        "typescript": "latest",
+        "typescript-eslint": "latest"
+    },
+    "exports": {
+        ".": "./lib/index.ts",
+        "./dbus": "./lib/decorators/dbus.ts",
+        "./gobject": "./lib/decorators/gobject.ts",
+        "./i18n": "./lib/i18n/index.ts",
+        "./schema": "./lib/schema/index.ts",
+        "./fetch": "./lib/polyfill/fetch.ts",
+        "./jsx-runtime": "./lib/jsx-runtime.ts",
+        "./jsx-dev-runtime": "./lib/jsx-dev-runtime.ts"
+    },
+    "publishConfig": {
+        "bin": "dist/bin/gnim.js",
+        "exports": {
+            ".": {
+                "import": "./dist/lib/index.js",
+                "types": "./dist/lib/index.d.ts"
+            },
+            "./dbus": {
+                "import": "./dist/lib/decorators/dbus.js",
+                "types": "./dist/lib/decorators/dbus.d.ts"
+            },
+            "./gobject": {
+                "import": "./dist/lib/decorators/gobject.js",
+                "types": "./dist/lib/decorators/gobject.d.ts"
+            },
+            "./i18n": {
+                "import": "./dist/lib/i18n/index.js",
+                "types": "./dist/lib/i18n/index.d.ts"
+            },
+            "./schema": {
+                "import": "./dist/lib/schema/index.js",
+                "types": "./dist/lib/schema/index.d.ts"
+            },
+            "./fetch": {
+                "import": "./dist/lib/polyfill/fetch.js",
+                "types": "./dist/lib/polyfill/fetch.d.ts"
+            },
+            "./jsx-runtime": {
+                "import": "./dist/lib/jsx-runtime.js",
+                "types": "./dist/lib/jsx-runtime.d.ts"
+            },
+            "./jsx-dev-runtime": {
+                "import": "./dist/lib/jsx-dev-runtime.js",
+                "types": "./dist/lib/jsx-dev-runtime.d.ts"
+            }
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "engines": {
+        "gjs": ">=1.83.0"
+    },
+    "keywords": [
+        "GJS",
+        "Gnome",
+        "GTK",
+        "JSX"
+    ]
+}

@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "erasableSyntaxOnly": true,
+
+        "module": "nodenext",
+        "target": "esnext",
+        "lib": ["ESNext"],
+
+        "outDir": "dist",
+        "skipLibCheck": true,
+        "rootDir": "./bin",
+
+        "strict": true,
+        "moduleResolution": "nodenext",
+        "types": ["node"],
+        "typeRoots": ["../../node_modules/@types"]
+    },
+    "include": ["./bin/**/*"]
+}

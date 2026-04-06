@@ -1,0 +1,26 @@
+[package]
+name = "gnim"
+version = "2.0.0-alpha.7"
+edition = "2024"
+license = "MIT"
+description = "Gnim CLI"
+homepage = "https://gnim.aylur.dev/"
+repository = "https://github.com/aylur/gnim"
+include = ["/bin/gnim.rs", "/bin/command"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+quick-xml = "0"
+colored = "3"
+girgen = "0.3.9"
+grass = "0.13.4"
+lightningcss = "1.0.0-alpha.71"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rolldown = { git = "https://github.com/rolldown/rolldown" }
+rolldown_watcher = { git = "https://github.com/rolldown/rolldown" }
+rolldown_plugin = { git = "https://github.com/rolldown/rolldown" }
+rolldown_common = { git = "https://github.com/rolldown/rolldown" }
+rolldown_utils = { git = "https://github.com/rolldown/rolldown" }
+oxc = { version = "0.115.0", features = ["transformer", "codegen"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net", "io-util", "sync", "process"] }

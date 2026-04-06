@@ -5,11 +5,12 @@ in-depth concepts you can read the [Gtk docs](https://docs.gtk.org/gtk4/#extra).
 
 ## Running Gtk
 
-To run Gtk you will have to initialize it, create widgets and run a GLib main
-loop.
+To run Gtk, you will have to initialize it, create widgets, and run a GLib main
+loop. Alternatively you can use `Gio.Application` and its various subclasses
+such as `Gtk.Application`.
 
-```ts
-import GLib from "gi://GLib"
+```ts [GLib MainLoop]
+import GLib from "gi://GLib?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
 
 Gtk.init()
@@ -17,6 +18,7 @@ Gtk.init()
 const loop = GLib.MainLoop.new(null, false)
 
 // create widgets here
+// loop.quit() to exit
 
 loop.runAsync()
 ```
@@ -26,7 +28,7 @@ loop.runAsync()
 For a list of available widgets you can refer to the
 [Gtk docs](https://docs.gtk.org/gtk4/visual_index.html). If you are planning to
 write an app for the Gnome platform you might be interested in using
-[Adwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/).
+[Adwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/).
 
 The top level widget that makes it possible to display something on the screen
 is `Gtk.Window` and its various subclasses such as `Gtk.ApplicationWindow` and
@@ -53,6 +55,23 @@ win.connect("close-request", () => loop.quit())
 win.present()
 ```
 
+> [!TIP]
+>
+> Its best practice to mark translatable text as translatable from the
+> beginning.
+>
+> ```ts
+> import { gettext: t } from "gettext"
+>
+> const win = new Gtk.Window({
+>   title: t("My App"),
+> })
+>
+> const label = new Gtk.Label({
+>   label: t("Hello World"),
+> })
+> ```
+
 ## Layout system
 
 Gtk uses [LayoutManagers](https://docs.gtk.org/gtk4/class.LayoutManager.html) to
@@ -66,6 +85,7 @@ implement some common layouts:
   ```ts
   const box = new Gtk.Box({
     orientation: Gtk.Orientation.HORIZONTAL,
+    spacing: 8,
   })
 
   box.append(Gtk.Label.new("1"))
@@ -86,7 +106,7 @@ implement some common layouts:
   ```
 
 - [`Overlay`](https://docs.gtk.org/gtk4/class.Overlay.html) which has a single
-  child that dictates the size of the widget and positions each children on top.
+  child that dictates the size of the widget and positions each child on top.
 
   ```ts
   const overlay = new Gtk.Overlay()
