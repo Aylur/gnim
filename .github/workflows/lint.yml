@@ -38,4 +38,4 @@ jobs:
                   ./packages/gnim/node_modules/@gnim-js/linux-x64/gnim types -d /usr/share/gir-1.0
 
             - name: Lint
-              run: pnpm lint
+              run: pnpm -r lint
