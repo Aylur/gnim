@@ -77,9 +77,29 @@ sudo apt install libgjs-dev libgtk-4-dev npm
 
 ## Using a template
 
-```sh
+::: code-group
+
+```sh [npm]
 npm create gnim@alpha
 ```
+
+```sh [pnpm]
+pnpm create gnim@alpha
+```
+
+```sh [yarn]
+yarn create gnim@alpha
+```
+
+```sh [bun]
+bun create gnim@alpha
+```
+
+```sh [deno]
+deno init --npm gnim@alpha
+```
+
+:::
 
 ## Creating a new project manually
 

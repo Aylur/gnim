@@ -10,6 +10,32 @@ Library that brings JSX, reactivity and type-safety to GNOME JavaScript.
   GObjects
 - [DBus decorators](/reference/dbus) for implementing DBus services and proxies
 
+## Get started
+
+::: code-group
+
+```sh [npm]
+npm create gnim@alpha
+```
+
+```sh [pnpm]
+pnpm create gnim@alpha
+```
+
+```sh [yarn]
+yarn create gnim@alpha
+```
+
+```sh [bun]
+bun create gnim@alpha
+```
+
+```sh [deno]
+deno init --npm gnim@alpha
+```
+
+:::
+
 ## Obligatory Counter Example
 
 ```tsx
@@ -32,8 +58,3 @@ function Counter() {
   )
 }
 ```
-
-## Templates
-
-- [gtk4](https://github.com/Aylur/gnim-gtk4-template/)
-- [gnome-extension](https://github.com/Aylur/gnome-shell-extension-template/)
