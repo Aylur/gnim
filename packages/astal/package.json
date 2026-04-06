@@ -1,0 +1,60 @@
+{
+    "name": "@astal/io",
+    "version": "0.0.0-alpha.0",
+    "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "homepage": "https://gnimjs.dev/",
+    "repository": "github:Aylur/gnim",
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "scripts": {
+        "build": "tsc",
+        "lint": "eslint ."
+    },
+    "dependencies": {
+        "gnim": "workspace:^"
+    },
+    "devDependencies": {
+        "@eslint/js": "latest",
+        "eslint": "latest",
+        "typescript": "latest",
+        "typescript-eslint": "latest"
+    },
+    "exports": {
+        "./timer": "./dist/timer.ts",
+        "./fs": "./dist/fs.ts",
+        "./process": "./dist/process.ts"
+    },
+    "publishConfig": {
+        "exports": {
+            "./timer": {
+                "import": "./dist/timer.js",
+                "types": "./dist/timer.d.ts"
+            },
+            "./fs": {
+                "import": "./dist/fs.js",
+                "types": "./dist/fs.d.ts"
+            },
+            "./process": {
+                "import": "./dist/process.js",
+                "types": "./dist/process.d.ts"
+            }
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "engines": {
+        "gjs": ">=1.83.0"
+    },
+    "keywords": [
+        "GJS",
+        "Gnim",
+        "Gnome",
+        "GTK",
+        "JSX"
+    ]
+}
