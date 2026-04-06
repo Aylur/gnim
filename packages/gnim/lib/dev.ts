@@ -13,7 +13,7 @@ import {
     type State,
 } from "./jsx/reactive.js"
 
-const props = JSON.parse(GLib.getenv("GNIM_DEV_PROPS")!) as {
+const props = JSON.parse(GLib.getenv("GNIM_DEV")!) as {
     applicationId?: string
     verbose: boolean
     gtk?: "3.0" | "4.0"

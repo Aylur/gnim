@@ -46,7 +46,7 @@ pub async fn gjs_runner(args: GjsRunnerArgs) {
         let mut gjs = Command::new("gjs")
             .arg("-m")
             .arg(&args.dev_entry_js)
-            .env("GNIM_DEV_PROPS", props.to_string())
+            .env("GNIM_DEV", props.to_string())
             .env("GSETTINGS_SCHEMA_DIR", "./.gnim/schemas")
             .spawn()
             .expect("failed to spawn gjs");
