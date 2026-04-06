@@ -78,7 +78,7 @@ sudo apt install libgjs-dev libgtk-4-dev npm
 ## Using a template
 
 ```sh
-npm create gnim
+npm create gnim@alpha
 ```
 
 ## Creating a new project manually
@@ -88,7 +88,7 @@ npm create gnim
    ```sh
    mkdir gnim-app
    cd gnim-app
-   npm install gnim @gnim-js/gtk4
+   npm install gnim@alpha @gnim-js/gtk4@alpha
    ```
 
 2. Configure `tsconfig.json`

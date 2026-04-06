@@ -1,6 +1,6 @@
 {
     "name": "gnim",
-    "version": "2.0.0-alpha.6",
+    "version": "2.0.0-alpha.7",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
@@ -38,7 +38,7 @@
         "./jsx-dev-runtime": "./lib/jsx-dev-runtime.ts"
     },
     "publishConfig": {
-        "bin": "dist/lib/gnim.js",
+        "bin": "dist/bin/gnim.js",
         "exports": {
             ".": {
                 "import": "./dist/lib/index.js",
