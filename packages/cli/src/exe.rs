@@ -51,7 +51,7 @@ pub async fn exe(args: &ExeArgs) -> Result<(), String> {
         None => "".to_string(),
         Some(id) => {
             format!(
-                "imports.gettext.bindtextdomain({:?}, \"{}/{}\")",
+                "imports.gettext.bindtextdomain({:?}, \"{}/{}/locale\")",
                 id, args.prefix, args.datadir
             )
         }
