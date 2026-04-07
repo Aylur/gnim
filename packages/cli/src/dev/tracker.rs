@@ -5,6 +5,7 @@ use std::{collections::HashMap, fs, sync::Arc};
 
 fn get_dev_entry() -> Option<String> {
     let candidates = [
+        Some("./node_modules/gnim/lib/dev.ts".to_string()),
         Some("./node_modules/gnim/dist/lib/dev.js".to_string()),
         option_env!("GNIM_DATADIR").map(|dir| format!("{dir}/gnim/dist/lib/dev.js")),
     ];
