@@ -17,6 +17,15 @@ const dummyBuilder = new Gtk.Builder()
 const slotType = Symbol("gnim.gtk4.slot")
 const cssprovider = Symbol("gnim.gtk4.cssprovider")
 
+class UnknownMethodError extends Error {
+    constructor(name: string, parent: GObject.Object, child: GObject.Object) {
+        super(
+            `Method "${name}" for parent ${parent} and child ${child} is not registered. ` +
+                "You should open an issue about this so that we can add support.",
+        )
+    }
+}
+
 function snakecase(str: string) {
     return str
         .replace(/([a-z])([A-Z])/g, "$1-$2")
@@ -100,11 +109,6 @@ export const { render } = createRenderer({
         }
     },
     createText: Gtk.Label.new,
-    // `set_child` and especially `remove` might be way too generic and there might
-    // be cases where it does not actually do what we want it to do
-    //
-    // if there is a usecase for either of these two that does something else than
-    // we expect it to do here in a JSX context we have to check for known instances
     removeChild(parent, child) {
         if (removeChild in parent && typeof parent[removeChild] === "function") {
             if (parent[removeChild](child)) return
@@ -114,19 +118,57 @@ export const { render } = createRenderer({
             return parent.remove_controller(child)
         }
 
-        if ("set_child" in parent && typeof parent.set_child == "function") {
-            return parent.set_child(null)
-        }
+        if (child instanceof Gtk.Widget) {
+            if (parent instanceof Gtk.CenterBox) {
+                switch (getSlot(child)) {
+                    case "start":
+                        return parent.set_start_widget(null)
+                    case "center":
+                        return parent.set_center_widget(null)
+                    case "end":
+                        return parent.set_end_widget(null)
+                }
+            }
 
-        if ("remove" in parent && typeof parent.remove == "function") {
-            return parent.remove(child)
+            if (parent instanceof Gtk.Paned) {
+                switch (getSlot(child)) {
+                    case "start":
+                        return parent.set_start_child(null)
+                    case "end":
+                        return parent.set_end_child(null)
+                }
+            }
+
+            if (parent instanceof Gtk.Overlay) {
+                if (getSlot(child) === "overlay") {
+                    return parent.remove_overlay(child)
+                }
+                return parent.set_child(null)
+            }
+
+            if (parent instanceof Gtk.Notebook) {
+                const pageNum = parent.page_num(child)
+                if (pageNum !== -1) {
+                    return parent.remove_page(pageNum)
+                }
+            }
+
+            // Most Bin-like containers have a .set_child()
+            if ("set_child" in parent && typeof parent.set_child == "function") {
+                return parent.set_child(null)
+            }
+
+            // Most mulit children containers have a .remove()
+            if ("remove" in parent && typeof parent.remove == "function") {
+                return parent.remove(child)
+            }
         }
 
         if (parent instanceof Gtk.Application && child instanceof Gtk.Window) {
             return parent.remove_window(child)
         }
 
-        throw Error(`cannot remove ${child} from ${parent}`)
+        throw new UnknownMethodError("removeChild", parent, child)
     },
     appendChild(parent, child) {
         if (appendChild in parent && typeof parent[appendChild] === "function") {
@@ -162,10 +204,6 @@ export const { render } = createRenderer({
             return parent.set_menu_model(child)
         }
 
-        if (child instanceof Gio.MenuItem && parent instanceof Gio.Menu) {
-            // TODO:
-        }
-
         if (child instanceof Gtk.Window && parent instanceof Gtk.Application) {
             return parent.add_window(child)
         }
@@ -174,11 +212,25 @@ export const { render } = createRenderer({
             return parent.set_buffer(child)
         }
 
+        if (parent instanceof Gtk.CenterBox && child instanceof Gtk.Widget) {
+            const slot = getSlot(child)
+            if (!slot) {
+                console.warn("Trying to append child to Gtk.CenterBox without a specified slot")
+                return
+            }
+            if (slot !== "center" && slot !== "start" && slot !== "end") {
+                console.warn(
+                    `Invalid Gtk.CenterBox child slot: has to be one of "start", "center", "end"`,
+                )
+                return
+            }
+        }
+
         if (parent instanceof Gtk.Buildable) {
             return parent.vfunc_add_child(dummyBuilder, child, getSlot(child))
         }
 
-        throw Error(`cannot add ${child} to ${parent}`)
+        throw new UnknownMethodError("appendChild", parent, child)
     },
     prepareProps(object, props) {
         if (object.prototype instanceof GObject.Object && "class" in props) {
