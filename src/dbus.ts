@@ -16,6 +16,7 @@ import {
     getter as ggetter,
     setter as gsetter,
 } from "./gobject.js"
+import System from 'system'
 
 const DEFAULT_TIMEOUT = 10_000
 
@@ -146,11 +147,21 @@ export class Service extends GObject.Object {
     }
 
     // server
-    #handleMethodCall(
-        _: Gio.DBusExportedObject,
+    #handleMethodCallLegacy(
+        obj: Gio.DBusExportedObject,
         methodName: Extract<keyof this, string>,
         parameters: GLib.Variant,
         invocation: Gio.DBusMethodInvocation,
+    ): void {
+        this.#handleMethodCall(obj, methodName, invocation, parameters);
+    }
+
+
+    #handleMethodCall(
+        _: Gio.DBusExportedObject,
+        methodName: Extract<keyof this, string>,
+        invocation: Gio.DBusMethodInvocation,
+        parameters: GLib.Variant,
     ): void {
         try {
             const value = (this[methodName] as (...args: unknown[]) => unknown)(
@@ -189,8 +200,12 @@ export class Service extends GObject.Object {
             // @ts-expect-error missing constructor type
             { g_interface_info: this.#info },
         )
-
-        impl.connect("handle-method-call", this.#handleMethodCall.bind(this))
+        if (System.version < 18701) {
+            impl.connect("handle-method-call", this.#handleMethodCallLegacy.bind(this))
+        }
+        else {
+            impl.connect("handle-method-call", this.#handleMethodCall.bind(this))
+        }
         impl.connect("handle-property-get", this.#handlePropertyGet.bind(this))
         impl.connect("handle-property-set", this.#handlePropertySet.bind(this))
 
