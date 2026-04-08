@@ -24,9 +24,9 @@
         "typescript-eslint": "latest"
     },
     "exports": {
-        "./timer": "./dist/timer.ts",
-        "./fs": "./dist/fs.ts",
-        "./process": "./dist/process.ts"
+        "./timer": "./lib/timer.ts",
+        "./fs": "./lib/fs.ts",
+        "./process": "./lib/process.ts"
     },
     "publishConfig": {
         "exports": {

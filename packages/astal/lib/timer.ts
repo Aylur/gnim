@@ -18,10 +18,10 @@ export namespace Timer {
 export class Timer extends Object {
     declare $signals: Timer.SignalSignatures
 
-    @signal([VoidType], VoidType, { default: false })
+    @signal([], VoidType, { default: false })
     protected now(): void {}
 
-    @signal([VoidType], VoidType, { default: false })
+    @signal([], VoidType, { default: false })
     protected cancelled(): void {}
 
     /**

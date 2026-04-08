@@ -1,6 +1,6 @@
 {
     "name": "@gnim-js/gtk4",
-    "version": "2.0.0-alpha.0",
+    "version": "2.0.0-alpha.1",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
@@ -24,7 +24,7 @@
         "typescript-eslint": "latest"
     },
     "exports": {
-        ".": "./index.ts"
+        ".": "./lib/index.ts"
     },
     "publishConfig": {
         "exports": {
