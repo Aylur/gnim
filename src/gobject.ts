@@ -319,47 +319,72 @@ export function signal<
     }
 }
 
-const MAXINT = 2 ** 31 - 1
-const MININT = -(2 ** 31)
-const MAXUINT = 2 ** 32 - 1
-const MAXFLOAT = 3.4028235e38
-const MINFLOAT = -3.4028235e38
-const MININT64 = Number.MIN_SAFE_INTEGER
-const MAXINT64 = Number.MAX_SAFE_INTEGER
+const MININT8 = GLib.MININT8
+const MAXINT8 = GLib.MAXINT8
+const MAXUINT8 = GLib.MAXUINT8
+
+const MAXINT32 = GLib.MAXINT32
+const MININT32 = GLib.MININT32
+const MAXUINT32 = GLib.MAXUINT32
+
+// @ts-expect-error missing @girs type
+const MININT64: number = GLib.MININT64_BIGINT
+// @ts-expect-error missing @girs type
+const MAXINT64: number = GLib.MAXINT64_BIGINT
+// @ts-expect-error missing @girs type
+const MAXUINT64: number = GLib.MAXUINT64_BIGINT
+
+const MINLONG = Number.MIN_SAFE_INTEGER
+const MAXLONG = Number.MAX_SAFE_INTEGER
+const MAXULONG = Number.MAX_SAFE_INTEGER
+
+const MAXFLOAT = 3.4028234663852886e38
+const MAXDOUBLE = Number.MAX_VALUE
 
 function pspecFromGType(type: GType<unknown>, name: string, flags: ParamFlags) {
     switch (type) {
-        case GObject.TYPE_BOOLEAN:
-            return ParamSpec.boolean(name, "", "", flags, false)
-        case GObject.TYPE_STRING:
-            return ParamSpec.string(name, "", "", flags, "")
+        // @ts-expect-error missing @girs type
+        case GObject.TYPE_CHAR:
+            return GObject.param_spec_char(name, null, null, MININT8, MAXINT8, 0, flags)
+        // @ts-expect-error missing @girs type
+        case GObject.TYPE_UCHAR:
+            return GObject.param_spec_uchar(name, null, null, 0, MAXUINT8, 0, flags)
         case GObject.TYPE_INT:
-            return ParamSpec.int(name, "", "", flags, MININT, MAXINT, 0)
+            return GObject.param_spec_int(name, null, null, MININT32, MAXINT32, 0, flags)
         case GObject.TYPE_UINT:
-            return ParamSpec.uint(name, "", "", flags, 0, MAXUINT, 0)
+            return GObject.param_spec_uint(name, null, null, 0, MAXUINT32, 0, flags)
+        // @ts-expect-error missing @girs type
+        case GObject.TYPE_LONG:
+            return GObject.param_spec_long(name, null, null, MINLONG, MAXLONG, 0, flags)
+        // @ts-expect-error missing @girs type
+        case GObject.TYPE_ULONG:
+            return GObject.param_spec_ulong(name, null, null, 0, MAXULONG, 0, flags)
         case GObject.TYPE_INT64:
-            return ParamSpec.int64(name, "", "", flags, MININT64, MAXINT64, 0)
+            return GObject.param_spec_int64(name, null, null, MININT64, MAXINT64, 0, flags)
         case GObject.TYPE_UINT64:
-            return ParamSpec.uint64(name, "", "", flags, 0, Number.MAX_SAFE_INTEGER, 0)
+            return GObject.param_spec_uint64(name, null, null, 0, MAXUINT64, 0, flags)
         case GObject.TYPE_FLOAT:
-            return ParamSpec.float(name, "", "", flags, MINFLOAT, MAXFLOAT, 0)
+            return GObject.param_spec_float(name, null, null, -MAXFLOAT, MAXFLOAT, 0, flags)
         case GObject.TYPE_DOUBLE:
-            return ParamSpec.double(name, "", "", flags, Number.MIN_VALUE, Number.MIN_VALUE, 0)
+            return GObject.param_spec_double(name, null, null, -MAXDOUBLE, MAXDOUBLE, 0, flags)
+        case GObject.TYPE_BOOLEAN:
+            return GObject.param_spec_boolean(name, null, null, false, flags)
+        case GObject.TYPE_STRING:
+            return GObject.param_spec_string(name, null, null, "", flags)
         case GObject.TYPE_JSOBJECT:
-            return ParamSpec.jsobject(name, "", "", flags)
-        case GObject.TYPE_VARIANT:
-            return ParamSpec.object(name, "", "", flags as any, GLib.Variant)
-
-        case GObject.TYPE_ENUM:
-        case GObject.TYPE_INTERFACE:
-        case GObject.TYPE_BOXED:
-        case GObject.TYPE_POINTER:
-        case GObject.TYPE_PARAM:
-        case GObject.type_from_name("GType"):
-            throw Error(`cannot guess ParamSpec from GType "${type}"`)
-        case GObject.TYPE_OBJECT:
+            return GObject.param_spec_boxed(name, null, null, GObject.TYPE_JSOBJECT, flags)
         default:
-            return ParamSpec.object(name, "", "", flags as any, type)
+            if (GObject.type_is_a(type, GObject.TYPE_OBJECT)) {
+                return GObject.param_spec_object(name, null, null, type, flags)
+            }
+            // @ts-expect-error missing @girs type
+            if (GObject.type_is_a(type, GObject.TYPE_GTYPE)) {
+                return GObject.param_spec_gtype(name, null, null, type, flags)
+            }
+            if (GObject.type_is_a(type, GObject.TYPE_BOXED)) {
+                return GObject.param_spec_boxed(name, null, null, type, flags)
+            }
+            throw Error(`cannot guess ParamSpec from GObject.Type "${type}"`)
     }
 }
 
