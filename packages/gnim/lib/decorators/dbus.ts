@@ -192,9 +192,15 @@ export class Service extends GObject.Object {
 
         const impl = new Gio.DBusExportedObject({ gInterfaceInfo: this.#info })
 
-        impl.connect("handle-method-call", this.#handleMethodCall.bind(this))
         impl.connect("handle-property-get", this.#handlePropertyGet.bind(this))
         impl.connect("handle-property-set", this.#handlePropertySet.bind(this))
+        impl.connect("handle-method-call", (self, name, arg1, arg2) => {
+            if (arg1 instanceof GLib.Variant) {
+                return this.#handleMethodCall(self, name, arg1, arg2 as Gio.DBusMethodInvocation)
+            } else {
+                return this.#handleMethodCall(self, name, arg2 as GLib.Variant, arg1)
+            }
+        })
 
         this.#info.cache_build()
 
