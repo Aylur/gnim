@@ -1,6 +1,7 @@
-import gi from "gi"
 import Gettext from "gettext"
+import gi from "gi"
 import Gio from "gi://Gio?version=2.0"
+import GIRepository from "gi://GIRepository?version=3.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { jsx, resolveNode, type FC } from "./jsx/element.js"
@@ -31,36 +32,73 @@ type SocketMsg = {
 
 let sourceCss: null | ((id: string, stylesheet: string) => void) = null
 
+function path([root, ...segments]: [root: string | Gio.File, ...segments: string[]]) {
+    const file = Gio.file_new_build_filenamev([
+        typeof root === "string" ? root : root.get_path()!,
+        ...segments,
+    ])
+    return file.get_path()!
+}
+
+function exists(file: string) {
+    return Gio.File.new_for_path(file).query_exists(null)
+}
+
 function initGtk() {
     if (props.gtk === "4.0") {
         gi.require("Gtk", "4.0").init()
     }
     if (props.gtk === "3.0") {
-        // @ts-expect-error girgen should override init()
         gi.require("Gtk", "3.0").init(null)
     }
 }
 
 function initGettext() {
     if (props.applicationId) {
-        const localedir = Gio.file_new_build_filenamev([props.rundir, "locale"])
-        Gettext.bindtextdomain(props.applicationId, localedir.get_path()!)
+        Gettext.bindtextdomain(props.applicationId, path([props.rundir, "locale"]))
     }
 }
 
 function initIcons() {
     const cwd = GLib.get_current_dir()
-    const icondir = Gio.file_new_build_filenamev([cwd, "data", "icons"])
+    const icondir = path([cwd, "data", "icons"])
 
     if (props.gtk === "4.0") {
         const display = gi.require("Gdk", "4.0").Display.get_default()!
-        gi.require("Gtk", "4.0")
-            .IconTheme.get_for_display(display)
-            .add_search_path(icondir.get_path()!)
+        gi.require("Gtk", "4.0").IconTheme.get_for_display(display).add_search_path(icondir)
     }
 
     if (props.gtk === "3.0") {
-        gi.require("Gtk", "3.0").IconTheme.get_default().append_search_path(icondir.get_path()!)
+        gi.require("Gtk", "3.0").IconTheme.get_default().append_search_path(icondir)
+    }
+}
+
+function initLibdir() {
+    const cwd = GLib.get_current_dir()
+    const gir = GIRepository.Repository.dup_default()
+    const id = props.applicationId
+
+    const dist = path([cwd, "dist"])
+    if (exists(dist)) {
+        gir.prepend_search_path(path([dist, "lib", "girepository-1.0"]))
+        gir.prepend_search_path(path([dist, "lib"]))
+        gir.prepend_library_path(path([dist, "lib"]))
+
+        if (id) {
+            gir.prepend_search_path(path([dist, "lib", id, "girepository-1.0"]))
+            gir.prepend_search_path(path([dist, "lib", id]))
+            gir.prepend_library_path(path([dist, "lib", id]))
+        }
+
+        return
+    }
+
+    const build = path([cwd, "build"])
+    if (exists(build)) {
+        gir.prepend_search_path(build)
+        gir.prepend_search_path(path([build, "lib"]))
+        gir.prepend_library_path(build)
+        gir.prepend_library_path(path([build, "lib"]))
     }
 }
 
@@ -267,6 +305,7 @@ overrideGObjectRegistration()
 initGtk()
 initGettext()
 initIcons()
+initLibdir()
 initCss()
 initRegistry()
 initSocket()

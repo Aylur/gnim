@@ -2,8 +2,8 @@
 
 def "main types" [] {
     mkdir .gnim
-    flatpak run --command=cp --filesystem=home org.gnome.Sdk -r /usr/share/gir-1.0 ./.gnim/girs
-    cargo run --bin gnim -- types --verbose -d .gnim/girs
+    flatpak run --command=cp --filesystem=home org.gnome.Sdk -r /usr/share/gir-1.0 ./.gnim
+    cargo run --bin gnim -- types --verbose -d .gnim/gir-1.0
 }
 
 def build_cli [--os: string, --cpu: string, --target: string] {

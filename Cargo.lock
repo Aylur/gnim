@@ -952,9 +952,9 @@ dependencies = [
 
 [[package]]
 name = "girgen"
-version = "0.3.9"
+version = "0.3.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "023d2e032211eccf01a2e7e403c8fb3fa4a9c1b2f20d74afdbb30ef3dda2d583"
+checksum = "1fc2129b509cfd8a328e13d8dcbc6961058eeef97c876fa84a4d9b2316ac557a"
 dependencies = [
  "clap",
  "colored",
@@ -969,7 +969,7 @@ dependencies = [
 
 [[package]]
 name = "gnim"
-version = "2.0.0-alpha.7"
+version = "2.0.0-alpha.8"
 dependencies = [
  "clap",
  "colored",

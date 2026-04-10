@@ -1,6 +1,7 @@
 use clap::Args;
 use rolldown_utils::replace_all_placeholder::ReplaceAllPlaceholder;
 use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
 use std::{env, fs, path::Path};
 
 #[derive(Args)]
@@ -16,9 +17,12 @@ pub struct ExeArgs {
     /// Installation prefix
     #[arg(short, long, default_value_t = String::from("/usr/local"))]
     pub prefix: String,
-    /// Data file directory
+    /// Data directory
     #[arg(short, long, default_value_t = String::from("share"))]
     pub datadir: String,
+    /// Library directory
+    #[arg(short, long, default_value_t = String::from("lib"))]
+    pub libdir: String,
 }
 
 pub async fn exe(args: &ExeArgs) -> Result<(), String> {
@@ -47,19 +51,40 @@ pub async fn exe(args: &ExeArgs) -> Result<(), String> {
         }
     };
 
-    let gettext = match &args.id {
-        None => "".to_string(),
-        Some(id) => {
-            format!(
-                "imports.gettext.bindtextdomain({:?}, \"{}/{}/locale\")",
-                id, args.prefix, args.datadir
-            )
-        }
-    };
+    let prefix = PathBuf::from(&args.prefix);
+    let datadir = prefix.join(&args.datadir);
+    let libdir = prefix.join(&args.libdir);
+
+    let gettext = args.id.as_deref().map(|id| {
+        let localedir = datadir.join("locale");
+        format!(
+            "imports.gettext.bindtextdomain({:?}, {:?})",
+            id,
+            localedir.to_string_lossy()
+        )
+    });
+
+    let libsearch = args.id.as_deref().map(|id| {
+        let pkglibdir = libdir.join(id);
+        let girdir = pkglibdir.join("girepository-1.0");
+
+        let content = [
+            "const gir = imports.gi.GIRepository.Repository.dup_default()",
+            &format!("gir.prepend_search_path({:?})", girdir.to_string_lossy()),
+            &format!("gir.prepend_search_path({:?})", pkglibdir.to_string_lossy()),
+            &format!(
+                "gir.prepend_library_path({:?})",
+                pkglibdir.to_string_lossy()
+            ),
+        ];
+
+        content.join("\n")
+    });
 
     let content = [
         &format!("#!{} -m", gjs.to_string_lossy()),
-        &gettext,
+        &gettext.unwrap_or_default(),
+        &libsearch.unwrap_or_default(),
         &format!(
             "const r = imports.gi.Gio.Resource.load({:?})",
             gresource.to_string_lossy(),

@@ -44,9 +44,9 @@ pub struct TypeArgs {
     /// Skip rendering by name and version, e.g "Gtk-4.0"
     #[arg(short, long, value_name = "NAMESPACE")]
     pub ignore: Vec<String>,
-    /// Generate non versioned imports
+    /// Generate non versioned import aliases
     #[arg(long, default_value_t = false)]
-    pub short_imports: bool,
+    pub alias: bool,
 }
 
 static VERBOSE: OnceLock<bool> = OnceLock::new();
@@ -109,6 +109,7 @@ fn on_verbose_event(event: Event) {
     }
 }
 
+// TODO: impl a progress bar
 fn on_silent_event(event: Event) {
     let mut out = io::stderr();
 
@@ -160,22 +161,19 @@ fn on_event(event: Event) {
 pub async fn types(args: &TypeArgs) -> Result<(), String> {
     VERBOSE.set(args.verbose).unwrap();
 
-    let dirs = &args.dirs.iter().map(|p| p.as_path()).collect::<Vec<_>>();
-    let ignore = &args.ignore.iter().map(|i| i.as_ref()).collect::<Vec<_>>();
-
-    let opts = typescript::Opts {
-        short_paths: args.short_imports,
-    };
+    let mut dirs = [default_dirs(), args.dirs.clone()].concat();
+    dirs.sort();
+    dirs.dedup();
 
     let girgen_args = girgen::Args {
         dirs,
-        ignore,
-        outdir: &format!("{}/gi", &args.outdir),
-        event: on_event,
-        generator: typescript::generate,
+        ignore: args.ignore.clone(),
+        outdir: format!("{}/gi", &args.outdir),
+        on_event,
+        generator: typescript::TypeScript { alias: args.alias },
     };
 
-    girgen(&opts, &girgen_args).map_err(|err| match err {
+    girgen(girgen_args).map_err(|err| match err {
         Error::Empty => "nothing to generate".to_string(),
         Error::FsError(error) => error.to_string(),
     })?;
