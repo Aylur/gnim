@@ -61,7 +61,11 @@ export const { render } = createRenderer({
 
         let current: unknown
 
-        if (getter in object && typeof object[getter] === "function") {
+        if (
+            getter in object &&
+            typeof object[getter] === "function" &&
+            object[getter].length === 0
+        ) {
             current = (object[getter] as () => unknown)()
         } else {
             current = object[key as keyof typeof object]
