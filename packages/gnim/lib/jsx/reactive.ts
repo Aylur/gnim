@@ -66,7 +66,10 @@ export class Scope {
     after: Fn[] | null = []
 
     constructor(parent?: Scope | null) {
-        if (parent) this.owner = parent
+        if (parent) {
+            this.owner = parent
+            parent.cleanups.unshift(() => this.dispose())
+        }
     }
 
     run<T>(fn: () => T): T {
