@@ -69,12 +69,15 @@ export function createDomain(domain: string | Gettext.GettextDomain): GettextDom
         domain = Gettext.domain(domain)
     }
 
-    const { gettext } = domain
+    const gettext = domain.gettext.bind(domain)
+    const pgettext = domain.pgettext.bind(domain)
+    const ngettext = domain.ngettext.bind(domain)
+
     function t(msgid: string) {
         return gettext(msgid)
     }
 
-    return Object.assign(t, domain) as GettextDomain
+    return Object.assign(t, { gettext, pgettext, ngettext }) as GettextDomain
 }
 
 function parseToAst(input: string): AstNode[] {
