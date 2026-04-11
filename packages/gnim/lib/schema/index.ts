@@ -403,3 +403,9 @@ export function createSettings(
 
     throw Error("invalid arguments")
 }
+
+export type CreateSettings<T> = T extends Schema
+    ? Prettify<SchemaSettings<T>>
+    : T extends Record<string, string>
+      ? Prettify<Settings<T>>
+      : never
