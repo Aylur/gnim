@@ -1,11 +1,12 @@
 import GLib from "gi://GLib?version=2.0"
-import { JSObject, Object, register, signal, VoidType } from "gnim/gobject"
+import GObject from "gi://GObject?version=2.0"
+import { register, signal, VoidType } from "gnim/gobject"
 import { type Accessor, createAccessor } from "gnim"
 import { execAsync } from "./process.js"
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Timer {
-    export interface SignalSignatures extends Object.SignalSignatures {
+    export interface SignalSignatures extends GObject.Object.SignalSignatures {
         now: Timer["now"]
         cancelled: Timer["cancelled"]
     }
@@ -15,7 +16,7 @@ export namespace Timer {
  * GObject-based timer that emits signals on ticks and cancellations.
  */
 @register
-export class Timer extends Object {
+export class Timer extends GObject.Object {
     declare $signals: Timer.SignalSignatures
 
     @signal([], VoidType, { default: false })
@@ -207,7 +208,7 @@ export function createPoll<T>(
     const subscribers = new Set<() => void>()
 
     function set(value: T) {
-        if (!JSObject.is(currentValue, value)) {
+        if (!Object.is(currentValue, value)) {
             currentValue = value
             Array.from(subscribers).forEach((cb) => cb())
         }

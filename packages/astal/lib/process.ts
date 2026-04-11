@@ -1,11 +1,12 @@
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
+import GObject from "gi://GObject?version=2.0"
 import { createAccessor, type Accessor } from "gnim"
-import { JSObject, Object, register, signal, VoidType, type ConstructorProps } from "gnim/gobject"
+import { register, signal, VoidType, type ConstructorProps } from "gnim/gobject"
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Process {
-    export interface SignalSignatures extends Object.SignalSignatures {
+    export interface SignalSignatures extends GObject.Object.SignalSignatures {
         stdout: Process["stdout"]
         stderr: Process["stderr"]
         exit: Process["exit"]
@@ -20,7 +21,7 @@ export namespace Process {
  * A simple abstraction over {@link Gio.Subprocess} which lets you run child processes.
  */
 @register
-export class Process extends Object {
+export class Process extends GObject.Object {
     declare readonly $signals: Process.SignalSignatures
     declare readonly $constructOnlyProperties: Process.ConstructOnlyProperties
 
@@ -408,7 +409,7 @@ export function createSubprocess<T>(
     const subscribers = new Set<() => void>()
 
     function set(value: T) {
-        if (!JSObject.is(currentValue, value)) {
+        if (!Object.is(currentValue, value)) {
             currentValue = value
             Array.from(subscribers).forEach((cb) => cb())
         }
