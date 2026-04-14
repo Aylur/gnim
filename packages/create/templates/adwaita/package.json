@@ -1,0 +1,13 @@
+{
+  "name": "__app-name__",
+  "type": "module",
+  "dependencies": {
+    "@gnim-js/gtk4": "^2.0.0-alpha.0",
+    "gnim": "^2.0.0-alpha.0"
+  },
+  "scripts": {
+    "types": "gnim types",
+    "dev": "gnim dev src/main.ts",
+    "build": "rm -rf dist ; meson setup build --wipe --prefix \"$(pwd)/dist\" ; meson install -C build"
+  }
+}

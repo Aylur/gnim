@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+
+    "module": "ES2022",
+    "target": "ES2020",
+    "lib": ["ES2024"],
+
+    "inlineSourceMap": true,
+    "outDir": "dist",
+    "skipLibCheck": true,
+
+    "strict": true,
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "gnim",
+    "types": ["gi", "gnim"],
+    "typeRoots": ["./.gnim/types"],
+    "baseUrl": "./src"
+  },
+  "include": ["prefs.ts", "extension.ts", "./src/**/*"]
+}

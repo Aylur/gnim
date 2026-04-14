@@ -1,0 +1,8 @@
+{
+  "name": "__extension-name__",
+  "uuid": "__extension-uuid__",
+  "description": "__extension-description__",
+  "settings-schema": "org.gnome.shell.extensions.__extension-id__",
+  "version-name": "0.0.0",
+  "shell-version": ["48", "49", "50"]
+}

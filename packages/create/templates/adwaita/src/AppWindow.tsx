@@ -1,7 +1,7 @@
 import Adw from "gi://Adw?version=1"
 import Gtk from "gi://Gtk?version=4.0"
 import AppContent from "./AppContent"
-import { App } from "./main"
+import App from "./main"
 
 export default function AppWindow() {
   let toasts: Adw.ToastOverlay

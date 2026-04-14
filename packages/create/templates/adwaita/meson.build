@@ -36,7 +36,7 @@ custom_target(
   command: [gnim, 'schemas', root / 'src', '-o', 'schemas'],
   output: 'schemas',
   install: true,
-  install_dir: datadir / 'glib-2.0',
+  install_dir: prefix / datadir / 'glib-2.0',
 )
 
 # desktop entry

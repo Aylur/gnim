@@ -10,7 +10,9 @@ import { programArgs, programInvocationName } from "system"
 import { appSchema } from "./__app-id__.gschema"
 import AppWindow from "./AppWindow"
 
-export class App extends Adw.Application {
+@register
+export default class App extends Adw.Application {
+  static instance: App
   static gettext = createDomain("__app-id__")
   static settings = createSettings(appSchema)
   static isDev = !!GLib.getenv("GNIM_DEV")
@@ -20,10 +22,6 @@ export class App extends Adw.Application {
       applicationId: "__app-id__",
       flags: Gio.ApplicationFlags.DEFAULT_FLAGS,
     })
-
-    const { gettext: t } = App.gettext
-    GLib.set_prgname("__app-name__")
-    GLib.set_application_name(t("Gnim Demo App"))
   }
 
   vfunc_startup(this: App): void {
@@ -37,10 +35,15 @@ export class App extends Adw.Application {
       window.present()
     }
   }
+}
 
-  static {
-    const App = register(this)
-    const app = new App()
-    app.runAsync([programInvocationName, ...programArgs])
-  }
+/* main */ {
+  const { gettext: t } = App.gettext
+  GLib.set_prgname("__app-name__")
+  GLib.set_application_name(t("Gnim Demo Adwaita App"))
+
+  App.instance = new App()
+  App.instance
+    .runAsync([programInvocationName, ...programArgs])
+    .catch(console.error)
 }

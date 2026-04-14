@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "@gnim-js/gnome-shell": "^2.0.0-alpha.0",
+    "@gnim-js/gtk4": "^2.0.0-alpha.0",
+    "gnim": "^2.0.0-alpha.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "nushell": "^0.111.0",
+    "rolldown": "1.0.0-rc.15"
+  },
+  "scripts": {
+    "types": "./scripts.nu types",
+    "build": "./scripts.nu build",
+    "dev": "./scripts.nu dev"
+  }
+}
