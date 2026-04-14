@@ -404,6 +404,7 @@ async function main() {
         }
         case "gnome-shell": {
             id = await askGnomeUuid()
+            name = await askAppName("My Extension")
             description = await askDescription()
             break
         }
@@ -423,12 +424,7 @@ async function main() {
             break
         }
         case "gnome-shell": {
-            await copyGnomeShell({
-                dir,
-                id: id.split("@")[0],
-                name,
-                description,
-            })
+            await copyGnomeShell({ dir, id, name, description })
             break
         }
     }
