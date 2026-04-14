@@ -44,6 +44,8 @@ importers:
         specifier: latest
         version: 8.58.0(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2)
 
+  packages/cli: {}
+
   packages/create:
     dependencies:
       '@clack/prompts':

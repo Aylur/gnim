@@ -11,7 +11,7 @@
     "scripts": {
         "clean": "git clean -Xdf",
         "types": "./scripts.nu types",
-        "build:cli": "./scripts.nu build:cli",
+        "build": "pnpm -r build",
         "docs:dev": "vitepress dev docs",
         "docs:build": "vitepress build docs"
     },
