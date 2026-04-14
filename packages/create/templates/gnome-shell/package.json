@@ -10,8 +10,8 @@
     "rolldown": "1.0.0-rc.15"
   },
   "scripts": {
-    "types": "./scripts.nu types",
-    "build": "./scripts.nu build",
-    "dev": "./scripts.nu dev"
+    "types": "nu ./scripts.nu types",
+    "build": "nu ./scripts.nu build",
+    "dev": "nu ./scripts.nu dev"
   }
 }
