@@ -1,5 +1,6 @@
 /** @version 49 */
 declare module "resource:///org/gnome/shell/extensions/sharedInternals.js" {
+    import type { Extension } from "resource:///org/gnome/shell/extensions/extension.js"
     import { Console } from "console"
     import Gio from "gi://Gio?version=2.0"
 
@@ -20,7 +21,7 @@ declare module "resource:///org/gnome/shell/extensions/sharedInternals.js" {
     }
 
     class ExtensionBase {
-        readonly metadata: MetadataJson
+        readonly metadata: ExtensionMetadata
 
         /**
          * Look up an extension by URL (usually 'import.meta.url')
