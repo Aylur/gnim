@@ -5,8 +5,8 @@ explains how to use Meson as a build system and how to create Flatpak packages.
 
 ## Desktop entry
 
-To make your application show up in application lists/drawers on desktops so
-that users can launch the app in a graphical interface you have to create an
+To make your application show up in application lists or drawers so that users
+can launch the app in a graphical interface, you have to create an
 [entry](https://specifications.freedesktop.org/desktop-entry/latest/).
 
 Create a `data/entry.desktop` file.
@@ -47,8 +47,8 @@ following the
 
 [Meson](https://mesonbuild.com/) is a build system commonly used for GNOME
 projects. It handles compilation, bundling, and installation of your
-application. The following example shows how to configure Meson to bundle your
-Gnim applications.
+application. The following example shows how to configure Meson to bundle a Gnim
+application.
 
 ::: code-group
 
@@ -152,18 +152,18 @@ meson install -C build
 >
 > The `prefix` option defaults to
 > [`/usr/local`](https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch04s09.html)
-> which is usually not setup system wide on most distributions. For example:
+> which is usually not set up system-wide on most distributions. For example:
 >
 > - `/usr/local/bin` might not be in `$PATH`,
 > - icons from `/usr/local/share/icons` might not be sourced,
 > - desktop entries in `/usr/local/share/applications` might not be in the
 >   search path
 >
-> You might want to setup meson with the `/usr` prefix, but keep in mind that
+> You might want to set up Meson with the `/usr` prefix, but keep in mind that
 > your system package manager will not be aware of you installing a package
 > manually and it is a violation of
 > [FHS](https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch04s09.html). Try
-> installing to `~/.local` instead and make the above list is satisfied.
+> installing to `~/.local` instead and make sure the above list is satisfied.
 >
 > ```sh
 > meson setup build --prefix "$HOME/.local"

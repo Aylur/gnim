@@ -3,19 +3,19 @@
 The `gnim dev` command is a simple HMR implementation which
 
 - in `.tsx` and `.jsx` modules will wrap exported function components such that
-  it will always run the most up to date implementation on file changes.
+  it will always run the most up-to-date implementation on file changes.
 - hooks into `createState()` calls such that it will try to persist their state
   across HMR triggers by tracking their current value based on the position they
   are invoked and their initial value.
 - overrides `GObject.registerClass()` such that it overrides `GTypeName` across
-  HMR triggers to allows the runtime to continue without crashing, but without
+  HMR triggers to allow the runtime to continue without crashing, but without
   updating the slots that the type is used in. To update slots you also need to
   trigger HMR in the components that use the class.
 - intercepts `.css` imports and adds css providers to Gtk.
 - compiles `.po` translation files and provides them to the runtime on startup
   using the given application id.
 
-When a component's implementation changes, it will cleanup the previous effects
+When a component's implementation changes, it will clean up the previous effects
 and will simply re-instantiate the widgets. It does not do any diffing
 currently.
 
@@ -27,7 +27,7 @@ simply restarted.
 
 ### Component syntax
 
-Currently only this syntax will be recognised as a component for HMR:
+Currently only this syntax is recognized as a component for HMR:
 
 ```tsx
 export const Comp = () => {}
@@ -42,8 +42,8 @@ export default Comp
 
 ### CSS
 
-Currently CSS transitive imports are not tracked, only the root CSS file is
-tracked that is imported from TypeScript code. When updating `component.css` its
+Currently CSS transitive imports are not tracked; only the root CSS file
+imported from TypeScript code is tracked. When updating `component.css`, it's
 also required to save `style.css` to trigger HMR.
 
 ```css

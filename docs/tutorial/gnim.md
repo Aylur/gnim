@@ -5,7 +5,7 @@ While GTK has its own
 lackluster.
 [Blueprint](https://gnome.pages.gitlab.gnome.org/blueprint-compiler/) tries to
 improve upon it, but it is still not as convenient as JSX. Gnim aims to bring
-the kind of developer experience to GJS that libraries like React offers for the
+the kind of developer experience to GJS that libraries like React offer for the
 web.
 
 > [!WARNING] Gnim is not React
@@ -46,7 +46,7 @@ function Box() {
 win.set_child(Box())
 ```
 
-Can be written as
+This can be written as:
 
 ```tsx
 let win: Gtk.Window
@@ -74,9 +74,9 @@ render(Box, win)
 
 ## Entry point
 
-To instantiate JSX you have to render it into a parent object which is done
-using the `render()` function. The render function returns a cleanup function
-which when invoked will detach widgets from the parent and dispose them.
+To instantiate JSX, you have to render it into a parent object using the
+`render()` function. The render function returns a cleanup function which, when
+invoked, will detach widgets from the parent and dispose of them.
 
 ```jsx
 import { render } from "gnim/gtk4"
@@ -90,7 +90,7 @@ app.connect("shutdown", dispose)
 
 ## JSX Markup
 
-JSX is a syntax extension to JavaScript. It is simply a syntactic sugar for
+JSX is a syntax extension to JavaScript. It is simply syntactic sugar for
 function composition. In Gnim, JSX is also used to enhance
 [GObject construction](/reference/jsx#class-components).
 
@@ -121,7 +121,7 @@ function MyWindow() {
 }
 ```
 
-Notice that widgets start with a capital letter. Lower case widgets are
+Notice that widgets start with a capital letter. Lowercase widgets are
 [intrinsic elements](/reference/jsx#intrinsic-elements)
 
 ### Displaying Data
@@ -274,7 +274,7 @@ return (
 State is managed using reactive values <span style="opacity: 0.6">(also known as
 signals or observables in some other libraries)</span> through the
 [`Accessor`](/reference/primitives) interface. The most common primitives you
-will use is [`createState`](/reference/primitives#createstate),
+will use are [`createState`](/reference/primitives#createstate),
 [`computed`](/reference/primitives#computed) and
 [`bind`](/reference/primitives#bind). `createState` is used to create writable
 reactive values, `computed` is used to derive reactive values and `bind` is used
@@ -401,8 +401,8 @@ return (
 
 ## Dynamic list rendering
 
-The `<For>` component let's you render based on a reactive array dynamically.
-Each time the array changes it is compared with its previous state. Widgets for
+The `<For>` component lets you render based on a reactive array dynamically.
+Each time the array changes, it is compared with its previous state. Widgets for
 new items are inserted while widgets associated with removed items are disposed.
 
 ```tsx
@@ -421,7 +421,7 @@ return (
 
 ## Effects
 
-Effects are functions that run when state changes. It can be used to react to
+Effects are functions that run when state changes. They can be used to react to
 value changes and run _side-effects_ such as async tasks, logging or writing Gtk
 widget properties directly. In general, an effect is considered something of an
 escape hatch rather than a tool you should use frequently. In particular, avoid
@@ -473,7 +473,7 @@ effect(() => {
 ```
 
 The order of execution is important to note. An inner effect will not affect the
-outer effect. Signals that are accessed within an inner effect, will not be
+outer effect. Signals that are accessed within an inner effect will not be
 registered as dependencies for the outer effect. When the signal located within
 the inner effect changes, it will trigger only the inner effect to re-run, not
 the outer one.
@@ -490,7 +490,7 @@ effect(() => {
 
 ### Root effects
 
-If you wish to create an effect in the global scope you have to manage its
+If you wish to create an effect in the global scope, you have to manage its
 life-cycle with `createRoot`.
 
 ```ts
@@ -536,7 +536,7 @@ function Counter(props: { count: Accessor<number> }) {
 }
 ```
 
-Avoid using an effect for event specific logic.
+Avoid using an effect for event-specific logic.
 
 ```ts
 function TextEntry() {
@@ -555,8 +555,8 @@ function TextEntry() {
 
 ## Lifecycles
 
-There are only a few Lifecycle functions in Gnim as everything lives and dies by
-the reactive system. The reactive system updates synchronously, so the only
+There are only a few lifecycle functions in Gnim, as everything lives and dies
+by the reactive system. The reactive system updates synchronously, so the only
 scheduling comes down to Effects which are scheduled to the end of reactive
 scopes to make sure every widget ref is alive.
 
@@ -572,9 +572,9 @@ function MyWindow() {
 }
 ```
 
-Everything in a Gnim render tree is living inside an Effect and can be nested.
-You can call `onCleanup()` in any scope and it will run when that scope is
-triggered to re-evaluate and when it is disposed.
+Everything in a Gnim render tree lives inside an Effect and can be nested. You
+can call `onCleanup()` in any scope and it will run when that scope is triggered
+to re-evaluate and when it is disposed.
 
 ```tsx
 function Timer() {

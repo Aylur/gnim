@@ -116,7 +116,7 @@ class MyObject {
 ### Property type declaration
 
 The runtime type of the property will be inferred from TypeScript annotations.
-Optionally they can be explicitly declared by passing an argument to the
+Optionally, it can be explicitly declared by passing an argument to the
 decorator.
 
 ```ts

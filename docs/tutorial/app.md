@@ -7,7 +7,7 @@ where `Gtk.Application` comes in, which does most of the heavy lifting.
 
 > [!TIP]
 >
-> In case you are writing an Adwaita application you want to use
+> If you are writing an Adwaita application, you will likely want to use
 > `Adw.Application`.
 
 ## `Gtk.Application`

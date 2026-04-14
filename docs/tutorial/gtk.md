@@ -1,7 +1,8 @@
 # Gtk
 
-This page is merely an intro to Gtk and not a comprehensive guide. For more
-in-depth concepts you can read the [Gtk docs](https://docs.gtk.org/gtk4/#extra).
+This page is merely an introduction to Gtk and not a comprehensive guide. For
+more in-depth concepts you can read the
+[Gtk docs](https://docs.gtk.org/gtk4/#extra).
 
 ## Running Gtk
 
@@ -27,7 +28,7 @@ loop.runAsync()
 
 For a list of available widgets you can refer to the
 [Gtk docs](https://docs.gtk.org/gtk4/visual_index.html). If you are planning to
-write an app for the Gnome platform you might be interested in using
+write an app for the GNOME platform, you might be interested in using
 [Adwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/).
 
 The top level widget that makes it possible to display something on the screen
@@ -57,7 +58,7 @@ win.present()
 
 > [!TIP]
 >
-> Its best practice to mark translatable text as translatable from the
+> It's best practice to mark translatable text as translatable from the
 > beginning.
 >
 > ```ts

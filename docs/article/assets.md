@@ -2,7 +2,7 @@
 
 ## Icons
 
-There are two kind of icons:
+There are two kinds of icons:
 
 - Full color icons, that will be displayed as-is
 - Symbolic icons, that will be recolored to the text color, allowing them to
@@ -22,7 +22,7 @@ the
 [Icon Naming specification](https://specifications.freedesktop.org/icon-naming/latest/).
 
 During development the dev server will append `$PWD/data/icons` to Gtk's icon
-theme search paths. As an example you'd put icons you use on buttons at
+theme search paths. For example, you'd put icons you use on buttons at
 `data/icons/hicolor/scalable/actions/my-icon-symbolic.svg`.
 
 ```tsx
@@ -53,7 +53,7 @@ function MyApp() {
 }
 ```
 
-::: details Infering GTK version for imported CSS modules
+::: details Inferring GTK version for imported CSS modules
 
 Importing CSS requires knowing the GTK version ahead of time, which is inferred
 from the codebase. Make sure to have at least one versioned import anywhere in
@@ -68,8 +68,8 @@ import { render } from "ags/gtk4" // this also counts
 
 ## Files
 
-Gnim supports importing files with `?file` suffix which gives you a `Gio.File`
-pointing to the file.
+Gnim supports importing files with a `?file` suffix, which gives you a
+`Gio.File` pointing to the file.
 
 ```tsx
 import image from "./image.png?file"

@@ -12,7 +12,7 @@ We have annotations for:
 - construct-only properties
 
 When implementing a GObject subclass you might want to annotate a subset of
-these or all of these depending on usecase.
+these or all of these depending on the use case.
 
 ## Generating types
 
@@ -57,7 +57,7 @@ namespace MyClass {
 }
 ```
 
-And the Class will refer to these using special `$` prefixed fields:
+And the class will refer to these using special `$`-prefixed fields:
 
 > [!IMPORTANT]
 >
@@ -113,8 +113,8 @@ connectSignal(instance, "my-signal", (arg) => {
 const myProp = ref(instance, "my-prop")
 ```
 
-Due to how TypeScript `this` type works, you need to annotate `this` or use a
-typecast to correctly infer types within the class.
+Due to how TypeScript's `this` type works, you need to annotate `this` or use a
+type cast to correctly infer types within the class.
 
 ```ts
 class MyClass {
@@ -131,7 +131,7 @@ class MyClass {
 
 ## Annotating GI imports
 
-You can define non versioned gi imports.
+You can define non-versioned GI imports.
 
 :::code-group
 
@@ -144,7 +144,7 @@ declare module "gi://Gtk" {
 
 :::
 
-You can also use the `--short-imports` flag when generating types to do it
+You can also use the `--alias` flag when generating types to do this
 automatically, which will generate an alias for each namespace.
 
 > [!TIP]
@@ -152,13 +152,13 @@ automatically, which will generate an alias for each namespace.
 > To target specific versions you can ignore other versions.
 >
 > ```sh
-> gnim types -i Gtk-3.0 -i Gdk-3.0 --short-imports
+> gnim types --alias -i Gtk-3.0 -i Gdk-3.0
 > ```
 
 ## Escape hatches
 
 To avoid using `@ts-expect-error` or `as any` assertions when the signal name is
-a `string` you can use non typed versions of signal related functions:
+a `string`, you can use non-typed versions of signal-related functions:
 
 ```ts
 GObject.signal_connect(object, "signal-name", (emitter, ...args) => {

@@ -18,7 +18,7 @@ interface Buildable {
 
 The `Gtk.Buildable` interface uses custom tags in its UI definitions to define
 the layout of `Gtk.Grid`. These tags don't exist at runtime and so cannot be
-used within JSX. To fix this, its possible to implement a replacement auxiliary
+used within JSX. To fix this, it's possible to implement a replacement auxiliary
 object (similar to `Gtk.StackChild`). You can implement `Gtk.Buildable` or
 Gnim's `Buildable` interface which requires less noise.
 
@@ -98,8 +98,8 @@ export class Grid extends Gtk.Grid implements Buildable {
 > [!NOTE]
 >
 > This implementation does not handle every use case since it's possible that
-> `appendChild` is called with a new widget after its already a child of a Grid.
-> It would also require a widget recreation to move the widget around. To
+> `appendChild` is called with a new widget after it's already a child of a
+> Grid. It would also require a widget recreation to move the widget around. To
 > support reactive position and child properties you can implement
 > setters/getters for each `GridChild` property such that they move the child in
 > the parent or implement signal handlers in `Grid` so that when a property

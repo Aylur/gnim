@@ -7,9 +7,9 @@ using Gnim. Before jumping in, you are expected to know
 
 ## JavaScript Runtime
 
-The JavaScript runtime Gnim uses is [GJS](https://gitlab.gnome.org/GNOME/gjs).
-It is built on Firefox's SpiderMonkey JavaScript engine and the GNOME platform
-libraries.
+The JavaScript runtime that Gnim uses is
+[GJS](https://gitlab.gnome.org/GNOME/gjs). It is built on Firefox's SpiderMonkey
+JavaScript engine and the GNOME platform libraries.
 
 > [!IMPORTANT]
 >
@@ -103,7 +103,7 @@ deno init --npm gnim@alpha
 
 ## Creating a new project manually
 
-1. Create a project directory and install gnim
+1. Create a project directory and install Gnim
 
    ```sh
    mkdir gnim-app
@@ -151,7 +151,7 @@ deno init --npm gnim@alpha
 
    > [!TIP]
    >
-   > Make sure to ignore generated files
+   > Make sure to ignore generated files.
    >
    > ```sh
    > echo ".gnim/" > .gitignore

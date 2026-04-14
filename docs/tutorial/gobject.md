@@ -23,7 +23,7 @@ const labelWidget = Gtk.Label.new("Text")
 
 > [!TIP]
 >
-> In rare cases, like the `Gio.File` interface, objects can not be constructed
+> In rare cases, like the `Gio.File` interface, objects cannot be constructed
 > with the `new` operator and a constructor method must always be used.
 
 ## Signals

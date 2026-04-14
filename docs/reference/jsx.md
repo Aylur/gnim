@@ -87,7 +87,7 @@ instead, you can specify it with `construct`.
 />
 ```
 
-The `construct` property can also be passed an existing instance. It can be used
+The `construct` property can also be given an existing instance. It can be used
 in combination with the `render` function to use JSX in subclasses.
 
 ```tsx

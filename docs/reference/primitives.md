@@ -1,8 +1,8 @@
 # Primitives
 
 Gnim is built around the `Accessor` primitive, which is a read-only reactive
-value. They are essentially functions that let you read a value and track it in
-reactive scopes so that when they change the reader is notified.
+value. Accessors are essentially functions that let you read a value and track
+it in reactive scopes so that when it changes, the reader is notified.
 
 ```ts
 interface Accessor<T> {
@@ -37,7 +37,7 @@ unsubscribe()
 > The subscribe method is not scope aware. Do not forget to clean them up when
 > no longer needed. Alternatively, use an [`effect`](#effect) instead.
 
-The `.as()` can be used to simply map the value without doing any memoization or
+`.as()` can be used to simply map the value without doing any memoization or
 validation.
 
 ```ts
@@ -96,7 +96,7 @@ const [value, setValue] = createState("initial value", {
 
 ### `computed`
 
-Create a computed value which tracks dependencies and memoizes the value.
+Creates a computed value that tracks dependencies and memoizes the value.
 
 ```ts
 function computed<T>(compute: () => T, opts?: StateOptions<T>): Accessor<T>
@@ -121,7 +121,7 @@ const c: Accessor<number> = computed(() => a() + b())
 
 ### `untrack`
 
-Alternative to `.peek()`: it lets you read `Accessor` values without tracking
+An alternative to `.peek()`: it lets you read `Accessor` values without tracking
 them.
 
 ```ts
@@ -197,8 +197,8 @@ effect(() => {
 
 > [!CAUTION]
 >
-> Effects are a common pitfall for beginners to understand when to use and when
-> not to use them. You can read about
+> Effects are a common pitfall for beginners when deciding when to use them and
+> when not to use them. You can read about
 > [when it is discouraged and their alternatives](/tutorial/gnim#when-not-to-use-an-effect).
 
 ### `connectSignal`

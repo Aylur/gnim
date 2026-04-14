@@ -85,7 +85,7 @@ console.log(settings.myKey.peek())
 settings.setMyKey("new value")
 ```
 
-Optionally you can pass in an existing `Gio.Settings` object.
+Optionally, you can pass an existing `Gio.Settings` object.
 
 ```ts
 import { createSettings } from "gnim/schema"
@@ -94,8 +94,8 @@ const gioSettings: Gio.Settings
 const settings = createSettings(gioSettings, schema)
 ```
 
-If you are going to use an existing system installed schema where you only care
-about the types you can use a simple schema definition.
+If you are going to use an existing system-installed schema where you only care
+about the types, you can use a simple schema definition.
 
 ```ts
 import { createSettings } from "gnim/schema"
