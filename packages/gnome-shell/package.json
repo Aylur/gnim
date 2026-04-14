@@ -35,7 +35,8 @@
         }
     },
     "files": [
-        "dist"
+        "dist",
+        "gir-1.0"
     ],
     "engines": {
         "gjs": ">=1.83.0"
