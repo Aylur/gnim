@@ -49,7 +49,6 @@ export default function Bar(props: { monitor: Gdk.Monitor }) {
           <Gtk.Label label={t("Toggle Popup")} />
           <Portal mount={App.instance}>
             <Astal.Window
-              application={app}
               visible={open}
               gdkmonitor={props.monitor}
               anchor={Astal.WindowAnchor.TOP | Astal.WindowAnchor.RIGHT}
