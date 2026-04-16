@@ -785,6 +785,8 @@ type SignalsOf<O> = O extends GObject.Object
           [S in Keyof<O["$readableProperties"]> as `notify::${S}`]: (
               pspec: GObject.ParamSpec<O["$readableProperties"][S]>,
           ) => void
+      } & {
+          notify: (pspec: GObject.ParamSpec) => void
       }
     : never
 

@@ -109,13 +109,20 @@ function signalName(key: string): string {
     return detail ? `${sig}::${detail}` : sig
 }
 
-export function newObject<C extends CC>(constructor: C, args: Partial<CCProps<InstanceType<C>>>) {
+export function newObject<C extends CC>(
+    constructor: C,
+    args: Partial<CCProps<InstanceType<C>>>,
+): InstanceType<C> {
     const { children, ref, construct, ...rest } = args as Partial<CCProps<GObject.Object>>
     const renderer = getRenderer()
     const props = renderer.prepareProps(constructor, rest as Props)
 
     const signals: Array<[string, (...props: unknown[]) => unknown]> = []
     const bindings: Array<[string, Accessor<unknown>]> = []
+
+    for (const [key, value] of Object.entries(props)) {
+        if (value === undefined) delete props[key]
+    }
 
     // collect signals and bindings
     for (const [key, value] of Object.entries(props)) {
@@ -169,7 +176,7 @@ export function newObject<C extends CC>(constructor: C, args: Partial<CCProps<In
         })
     }
 
-    return obj
+    return obj as InstanceType<C>
 }
 
 function unpackSlot(node: GObject.Object | Accessor<GnimNode>): GObject.Object[] {
