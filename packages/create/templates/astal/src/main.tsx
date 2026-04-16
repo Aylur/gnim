@@ -37,11 +37,14 @@ export class App extends Gtk.Application {
   }
 
   protected main(this: App, args: string[]) {
-    const dispose = render(() => (
-      <For each={Gdk.Display.get_default()!.get_monitors()}>
-        {(monitor: Gdk.Monitor) => <Bar monitor={monitor} />}
-      </For>
-    ))
+    const dispose = render(
+      () => (
+        <For each={Gdk.Display.get_default()!.get_monitors()}>
+          {(monitor: Gdk.Monitor) => <Bar monitor={monitor} />}
+        </For>
+      ),
+      this,
+    )
 
     this.connect("shutdown", dispose)
 
