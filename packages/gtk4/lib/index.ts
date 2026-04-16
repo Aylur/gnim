@@ -1,4 +1,4 @@
-export { render, getSlot } from "./renderer.js"
+export { render, getSlot, type ClassValue, type ClassList } from "./renderer.js"
 export {
     keyframes,
     style,
