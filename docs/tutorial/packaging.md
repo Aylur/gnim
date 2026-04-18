@@ -61,13 +61,18 @@ root = meson.project_source_root()
 prefix = get_option('prefix')
 datadir = get_option('datadir')
 bindir = get_option('bindir')
+libdir = get_option('libdir')
 
 gnim = find_program('gnim', 'node_modules/.bin/gnim')
 app_id = 'com.example.MyApp'
 
 # bundle
 custom_target(
-  command: [gnim, 'bundle', root / 'src' / 'main.tsx'],
+  command: [
+    gnim, 'bundle',
+    root / 'src' / 'main.tsx',
+    '--id', app_id,
+  ],
   install: true,
   install_dir: prefix / datadir / app_id,
   output: 'gresource',
@@ -76,11 +81,13 @@ custom_target(
 # executable
 custom_target(
   command: [
-    gnim,
-    'exe',
+    gnim, 'exe',
     prefix / datadir / app_id / 'gresource',
-    '--id', app_id,
     '-o', name,
+    '--id', app_id,
+    '--prefix', prefix,
+    '--datadir', datadir,
+    '--libdir', libdir,
   ],
   output: name,
   install: true,
@@ -92,7 +99,7 @@ custom_target(
   command: [gnim, 'schemas', root / 'src', '-o', 'schemas'],
   output: 'schemas',
   install: true,
-  install_dir: datadir / 'glib-2.0',
+  install_dir: prefix / datadir / 'glib-2.0',
 )
 
 # translations

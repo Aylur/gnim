@@ -91,7 +91,7 @@ export default defineConfig({
 
     markdown: {
         languageAlias: {
-            meson: "py",
+            meson: "ruby",
         },
     },
 })

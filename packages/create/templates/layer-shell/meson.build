@@ -6,13 +6,19 @@ root = meson.project_source_root()
 prefix = get_option('prefix')
 datadir = get_option('datadir')
 bindir = get_option('bindir')
+libdir = get_option('libdir')
 pkgdatadir = prefix / datadir / app_id
 
 gnim = find_program('gnim', 'node_modules/.bin/gnim')
 
 # bundle
 custom_target(
-  command: [gnim, 'bundle', root / 'src' / 'main.ts'],
+  command: [
+    gnim,
+    'bundle',
+    '--id', app_id,
+    root / 'src' / 'main.ts',
+  ],
   install: true,
   install_dir: pkgdatadir,
   output: 'gresource',
@@ -28,6 +34,7 @@ custom_target(
     '--id', app_id,
     '--prefix', prefix,
     '--datadir', datadir,
+    '--libdir', libdir,
   ],
   output: name + '.js',
   install: true,
@@ -57,4 +64,9 @@ custom_target(
   output: 'schemas',
   install: true,
   install_dir: prefix / datadir / 'glib-2.0',
+)
+
+# post install
+import('gnome').post_install(
+  glib_compile_schemas: true,
 )

@@ -57,7 +57,7 @@ export class App extends Gtk.Application {
 /* main */ {
   const { gettext: t } = App.gettext
   GLib.set_prgname("__app-name__")
-  GLib.set_application_name(t("Gnim Demo Astal App"))
+  GLib.set_application_name(t("Gnim Demo Layer Shell App"))
 
   // avoid leaking it into subprocesses
   GLib.setenv("LD_PRELOAD", "", true)

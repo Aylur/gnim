@@ -299,9 +299,9 @@ async function copyAdwaita({ dir, id, name }: TemplateProps) {
     await replaceInFile(`${dir}/package.json`, "__app-name__", name)
 }
 
-async function copyAstal({ dir, id, name }: TemplateProps) {
+async function copyLayerShell({ dir, id, name }: TemplateProps) {
     const template = import.meta
-        .resolve("../templates/astal")
+        .resolve("../templates/layer-shell")
         .replace("file://", "")
 
     await mkdir(dir, { recursive: true })
@@ -374,7 +374,7 @@ async function main() {
         message: "Pick a template",
         options: [
             { value: "adwaita", label: "Adwaita Application" },
-            { value: "astal", label: "Astal Shell" },
+            { value: "layer-shell", label: "Gtk4 Layer Shell" },
             {
                 value: "gnome-shell",
                 label: "Gnome Shell Extension",
@@ -397,7 +397,7 @@ async function main() {
             name = await askAppName("my-app")
             break
         }
-        case "astal": {
+        case "layer-shell": {
             id = await askAppId("com.example.MyShell")
             name = await askAppName("my-shell")
             break
@@ -419,8 +419,8 @@ async function main() {
             await copyAdwaita({ dir, id, name, description })
             break
         }
-        case "astal": {
-            await copyAstal({ dir, id, name, description })
+        case "layer-shell": {
+            await copyLayerShell({ dir, id, name, description })
             break
         }
         case "gnome-shell": {
