@@ -5,4 +5,4 @@ packages:
     - "packages/gtk3"
     - "packages/gnome-shell"
     - "packages/create"
-    - "packages/astal"
+    - "packages/io"

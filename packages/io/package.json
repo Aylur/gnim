@@ -1,6 +1,6 @@
 {
-    "name": "@astal/io",
-    "version": "0.0.0-alpha.1",
+    "name": "@gnim-js/io",
+    "version": "0.0.0-alpha.0",
     "type": "module",
     "author": "Aylur",
     "license": "MIT",
