@@ -44,6 +44,10 @@ function exists(file: string) {
     return Gio.File.new_for_path(file).query_exists(null)
 }
 
+function isCss(id: string) {
+    return id.endsWith(".css") || id.endsWith(".scss") || id.endsWith(".sass")
+}
+
 function initGtk() {
     if (props.gtk === "4.0") {
         gi.require("Gtk", "4.0").init()
@@ -142,7 +146,7 @@ function initCss() {
 
     if (sourceCss) {
         for (const [id, file] of Object.entries(props.modules)) {
-            if (id.endsWith(".css")) {
+            if (isCss(id)) {
                 import(`file://${file}`)
                     .then((m) => {
                         if (typeof m.default === "string") {
@@ -171,7 +175,7 @@ function initSocket() {
                 if (props.verbose) printerr(`[dev] source ${file}`)
                 import(`file://${file}`)
                     .then((m) => {
-                        if (source.endsWith(".css")) {
+                        if (isCss(source)) {
                             sourceCss?.(source, m.default)
                         }
                     })
