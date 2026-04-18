@@ -366,6 +366,32 @@ async function copyGnomeShell({
     )
 }
 
+async function createGitignore(dir: string) {
+    const ignore = [
+        "node_modules",
+        "dist",
+        "build",
+        ".gnim",
+        "*.local",
+
+        "# Logs",
+        "logs",
+        "*.log",
+        "npm-debug.log*",
+        "yarn-debug.log*",
+        "yarn-error.log*",
+        "pnpm-debug.log*",
+
+        "# Editor files",
+        ".vscode/*",
+        "!.vscode/extensions.json",
+        ".idea",
+        "*.sw?",
+    ]
+
+    return writeFile(`${dir}/.gitignore`, ignore.join("\n"))
+}
+
 async function main() {
     console.log()
     intro(`\x1b[7;34m\x1b[1m${" Gnim "}\x1b[0m`)
@@ -429,8 +455,13 @@ async function main() {
         }
     }
 
-    if (install) await doInstall(dir)
-    if (git) await doGit(dir)
+    if (install) {
+        await doInstall(dir)
+    }
+    if (git) {
+        await createGitignore(dir)
+        await doGit(dir)
+    }
     await doTypes(dir)
     await doOutro(dir, install)
 }

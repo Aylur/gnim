@@ -17,7 +17,7 @@ custom_target(
     gnim,
     'bundle',
     '--id', app_id,
-    root / 'src' / 'main.ts',
+    root / 'src' / 'main.tsx',
   ],
   install: true,
   install_dir: pkgdatadir,
