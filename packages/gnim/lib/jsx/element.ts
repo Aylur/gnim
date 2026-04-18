@@ -361,19 +361,22 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
             }
         }
 
-        items.map((item, i) => {
-            const key = ids[i]
-            if (map.has(key)) {
-                map.get(key)!.index[1](i)
-            } else {
-                const [index, setIndex] = createState(i)
-                const scope = new Scope(currentScope)
-                const child = scope.run(() => resolveNode(mkChild(item, index)))
-                map.set(key, { item, child, index: [index, setIndex], scope })
-            }
-        })
-
-        return [...map.values()].map((i) => i.child).flat()
+        return items
+            .map((item, i) => {
+                const key = ids[i]
+                const mapItem = map.get(key)
+                if (mapItem) {
+                    mapItem.index[1](i)
+                    return mapItem.child
+                } else {
+                    const [index, setIndex] = createState(i)
+                    const scope = new Scope(currentScope)
+                    const child = scope.run(() => resolveNode(mkChild(item, index)))
+                    map.set(key, { item, child, index: [index, setIndex], scope })
+                    return child
+                }
+            })
+            .flat()
     })
 }
 
