@@ -591,7 +591,7 @@ export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>
     return createAccessor(get, subscribe)
 }
 
-type Store<S = Record<PropertyKey, unknown>> = S & {
+export type Store<S = Record<PropertyKey, unknown>> = S & {
     $readableProperties: S
     subscribe(key: keyof S, callback: Fn): Fn
 }

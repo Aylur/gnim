@@ -31,6 +31,7 @@ export {
     type Scope,
     type Setter,
     type State,
+    type Store,
 } from "./jsx/reactive.js"
 export {
     appendChild,
