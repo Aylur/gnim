@@ -1,6 +1,7 @@
 use super::tracker::ModuleTracker;
 use crate::dev_rundir;
 use serde_json::json;
+use std::env::{join_paths, split_paths, var_os};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use tokio::process::Command;
@@ -20,6 +21,24 @@ pub struct GjsRunnerArgs {
 pub async fn gjs_runner(args: GjsRunnerArgs) {
     let mut restart_rx = args.restart_rx;
     let rundir = dev_rundir();
+
+    // nix uses GSETTINGS_SCHEMAS_PATH
+    let schema_paths = var_os("GSETTINGS_SCHEMAS_PATH")
+        .map(|paths| {
+            split_paths(&paths)
+                .map(|p| p.join("glib-2.0").join("schemas"))
+                .collect::<Vec<PathBuf>>()
+        })
+        .unwrap_or_default();
+
+    let schema_dirs = var_os("GSETTINGS_SCHEMA_DIR")
+        .map(|dirs| split_paths(&dirs).collect::<Vec<PathBuf>>())
+        .unwrap_or_default();
+
+    let gnim_schemas = vec![PathBuf::from("./.gnim/schemas")];
+
+    let gsettings_schema_dir =
+        join_paths([gnim_schemas, schema_paths, schema_dirs].concat()).unwrap();
 
     loop {
         if args.verbose {
@@ -47,7 +66,7 @@ pub async fn gjs_runner(args: GjsRunnerArgs) {
             .arg("-m")
             .arg(&args.dev_entry_js)
             .env("GNIM_DEV", props.to_string())
-            .env("GSETTINGS_SCHEMA_DIR", "./.gnim/schemas")
+            .env("GSETTINGS_SCHEMA_DIR", gsettings_schema_dir.clone())
             .spawn()
             .expect("failed to spawn gjs");
 
