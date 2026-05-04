@@ -15,23 +15,23 @@ A library that brings JSX, reactivity, and type safety to GNOME JavaScript.
 ::: code-group
 
 ```sh [npm]
-npm create gnim@alpha
+npm create gnim@beta
 ```
 
 ```sh [pnpm]
-pnpm create gnim@alpha
+pnpm create gnim@beta
 ```
 
 ```sh [yarn]
-yarn create gnim@alpha
+yarn create gnim@beta
 ```
 
 ```sh [bun]
-bun create gnim@alpha
+bun create gnim@beta
 ```
 
 ```sh [deno]
-deno init --npm gnim@alpha
+deno init --npm gnim@beta
 ```
 
 :::

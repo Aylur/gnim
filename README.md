@@ -5,7 +5,7 @@ Library that brings JSX, reactivity and type-safety to GNOME JavaScript.
 ## Get started
 
 ```sh
-pnpm create gnim@alpha
+pnpm create gnim@beta
 ```
 
 ## JSX and reactivity

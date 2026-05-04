@@ -2,9 +2,9 @@
   "name": "__app-name__",
   "type": "module",
   "dependencies": {
-    "@gnim-js/io": "^0.0.0-alpha.0",
-    "@gnim-js/gtk4": "^2.0.0-alpha.0",
-    "gnim": "^2.0.0-alpha.0"
+    "@gnim-js/io": "^0.0.0-beta.0",
+    "@gnim-js/gtk4": "^2.0.0-beta.0",
+    "gnim": "^2.0.0-beta.0"
   },
   "scripts": {
     "types": "gnim types",
