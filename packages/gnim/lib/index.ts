@@ -39,4 +39,5 @@ export {
     removeChild,
     setChildren,
     type Buildable,
+    type Renderer,
 } from "./jsx/render.js"

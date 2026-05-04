@@ -377,7 +377,8 @@ function diff(prev: Map<Accessor, Fn>, next: Set<Accessor>, fn: Fn) {
     return newDeps
 }
 
-export function createComputed<T>(fn: (prev?: T) => T): Accessor<T> {
+// TODO: merge this into `computed()`
+function createComputed<T>(fn: (prev?: T) => T): Accessor<T> {
     const parentScope = Scope.current
 
     const observers = new Set<Fn>()
@@ -765,13 +766,16 @@ export function bind(object: Bindable, key: PropertyKey, ...props: string[]): Ac
         }
     }
 
-    return createComputed(() => {
-        let v = bind(object, key)()
-        for (const prop of props) {
-            v = v !== null ? bind(v as Bindable, prop)() : null
-        }
-        return v
-    })
+    return computed(
+        () => {
+            let v = bind(object, key)()
+            for (const prop of props) {
+                v = v !== null ? bind(v as Bindable, prop)() : null
+            }
+            return v
+        },
+        { equals: () => false },
+    )
 }
 
 type SignalsOf<O> = O extends GObject.Object
@@ -831,6 +835,6 @@ export function prop<T>(value: MaybeAccessor<T>, fallback: NonNullable<T>): Acce
 
 export function prop<T>(value: T, fallback?: unknown) {
     return isAccessor(value)
-        ? createComputed(() => value() ?? fallback)
+        ? computed(() => value() ?? fallback)
         : createAccessor(() => value ?? fallback)
 }
