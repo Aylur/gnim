@@ -18,7 +18,7 @@ import {
 const DEFAULT_TIMEOUT = 10_000
 
 export const Variant = GLib.Variant
-export type Variant<T extends string> = GLib.Variant<T>
+export type Variant<T extends string = any> = GLib.Variant<T>
 
 const info = Symbol("dbus interface info")
 const internals = Symbol("dbus interface internals")
@@ -265,8 +265,10 @@ export class Service extends GObject.Object {
         signal: string,
         parameters: GLib.Variant,
     ) {
-        const params = parameters.deepUnpack() as Iterable<unknown>
-        emit(this, kebabcase(signal), ...params)
+        if (signal in getMeta(this.constructor.prototype).dbusSignals) {
+            const params = parameters.deepUnpack() as Iterable<unknown>
+            emit(this, kebabcase(signal), ...params)
+        }
     }
 
     // proxy
@@ -299,12 +301,13 @@ export class Service extends GObject.Object {
 
     // proxy
     [remoteMethodAsync](methodName: string, args: unknown[]): Promise<GLib.Variant> {
+        const proxy = this[internals].proxy!
         return new Promise((resolve, reject) => {
             try {
                 const params = this.#remoteMethodParams(methodName, args)
-                this[internals].proxy!.call(...params, (_, res) => {
+                proxy.call(...params, (_, res) => {
                     try {
-                        resolve(this[internals].proxy!.call_finish(res))
+                        resolve(proxy.call_finish(res))
                     } catch (error) {
                         reject(error)
                     }
