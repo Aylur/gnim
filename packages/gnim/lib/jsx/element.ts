@@ -111,11 +111,11 @@ function signalName(key: string): string {
 
 export function newObject<C extends CC>(
     constructor: C,
-    args: Partial<CCProps<InstanceType<C>>>,
+    ccProps: CCProps<InstanceType<C>, ConstructorParameters<C>[0]>,
 ): InstanceType<C> {
-    const { children, ref, construct, ...rest } = args as Partial<CCProps<GObject.Object>>
+    const { children, ref, construct, ...rest } = ccProps as Partial<CCProps<GObject.Object>>
     const renderer = getRenderer()
-    const props = renderer.prepareProps(constructor, rest as Props)
+    const props = renderer.prepareProps(constructor, rest)
 
     const signals: Array<[string, (...props: unknown[]) => unknown]> = []
     const bindings: Array<[string, Accessor<unknown>]> = []
