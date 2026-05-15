@@ -184,9 +184,7 @@ export type RegisterOptions = {
     InternalChildren?: string[]
 }
 
-type ObjectConstructor = {
-    new (...args: any[]): Object
-}
+type ObjectConstructor = abstract new (...args: any[]) => Object
 
 export function register<T extends ObjectConstructor>(
     options?: RegisterOptions,
