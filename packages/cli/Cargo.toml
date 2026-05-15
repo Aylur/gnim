@@ -12,7 +12,7 @@ include = ["/bin/gnim.rs", "/bin/command"]
 clap = { version = "4", features = ["derive"] }
 quick-xml = "0"
 colored = "3"
-girgen = "0.3.14"
+girgen = "0.3.17"
 grass = "0.13.4"
 lightningcss = "1.0.0-alpha.71"
 serde = { version = "1", features = ["derive"] }

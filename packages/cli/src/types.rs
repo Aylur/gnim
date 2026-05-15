@@ -168,9 +168,11 @@ pub async fn types(args: &TypeArgs) -> Result<(), String> {
     let girgen_args = girgen::Args {
         dirs,
         ignore: args.ignore.clone(),
-        outdir: format!("{}/gi", &args.outdir),
         on_event,
-        generator: typescript::TypeScript { alias: args.alias },
+        generator: typescript::TypeScript {
+            alias: args.alias,
+            outdir: format!("{}/gi", &args.outdir),
+        },
     };
 
     girgen(girgen_args).map_err(|err| match err {
