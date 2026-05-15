@@ -188,12 +188,10 @@ export class Process extends GObject.Object {
         )
 
         const [, out, err] = process.communicate_utf8(null, null)
-        if (process.get_successful() && out) {
-            return out.trim()
-        } else if (err) {
-            throw new Error(err.trim())
+        if (process.get_successful()) {
+            return out?.trim() ?? ""
         } else {
-            throw new Error("Unknown error")
+            throw new Error(err?.trim() ?? "Unknown error")
         }
     }
 
@@ -227,12 +225,10 @@ export class Process extends GObject.Object {
             process.communicate_utf8_async(null, null, (_, res) => {
                 try {
                     const [, out, err] = process.communicate_utf8_finish(res)
-                    if (process.get_successful() && out) {
-                        return resolve(out.trim())
-                    } else if (err) {
-                        reject(new Error(err.trim()))
+                    if (process.get_successful()) {
+                        return resolve(out?.trim() ?? "")
                     } else {
-                        reject(new Error("Unknown error"))
+                        reject(new Error(err?.trim() ?? "Unknown error"))
                     }
                 } catch (error) {
                     reject(error)
