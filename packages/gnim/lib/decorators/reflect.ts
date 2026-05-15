@@ -1,4 +1,4 @@
-import type GObject from "gi://GObject?version=2.0"
+import GObject from "gi://GObject?version=2.0"
 
 type Type = { $gtype: GObject.GType }
 
@@ -15,6 +15,11 @@ Object.assign(Reflect, {
         return (proto: GObject.Object, key: string) => {
             const record = decoratorMetadata.get(proto) ?? {}
             const meta = record[key] ?? {}
+
+            // `void` will be passed as `undefined` explicitly
+            if (typeof value === "undefined") {
+                value ??= GObject.VoidType
+            }
 
             switch (k) {
                 case "design:type":
