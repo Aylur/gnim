@@ -162,7 +162,11 @@ export function createContext<T>(defaultValue: T): Context<T> {
         return withContext(value, () => resolveNode(children))
     }
 
-    return (ctx = Object.assign(Context, { use, provide, $$typeof: "context" }))
+    return (ctx = Object.assign(Context, {
+        use,
+        provide,
+        $$contextDefaultValue: defaultValue,
+    }))
 }
 
 /**

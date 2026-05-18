@@ -278,7 +278,6 @@ function initRegistry() {
 
     function $$registerComponent(mod: string, name: string, impl: FC) {
         if (typeof impl !== "function") return impl
-        if ("$$typeof" in impl && impl.$$typeof === "context") return impl
 
         const path = GLib.uri_parse(mod, GLib.UriFlags.NONE).get_path()
         const id = path + ":" + name
@@ -291,6 +290,16 @@ function initRegistry() {
         }
 
         const [get, set] = entry.impl
+        const prevImpl = get.peek()
+        if ("$$contextDefaultValue" in impl && "$$contextDefaultValue" in prevImpl) {
+            const prevDefaultValue = prevImpl.$$contextDefaultValue
+            const nextDefaultValue = impl.$$contextDefaultValue
+            if (!Object.is(prevDefaultValue, nextDefaultValue)) {
+                set(() => impl)
+            }
+            return get.peek()
+        }
+
         set(() => impl)
         return function (props: any) {
             return computed(() => {
