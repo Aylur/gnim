@@ -36,7 +36,16 @@ export type FC<P = any> = (props: P) => GnimNode
  */
 export type CC<P = any> = new (props: P) => GObject.Object
 
-interface ConstructorNode<P = any> {
+/**
+ * The result of a JSX expression.
+ *
+ * ```tsx
+ * const jsx = <MyComp prop="hello" />
+ * jsx.type // MyComp
+ * jsx.props // { props: "hello" }
+ * ```
+ */
+export interface ConstructorNode<P = any> {
     type: string | FC<P> | CC<P>
     props: Props
 }
@@ -468,6 +477,18 @@ type GObjectProps<T> = T extends {
       }
     : never
 
+/**
+ * Represents the props a Class Component takes.
+ *
+ * ```tsx
+ * const props: CCProps<Gtk.Button> = {
+ *   onClicked: (self) => {},
+ *   label: "hello",
+ * }
+ *
+ * <Gtk.Button {...props} />
+ * ```
+ */
 export type CCProps<T, Props = Partial<GObject.ConstructorProps<T>>> =
     | (MergeProps<Props, Partial<GObjectProps<T>>> & { construct?: never })
     | (Partial<GObjectProps<T>> & { construct: T | (() => T) })
