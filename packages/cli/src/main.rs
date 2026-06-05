@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
 use gnim::bundle::{BundleArgs, bundle};
 use gnim::dev::{DevArgs, dev};
 use gnim::dev_rundir;
@@ -10,12 +10,16 @@ use rolldown_utils::indexmap::FxIndexMap;
 use std::{fs, process};
 
 #[derive(Parser)]
-#[command(version)]
+#[command(version, disable_version_flag = true)]
 #[command(about)]
 struct Cli {
     /// Keep temporary and runtime files on exit
     #[arg(short, long, default_value_t = false)]
     pub keep_tmp: bool,
+
+    /// Print version
+    #[arg(short = 'v', long = "version", action = ArgAction::Version)]
+    version: (),
 
     #[command(subcommand)]
     command: Command,
