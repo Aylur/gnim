@@ -59,6 +59,14 @@ export function getSlot(object: GObject.Object) {
     return slotType in object ? (object[slotType] as string) : null
 }
 
+function isAdjustable<T extends GObject.Object>(
+    object: T,
+): object is T & { adjustment: Gtk.Adjustment } {
+    return GObject.Object.list_properties
+        .call(object)
+        .some((prop) => GObject.type_is_a(prop.value_type, Gtk.Adjustment))
+}
+
 export const { render } = createRenderer({
     constructObject(element, props) {
         const { slot, css, classList, ...rest } = props
@@ -109,6 +117,10 @@ export const { render } = createRenderer({
             if (parent[removeChild](child)) return
         }
 
+        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
+            return // no-op
+        }
+
         if (parent instanceof Gtk.Container && child instanceof Gtk.Widget) {
             return parent.remove(child)
         }
@@ -124,12 +136,8 @@ export const { render } = createRenderer({
             if (parent[appendChild](child)) return
         }
 
-        if (
-            child instanceof Gtk.Adjustment &&
-            "set_adjustment" in parent &&
-            typeof parent.set_adjustment === "function"
-        ) {
-            return parent.set_adjustment(child)
+        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
+            return void (parent.adjustment = child)
         }
 
         if (

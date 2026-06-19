@@ -17,6 +17,7 @@
     },
     "devDependencies": {
         "@types/node": "latest",
+        "jiti": "^2.7.0",
         "nushell": "latest",
         "vitepress": "2.0.0-alpha.16"
     },

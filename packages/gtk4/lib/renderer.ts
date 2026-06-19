@@ -68,6 +68,14 @@ export function getSlot(object: GObject.Object) {
     return slotType in object ? (object[slotType] as string) : null
 }
 
+function isAdjustable<T extends GObject.Object>(
+    object: T,
+): object is T & { adjustment: Gtk.Adjustment } {
+    return GObject.Object.list_properties
+        .call(object)
+        .some((prop) => GObject.type_is_a(prop.value_type, Gtk.Adjustment))
+}
+
 export const { render } = createRenderer({
     constructObject(element, props) {
         const { slot, css, classList, ...rest } = props
@@ -114,8 +122,14 @@ export const { render } = createRenderer({
             if (parent[removeChild](child)) return
         }
 
-        if (parent instanceof Gtk.Widget && child instanceof Gtk.EventController) {
-            return parent.remove_controller(child)
+        if (parent instanceof Gtk.Widget) {
+            if (child instanceof Gtk.EventController) {
+                return parent.remove_controller(child)
+            }
+
+            if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
+                return // no-op
+            }
         }
 
         if (child instanceof Gtk.Widget) {
@@ -158,7 +172,7 @@ export const { render } = createRenderer({
                 return parent.set_child(null)
             }
 
-            // Most mulit children containers have a .remove()
+            // Most multi children containers have a .remove()
             if ("remove" in parent && typeof parent.remove == "function") {
                 return parent.remove(child)
             }
@@ -175,12 +189,8 @@ export const { render } = createRenderer({
             if (parent[appendChild](child)) return
         }
 
-        if (
-            child instanceof Gtk.Adjustment &&
-            "set_adjustment" in parent &&
-            typeof parent.set_adjustment === "function"
-        ) {
-            return parent.set_adjustment(child)
+        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
+            return void (parent.adjustment = child)
         }
 
         if (
@@ -246,7 +256,7 @@ export const { render } = createRenderer({
         }
 
         if (object instanceof Gtk.Widget && key === "class" && typeof value === "string") {
-            return object.set_css_classes(value.split(/\s+/))
+            return object.set_css_classes(value.split(/\s+/).filter((n) => n !== ""))
         }
 
         const getter = `get_${snakecase(key)}` as keyof typeof object
