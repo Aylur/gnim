@@ -35,8 +35,8 @@ export {
     type Store,
 } from "./jsx/reactive.js"
 export {
+    render,
     appendChild,
-    createRenderer,
     removeChild,
     setChildren,
     type Buildable,

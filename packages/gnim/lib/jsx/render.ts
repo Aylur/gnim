@@ -1,5 +1,5 @@
 import GObject from "gi://GObject?version=2.0"
-import { mountChildren, type CC, type FC, type GnimNode, type Props } from "./element.js"
+import { mountChildren, type CC, type FC, type GnimNode } from "./element.js"
 import { createContext, Scope, untrack } from "./reactive.js"
 
 const RendererContext = createContext<Renderer | null>(null)
@@ -26,9 +26,9 @@ export function getRenderer(): Renderer {
 
 export interface Renderer {
     resolveTag(tag: string): CC | FC
-    constructObject(element: CC, props: Props): GObject.Object
+    constructObject(element: CC, props: Record<string, unknown>): GObject.Object
     createText(string: string): GObject.Object
-    prepareProps(klass: CC, props: Props): Props
+    prepareProps(klass: CC, props: Record<string, unknown>): Record<string, unknown>
     setProperty(object: GObject.Object, key: string, value: unknown): void
     setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]): void
     appendChild(parent: GObject.Object, child: GObject.Object): void
@@ -36,13 +36,9 @@ export interface Renderer {
     destroyChild(parent: GObject.Object, child: GObject.Object): void
 }
 
-export function createRenderer(renderer: Renderer) {
-    function render(element: () => GnimNode, root?: GObject.Object) {
-        const scope = new Scope(Scope.current)
-        scope.contexts.set(RendererContext, renderer)
-        scope.run(() => mountChildren(untrack(element), root))
-        return () => scope.dispose()
-    }
-
-    return { render }
+export function render(renderer: Renderer, element: () => GnimNode, root?: GObject.Object) {
+    const scope = new Scope(Scope.current)
+    scope.contexts.set(RendererContext, renderer)
+    scope.run(() => mountChildren(untrack(element), root))
+    return () => scope.dispose()
 }

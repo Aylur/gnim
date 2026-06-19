@@ -1,1 +1,1 @@
-export { render } from "./renderer.js"
+export { render, GtkRenderer } from "./renderer.js"

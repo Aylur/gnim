@@ -1,5 +1,15 @@
 import GObject from "gi://GObject?version=2.0"
-import { appendChild, createRenderer, newObject, removeChild, setChildren } from "gnim"
+import {
+    appendChild,
+    newObject,
+    removeChild,
+    render as renderGnim,
+    setChildren,
+    type CC,
+    type FC,
+    type GnimNode,
+    type Renderer,
+} from "gnim"
 
 interface Actor extends GObject.Object {
     add_child(actor: Actor): void
@@ -45,18 +55,20 @@ function snakecase(str: string) {
         .toLowerCase()
 }
 
-export const { render } = createRenderer({
-    resolveTag() {
+export class GnomeRenderer implements Renderer {
+    resolveTag(_: string): CC | FC {
         throw new Error("Function not implemented.")
-    },
-    constructObject: newObject,
-    createText(string: string) {
+    }
+    constructObject(element: CC, props: Record<string, unknown>): GObject.Object {
+        return newObject(element, props)
+    }
+    createText(string: string): GObject.Object {
         return St.Label.new(string)
-    },
-    prepareProps(_, props) {
+    }
+    prepareProps(_: CC, props: Record<string, unknown>): Record<string, unknown> {
         return props
-    },
-    setProperty(object: GObject.Object, key: string, value: unknown) {
+    }
+    setProperty(object: GObject.Object, key: string, value: unknown): void {
         const getter = `get_${snakecase(key)}` as keyof typeof object
 
         let current: unknown
@@ -74,8 +86,8 @@ export const { render } = createRenderer({
         if (!Object.is(current, value)) {
             Object.assign(object, { [key]: value })
         }
-    },
-    setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]) {
+    }
+    setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]): void {
         if (setChildren in parent && typeof parent[setChildren] === "function") {
             if (parent[setChildren](children, prev)) return
         } else {
@@ -86,33 +98,12 @@ export const { render } = createRenderer({
                 this.appendChild(parent, child)
             }
         }
+
         for (const child of prev.filter((child) => !children.includes(child))) {
             this.destroyChild(parent, child)
         }
-    },
-    removeChild(parent, child) {
-        if (removeChild in parent && typeof parent[removeChild] === "function") {
-            if (parent[removeChild](child)) return
-        }
-
-        if (parent instanceof Clutter.Actor) {
-            if (child instanceof Clutter.Action) {
-                return parent.remove_action(child)
-            }
-            if (child instanceof Clutter.Actor) {
-                return parent.remove_child(child)
-            }
-            if (child instanceof Clutter.Constraint) {
-                return parent.remove_constraint(child)
-            }
-            if (child instanceof Clutter.LayoutManager) {
-                return parent.set_layout_manager(null)
-            }
-        }
-
-        throw Error(`cannot remove ${child} from ${parent}`)
-    },
-    appendChild(parent, child) {
+    }
+    appendChild(parent: GObject.Object, child: GObject.Object): void {
         if (appendChild in parent && typeof parent[appendChild] === "function") {
             if (parent[appendChild](child)) return
         }
@@ -133,10 +124,36 @@ export const { render } = createRenderer({
         }
 
         throw Error(`cannot add ${child} to ${parent}`)
-    },
-    destroyChild(_, child) {
+    }
+    removeChild(parent: GObject.Object, child: GObject.Object): void {
+        if (removeChild in parent && typeof parent[removeChild] === "function") {
+            if (parent[removeChild](child)) return
+        }
+
+        if (parent instanceof Clutter.Actor) {
+            if (child instanceof Clutter.Action) {
+                return parent.remove_action(child)
+            }
+            if (child instanceof Clutter.Actor) {
+                return parent.remove_child(child)
+            }
+            if (child instanceof Clutter.Constraint) {
+                return parent.remove_constraint(child)
+            }
+            if (child instanceof Clutter.LayoutManager) {
+                return parent.set_layout_manager(null)
+            }
+        }
+
+        throw Error(`cannot remove ${child} from ${parent}`)
+    }
+    destroyChild(_: GObject.Object, child: GObject.Object): void {
         if (child instanceof Clutter.Actor) {
             child.destroy()
         }
-    },
-})
+    }
+}
+
+export function render(element: () => GnimNode, root?: GObject.Object) {
+    return renderGnim(new GnomeRenderer(), element, root)
+}

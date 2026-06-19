@@ -4,13 +4,17 @@ import Gtk from "gi://Gtk?version=4.0"
 import {
     appendChild,
     computed,
-    createRenderer,
     isAccessor,
     newObject,
     removeChild,
+    render as renderGnim,
     setChildren,
+    type CC,
     type CCProps,
+    type FC,
+    type GnimNode,
     type MaybeAccessor,
+    type Renderer,
 } from "gnim"
 
 const dummyBuilder = new Gtk.Builder()
@@ -61,13 +65,6 @@ function flattenClassList(classList: unknown): MaybeAccessor<string> {
     return ""
 }
 
-/**
- * @returns The slot that was set in JSX on `object`.
- */
-export function getSlot(object: GObject.Object) {
-    return slotType in object ? (object[slotType] as string) : null
-}
-
 function isAdjustable<T extends GObject.Object>(
     object: T,
 ): object is T & { adjustment: Gtk.Adjustment } {
@@ -76,8 +73,18 @@ function isAdjustable<T extends GObject.Object>(
         .some((prop) => GObject.type_is_a(prop.value_type, Gtk.Adjustment))
 }
 
-export const { render } = createRenderer({
-    constructObject(element, props) {
+/**
+ * @returns The slot that was set in JSX on `object`.
+ */
+export function getSlot(object: GObject.Object) {
+    return slotType in object ? (object[slotType] as string) : null
+}
+
+export class GtkRenderer implements Renderer {
+    resolveTag(tag: string): CC | FC {
+        throw Error(`unresolved JSX tag: "${tag}"`)
+    }
+    constructObject(element: CC, props: Record<string, unknown>): GObject.Object {
         const { slot, css, classList, ...rest } = props
 
         const object = newObject(element, rest as Partial<CCProps<GObject.Object>>)
@@ -95,8 +102,46 @@ export const { render } = createRenderer({
         }
 
         return object
-    },
-    setChildren(parent, children, prev) {
+    }
+    createText(string: string): GObject.Object {
+        return Gtk.Label.new(string)
+    }
+    prepareProps(klass: CC, props: Record<string, unknown>): Record<string, unknown> {
+        if (klass.prototype instanceof GObject.Object && "class" in props) {
+            const cn = props.class
+            props.class = computed(() => flattenClassList(cn))
+            return props
+        }
+        return props
+    }
+    setProperty(object: GObject.Object, key: string, value: unknown): void {
+        if (key === "css" && typeof value === "string") {
+            return setCss(object, value)
+        }
+
+        if (object instanceof Gtk.Widget && key === "class" && typeof value === "string") {
+            return object.set_css_classes(value.split(/\s+/).filter((n) => n !== ""))
+        }
+
+        const getter = `get_${snakecase(key)}` as keyof typeof object
+
+        let current: unknown
+
+        if (
+            getter in object &&
+            typeof object[getter] === "function" &&
+            object[getter].length === 0
+        ) {
+            current = (object[getter] as () => unknown)()
+        } else {
+            current = object[key as keyof typeof object]
+        }
+
+        if (!Object.is(current, value)) {
+            Object.assign(object, { [key]: value })
+        }
+    }
+    setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]): void {
         if (setChildren in parent && typeof parent[setChildren] === "function") {
             if (parent[setChildren](children, prev)) return
         } else {
@@ -110,14 +155,66 @@ export const { render } = createRenderer({
         for (const child of prev.filter((child) => !children.includes(child))) {
             this.destroyChild(parent, child)
         }
-    },
-    destroyChild(parent, child) {
-        if (parent instanceof Gio.Application && child instanceof Gtk.Window) {
-            child.destroy()
+    }
+    appendChild(parent: GObject.Object, child: GObject.Object): void {
+        if (appendChild in parent && typeof parent[appendChild] === "function") {
+            if (parent[appendChild](child)) return
         }
-    },
-    createText: Gtk.Label.new,
-    removeChild(parent, child) {
+
+        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
+            return void (parent.adjustment = child)
+        }
+
+        if (
+            child instanceof Gtk.Widget &&
+            parent instanceof Gtk.Stack &&
+            child.name !== "" &&
+            child.name !== null &&
+            getSlot(child) === "named"
+        ) {
+            return void parent.add_named(child, child.name)
+        }
+
+        if (child instanceof Gtk.Popover && parent instanceof Gtk.MenuButton) {
+            return parent.set_popover(child)
+        }
+
+        if (
+            child instanceof Gio.MenuModel &&
+            (parent instanceof Gtk.MenuButton || parent instanceof Gtk.PopoverMenu)
+        ) {
+            return parent.set_menu_model(child)
+        }
+
+        if (child instanceof Gtk.Window && parent instanceof Gtk.Application) {
+            return parent.add_window(child)
+        }
+
+        if (child instanceof Gtk.TextBuffer && parent instanceof Gtk.TextView) {
+            return parent.set_buffer(child)
+        }
+
+        if (parent instanceof Gtk.CenterBox && child instanceof Gtk.Widget) {
+            const slot = getSlot(child)
+            if (!slot) {
+                console.warn("Trying to append child to Gtk.CenterBox without a specified slot")
+                return
+            }
+            if (slot !== "center" && slot !== "start" && slot !== "end") {
+                console.warn(
+                    `Invalid Gtk.CenterBox child slot: has to be one of "start", "center", "end"`,
+                )
+                return
+            }
+        }
+
+        if (parent instanceof Gtk.Buildable) {
+            return parent.vfunc_add_child(dummyBuilder, child, getSlot(child))
+        }
+
+        throw new UnknownMethodError("appendChild", parent, child)
+    }
+    removeChild(parent: GObject.Object, child: GObject.Object): void {
         if (removeChild in parent && typeof parent[removeChild] === "function") {
             if (parent[removeChild](child)) return
         }
@@ -183,104 +280,17 @@ export const { render } = createRenderer({
         }
 
         throw new UnknownMethodError("removeChild", parent, child)
-    },
-    appendChild(parent, child) {
-        if (appendChild in parent && typeof parent[appendChild] === "function") {
-            if (parent[appendChild](child)) return
+    }
+    destroyChild(parent: GObject.Object, child: GObject.Object): void {
+        if (parent instanceof Gio.Application && child instanceof Gtk.Window) {
+            child.destroy()
         }
+    }
+}
 
-        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
-            return void (parent.adjustment = child)
-        }
-
-        if (
-            child instanceof Gtk.Widget &&
-            parent instanceof Gtk.Stack &&
-            child.name !== "" &&
-            child.name !== null &&
-            getSlot(child) === "named"
-        ) {
-            return parent.add_named(child, child.name)
-        }
-
-        if (child instanceof Gtk.Popover && parent instanceof Gtk.MenuButton) {
-            return parent.set_popover(child)
-        }
-
-        if (
-            child instanceof Gio.MenuModel &&
-            (parent instanceof Gtk.MenuButton || parent instanceof Gtk.PopoverMenu)
-        ) {
-            return parent.set_menu_model(child)
-        }
-
-        if (child instanceof Gtk.Window && parent instanceof Gtk.Application) {
-            return parent.add_window(child)
-        }
-
-        if (child instanceof Gtk.TextBuffer && parent instanceof Gtk.TextView) {
-            return parent.set_buffer(child)
-        }
-
-        if (parent instanceof Gtk.CenterBox && child instanceof Gtk.Widget) {
-            const slot = getSlot(child)
-            if (!slot) {
-                console.warn("Trying to append child to Gtk.CenterBox without a specified slot")
-                return
-            }
-            if (slot !== "center" && slot !== "start" && slot !== "end") {
-                console.warn(
-                    `Invalid Gtk.CenterBox child slot: has to be one of "start", "center", "end"`,
-                )
-                return
-            }
-        }
-
-        if (parent instanceof Gtk.Buildable) {
-            return parent.vfunc_add_child(dummyBuilder, child, getSlot(child))
-        }
-
-        throw new UnknownMethodError("appendChild", parent, child)
-    },
-    prepareProps(object, props) {
-        if (object.prototype instanceof GObject.Object && "class" in props) {
-            const cn = props.class
-            props.class = computed(() => flattenClassList(cn))
-            return props
-        }
-        return props
-    },
-    setProperty(object, key, value) {
-        if (key === "css" && typeof value === "string") {
-            return setCss(object, value)
-        }
-
-        if (object instanceof Gtk.Widget && key === "class" && typeof value === "string") {
-            return object.set_css_classes(value.split(/\s+/).filter((n) => n !== ""))
-        }
-
-        const getter = `get_${snakecase(key)}` as keyof typeof object
-
-        let current: unknown
-
-        if (
-            getter in object &&
-            typeof object[getter] === "function" &&
-            object[getter].length === 0
-        ) {
-            current = (object[getter] as () => unknown)()
-        } else {
-            current = object[key as keyof typeof object]
-        }
-
-        if (!Object.is(current, value)) {
-            Object.assign(object, { [key]: value })
-        }
-    },
-    resolveTag(tag) {
-        throw Error(`unresolved JSX tag: "${tag}"`)
-    },
-})
+export function render(element: () => GnimNode, root?: GObject.Object) {
+    return renderGnim(new GtkRenderer(), element, root)
+}
 
 export type ClassValue = string | number | null | boolean | undefined | ClassValue[]
 export type ClassList = MaybeAccessor<ClassValue> | MaybeAccessor<ClassList[]>

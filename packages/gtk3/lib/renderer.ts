@@ -3,13 +3,17 @@ import Gtk from "gi://Gtk?version=3.0"
 import {
     appendChild,
     computed,
-    createRenderer,
     isAccessor,
     newObject,
     removeChild,
+    render as renderGnim,
     setChildren,
+    type CC,
     type CCProps,
+    type FC,
+    type GnimNode,
     type MaybeAccessor,
+    type Renderer,
 } from "gnim"
 
 const dummyBuilder = new Gtk.Builder()
@@ -52,13 +56,6 @@ function flattenClassList(classList: unknown): MaybeAccessor<string> {
     return ""
 }
 
-/**
- * @returns The slot that was set in JSX on `object`.
- */
-export function getSlot(object: GObject.Object) {
-    return slotType in object ? (object[slotType] as string) : null
-}
-
 function isAdjustable<T extends GObject.Object>(
     object: T,
 ): object is T & { adjustment: Gtk.Adjustment } {
@@ -67,8 +64,18 @@ function isAdjustable<T extends GObject.Object>(
         .some((prop) => GObject.type_is_a(prop.value_type, Gtk.Adjustment))
 }
 
-export const { render } = createRenderer({
-    constructObject(element, props) {
+/**
+ * @returns The slot that was set in JSX on `object`.
+ */
+export function getSlot(object: GObject.Object) {
+    return slotType in object ? (object[slotType] as string) : null
+}
+
+export class GtkRenderer implements Renderer {
+    resolveTag(tag: string): CC | FC {
+        throw Error(`unresolved JSX tag: "${tag}"`)
+    }
+    constructObject(element: CC, props: Record<string, unknown>): GObject.Object {
         const { slot, css, classList, ...rest } = props
 
         rest.visible ??= true
@@ -88,91 +95,19 @@ export const { render } = createRenderer({
         }
 
         return object
-    },
-    setChildren(parent, children, prev) {
-        if (setChildren in parent && typeof parent[setChildren] === "function") {
-            if (parent[setChildren](children, prev)) return
-        } else {
-            for (const child of prev) {
-                this.removeChild(parent, child)
-            }
-            for (const child of children) {
-                this.appendChild(parent, child)
-            }
-        }
-        for (const child of prev.filter((child) => !children.includes(child))) {
-            this.destroyChild(parent, child)
-        }
-    },
-    destroyChild(_, child) {
-        if (child instanceof Gtk.Window) {
-            child.destroy()
-        }
-    },
-    createText(label) {
+    }
+    createText(label: string): GObject.Object {
         return new Gtk.Label({ label, visible: true })
-    },
-    removeChild(parent, child) {
-        if (removeChild in parent && typeof parent[removeChild] === "function") {
-            if (parent[removeChild](child)) return
-        }
-
-        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
-            return // no-op
-        }
-
-        if (parent instanceof Gtk.Container && child instanceof Gtk.Widget) {
-            return parent.remove(child)
-        }
-
-        if (parent instanceof Gtk.Application && child instanceof Gtk.Window) {
-            return parent.remove_window(child)
-        }
-
-        throw Error(`cannot remove ${child} from ${parent}`)
-    },
-    appendChild(parent, child) {
-        if (appendChild in parent && typeof parent[appendChild] === "function") {
-            if (parent[appendChild](child)) return
-        }
-
-        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
-            return void (parent.adjustment = child)
-        }
-
-        if (
-            child instanceof Gtk.Widget &&
-            parent instanceof Gtk.Stack &&
-            child.name !== "" &&
-            child.name !== null &&
-            getSlot(child) === "named"
-        ) {
-            return parent.add_named(child, child.name)
-        }
-
-        if (child instanceof Gtk.Window && parent instanceof Gtk.Application) {
-            return parent.add_window(child)
-        }
-
-        if (child instanceof Gtk.TextBuffer && parent instanceof Gtk.TextView) {
-            return parent.set_buffer(child)
-        }
-
-        if (parent instanceof Gtk.Buildable) {
-            return parent.vfunc_add_child(dummyBuilder, child, getSlot(child))
-        }
-
-        throw Error(`cannot add ${child} to ${parent}`)
-    },
-    prepareProps(object, props) {
-        if (object.prototype instanceof GObject.Object && "class" in props) {
+    }
+    prepareProps(klass: CC, props: Record<string, unknown>): Record<string, unknown> {
+        if (klass.prototype instanceof GObject.Object && "class" in props) {
             const cn = props.class
             props.class = computed(() => flattenClassList(cn))
             return props
         }
         return props
-    },
-    setProperty(object, key, value) {
+    }
+    setProperty(object: GObject.Object, key: string, value: unknown): void {
         if (key === "css" && typeof value === "string") {
             return setCss(object, value)
         }
@@ -208,11 +143,84 @@ export const { render } = createRenderer({
         if (!Object.is(current, value)) {
             Object.assign(object, { [key]: value })
         }
-    },
-    resolveTag(tag) {
-        throw Error(`unresolved JSX tag: "${tag}"`)
-    },
-})
+    }
+    setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]): void {
+        if (setChildren in parent && typeof parent[setChildren] === "function") {
+            if (parent[setChildren](children, prev)) return
+        } else {
+            for (const child of prev) {
+                this.removeChild(parent, child)
+            }
+            for (const child of children) {
+                this.appendChild(parent, child)
+            }
+        }
+        for (const child of prev.filter((child) => !children.includes(child))) {
+            this.destroyChild(parent, child)
+        }
+    }
+    appendChild(parent: GObject.Object, child: GObject.Object): void {
+        if (appendChild in parent && typeof parent[appendChild] === "function") {
+            if (parent[appendChild](child)) return
+        }
+
+        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
+            return void (parent.adjustment = child)
+        }
+
+        if (
+            child instanceof Gtk.Widget &&
+            parent instanceof Gtk.Stack &&
+            child.name !== "" &&
+            child.name !== null &&
+            getSlot(child) === "named"
+        ) {
+            return parent.add_named(child, child.name)
+        }
+
+        if (child instanceof Gtk.Window && parent instanceof Gtk.Application) {
+            return parent.add_window(child)
+        }
+
+        if (child instanceof Gtk.TextBuffer && parent instanceof Gtk.TextView) {
+            return parent.set_buffer(child)
+        }
+
+        if (parent instanceof Gtk.Buildable) {
+            return parent.vfunc_add_child(dummyBuilder, child, getSlot(child))
+        }
+
+        throw Error(`cannot add ${child} to ${parent}`)
+    }
+    removeChild(parent: GObject.Object, child: GObject.Object): void {
+        if (removeChild in parent && typeof parent[removeChild] === "function") {
+            if (parent[removeChild](child)) return
+        }
+
+        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
+            return // no-op
+        }
+
+        if (parent instanceof Gtk.Container && child instanceof Gtk.Widget) {
+            return parent.remove(child)
+        }
+
+        if (parent instanceof Gtk.Application && child instanceof Gtk.Window) {
+            return parent.remove_window(child)
+        }
+
+        throw Error(`cannot remove ${child} from ${parent}`)
+    }
+    destroyChild(_: GObject.Object, child: GObject.Object): void {
+        if (child instanceof Gtk.Window) {
+            child.destroy()
+        }
+    }
+}
+
+export function render(element: () => GnimNode, root?: GObject.Object) {
+    return renderGnim(new GtkRenderer(), element, root)
+}
 
 export type ClassValue = string | number | null | boolean | undefined | ClassValue[]
 export type ClassList = MaybeAccessor<ClassValue> | MaybeAccessor<ClassList[]>
