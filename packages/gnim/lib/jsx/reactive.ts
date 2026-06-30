@@ -787,7 +787,7 @@ type SignalsOf<O> = O extends GObject.Object
           [S in Keyof<O["$signals"]> as S extends `${infer Name}::{}`
               ? Name extends "notify"
                   ? never
-                  : `${Name}::${string}`
+                  : Name | `${Name}::${string}`
               : S]: O["$signals"][S]
       } & {
           [S in Keyof<O["$readableProperties"]> as `notify::${S}`]: (
