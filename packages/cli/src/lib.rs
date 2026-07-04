@@ -57,6 +57,7 @@ pub fn rolldown_config() -> rolldown::BundlerOptions {
         transform: Some(rolldown::BundlerTransformOptions {
             decorator: Some(rolldown::DecoratorOptions {
                 legacy: Some(true),
+                strict_null_checks: Some(true),
                 emit_decorator_metadata: Some(true),
             }),
             jsx: Some(rolldown::Either::Right(rolldown::JsxOptions {

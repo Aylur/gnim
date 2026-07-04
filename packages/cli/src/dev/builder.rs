@@ -114,7 +114,7 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
             match transform_imports(&code, &chunk_filename, &versions) {
                 Ok(transformed) => Ok(Some(rolldown_plugin::HookRenderChunkOutput {
                     code: transformed,
-                    map: None,
+                    map: rolldown_plugin::HookTransformOutputMap::Omitted,
                 })),
                 Err(err) => {
                     eprintln!("[dev] {}", err);
