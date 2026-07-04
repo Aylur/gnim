@@ -175,7 +175,10 @@ export class GtkRenderer implements Renderer {
             return void parent.add_named(child, child.name)
         }
 
-        if (child instanceof Gtk.Popover && parent instanceof Gtk.MenuButton) {
+        if (
+            child instanceof Gtk.Popover &&
+            (parent instanceof Gtk.MenuButton || parent instanceof Gtk.PopoverBin)
+        ) {
             return parent.set_popover(child)
         }
 
@@ -262,6 +265,10 @@ export class GtkRenderer implements Renderer {
                 if (pageNum !== -1) {
                     return parent.remove_page(pageNum)
                 }
+            }
+
+            if (parent instanceof Gtk.PopoverBin && parent.popover === child) {
+                parent.set_popover(null)
             }
 
             // Most Bin-like containers have a .set_child()
