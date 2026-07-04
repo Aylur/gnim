@@ -482,7 +482,13 @@ function queueEffect(fn: Fn) {
             EffectsPending = false
             const effects = Array.from(EffectQueue)
             EffectQueue.clear()
-            effects.forEach((fn) => fn())
+            effects.forEach((fn) => {
+                try {
+                    fn()
+                } catch (err) {
+                    console.error(err)
+                }
+            })
         })
     }
 }
