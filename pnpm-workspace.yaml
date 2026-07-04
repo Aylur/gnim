@@ -6,3 +6,5 @@ packages:
     - "packages/gnome-shell"
     - "packages/create"
     - "packages/io"
+allowBuilds:
+    esbuild: false
