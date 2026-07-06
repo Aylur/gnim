@@ -879,9 +879,9 @@ dependencies = [
 
 [[package]]
 name = "girgen"
-version = "0.3.18"
+version = "0.3.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53c719c53d3db086739bb46722489900c9ea8bc75ab05dc530e2ee2964f0d58c"
+checksum = "f354bce2a9595ca415fcc00e4ad7207c45e58ce245248b8c4b67bc9528121716"
 dependencies = [
  "clap",
  "colored",
@@ -890,13 +890,14 @@ dependencies = [
  "rayon",
  "regex",
  "serde",
+ "serde_json",
  "stringcase",
  "twox-hash",
 ]
 
 [[package]]
 name = "gnim"
-version = "2.0.0-beta.0"
+version = "2.0.0-beta.1"
 dependencies = [
  "clap",
  "colored",

@@ -1,6 +1,6 @@
 use clap::Args;
 use colored::Colorize;
-use girgen::generator::{Error, Event, typescript};
+use girgen::generator::{Error, Event, gjs};
 use girgen::{default_dirs, girgen};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -169,7 +169,7 @@ pub async fn types(args: &TypeArgs) -> Result<(), String> {
         dirs,
         ignore: args.ignore.clone(),
         on_event,
-        generator: typescript::TypeScript {
+        generator: gjs::TypeScript {
             alias: args.alias,
             outdir: format!("{}/gi", &args.outdir),
         },

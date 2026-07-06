@@ -336,7 +336,7 @@ export type ForProps<Item, Key = Item> = (ForEachProps<Item> | ForModelProps<Ite
  *
  * ```tsx
  * <For each={items}>
- *     {(item, index) => <Label label={index(i => `${item} at ${i}`)} />}
+ *     {(item, index) => <Label label={index.as(i => `${item} at ${i}`)} />}
  * </For>
  * ```
  */
