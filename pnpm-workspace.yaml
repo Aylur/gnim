@@ -1,10 +1,12 @@
 packages:
-    - "packages/cli"
-    - "packages/gnim"
-    - "packages/gtk4"
-    - "packages/gtk3"
-    - "packages/gnome-shell"
-    - "packages/create"
-    - "packages/io"
+  - "packages/cli"
+  - "packages/gnim"
+  - "packages/gtk4"
+  - "packages/gtk3"
+  - "packages/gnome-shell"
+  - "packages/create"
+  - "packages/io"
 allowBuilds:
-    esbuild: false
+  esbuild: false
+minimumReleaseAgeExclude:
+  - '@gnim-js/linux-x64@2.0.0-beta.6'
