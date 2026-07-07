@@ -1,7 +1,7 @@
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { emit, isGObjectCtor, kebabcase, snakecase } from "../util.js"
-import { decoratorMetadata } from "./reflect.js"
+import { getMetadata } from "./reflect.js"
 
 const { defineProperty, fromEntries, entries, is } = globalThis.Object
 const priv = Symbol("gobject private")
@@ -207,14 +207,13 @@ export function register<T extends ObjectConstructor>(
 function registerClass(constructor: ObjectConstructor, options: RegisterOptions = {}) {
     const proto = constructor.prototype
     const meta = getMeta(proto)
-    const design = decoratorMetadata.get(proto)
 
     const properties = entries(meta.properties).map(([key, { declaration, descriptor }]) => {
         const name = kebabcase(key)
         const readable = !descriptor || "get" in descriptor
         const writeable = !descriptor || "set" in descriptor
         const flags = (readable ? ParamFlags.READABLE : 0) + (writeable ? ParamFlags.WRITABLE : 0)
-        const type = declaration || design?.[key].type
+        const type = declaration || getMetadata(proto, key)?.type
         if (!type) throw Error(`missing property type declaration "${constructor.name}.${key}"`)
 
         if (!descriptor) {
@@ -245,8 +244,8 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
 
     const signals = entries(meta.signals).map(([key, { options, declaration, descriptor }]) => {
         const name = kebabcase(key)
-        const returntype = declaration?.returntype || design?.[key].returntype
-        const paramtypes = declaration?.paramtypes || design?.[key].paramtypes
+        const returntype = declaration?.returntype || getMetadata(proto, key)?.returntype
+        const paramtypes = declaration?.paramtypes || getMetadata(proto, key)?.paramtypes
 
         if (!returntype)
             throw Error(`missing signal returntype declaration ${constructor.name}.${key}`)
