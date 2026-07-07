@@ -2,8 +2,8 @@
   "name": "__app-name__",
   "type": "module",
   "dependencies": {
-    "@gnim-js/gtk4": "^2.0.0-beta.0",
-    "gnim": "^2.0.0-beta.0"
+    "@gnim-js/gtk4": "^2.0.0-beta.5",
+    "gnim": "^2.0.0-beta.5"
   },
   "scripts": {
     "types": "gnim types",
