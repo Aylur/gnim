@@ -14,28 +14,45 @@ symbolic if its name is suffixed with `-symbolic`.
 The preferred format is [SVG](https://developer.mozilla.org/en-US/docs/Web/SVG),
 so they can be scaled to any size.
 
-Icons must be stored in a specific hierarchy, respecting the
+Icons can be installed system-wide, for example, next to the
+[application icon](/tutorial/packaging#application-icon) in which case they must
+be stored in a specific hierarchy, respecting the
 [Icon Theme specification](https://specifications.freedesktop.org/icon-theme/latest/):
 `$ICON_THEME/$SIZE/$CONTEXT/`. The default icon theme is `hicolor`, for scalable
 SVG the size is `scalable`, and the context is one of the contexts defined in
 the
 [Icon Naming specification](https://specifications.freedesktop.org/icon-naming/latest/).
 
+```meson
+# install with meson
+install_data(
+   'data' / 'icons' / 'hicolor',
+  install_dir: prefix / datadir / 'icons' / 'hicolor',
+)
+```
+
+Icons can also be bundled with the application in which case they do not have to
+follow the icon theme specification. Gtk will register them on startup when the
+application id is given.
+
+```bash
+# bundle using the cli
+gnim bundle -i data/icons --id com.example.MyApp src/main.tsx
+```
+
+```ts
+const app = new Gtk.Application({
+  applicaitonId: "com.example.MyApp",
+})
+```
+
 During development the dev server will append `$PWD/data/icons` to Gtk's icon
-theme search paths. For example, you'd put icons you use on buttons at
-`data/icons/hicolor/scalable/actions/my-icon-symbolic.svg`.
+theme search paths. For example, you'd put icons at
+`data/icons/hicolor/scalable/actions/my-icon-symbolic.svg` for system-wide, or
+`data/icons/my-icon-symbolic` for bundled icons.
 
 ```tsx
 <Gtk.Image iconName="my-icon-symbolic" />
-```
-
-You can then bundle them for production using the `--include` (`-i`) flag. You
-should also use a `--prefix` (`-p`) matching
-[Application.resourceBasePath](https://docs.gtk.org/gio/property.Application.resource-base-path.html)
-so that Gtk registers them on startup.
-
-```sh
-gnim bundle -i data/icons -p /com/example/MyApp/ src/main.tsx out.gresource
 ```
 
 ## CSS

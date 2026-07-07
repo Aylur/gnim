@@ -22,6 +22,7 @@ const props = JSON.parse(GLib.getenv("GNIM_DEV")!) as {
     entry: string
     modules: Record<string, string>
     rundir: string
+    iconResource?: string
 }
 
 type SocketMsg = {
@@ -67,13 +68,19 @@ function initIcons() {
     const cwd = GLib.get_current_dir()
     const icondir = path([cwd, "data", "icons"])
 
+    if (props.iconResource) {
+        Gio.Resource.load(props.iconResource)._register()
+    }
+
     if (props.gtk === "4.0") {
         const display = gi.require("Gdk", "4.0").Display.get_default()!
-        gi.require("Gtk", "4.0").IconTheme.get_for_display(display).add_search_path(icondir)
+        const iconTheme = gi.require("Gtk", "4.0").IconTheme.get_for_display(display)
+        iconTheme.add_search_path(icondir)
     }
 
     if (props.gtk === "3.0") {
-        gi.require("Gtk", "3.0").IconTheme.get_default().append_search_path(icondir)
+        const iconTheme = gi.require("Gtk", "3.0").IconTheme.get_default()
+        iconTheme.append_search_path(icondir)
     }
 }
 
