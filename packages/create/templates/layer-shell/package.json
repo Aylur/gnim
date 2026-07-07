@@ -4,7 +4,7 @@
   "dependencies": {
     "@gnim-js/io": "^2.0.0-beta.5",
     "@gnim-js/gtk4": "^2.0.0-beta.5",
-    "gnim": "^2.0.0-beta.5"
+    "gnim": "^2.0.0-beta.6"
   },
   "scripts": {
     "types": "gnim types",
