@@ -2,6 +2,8 @@ use super::dev::ModuleTracker;
 use super::{dev_rundir, rolldown_config};
 use crate::plugin::{css::GnimCssPlugin, resource::GnimResourcePlugin};
 use clap::Args;
+use std::env::{join_paths, split_paths, var_os};
+use std::path::PathBuf;
 use std::{path, process, sync::Arc};
 
 #[derive(Args)]
@@ -14,6 +16,25 @@ pub struct RunArgs {
     /// Replace global identifiers with constant expressions
     #[arg(short, long, value_name = "KEY=VALUE", value_parser = crate::parse_key_val)]
     pub define: Vec<(String, String)>,
+}
+
+pub fn gsettings_schema_dir() -> std::ffi::OsString {
+    // nix uses GSETTINGS_SCHEMAS_PATH
+    let schema_paths = var_os("GSETTINGS_SCHEMAS_PATH")
+        .map(|paths| {
+            split_paths(&paths)
+                .map(|p| p.join("glib-2.0").join("schemas"))
+                .collect::<Vec<PathBuf>>()
+        })
+        .unwrap_or_default();
+
+    let schema_dirs = var_os("GSETTINGS_SCHEMA_DIR")
+        .map(|dirs| split_paths(&dirs).collect::<Vec<PathBuf>>())
+        .unwrap_or_default();
+
+    let gnim_schemas = vec![PathBuf::from("./.gnim/schemas")];
+
+    join_paths([gnim_schemas, schema_paths, schema_dirs].concat()).unwrap()
 }
 
 pub async fn run(args: &RunArgs) -> Result<(), String> {
@@ -53,6 +74,7 @@ pub async fn run(args: &RunArgs) -> Result<(), String> {
 
     let status = process::Command::new("gjs")
         .args([vec!["-m", &tmpname], gjs_args].concat())
+        .env("GSETTINGS_SCHEMA_DIR", gsettings_schema_dir())
         .status()
         .expect("Failed to run script");
 
