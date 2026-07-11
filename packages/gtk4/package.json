@@ -24,13 +24,18 @@
         "typescript-eslint": "latest"
     },
     "exports": {
-        ".": "./lib/index.ts"
+        ".": "./lib/index.ts",
+        "./listItemFactory": "./lib/listItemFactory.ts"
     },
     "publishConfig": {
         "exports": {
             ".": {
                 "import": "./dist/index.js",
                 "types": "./dist/index.d.ts"
+            },
+            "./listItemFactory": {
+                "import": "./dist/listItemFactory.js",
+                "types": "./dist/listItemFactory.d.ts"
             }
         }
     },
