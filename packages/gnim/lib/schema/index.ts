@@ -136,6 +136,7 @@ export class Schema<
     ) {
         if (typeof props === "string") {
             this.id = props
+            this.path = "/" + props.replaceAll(".", "/") + "/"
         } else {
             this.id = props.id
             this.path = props.path
