@@ -9,4 +9,4 @@ packages:
 allowBuilds:
   esbuild: false
 minimumReleaseAgeExclude:
-  - '@gnim-js/linux-x64@2.0.0-beta.6'
+  - '@gnim-js/linux-x64@2.0.0-beta.7'
