@@ -21,12 +21,9 @@ const dummyBuilder = new Gtk.Builder()
 const slotType = Symbol("gnim.gtk4.slot")
 const cssprovider = Symbol("gnim.gtk4.cssprovider")
 
-class UnknownMethodError extends Error {
+class MissingMethodError extends Error {
     constructor(name: string, parent: GObject.Object, child: GObject.Object) {
-        super(
-            `Method "${name}" for parent ${parent} and child ${child} is not registered. ` +
-                "You should open an issue about this so that we can add support.",
-        )
+        super(`Missing "${name}" implementation for parent "${parent}" and child "${child}".`)
     }
 }
 
@@ -215,7 +212,7 @@ export class GtkRenderer implements Renderer {
             return parent.vfunc_add_child(dummyBuilder, child, getSlot(child))
         }
 
-        throw new UnknownMethodError("appendChild", parent, child)
+        throw new MissingMethodError("appendChild", parent, child)
     }
     removeChild(parent: GObject.Object, child: GObject.Object): void {
         if (removeChild in parent && typeof parent[removeChild] === "function") {
@@ -230,6 +227,13 @@ export class GtkRenderer implements Renderer {
             if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
                 return // no-op
             }
+        }
+
+        if (
+            child instanceof Gio.MenuModel &&
+            (parent instanceof Gtk.MenuButton || parent instanceof Gtk.PopoverMenu)
+        ) {
+            return parent.set_menu_model(null)
         }
 
         if (child instanceof Gtk.Widget) {
@@ -286,7 +290,7 @@ export class GtkRenderer implements Renderer {
             return parent.remove_window(child)
         }
 
-        throw new UnknownMethodError("removeChild", parent, child)
+        throw new MissingMethodError("removeChild", parent, child)
     }
     destroyChild(parent: GObject.Object, child: GObject.Object): void {
         if (parent instanceof Gio.Application && child instanceof Gtk.Window) {
