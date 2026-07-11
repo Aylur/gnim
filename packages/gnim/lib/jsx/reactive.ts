@@ -271,7 +271,7 @@ export function createAccessor<T>(
 
     const accessor: Accessor<T> = Object.assign(access, {
         as,
-        peek: get,
+        peek: () => untrack(get),
         subscribe: subscribe,
         toString(): string {
             return `Accessor { ${get()} }`
@@ -834,8 +834,8 @@ export function connectSignal<O extends GObject.Object, S extends Keyof<SignalsO
  *   required: MaybeAccessor<string>
  * }
  *
- * const optional: Accessor<string> = accessor(props.optional, "")
- * const required: Accessor<string> = accessor(props.required)
+ * const optional: Accessor<string> = prop(props.optional, "")
+ * const required: Accessor<string> = prop(props.required)
  * ```
  *
  */

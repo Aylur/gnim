@@ -25,6 +25,7 @@ export {
     isAccessor,
     onCleanup,
     prop,
+    untrack,
     type Accessed,
     type Accessor,
     type Context,
