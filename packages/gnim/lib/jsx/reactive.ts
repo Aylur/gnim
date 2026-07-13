@@ -13,6 +13,8 @@ export const devHooks: DevHooks = {
 }
 
 const noop = () => {}
+const accessorType = Symbol("gnim.type.accessor")
+
 const AccessStack = new Array<Set<Accessor>>()
 let EffectDepth = 0
 
@@ -89,6 +91,10 @@ export class Scope {
         this.cleanups.forEach((cb) => cb())
         this.cleanups.length = 0
         this.owner = null
+    }
+
+    setContext<V>(ctx: Context<V>, value: V): void {
+        this.contexts.set(ctx, value)
     }
 }
 
@@ -247,12 +253,8 @@ export function createRoot<T>(fn: (dispose: Fn) => T, parent?: Scope | null) {
 export function isAccessor(instance: unknown): instance is Accessor {
     return (
         typeof instance === "function" &&
-        "peek" in instance &&
-        typeof instance.peek === "function" &&
-        "subscribe" in instance &&
-        typeof instance.subscribe === "function" &&
-        "as" in instance &&
-        typeof instance.as === "function"
+        "$$typeof" in instance &&
+        instance.$$typeof === accessorType
     )
 }
 
@@ -266,10 +268,11 @@ export function createAccessor<T>(
     }
 
     function as<R = T>(fn: (value: T) => R): Accessor<R> {
-        return createAccessor(() => fn(get()), subscribe)
+        return createAccessor(() => fn(untrack(get)), subscribe)
     }
 
     const accessor: Accessor<T> = Object.assign(access, {
+        $$typeof: accessorType,
         as,
         peek: () => untrack(get),
         subscribe: subscribe,
