@@ -12,14 +12,21 @@
         "clean": "git clean -Xdf",
         "types": "./scripts.nu types",
         "build": "pnpm -r build",
+        "test": "vitest run",
+        "lint": "pnpm -r run lint",
+        "test:watch": "vitest",
         "docs:dev": "vitepress dev docs",
         "docs:build": "vitepress build docs"
     },
     "devDependencies": {
+        "@eslint/js": "^10.0.1",
         "@types/node": "latest",
-        "jiti": "^2.7.0",
+        "eslint": "^10.7.0",
         "nushell": "latest",
-        "vitepress": "2.0.0-alpha.16"
+        "typescript": "^6.0.0",
+        "typescript-eslint": "^8.64.0",
+        "vitepress": "2.0.0-alpha.16",
+        "vitest": "^4.1.10"
     },
     "dependencies": {
         "@vercel/analytics": "^2.0.1",

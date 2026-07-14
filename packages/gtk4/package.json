@@ -17,12 +17,6 @@
     "dependencies": {
         "gnim": "workspace:^"
     },
-    "devDependencies": {
-        "@eslint/js": "latest",
-        "eslint": "latest",
-        "typescript": "latest",
-        "typescript-eslint": "latest"
-    },
     "exports": {
         ".": "./lib/index.ts",
         "./listItemFactory": "./lib/listItemFactory.ts"

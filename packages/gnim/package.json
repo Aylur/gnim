@@ -20,13 +20,6 @@
     "optionalDependencies": {
         "@gnim-js/linux-x64": "2.0.0-beta.7"
     },
-    "devDependencies": {
-        "@types/node": "latest",
-        "@eslint/js": "latest",
-        "eslint": "latest",
-        "typescript": "latest",
-        "typescript-eslint": "latest"
-    },
     "exports": {
         ".": "./lib/index.ts",
         "./dbus": "./lib/decorators/dbus.ts",

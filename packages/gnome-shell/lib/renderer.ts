@@ -56,7 +56,7 @@ function snakecase(str: string) {
 }
 
 export class GnomeRenderer implements Renderer {
-    resolveTag(_: string): CC | FC {
+    resolveTag(): CC | FC {
         throw new Error("Function not implemented.")
     }
     constructObject(element: CC, props: Record<string, unknown>): GObject.Object {
