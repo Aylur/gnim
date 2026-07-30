@@ -705,12 +705,7 @@ describe("edge cases", () => {
         warn.mockRestore()
     })
 
-    // KNOWN LIMITATION: calling the root's dispose from within an effect does not
-    // stop the effect from re-running, because `diff()` re-subscribes the effect to
-    // its dependencies after the disposing run completes. When this is fixed the
-    // effect should stop after the run that disposes, and this test will start
-    // passing — flip it to a normal `it` at that point.
-    it.fails("stops an effect that disposes its own root", async () => {
+    it("stops an effect that disposes its own root", async () => {
         const spy = vi.fn()
         const [n, setN] = createState(0)
 

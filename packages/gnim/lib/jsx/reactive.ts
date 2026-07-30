@@ -16,7 +16,9 @@ const noop = () => {}
 const accessorType = Symbol("gnim.type.accessor")
 
 const AccessStack = new Array<Set<Accessor>>()
+const EffectQueue = new Set<Fn>()
 let EffectDepth = 0
+let EffectsPending = false
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 export type MaybeAccessor<T> = T | Accessor<T>
@@ -36,6 +38,7 @@ export interface Accessor<T = unknown> {
     /**
      * Create a new {@link Accessor} that applies a transformation on its value when read.
      * This operation is also known as `map` in other languages.
+     * You might want to use {@link computed} instead, since this does not memoize the result.
      * @param transform The transformation to apply. Should be a pure function.
      */
     as<R = T>(fn: (value: T) => R): Accessor<R>
@@ -62,6 +65,7 @@ export interface Accessor<T = unknown> {
 export class Scope {
     static current: Scope | null = null
 
+    disposed: boolean = false
     owner: Scope | null = null
     contexts = new Map<Context<any>, unknown>()
     cleanups: Fn[] = []
@@ -91,6 +95,7 @@ export class Scope {
         this.cleanups.forEach((cb) => cb())
         this.cleanups.length = 0
         this.owner = null
+        this.disposed = true
     }
 
     setContext<V>(ctx: Context<V>, value: V): void {
@@ -364,7 +369,7 @@ export function untrack<T>(fn: () => T) {
     return push(fn)[0]
 }
 
-function diff(prev: Map<Accessor, Fn>, next: Set<Accessor>, fn: Fn) {
+function diff(scope: Scope | null, prev: Map<Accessor, Fn>, next: Set<Accessor>, fn: Fn) {
     const newDeps = new Map<Accessor, Fn>()
 
     for (const [dep, dispose] of prev) {
@@ -375,9 +380,11 @@ function diff(prev: Map<Accessor, Fn>, next: Set<Accessor>, fn: Fn) {
         }
     }
 
-    for (const dep of next) {
-        if (!newDeps.has(dep)) {
-            newDeps.set(dep, dep.subscribe(fn))
+    if (!scope?.disposed) {
+        for (const dep of next) {
+            if (!newDeps.has(dep)) {
+                newDeps.set(dep, dep.subscribe(fn))
+            }
         }
     }
 
@@ -412,7 +419,7 @@ function createComputed<T>(fn: (prev?: T) => T): Accessor<T> {
 
         const [value, next] = scope.run(() => push(() => (state.dirty ? fn() : fn(state.value))))
 
-        deps = diff(deps, next, invalidate)
+        deps = diff(parentScope, deps, next, invalidate)
         state.dirty = false
         state.value = value
 
@@ -475,8 +482,6 @@ type EffectOptions = {
     immediate?: boolean
 }
 
-const EffectQueue = new Set<Fn>()
-let EffectsPending = false
 function queueEffect(fn: Fn) {
     EffectQueue.add(fn)
     if (!EffectsPending) {
@@ -515,7 +520,7 @@ export function effect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions) {
 
         const [value, deps] = currentScope.run(() => push(() => fn(currentValue)))
 
-        currentDeps = diff(currentDeps, deps, () => queueEffect(syncEffect))
+        currentDeps = diff(parentScope, currentDeps, deps, () => queueEffect(syncEffect))
         currentValue = value
         EffectDepth--
     }
