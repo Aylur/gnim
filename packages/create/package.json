@@ -10,14 +10,16 @@
         "type": "kofi",
         "url": "https://ko-fi.com/aylur"
     },
-    "devDependencies": {
-        "@eslint/js": "latest",
-        "eslint": "latest",
-        "typescript": "latest",
-        "typescript-eslint": "latest"
-    },
     "scripts": {
-        "build": "tsc"
+        "build": "tsc",
+        "fmt": "prettier . --write"
+    },
+    "devDependencies": {
+        "@eslint/js": "catalog:",
+        "@types/node": "catalog:",
+        "eslint": "catalog:",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:"
     },
     "bin": "bin/index.ts",
     "publishConfig": {
@@ -38,7 +40,7 @@
         "JSX"
     ],
     "dependencies": {
-        "@clack/prompts": "^1.2.0"
+        "@clack/prompts": "^1.7.0"
     },
     "prettier": {
         "semi": false,

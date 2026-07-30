@@ -14,23 +14,19 @@
         "build": "pnpm -r build",
         "test": "vitest run",
         "lint": "pnpm -r run lint",
+        "fmt": "pnpm -r run fmt",
         "test:watch": "vitest",
         "docs:dev": "vitepress dev docs",
         "docs:build": "vitepress build docs"
     },
     "devDependencies": {
-        "@eslint/js": "^10.0.1",
-        "@types/node": "latest",
-        "eslint": "^10.7.0",
         "nushell": "latest",
-        "typescript": "^6.0.0",
-        "typescript-eslint": "^8.64.0",
         "vitepress": "2.0.0-alpha.16",
         "vitest": "^4.1.10"
     },
     "dependencies": {
         "@vercel/analytics": "^2.0.1",
-        "vue": "^3.5.30"
+        "vue": "^3.5.40"
     },
     "prettier": {
         "semi": false,
@@ -49,12 +45,5 @@
                 }
             }
         ]
-    },
-    "workspaces": [
-        "packages/gnim",
-        "packages/gtk4",
-        "packages/gtk3",
-        "packages/gnome-shell",
-        "packages/create"
-    ]
+    }
 }

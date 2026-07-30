@@ -16,7 +16,7 @@
         "strict": true,
         "moduleResolution": "Bundler",
         "types": ["node", "gi"],
-        "typeRoots": ["../../.gnim/types", "./node_modules/@types"]
+        "typeRoots": ["./node_modules/@types", "../../.gnim/types"]
     },
     "include": ["./lib/**/*", "./bin/**/*"]
 }

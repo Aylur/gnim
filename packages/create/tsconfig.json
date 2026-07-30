@@ -12,8 +12,7 @@
 
         "strict": true,
         "moduleResolution": "nodenext",
-        "types": ["node"],
-        "typeRoots": ["../../node_modules/@types"]
+        "types": ["node"]
     },
     "include": ["./bin/**/*"]
 }

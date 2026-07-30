@@ -15,10 +15,18 @@
     },
     "scripts": {
         "build": "tsc",
-        "lint": "eslint ."
+        "lint": "eslint .",
+        "fmt": "prettier . --write"
     },
     "optionalDependencies": {
         "@gnim-js/linux-x64": "2.0.0-beta.7"
+    },
+    "devDependencies": {
+        "@eslint/js": "catalog:",
+        "@types/node": "catalog:",
+        "eslint": "catalog:",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:"
     },
     "exports": {
         ".": "./lib/index.ts",

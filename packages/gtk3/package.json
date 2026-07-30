@@ -12,10 +12,17 @@
     },
     "scripts": {
         "build": "tsc",
-        "lint": "eslint ."
+        "lint": "eslint .",
+        "fmt": "prettier . --write"
     },
     "dependencies": {
         "gnim": "workspace:^"
+    },
+    "devDependencies": {
+        "@eslint/js": "catalog:",
+        "eslint": "catalog:",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:"
     },
     "exports": {
         ".": "./index.ts"
