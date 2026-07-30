@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
+import GObject from "gi://GObject?version=2.0"
 import {
     createRoot,
     onCleanup,
@@ -7,7 +8,14 @@ import {
     computed,
     untrack,
     getScope,
+    isAccessor,
+    bind,
+    connectSignal,
+    createStore,
+    prop,
 } from "../jsx/reactive.js"
+
+const emit = GObject.signal_emit_by_name
 
 // Effect re-runs are scheduled on the microtask queue, so tests need to yield
 // to let the scheduler flush before asserting the observed value.
@@ -723,5 +731,435 @@ describe("edge cases", () => {
 
         // Desired behavior: no runs for n = 3 or n = 4.
         expect(spy.mock.calls).toEqual([[0], [1], [2]])
+    })
+})
+
+describe("Accessor.as", () => {
+    it("derives a transformed value", () => {
+        const [n] = createState(2)
+        const doubled = n.as((v) => v * 2)
+        expect(doubled()).toBe(4)
+    })
+
+    it("reflects source updates", () => {
+        const [n, setN] = createState(2)
+        const doubled = n.as((v) => v * 2)
+        setN(10)
+        expect(doubled()).toBe(20)
+    })
+
+    it("chains transformations", () => {
+        const [n] = createState(1)
+        const result = n.as((v) => v + 1).as((v) => `${v * 10}`)
+        expect(result()).toBe("20")
+    })
+
+    it("does not memoize the transformation", () => {
+        const transform = vi.fn((v: number) => v * 2)
+        const [n] = createState(1)
+        const doubled = n.as(transform)
+
+        doubled()
+        doubled()
+
+        expect(transform).toHaveBeenCalledTimes(2)
+    })
+
+    it("notifies subscribers when the source changes", () => {
+        const [n, setN] = createState(0)
+        const doubled = n.as((v) => v * 2)
+        const observer = vi.fn()
+
+        const unsubscribe = doubled.subscribe(observer)
+        setN(1)
+        expect(observer).toHaveBeenCalledTimes(1)
+
+        unsubscribe()
+        setN(2)
+        expect(observer).toHaveBeenCalledTimes(1)
+    })
+
+    it("is tracked as a dependency in effects", async () => {
+        const spy = vi.fn()
+
+        const { setN, dispose } = createRoot((dispose) => {
+            const [n, setN] = createState(1)
+            const doubled = n.as((v) => v * 2)
+            effect(() => spy(doubled()))
+            return { setN, dispose }
+        })
+
+        expect(spy).toHaveBeenLastCalledWith(2)
+
+        setN(3)
+        await flush()
+
+        expect(spy).toHaveBeenLastCalledWith(6)
+
+        dispose()
+    })
+
+    it("does not track when peeked", async () => {
+        const spy = vi.fn()
+
+        const { setN, dispose } = createRoot((dispose) => {
+            const [n, setN] = createState(1)
+            const doubled = n.as((v) => v * 2)
+            effect(() => {
+                doubled.peek()
+                spy()
+            })
+            return { setN, dispose }
+        })
+
+        expect(spy).toHaveBeenCalledTimes(1)
+
+        setN(2)
+        await flush()
+
+        expect(spy).toHaveBeenCalledTimes(1)
+
+        dispose()
+    })
+})
+
+describe("bind", () => {
+    class Person extends GObject.Object {
+        firstName = "Jane"
+
+        setFirstName(name: string) {
+            this.firstName = name
+            emit(this, "notify::first-name")
+        }
+    }
+
+    class Child extends GObject.Object {
+        value = "a"
+    }
+
+    class Parent extends GObject.Object {
+        child: Child | null = null
+    }
+
+    it("reads a GObject property", () => {
+        const person = new Person()
+        const firstName = bind(person, "firstName")
+        expect(firstName()).toBe("Jane")
+    })
+
+    it("prefers a get_* getter over the plain property", () => {
+        class Celsius extends GObject.Object {
+            tempName = 4
+
+            get_temp_name() {
+                return this.tempName * 10
+            }
+        }
+
+        const celsius = new Celsius()
+        const tempName = bind(celsius, "tempName")
+        expect(tempName()).toBe(40)
+    })
+
+    it("notifies subscribers on the kebab-cased notify signal", () => {
+        const person = new Person()
+        const name = bind(person, "firstName")
+        const observer = vi.fn()
+
+        const unsubscribe = name.subscribe(observer)
+        person.setFirstName("John")
+        expect(observer).toHaveBeenCalledTimes(1)
+        expect(name()).toBe("John")
+
+        unsubscribe()
+        person.setFirstName("Jill")
+        expect(observer).toHaveBeenCalledTimes(1)
+    })
+
+    it("re-runs effects when the property changes", async () => {
+        const spy = vi.fn()
+        const person = new Person()
+        const name = bind(person, "firstName")
+
+        const { dispose } = createRoot((dispose) => {
+            effect(() => spy(name()))
+            return { dispose }
+        })
+
+        expect(spy).toHaveBeenLastCalledWith("Jane")
+
+        person.setFirstName("John")
+        await flush()
+
+        expect(spy).toHaveBeenLastCalledWith("John")
+
+        dispose()
+        person.setFirstName("Jill")
+        await flush()
+
+        expect(spy).toHaveBeenCalledTimes(2)
+    })
+
+    it("reads and tracks a store property", () => {
+        const store = createStore({ value: 1 })
+        const value = bind(store, "value")
+        const observer = vi.fn()
+
+        expect(value()).toBe(1)
+
+        value.subscribe(observer)
+        store.value = 2
+
+        expect(value()).toBe(2)
+        expect(observer).toHaveBeenCalledTimes(1)
+    })
+
+    it("follows a chain of properties", async () => {
+        const spy = vi.fn()
+        const child = new Child()
+
+        const { parent, dispose } = createRoot((dispose) => {
+            const parent = new Parent()
+            parent.child = child
+            effect(() => spy(bind(parent, "child", "value")()))
+            return { parent, dispose }
+        })
+
+        expect(spy).toHaveBeenLastCalledWith("a")
+
+        // A change on the leaf object re-runs.
+        child.value = "b"
+        emit(child, "notify::value")
+        await flush()
+        expect(spy).toHaveBeenLastCalledWith("b")
+
+        // Swapping the intermediate object re-runs with the new leaf value.
+        const other = new Child()
+        other.value = "c"
+        parent.child = other
+        emit(parent, "notify::child")
+        await flush()
+        expect(spy).toHaveBeenLastCalledWith("c")
+        expect(spy).toHaveBeenCalledTimes(3)
+
+        // The old child is no longer tracked.
+        child.value = "d"
+        emit(child, "notify::value")
+        await flush()
+        expect(spy).toHaveBeenCalledTimes(3)
+
+        dispose()
+    })
+
+    it("resolves to null when an intermediate property is null", () => {
+        const parent = new Parent()
+        expect(bind(parent, "child", "value")()).toBeNull()
+    })
+})
+
+describe("connectSignal", () => {
+    class Button extends GObject.Object {
+        declare readonly $signals: GObject.Object.SignalSignatures & {
+            clicked: (x: number, y: number) => void
+        }
+    }
+
+    it("invokes the handler without the emitter argument", () => {
+        createRoot((dispose) => {
+            const button = new Button()
+            const handler = vi.fn()
+
+            connectSignal(button, "clicked", handler)
+            emit(button, "clicked", 1, 2)
+
+            expect(handler).toHaveBeenCalledTimes(1)
+            expect(handler).toHaveBeenCalledWith(1, 2)
+
+            dispose()
+        })
+    })
+
+    it("disconnects when the owning scope is disposed", () => {
+        const button = new Button()
+        const handler = vi.fn()
+
+        createRoot((dispose) => {
+            connectSignal(button, "clicked", handler)
+            dispose()
+        })
+
+        emit(button, "clicked", 0, 0)
+
+        expect(handler).not.toHaveBeenCalled()
+    })
+})
+
+describe("createStore", () => {
+    it("exposes initial values as plain properties", () => {
+        const store = createStore({ count: 1, name: "gnim" })
+        expect(store.count).toBe(1)
+        expect(store.name).toBe("gnim")
+    })
+
+    it("updates values through property assignment", () => {
+        const store = createStore({ count: 0 })
+        store.count = 5
+        expect(store.count).toBe(5)
+    })
+
+    it("notifies subscribers of the changed key only", () => {
+        const store = createStore({ a: 0, b: 0 })
+        const observer = vi.fn()
+
+        const unsubscribe = store.subscribe("a", observer)
+        store.b = 1
+        expect(observer).not.toHaveBeenCalled()
+
+        store.a = 1
+        expect(observer).toHaveBeenCalledTimes(1)
+
+        unsubscribe()
+        store.a = 2
+        expect(observer).toHaveBeenCalledTimes(1)
+    })
+
+    it("computes getters from other fields", () => {
+        const store = createStore({
+            value: 2,
+            get double() {
+                return this.value * 2
+            },
+        })
+
+        expect(store.double).toBe(4)
+
+        store.value = 10
+        expect(store.double).toBe(20)
+    })
+
+    it("tracks store properties in effects", async () => {
+        const spy = vi.fn()
+
+        const { store, dispose } = createRoot((dispose) => {
+            const store = createStore({ count: 0 })
+            effect(() => spy(store.count))
+            return { store, dispose }
+        })
+
+        expect(spy).toHaveBeenLastCalledWith(0)
+
+        store.count = 1
+        await flush()
+
+        expect(spy).toHaveBeenLastCalledWith(1)
+
+        dispose()
+    })
+
+    it("tracks getters in effects", async () => {
+        const spy = vi.fn()
+
+        const { store, dispose } = createRoot((dispose) => {
+            const store = createStore({
+                value: 1,
+                get negated() {
+                    return -this.value
+                },
+            })
+            effect(() => spy(store.negated))
+            return { store, dispose }
+        })
+
+        expect(spy).toHaveBeenLastCalledWith(-1)
+
+        store.value = 5
+        await flush()
+
+        expect(spy).toHaveBeenLastCalledWith(-5)
+
+        dispose()
+    })
+
+    it("does not track when a bound property is peeked", async () => {
+        const spy = vi.fn()
+
+        const { store, dispose } = createRoot((dispose) => {
+            const store = createStore({ count: 0 })
+            const count = bind(store, "count")
+            effect(() => {
+                count.peek()
+                spy()
+            })
+            return { store, dispose }
+        })
+
+        expect(spy).toHaveBeenCalledTimes(1)
+
+        store.count = 1
+        await flush()
+
+        expect(spy).toHaveBeenCalledTimes(1)
+
+        dispose()
+    })
+
+    it("supports nested stores", () => {
+        const store = createStore({
+            nested: createStore({ value: "a" }),
+        })
+        const observer = vi.fn()
+
+        store.nested.subscribe("value", observer)
+        store.nested.value = "b"
+
+        expect(store.nested.value).toBe("b")
+        expect(observer).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("prop", () => {
+    it("wraps a plain value in an accessor", () => {
+        const value = prop(5)
+        expect(isAccessor(value)).toBe(true)
+        expect(value()).toBe(5)
+    })
+
+    it("passes accessors through reactively", async () => {
+        const spy = vi.fn()
+
+        const { setValue, dispose } = createRoot((dispose) => {
+            const [value, setValue] = createState("a")
+            effect(() => spy(prop(value)()))
+            return { setValue, dispose }
+        })
+
+        expect(spy).toHaveBeenLastCalledWith("a")
+
+        setValue("b")
+        await flush()
+
+        expect(spy).toHaveBeenLastCalledWith("b")
+
+        dispose()
+    })
+
+    it("falls back when a plain value is nullish", () => {
+        const value = prop<string | undefined>(undefined, "fallback")
+        expect(value()).toBe("fallback")
+    })
+
+    it("falls back when an accessor's value is nullish", () => {
+        const [value, setValue] = createState<string | null>(null)
+        const withFallback = prop(value, "fallback")
+
+        expect(withFallback()).toBe("fallback")
+
+        setValue("set")
+        expect(withFallback()).toBe("set")
+    })
+
+    it("keeps a value that is not nullish", () => {
+        const value = prop("value", "fallback")
+        expect(value()).toBe("value")
     })
 })
