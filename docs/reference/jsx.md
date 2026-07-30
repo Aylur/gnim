@@ -257,6 +257,45 @@ function Counter(props: {
 
 ## Control flow
 
+::: details TypeScript inference limitation
+
+https://github.com/microsoft/TypeScript/issues/47599
+
+Unfortunately inline `bind()` will fail type inference on `With` and `For`
+
+```tsx
+<For each={bind(object, "field")}>
+  {(field) => <>{field}</> /* field is unknown */}
+</For>
+```
+
+The fix is to first type instantiate it and capture it in a variable:
+
+```tsx
+const field = bind(obj, "field")
+return (
+  <For each={field}>
+    {(field) => <>{field}</> /* field is correctly inferred */}
+  </For>
+)
+```
+
+Or, to keep it inline, specify the expected generic type:
+
+```tsx
+<For each={bind<ExpectedType>(obj, "field")}>
+  {(field) => <>{field}</> /* field is correctly inferred */}
+</For>
+```
+
+Or simply annotate the function parameter:
+
+```tsx
+<For each={bind(obj, "field")}>{(field: ExpectedType) => <>{field}</>}</For>
+```
+
+:::
+
 ### Dynamic rendering
 
 When you want to render based on a value, you can use the `<With>` component.
