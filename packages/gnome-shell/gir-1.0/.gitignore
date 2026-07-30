@@ -1,0 +1,6 @@
+*
+!.gitignore
+!.npmignore
+!flake.nix
+!flake.lock
+!install_gir.patch

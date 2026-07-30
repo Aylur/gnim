@@ -11,7 +11,8 @@
         "url": "https://ko-fi.com/aylur"
     },
     "scripts": {
-        "build": "tsc",
+        "girs": "./scripts.nu girs",
+        "build": "./scripts.nu girs && tsc",
         "lint": "eslint .",
         "fmt": "prettier . --write"
     },
@@ -37,7 +38,8 @@
     },
     "files": [
         "dist",
-        "gir-1.0"
+        "gir-1.0/gnome49",
+        "gir-1.0/gnome50"
     ],
     "engines": {
         "gjs": ">=1.83.0"
