@@ -174,7 +174,8 @@ export class GtkRenderer implements Renderer {
 
         if (
             child instanceof Gtk.Popover &&
-            (parent instanceof Gtk.MenuButton || parent instanceof Gtk.PopoverBin)
+            (parent instanceof Gtk.MenuButton ||
+                (Gtk.PopoverBin && parent instanceof Gtk.PopoverBin))
         ) {
             return parent.set_popover(child)
         }
@@ -271,7 +272,7 @@ export class GtkRenderer implements Renderer {
                 }
             }
 
-            if (parent instanceof Gtk.PopoverBin && parent.popover === child) {
+            if (Gtk.PopoverBin && parent instanceof Gtk.PopoverBin && parent.popover === child) {
                 parent.set_popover(null)
             }
 
