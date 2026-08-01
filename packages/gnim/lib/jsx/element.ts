@@ -385,7 +385,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
                     return child
                 }
             })
-            .flat()
+            .flat(Infinity)
     })
 }
 
