@@ -29,13 +29,9 @@ def "main build" [] {
 }
 
 def "main types" [] {
-    (gnim
-        types
-        -d node_modules/@gnim-js/gnome-shell/gir-1.0
-        --alias
-        -i Gtk-3.0
-        -i Gdk-3.0
-    )
+    let latest_ver = open metadata.json | get shell-version | last
+    let gnome_gir = $"node_modules/@gnim-js/gnome-shell/gir-1.0/gnome($latest_ver)"
+    gnim types -d $gnome_gir --alias -i Gtk-3.0 -i Gdk-3.0
 }
 
 def "main install" [] {

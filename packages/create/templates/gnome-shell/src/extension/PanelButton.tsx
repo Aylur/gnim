@@ -43,7 +43,7 @@ export default function PanelButton() {
       onButtonPressEvent={onButtonPressEvent}
     >
       <St.Label
-        styleClass="my-label"
+        styleClass="__css_namespace__-my-label"
         yAlign={Clutter.ActorAlign.CENTER}
         text={settings.simpleKey}
       />

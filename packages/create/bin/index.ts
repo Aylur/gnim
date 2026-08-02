@@ -364,6 +364,19 @@ async function copyGnomeShell({
         "__extension-id__",
         id,
     )
+
+    // css
+    const ns = id.toLowerCase().replaceAll(".", "-").replaceAll("_", "-")
+    await replaceInFile(
+        `${dir}/src/extension/PanelButton.tsx`,
+        "__css_namespace__",
+        ns,
+    )
+    await replaceInFile(
+        `${dir}/src/extension/stylesheet.css`,
+        "__css_namespace__",
+        ns,
+    )
 }
 
 async function createGitignore(dir: string) {
