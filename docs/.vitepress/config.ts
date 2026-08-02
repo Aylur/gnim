@@ -36,6 +36,8 @@ export default defineConfig({
                     { text: "DBus", link: "/reference/dbus" },
                     { text: "Schemas", link: "/reference/schemas" },
                     { text: "Polyfills", link: "/reference/polyfills" },
+                    { text: "Packages", link: "/reference/packages" },
+                    { text: "CLI", link: "/reference/cli" },
                 ],
             },
             {

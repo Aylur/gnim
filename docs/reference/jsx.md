@@ -100,33 +100,23 @@ class MyWidget extends Gtk.Widget {
 }
 ```
 
-### Type string
-
-Under the hood, to build the widget tree Gnim uses the
-[Gtk.Buildable](https://docs.gtk.org/gtk4/iface.Buildable.html) interface, which
-lets you specify a slot to specify the type the `child` is meant to be.
-
-```tsx
-<Gtk.CenterBox>
-  <Gtk.Box slot="start" />
-  <Gtk.Box slot="center" />
-  <Gtk.Box slot="end" />
-</Gtk.CenterBox>
-```
-
-> [!NOTE]
->
-> This is specific to Gtk renderers and is unavailable when using Clutter.
-
 ### Signal handlers
 
-Signal handlers can be defined with an `on` prefix, and `notify::` signal
-handlers can be defined with an `onNotify` prefix.
+Signal handlers can be defined with an `on` prefix.
+
+```tsx
+<Gtk.Button onClicked={(self) => console.log(self, "clicked")} />
+```
+
+Detail strings on detailed signals such as `notify::` can be specified with
+`:detail` suffix. The `notify` signal also has a special `onNotifyDetail`
+syntax.
 
 ```tsx
 <Gtk.Revealer
-  onNotifyChildRevealed={(self) => print(self, "child-revealed")}
-  onDestroy={(self) => print(self, "destroyed")}
+  onNotify={(self) => console.log(self, "notify")}
+  onNotify:child-revealed={(self) => console.log(self, "child-revealed")}
+  onNotifyChildRevealed={(self) => console.log(self, "child-revealed")}
 />
 ```
 
@@ -195,34 +185,11 @@ return (
 )
 ```
 
-### Inline CSS
-
-There is an additional `css` property available on Class components that inherit
-from `Gtk.Widget`. It is mostly meant to be used as a debugging tool, e.g. with
-`css="border: 1px solid red;"`.
-
-```tsx
-<Gtk.Button css="border: 1px solid red;" />
-```
-
-### Class names
-
-The `class` property is available on Class components that inherit from
-`Gtk.Widget`. It is an alternative to Gtk4 `cssClasses`
-<span style="opacity: 0.6">(Gtk3 does not have a property for class
-names)</span> property which can take class names in various forms.
-
-```tsx
-const name: string | Accessor<string> | string[] | Accessor<string[]>
-
-return (
-  <Gtk.Button
-    class="class1 class2"
-    class={name}
-    class={["class1 class2", name]}
-  />
-)
-```
+> [!NOTE]
+>
+> Renderers can define additional attributes on class components. The Gtk
+> renderers for example define [`css` and `class`](/reference/packages#css)
+> attributes on widgets.
 
 ## Function Components
 
@@ -253,6 +220,37 @@ function Counter(props: {
       </Gtk.Box>
     </Gtk.Button>
   )
+}
+```
+
+### `prop`
+
+`MaybeAccessor<T>` is the type to use for reactive function component props: it
+lets callers pass either a static `T` or an `Accessor<T>`. The `prop` function
+normalizes such a value into an `Accessor`, optionally applying a fallback for
+`null` and `undefined` values.
+
+```ts
+type MaybeAccessor<T> = T | Accessor<T>
+
+function prop<T>(value: MaybeAccessor<T>): Accessor<T>
+function prop<T>(
+  value: MaybeAccessor<T>,
+  fallback: NonNullable<T>,
+): Accessor<NonNullable<T>>
+```
+
+Example:
+
+```ts
+interface Props {
+  optional?: MaybeAccessor<string>
+  required: MaybeAccessor<string>
+}
+
+function MyComponent(props: Props) {
+  const optional: Accessor<string> = prop(props.optional, "fallback")
+  const required: Accessor<string> = prop(props.required)
 }
 ```
 
