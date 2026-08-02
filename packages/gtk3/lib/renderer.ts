@@ -145,15 +145,18 @@ export class GtkRenderer implements Renderer {
         }
     }
     setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]): void {
-        if (setChildren in parent && typeof parent[setChildren] === "function") {
-            if (parent[setChildren](children, prev)) return
-        } else {
-            for (const child of prev) {
-                this.removeChild(parent, child)
-            }
-            for (const child of children) {
-                this.appendChild(parent, child)
-            }
+        if (
+            setChildren in parent &&
+            typeof parent[setChildren] === "function" &&
+            parent[setChildren](children, prev)
+        ) {
+            return
+        }
+        for (const child of prev) {
+            this.removeChild(parent, child)
+        }
+        for (const child of children) {
+            this.appendChild(parent, child)
         }
         for (const child of prev.filter((child) => !children.includes(child))) {
             this.destroyChild(parent, child)
