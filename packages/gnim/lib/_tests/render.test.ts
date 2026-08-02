@@ -51,9 +51,6 @@ function createRenderer() {
                 destroyChild(parent, child)
             }
         }),
-        appendChild,
-        removeChild,
-        destroyChild,
     } satisfies Renderer
 }
 

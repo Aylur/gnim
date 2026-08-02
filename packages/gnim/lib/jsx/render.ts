@@ -31,9 +31,6 @@ export interface Renderer {
     prepareProps(klass: CC, props: Record<string, unknown>): Record<string, unknown>
     setProperty(object: GObject.Object, key: string, value: unknown): void
     setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]): void
-    appendChild(parent: GObject.Object, child: GObject.Object): void
-    removeChild(parent: GObject.Object, child: GObject.Object): void
-    destroyChild(parent: GObject.Object, child: GObject.Object): void
 }
 
 export function render(renderer: Renderer, element: () => GnimNode, root?: GObject.Object) {
