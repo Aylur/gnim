@@ -42,7 +42,7 @@ gnim bundle -i data/icons --id com.example.MyApp src/main.tsx
 
 ```ts
 const app = new Gtk.Application({
-  applicaitonId: "com.example.MyApp",
+  applicationId: "com.example.MyApp",
 })
 ```
 
@@ -78,7 +78,7 @@ the codebase.
 
 ```ts
 import "gi://Gtk?version=4.0"
-import { render } from "ags/gtk4" // this also counts
+import { render } from "gnim/gtk4" // this also counts
 ```
 
 :::

@@ -78,7 +78,7 @@ export class Process extends GObject.Object {
     }
 
     /**
-     * Write a line to the subprocess' stdin synchronously.
+     * Write a line to the subprocess' stdin asynchronously.
      * See {@link Gio.DataOutputStream.prototype.write_bytes_async}
      *
      * @param str String to be written to stdin
@@ -101,7 +101,7 @@ export class Process extends GObject.Object {
     }
 
     /**
-     * Write a line to the to stdin asynchronously.
+     * Write a line to stdin asynchronously.
      *
      * @param str String to be written to stdin
      */
@@ -257,7 +257,7 @@ type SubprocessArgs = {
 }
 
 /**
- * Start long running child process.
+ * Start a long-running child process.
  *
  * @example
  * ```ts
@@ -271,7 +271,7 @@ type SubprocessArgs = {
 export function subprocess(args: SubprocessArgs): Process
 
 /**
- * Start long running child process.
+ * Start a long-running child process.
  *
  * @example
  * ```ts
@@ -350,7 +350,7 @@ export function execAsync(cmd: string | string[]): Promise<string> {
 
 /**
  * Create an Accessor that starts the subprocess when the first observer appears
- * and kills the subprocess when number of observers drops to zero.
+ * and kills the subprocess when the number of observers drops to zero.
  * The subprocess is expected to never exit.
  *
  * @param init Placeholder value for stdout
@@ -360,7 +360,7 @@ export function execAsync(cmd: string | string[]): Promise<string> {
  * ```ts
  * const stdout = createSubprocess("placeholder", ["command"])
  *
- * effec(() => {
+ * effect(() => {
  *   console.log("command printed a new line", stdout())
  * })
  * ```
@@ -369,7 +369,7 @@ export function createSubprocess(init: string, exec: string | string[]): Accesso
 
 /**
  * Create an Accessor that starts the subprocess when the first observer appears
- * and kills the subprocess when number of observers drops to zero.
+ * and kills the subprocess when the number of observers drops to zero.
  * The subprocess is expected to never exit.
  *
  * @param init Placeholder value
@@ -383,7 +383,7 @@ export function createSubprocess(init: string, exec: string | string[]): Accesso
  *   return json
  * })
  *
- * effec(() => {
+ * effect(() => {
  *   console.log(JSON.stringify(value()))
  * })
  * ```

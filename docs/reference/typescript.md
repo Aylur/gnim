@@ -110,7 +110,7 @@ connectSignal(instance, "my-signal", (arg) => {
   console.log(arg)
 })
 
-const myProp = ref(instance, "my-prop")
+const myProp = bind(instance, "my-prop")
 ```
 
 Due to how TypeScript's `this` type works, you need to annotate `this` or use a

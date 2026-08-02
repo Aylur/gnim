@@ -8,7 +8,7 @@ import GLib from "gi://GLib?version=2.0"
  *
  * ```ts
  * const content = readFile("/path/to/file")
- * ````
+ * ```
  */
 export function readFile(file: string | Gio.File) {
     const f = typeof file === "string" ? Gio.File.new_for_path(file) : file
@@ -24,7 +24,7 @@ export function readFile(file: string | Gio.File) {
  *
  * ```ts
  * const content = await readFileAsync("/path/to/file")
- * ````
+ * ```
  */
 export function readFileAsync(file: string | Gio.File): Promise<string> {
     const f = typeof file === "string" ? Gio.File.new_for_path(file) : file
@@ -53,7 +53,7 @@ export function readFileAsync(file: string | Gio.File): Promise<string> {
  *
  * ```ts
  * const file = writeFile("/path/to/file", "contents")
- * ````
+ * ```
  */
 export function writeFile(file: string | Gio.File, content: string): Gio.File {
     const gfile = typeof file === "string" ? Gio.File.new_for_path(file) : file
@@ -83,7 +83,7 @@ export function writeFile(file: string | Gio.File, content: string): Gio.File {
  *
  * ```ts
  * const file = await writeFileAsync("/path/to/file", "contents")
- * ````
+ * ```
  */
 export function writeFileAsync(file: string | Gio.File, content: string): Promise<Gio.File> {
     return new Promise((resolve, reject) => {

@@ -334,7 +334,7 @@ let list: Accessor<Iterable<T>>
 return (
   <For each={list}>
     {(item: T, index: Accessor<number>) => (
-      <Gtk.Label label={index((i) => `${i}. ${item}`)} />
+      <Gtk.Label label={index.as((i) => `${i}. ${item}`)} />
     )}
   </For>
 )

@@ -113,7 +113,7 @@ function MyWindow() {
   return (
     <Gtk.Window>
       <Gtk.Box>
-        Click The button
+        Click the button
         <MyButton />
       </Gtk.Box>
     </Gtk.Window>
@@ -333,7 +333,7 @@ function Counter() {
 ```tsx [Store example]
 import { createStore, bind, computed } from "gnim"
 
-const countStore = createStore({
+const counter = createStore({
   count: 0,
 })
 
@@ -413,7 +413,7 @@ let list: Accessor<Array<T>>
 return (
   <For each={list}>
     {(item: T, index: Accessor<number>) => (
-      <Label label={index((i) => `${i}. ${item}`)} />
+      <Label label={index.as((i) => `${i}. ${item}`)} />
     )}
   </For>
 )

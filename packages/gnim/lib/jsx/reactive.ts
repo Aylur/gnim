@@ -39,7 +39,7 @@ export interface Accessor<T = unknown> {
      * Create a new {@link Accessor} that applies a transformation on its value when read.
      * This operation is also known as `map` in other languages.
      * You might want to use {@link computed} instead, since this does not memoize the result.
-     * @param transform The transformation to apply. Should be a pure function.
+     * @param fn The transformation to apply. Should be a pure function.
      */
     as<R = T>(fn: (value: T) => R): Accessor<R>
 
@@ -212,7 +212,7 @@ export function getScope(): Scope {
  */
 export function onCleanup(callback: Fn) {
     if (!Scope.current) {
-        console.error(Error("out of tracking context: will not be able to cleanup"))
+        console.error(Error("out of tracking context: will not be able to clean up"))
     }
 
     Scope.current?.cleanups.unshift(callback)
@@ -311,7 +311,7 @@ export interface StateOptions<T> {
 
 /**
  * Create a writable reactive value.
- * @param init The intial value.
+ * @param init The initial value.
  * @returns An {@link Accessor} and a setter function.
  */
 export function createState<T>(init: T, options?: StateOptions<NoInfer<T>>): State<T> {

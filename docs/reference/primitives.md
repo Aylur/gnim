@@ -261,7 +261,7 @@ function createMyStore() {
 
 :::
 
-Accessing store values are reactive.
+Accessing store values is reactive.
 
 ```ts
 const v = computed(() => store.value)
@@ -315,7 +315,7 @@ let scope = new Scope()
 // Inside this function, synchronously executed code will have access
 // to `scope` and will attach any allocated resources, such as signal
 // subscriptions.
-scopedFuntion()
+scopedFunction()
 
 // At a later point it can be disposed.
 scope.dispose()
@@ -335,7 +335,7 @@ Example:
 ```tsx
 let state: Accessor<number>
 
-createRoot((dipose) => {
+createRoot((dispose) => {
   effect(() => {
     if (state() > 5) {
       dispose()

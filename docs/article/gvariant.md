@@ -36,8 +36,8 @@ const variantString = variant.print(true)
 
 Compared to JSON, GVariant has the benefit of being strongly typed, with the
 ability to serialize special values like file handles. GVariant serves as a
-reliable and efficient format a number of places in the GNOME Platform including
-GDBus, GSettings, GAction, GMenu and others.
+reliable and efficient format in a number of places in the GNOME Platform
+including GDBus, GSettings, GAction, GMenu and others.
 
 ## Basic Usage
 
@@ -46,7 +46,7 @@ methods like `GLib.Variant.new_string()` to create new `GLib.Variant` objects
 and the instance methods like `GLib.Variant.prototype.get_string()` to extract
 their values.
 
-Below are some examples of some the standard functions in GLib for working with
+Below are some examples of the standard functions in GLib for working with
 `GLib.Variant` objects:
 
 ```ts
@@ -85,7 +85,7 @@ if (variantString.get_string()[0] === "a string") {
   console.log("Success!")
 }
 
-// List of strings are also straight forward
+// Lists of strings are also straightforward
 const stringList = ["one", "two"]
 const variantStrv = GLib.Variant.new_strv(stringList)
 
@@ -124,9 +124,9 @@ The
 page thoroughly describes the types and their string representations.
 
 ```ts
-// Both of these function create identical GVariant instances
+// Both of these functions create identical GVariant instances
 const stringList = ["one", "two"]
-const variantStrv1 = GLib.Variant.new_strv("as", stringList)
+const variantStrv1 = GLib.Variant.new_strv(stringList)
 const variantStrv2 = new GLib.Variant("as", stringList)
 
 if (variantStrv1.get_type_string() === "as") {

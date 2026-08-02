@@ -1,7 +1,7 @@
 /**
  * A {@link Service} currently only allows interfacing with a single interface of a remote object.
  * In the future I want to come up with an API to be able to create Service objects for multiple
- * interfaces of an object at the same time. Example usage would be for example combining
+ * interfaces of an object at the same time. Example usage would be combining
  * "org.mpris.MediaPlayer2" and "org.mpris.MediaPlayer2.Player" into a single object.
  */
 import Gio from "gi://Gio?version=2.0"
@@ -44,7 +44,7 @@ export type ServeProps = {
 
 /**
  * Base type for DBus services and proxies. Interface name is set with
- * the {@link iface} decorator which also register it as a GObject type.
+ * the {@link iface} decorator which also registers it as a GObject type.
  */
 export class Service extends GObject.Object {
     declare static [info]?: Gio.DBusInterfaceInfo
@@ -362,18 +362,18 @@ export class Service extends GObject.Object {
         })
 
         return new Promise((resolve, reject) => {
-            const cancallable = new Gio.Cancellable()
+            const cancellable = new Gio.Cancellable()
 
             let source =
                 timeout > 0
                     ? setTimeout(() => {
                           reject(Error(`proxy timed out`))
                           source = null
-                          cancallable.cancel()
+                          cancellable.cancel()
                       }, timeout)
                     : null
 
-            proxy.init_async(GLib.PRIORITY_DEFAULT, cancallable, (_, res) => {
+            proxy.init_async(GLib.PRIORITY_DEFAULT, cancellable, (_, res) => {
                 try {
                     if (source) {
                         clearTimeout(source)
@@ -799,7 +799,7 @@ export function property<T extends string>(type: T) {
  * Registers a signal which when invoked will emit the signal
  * on the local object and the exported object.
  *
- * **Note**: its not possible to emit signals on remote objects through proxies.
+ * **Note**: it's not possible to emit signals on remote objects through proxies.
  *
  * ```ts
  * class MyService extends Service {

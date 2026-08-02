@@ -62,7 +62,7 @@ win.present()
 > beginning.
 >
 > ```ts
-> import { gettext: t } from "gettext"
+> import { gettext as t } from "gettext"
 >
 > const win = new Gtk.Window({
 >   title: t("My App"),

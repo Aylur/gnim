@@ -33,7 +33,7 @@ enum Command {
     Types(TypeArgs),
     /// Compile gschema.ts files into xml and gschema files
     Schemas(SchemasArgs),
-    /// Startup the Gnim development server
+    /// Start the Gnim development server
     Dev(DevArgs),
     /// Bundle TypeScript and asset files into a gresource bundle
     Bundle(BundleArgs),

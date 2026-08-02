@@ -86,7 +86,7 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
     if let Some(app_id) = &args.id
         && let Err(err) = init_translations(app_id)
     {
-        eprintln!("Failed to init translations {err}")
+        eprintln!("Failed to init translations: {err}")
     }
 
     let mut gjs_task = tokio::spawn({

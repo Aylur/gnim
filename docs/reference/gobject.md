@@ -43,9 +43,9 @@ class MyObj extends GObject.Object {
     return this[priv]["my-prop"]
   }
 
-  set myProp() {
+  set myProp(value) {
     if (this[priv]["my-prop"] !== value) {
-      this[priv]["my-prop"] = v
+      this[priv]["my-prop"] = value
       this.notify("my-prop")
     }
   }

@@ -10,7 +10,7 @@ use std::{fs, path, process};
 
 #[derive(Args)]
 pub struct SchemasArgs {
-    /// Directory where the schemas are located at
+    /// Directory where the schemas are located
     pub directory: String,
     /// Compile into a gschema.compiled binary
     #[arg(short, long)]
@@ -69,7 +69,7 @@ fn compile(directory: &str) -> Result<process::ExitStatus, String> {
 
         status.map_err(|e| format!("Failed to compile: {e}"))
     } else {
-        Err("Cannot compile: glib-compile-schemas is not found".into())
+        Err("Cannot compile: glib-compile-schemas was not found".into())
     }
 }
 

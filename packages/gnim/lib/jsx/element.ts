@@ -42,7 +42,7 @@ export type CC<P = any> = new (props: P) => GObject.Object
  * ```tsx
  * const jsx = <MyComp prop="hello" />
  * jsx.type // MyComp
- * jsx.props // { props: "hello" }
+ * jsx.props // { prop: "hello" }
  * ```
  */
 export interface ConstructorNode<P = any> {
@@ -431,7 +431,7 @@ type GObjectProps<T> = T extends {
               T["$writableProperties"][K]
           >
       } & {
-          // onSignalName and onDetaliedSignal:detail
+          // onSignalName and onDetailedSignal:detail
           [S in Keyof<T["$signals"]> as S extends `${infer Name}::{}`
               ? `on${PascalCase<Name>}:${string}`
               : `on${PascalCase<S>}`]: GObject.SignalCallback<T, T["$signals"][S]>

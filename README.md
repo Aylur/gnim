@@ -27,7 +27,7 @@ function Counter() {
 
   return (
     <Gtk.Box spacing={8}>
-      <Gtk.Label label={count((c) => c.toString())} />
+      <Gtk.Label label={count.as((c) => c.toString())} />
       <Gtk.Button onClicked={increment}>Increment</Gtk.Button>
     </Gtk.Box>
   )

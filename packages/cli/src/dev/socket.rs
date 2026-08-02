@@ -43,7 +43,7 @@ pub async fn dev_socket(args: DevSocketArgs) {
 
                         if stream.write_all(msg_json.as_bytes()).await.is_err() {
                             if args.verbose {
-                                eprintln!("[dev] failed to write socket");
+                                eprintln!("[dev] failed to write to socket");
                             }
                             break;
                         }

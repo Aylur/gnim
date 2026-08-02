@@ -20,7 +20,7 @@ const ExtensionContext = createContext<ExtensionContext | null>(null)
 
 export function useExtension() {
   const ctx = ExtensionContext.use()
-  if (!ctx) throw Error("missing ExtensionContext context")
+  if (!ctx) throw Error("missing ExtensionContext")
   return ctx
 }
 

@@ -121,7 +121,7 @@ fn create_watcher(args: DevWatcherArgs, watcher_restart_tx: mpsc::UnboundedSende
         handler,
         &WatcherConfig {
             // I'm not sure if this is the correct way to do this, but
-            // withouth debounce the change event is emitted twice
+            // without debounce the change event is emitted twice
             debounce: Some(Duration::from_millis(100)),
             ..Default::default()
         },

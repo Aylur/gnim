@@ -19,7 +19,7 @@ const PrefsContext = createContext<PrefsContext | null>(null)
 
 export function usePrefs() {
   const ctx = PrefsContext.use()
-  if (!ctx) throw Error("missing ExtensionContext context")
+  if (!ctx) throw Error("missing PrefsContext")
   return ctx
 }
 

@@ -1,8 +1,7 @@
 # Web framework comparisons
 
 This page shows a list of small snippets comparing Gnim's syntax and semantics
-compared to popular rendering libraries for the web such as React, Vue and
-Svelte.
+to popular rendering libraries for the web such as React, Vue and Svelte.
 
 ## Why build another library?
 
@@ -270,7 +269,7 @@ function incrementCount() {
 
 > [!NOTE]
 >
-> In GTK there is no "DOM" they are called widgets.
+> In GTK there is no "DOM"; they are called widgets.
 
 ::: code-group
 
@@ -289,7 +288,7 @@ export default function FocusedEntry() {
 ```
 
 ```tsx [React]
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 export default function FocusedEntry() {
   const entryRef = useRef<Gtk.Entry>(null)
@@ -352,7 +351,7 @@ export default function TrafficLight() {
   return (
     <>
       <Button onClick={nextLight}>Next light</Button>
-      <Text content={light((v) => `Light is: ${v}`)} />
+      <Text content={light.as((v) => `Light is: ${v}`)} />
       <Box>
         You must
         <With value={light}>
@@ -756,7 +755,7 @@ function onAnswer(value: boolean) {
 import { type GnimNode } from "gnim"
 
 export default function MyButton(props: {
-  namedSlot: GnimNode
+  named: GnimNode
   children: GnimNode
 }) {
   return (

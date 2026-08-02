@@ -297,7 +297,7 @@ export class GtkRenderer implements Renderer {
                 return parent.set_child(null)
             }
 
-            // Most multi children containers have a .remove()
+            // Most multi-child containers have a .remove()
             if ("remove" in parent && typeof parent.remove == "function") {
                 return parent.remove(child)
             }

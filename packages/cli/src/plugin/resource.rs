@@ -59,7 +59,7 @@ pub fn generate_resource(
             return Err(format!("Failed to compile: {e}"));
         }
     } else {
-        return Err("Cannot compile: glib-compile-resources is not found".to_string());
+        return Err("Cannot compile: glib-compile-resources was not found".to_string());
     }
 
     Ok(())

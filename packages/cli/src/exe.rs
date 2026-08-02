@@ -111,7 +111,7 @@ pub async fn exe(args: &ExeArgs) -> Result<(), String> {
             .expect("Failed to get metadata for outfile")
             .permissions();
         perms.set_mode(perms.mode() | 0o111);
-        fs::set_permissions(outfile, perms).expect("Failed set file permissions");
+        fs::set_permissions(outfile, perms).expect("Failed to set file permissions");
     } else {
         println!("{content}");
     }

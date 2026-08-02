@@ -341,7 +341,7 @@ function pspecFromGType(type: GType<unknown>, name: string, flags: ParamFlags) {
             if (GObject.type_is_a(type, GObject.TYPE_BOXED)) {
                 return GObject.param_spec_boxed(name, null, null, type, flags)
             }
-            throw Error(`cannot guess ParamSpec from GObject.ype "${type}"`)
+            throw Error(`cannot guess ParamSpec from GObject.GType "${type}"`)
     }
 }
 

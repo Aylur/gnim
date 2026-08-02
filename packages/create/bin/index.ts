@@ -70,7 +70,7 @@ function detectPackageManager() {
 function defaultGirDirs(): string[] {
     const dataDirs =
         process.env.XDG_DATA_DIRS ??
-        ["/usr/share", "/usr/locale/share"].join(":")
+        ["/usr/share", "/usr/local/share"].join(":")
 
     const dirs = dataDirs
         .split(":")

@@ -50,7 +50,7 @@ export interface GettextDomain {
         n: number,
     ): Text<S1 | S2>
     /**
-     * @param context A context to disambiguate `msgid`.
+     * @param msgctxt A context to disambiguate `msgid`.
      * @param msgid A string to translate.
      * @returns A translated message.
      */
@@ -61,7 +61,7 @@ export interface GettextDomain {
  * Create an object with bindings for {@link Gettext.gettext}, {@link Gettext.ngettext},
  * and {@link Gettext.pgettext}, bound to a `domainName`.
  *
- * @param domainName A domain name.
+ * @param domain A domain name.
  * @returns An object with common gettext methods.
  */
 export function createDomain(domain: string | Gettext.GettextDomain): GettextDomain {

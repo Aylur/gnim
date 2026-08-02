@@ -9,9 +9,9 @@
         welcomeText = ''
           # Getting Started
 
-          - `nix develop` to enter the develop environment
-          - `pnpm create gnim@beta` to setup the initial project
-          - `pnpm dev` to start the develop process
+          - `nix develop` to enter the development environment
+          - `pnpm create gnim@beta` to set up the initial project
+          - `pnpm dev` to start the development process
         '';
       };
     };

@@ -25,7 +25,7 @@
         "typescript-eslint": "catalog:"
     },
     "exports": {
-        ".": "./index.ts"
+        ".": "./lib/index.ts"
     },
     "publishConfig": {
         "exports": {

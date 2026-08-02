@@ -54,7 +54,7 @@ impl ModuleTracker {
 
         let prog_entry = fs::canonicalize(entry)
             .map(|path| path.to_string_lossy().to_string())
-            .map_err(|e| format!("Invalid entry file {e}"))?;
+            .map_err(|e| format!("Invalid entry file: {e}"))?;
 
         let mut inputs: Vec<rolldown::InputItem> = vec![prog_entry.clone().into()];
 

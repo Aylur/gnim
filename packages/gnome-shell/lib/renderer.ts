@@ -27,7 +27,7 @@ interface ActorClass extends GObject.ObjectClass {
 }
 
 // gnome-shell only ships Clutter but not St. Their version number is also incremented each version
-// which would make maintainance annoying and since EGO does not support modern typescript anyway
+// which would make maintenance annoying and since EGO does not support modern typescript anyway
 // we just shim some required interfaces instead of maintaining .gir files.
 const { St, Clutter } = imports.gi as unknown as {
     St: {
