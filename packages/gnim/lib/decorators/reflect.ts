@@ -2,73 +2,83 @@ import GObject from "gi://GObject?version=2.0"
 
 type Type = { $gtype: GObject.GType }
 
+type Key = string | symbol
+
 type Meta = {
     type?: Type
     paramtypes?: Type[]
     returntype?: Type
 }
 
+declare global {
+    namespace Reflect {
+        function defineMetadata(
+            metadataKey: unknown,
+            metadataValue: unknown,
+            target: object,
+            propertyKey?: Key,
+        ): void
+        function hasMetadata(metadataKey: unknown, target: object, propertyKey?: Key): boolean
+        function getMetadata(metadataKey: unknown, target: object, propertyKey?: Key): unknown
+    }
+}
+
 /**
  * Partial polyfill of https://github.com/tc39/proposal-decorator-metadata
  */
 if (!("metadata" in Reflect)) {
-    const decoratorMetadata = new WeakMap<GObject.Object, Map<string, Meta>>()
+    const store = new WeakMap<object, Map<Key | undefined, Map<unknown, unknown>>>()
 
-    function defineMetadata(
-        metaKey: string,
-        metaValue: unknown,
-        proto: GObject.Object,
-        key: string,
-    ) {
-        const record = decoratorMetadata.get(proto) ?? new Map()
-        const meta = record.get(key) ?? {}
-
-        // `void` will be passed as `undefined` explicitly
-        if (typeof metaValue === "undefined") {
-            metaValue ??= GObject.VoidType
-        }
-
-        switch (metaKey) {
-            case "design:type":
-                meta.type = metaValue as Type
-                break
-            case "design:paramtypes":
-                meta.paramtypes = metaValue as Type[]
-                break
-            case "design:returntype":
-                meta.returntype = metaValue as Type
-                break
-            default:
-                break
-        }
-
-        record.set(key, meta)
-        decoratorMetadata.set(proto, record)
+    const defineMetadata: typeof Reflect.defineMetadata = (
+        metadataKey,
+        metadataValue,
+        target,
+        propertyKey,
+    ) => {
+        const targetMetadata = store.get(target) ?? new Map()
+        const propertyMetadata = targetMetadata.get(propertyKey) ?? new Map()
+        propertyMetadata.set(metadataKey, metadataValue)
+        targetMetadata.set(propertyKey, propertyMetadata)
+        store.set(target, targetMetadata)
     }
 
-    function metadata(metaKey: string, metaValue: unknown) {
-        return (proto: GObject.Object, key: string) => {
-            defineMetadata(metaKey, metaValue, proto, key)
+    const hasMetadata: typeof Reflect.hasMetadata = (metadataKey, target, propertyKey) => {
+        for (let t: object | null = target; t !== null; t = Object.getPrototypeOf(t)) {
+            if (store.get(t)?.get(propertyKey)?.has(metadataKey)) {
+                return true
+            }
         }
+        return false
     }
 
-    function getMetadata(metaKey: string, proto: GObject.Object) {
-        return decoratorMetadata.get(proto)?.get(metaKey)
+    const getMetadata: typeof Reflect.getMetadata = (metadataKey, target, propertyKey) => {
+        for (let t: object | null = target; t !== null; t = Object.getPrototypeOf(t)) {
+            if (store.get(t)?.get(propertyKey)?.has(metadataKey)) {
+                return store.get(t)?.get(propertyKey)?.get(metadataKey)
+            }
+        }
     }
 
     Object.assign(Reflect, {
-        metadata,
-        defineMetadata,
+        hasMetadata,
         getMetadata,
+        defineMetadata,
     })
 }
 
-declare global {
-    namespace Reflect {
-        function getMetadata(metaKey: string, proto: GObject.Object): Meta | void
-    }
-}
+export function getMetadata(proto: object, key: Key): Meta | void {
+    if (typeof Reflect.getMetadata !== "function") return
 
-export function getMetadata(proto: GObject.Object, metaKey: string) {
-    return Reflect.getMetadata(metaKey, proto)
+    function get(metadataKey: string): unknown {
+        if (Reflect.hasMetadata(metadataKey, proto, key)) {
+            const data = Reflect.getMetadata(metadataKey, proto, key)
+            return typeof data === "undefined" ? GObject.VoidType : data
+        }
+    }
+
+    return {
+        type: get("design:type") as Type | undefined,
+        paramtypes: Reflect.getMetadata("design:paramtypes", proto, key) as Type[] | undefined,
+        returntype: get("design:returntype") as Type | undefined,
+    }
 }
