@@ -201,6 +201,10 @@ export class GtkRenderer implements Renderer {
             return // no-op
         }
 
+        if (child instanceof Gtk.TextBuffer && parent instanceof Gtk.TextView) {
+            return parent.set_buffer(null)
+        }
+
         if (parent instanceof Gtk.Container && child instanceof Gtk.Widget) {
             return parent.remove(child)
         }

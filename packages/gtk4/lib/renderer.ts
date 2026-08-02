@@ -65,9 +65,11 @@ function flattenClassList(classList: unknown): MaybeAccessor<string> {
 function isAdjustable<T extends GObject.Object>(
     object: T,
 ): object is T & { adjustment: Gtk.Adjustment } {
-    return GObject.Object.list_properties
+    const property = GObject.Object.list_properties
         .call(object)
-        .some((prop) => GObject.type_is_a(prop.value_type, Gtk.Adjustment))
+        .find((prop) => prop.name === "adjustment")
+
+    return !!property && GObject.type_is_a(property.value_type, Gtk.Adjustment)
 }
 
 /**
@@ -220,14 +222,12 @@ export class GtkRenderer implements Renderer {
             if (parent[removeChild](child)) return
         }
 
-        if (parent instanceof Gtk.Widget) {
-            if (child instanceof Gtk.EventController) {
-                return parent.remove_controller(child)
-            }
+        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
+            return // no-op
+        }
 
-            if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
-                return // no-op
-            }
+        if (child instanceof Gtk.EventController && parent instanceof Gtk.Widget) {
+            return parent.remove_controller(child)
         }
 
         if (
@@ -235,6 +235,22 @@ export class GtkRenderer implements Renderer {
             (parent instanceof Gtk.MenuButton || parent instanceof Gtk.PopoverMenu)
         ) {
             return parent.set_menu_model(null)
+        }
+
+        if (
+            child instanceof Gtk.TextBuffer &&
+            parent instanceof Gtk.TextView &&
+            parent.buffer === child
+        ) {
+            return parent.set_buffer(null)
+        }
+
+        if (
+            child instanceof Gtk.Popover &&
+            parent instanceof Gtk.MenuButton &&
+            parent.popover === child
+        ) {
+            return parent.set_popover(null)
         }
 
         if (child instanceof Gtk.Widget) {
@@ -273,7 +289,7 @@ export class GtkRenderer implements Renderer {
             }
 
             if (Gtk.PopoverBin && parent instanceof Gtk.PopoverBin && parent.popover === child) {
-                parent.set_popover(null)
+                return parent.set_popover(null)
             }
 
             // Most Bin-like containers have a .set_child()

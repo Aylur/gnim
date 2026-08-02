@@ -10,7 +10,7 @@ import {
     text,
 } from "@clack/prompts"
 import { execFile } from "node:child_process"
-import { readdirSync, statSync } from "node:fs"
+import { statSync } from "node:fs"
 import { cp, mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import { parseArgs, promisify } from "node:util"
 import { existsSync } from "node:fs"
@@ -67,7 +67,7 @@ function detectPackageManager() {
     return specifier.substring(0, specifier.lastIndexOf("/"))
 }
 
-function defaultDirs(): string[] {
+function defaultGirDirs(): string[] {
     const dataDirs =
         process.env.XDG_DATA_DIRS ??
         ["/usr/share", "/usr/locale/share"].join(":")
@@ -114,10 +114,6 @@ async function askTargetDir() {
             try {
                 const s = statSync(path)
                 if (s.isFile()) return "Target is an existing file"
-                if (!s.isDirectory()) return
-                if (readdirSync(path).length > 0) {
-                    return "Directory is not empty"
-                }
             } catch {
                 // noop
             }
@@ -203,10 +199,10 @@ async function askGnomeUuid() {
     return id
 }
 
-async function askDescription() {
+async function askDescription(placeholder: string) {
     const id = await text({
         message: "Provide a short description",
-        placeholder: "An awesome app that lets you do things",
+        placeholder,
     })
 
     if (isCancel(id)) {
@@ -274,7 +270,7 @@ async function doTypes(cwd: string) {
     const pm = detectPackageManager()
     const s = spinner()
     s.start(`Generating GIR types`)
-    if (defaultDirs().length > 0) {
+    if (defaultGirDirs().length > 0) {
         await execFileAsync(pm, ["run", "types"], { cwd })
         s.stop("GIR types generated")
     } else {
@@ -478,7 +474,7 @@ async function main() {
         case "gnome-shell": {
             id = await askGnomeUuid()
             name = await askAppName("My Extension")
-            description = await askDescription()
+            description = await askDescription("Extension that lets you do xyz")
             break
         }
     }
