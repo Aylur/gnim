@@ -380,7 +380,7 @@ export async function fetch(url: string | URL, { method, headers, body }: Reques
 
     const message = new Soup.Message({
         method: method || "GET",
-        uri: url instanceof URL ? url.uri : GLib.Uri.parse(url, GLib.UriFlags.NONE),
+        uri: GLib.Uri.parse(url instanceof URL ? url.href : url, GLib.UriFlags.NONE),
     })
 
     if (headers) {
