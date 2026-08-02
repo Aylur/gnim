@@ -20,12 +20,11 @@
         "docs:build": "vitepress build docs"
     },
     "devDependencies": {
+        "@vercel/analytics": "^2.0.1",
         "nushell": "latest",
         "vitepress": "2.0.0-alpha.16",
-        "vitest": "^4.1.10"
-    },
-    "dependencies": {
-        "@vercel/analytics": "^2.0.1",
+        "vitepress-plugin-llmstxt": "^0.5.2",
+        "vitest": "^4.1.10",
         "vue": "^3.5.40"
     },
     "prettier": {

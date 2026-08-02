@@ -25,23 +25,25 @@ catalogs:
 importers:
 
   .:
-    dependencies:
+    devDependencies:
       '@vercel/analytics':
         specifier: ^2.0.1
         version: 2.0.1(vue@3.5.40(typescript@6.0.3))
-      vue:
-        specifier: ^3.5.40
-        version: 3.5.40(typescript@6.0.3)
-    devDependencies:
       nushell:
         specifier: latest
         version: 0.114.1
       vitepress:
         specifier: 2.0.0-alpha.16
         version: 2.0.0-alpha.16(@types/node@26.1.2)(jiti@2.7.0)(postcss@8.5.25)(typescript@6.0.3)
+      vitepress-plugin-llmstxt:
+        specifier: ^0.5.2
+        version: 0.5.2(vitepress@2.0.0-alpha.16(@types/node@26.1.2)(jiti@2.7.0)(postcss@8.5.25)(typescript@6.0.3))
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.2)(vite@7.3.1(@types/node@26.1.2)(jiti@2.7.0))
+      vue:
+        specifier: ^3.5.40
+        version: 3.5.40(typescript@6.0.3)
 
   packages/cli: {}
 
@@ -1449,6 +1451,12 @@ packages:
       yaml:
         optional: true
 
+  vitepress-plugin-llmstxt@0.5.2:
+    resolution: {integrity: sha512-mWfSYRTjR3YLmkt5ju421aOOx4MgB1IFYxLnewyFtL+0StX1UWJXeD7kGX1pGDYWsWEwiV4fV/iCAr9C1ervEg==}
+    engines: {node: '>=20.19.4'}
+    peerDependencies:
+      vitepress: ^1.0.0
+
   vitepress@2.0.0-alpha.16:
     resolution: {integrity: sha512-w1nwsefDVIsje7BZr2tsKxkZutDGjG0YoQ2yxO7+a9tvYVqfljYbwj5LMYkPy8Tb7YbPwa22HtIhk62jbrvuEQ==}
     hasBin: true
@@ -2690,6 +2698,10 @@ snapshots:
       '@types/node': 26.1.2
       fsevents: 2.3.3
       jiti: 2.7.0
+
+  vitepress-plugin-llmstxt@0.5.2(vitepress@2.0.0-alpha.16(@types/node@26.1.2)(jiti@2.7.0)(postcss@8.5.25)(typescript@6.0.3)):
+    dependencies:
+      vitepress: 2.0.0-alpha.16(@types/node@26.1.2)(jiti@2.7.0)(postcss@8.5.25)(typescript@6.0.3)
 
   vitepress@2.0.0-alpha.16(@types/node@26.1.2)(jiti@2.7.0)(postcss@8.5.25)(typescript@6.0.3):
     dependencies:

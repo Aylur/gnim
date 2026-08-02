@@ -1,14 +1,14 @@
 import { defineConfig } from "vitepress"
+import llmstxtPlugin from "vitepress-plugin-llmstxt"
+
+const hostname = "https://gnimjs.dev"
 
 export default defineConfig({
     title: "Gnim",
     description: "Library that brings JSX, reactivity and type-safety to GNOME JavaScript.",
 
     cleanUrls: true,
-
-    sitemap: {
-        hostname: "https://gnimjs.dev",
-    },
+    sitemap: { hostname },
 
     themeConfig: {
         outline: "deep",
@@ -93,5 +93,9 @@ export default defineConfig({
         languageAlias: {
             meson: "ruby",
         },
+    },
+
+    vite: {
+        plugins: [llmstxtPlugin({ hostname })],
     },
 })
