@@ -58,7 +58,7 @@ naturally using JSX syntax. For example, this applies to types like
 >   return (
 >     <Gtk.Button>
 >       // [!code --:3]
->       {str((s) => (
+>       {str.as((s) => (
 >         <Gtk.Label label={s} />
 >       ))}
 >       // [!code ++]

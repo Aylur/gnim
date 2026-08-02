@@ -5,6 +5,12 @@ using Gnim. Before jumping in, you are expected to know
 [TypeScript](https://learnxinyminutes.com/typescript/) or at least
 [JavaScript](https://learnxinyminutes.com/javascript/).
 
+> [!TIP]
+>
+> Using TypeScript is _not_ required, but it is _recommended_. Even if you
+> decide to use JavaScript, do not forget to set up a TypeScript LSP in your
+> chosen text editor to benefit from the generated type annotations.
+
 ## JavaScript Runtime
 
 The JavaScript runtime that Gnim uses is
@@ -32,19 +38,19 @@ You will need the following dependencies installed:
 
 ::: code-group
 
-```sh [Arch]
+```sh [<i class="devicon-archlinux-plain"></i> Arch]
 sudo pacman -Syu gjs gtk4 npm
 ```
 
-```sh [Fedora]
+```sh [<i class="devicon-fedora-plain"></i> Fedora]
 sudo dnf install gjs-devel gtk4-devel npm
 ```
 
-```sh [Ubuntu]
+```sh [<i class="devicon-ubuntu-plain"></i> Ubuntu]
 sudo apt install libgjs-dev libgtk-4-dev npm
 ```
 
-```nix [Nix]
+```nix [<i class="devicon-nixos-plain"></i> Nix]
 {
   inputs.nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
@@ -79,27 +85,27 @@ sudo apt install libgjs-dev libgtk-4-dev npm
 
 ::: code-group
 
-```sh [npm]
+```sh [<i class="devicon-npm-plain"></i> npm]
 npm create gnim@beta
 ```
 
-```sh [pnpm]
+```sh [<i class="devicon-pnpm-plain"></i> pnpm]
 pnpm create gnim@beta
 ```
 
-```sh [yarn]
+```sh [<i class="devicon-yarn-original"></i> yarn]
 yarn create gnim@beta
 ```
 
-```sh [bun]
-bun create gnim@beta
-```
-
-```sh [deno]
-deno init --npm gnim@beta
-```
-
 :::
+
+> [!TIP] Nix
+>
+> For nix users, Gnim provides a nix template
+>
+> ```sh
+> nix flake init --template github:aylur/gnim
+> ```
 
 ## Creating a new project manually
 
@@ -117,6 +123,7 @@ deno init --npm gnim@beta
    {
      "compilerOptions": {
        "experimentalDecorators": true,
+       "emitDecoratorMetadata": true,
        "target": "ES2022",
        "module": "ES2022",
        "lib": ["ES2024"],
@@ -126,6 +133,7 @@ deno init --npm gnim@beta
        "skipLibCheck": true,
        "jsx": "react-jsx",
        "jsxImportSource": "gnim",
+       "types": ["gi"],
        "typeRoots": ["./.gnim/types"]
      },
      "include": ["./src/**/*"]
@@ -159,13 +167,18 @@ deno init --npm gnim@beta
 
 5. Create the entry point
 
-   ```tsx
-   // src/main.tsx
+   :::code-group
+
+   ```tsx [src/main.tsx]
    import Gtk from "gi://Gtk?version=4.0"
    import { render } from "@gnim-js/gtk4"
 
    function App() {
-     return <Gtk.Window visible>hello</Gtk.Window>
+     return (
+       <Gtk.Window visible>
+         <Gtk.Label label="Hello from Gnim!" />
+       </Gtk.Window>
+     )
    }
 
    const app = new Gtk.Application()
@@ -175,6 +188,8 @@ deno init --npm gnim@beta
    })
    app.runAsync(null)
    ```
+
+   :::
 
 6. Start the dev server
 

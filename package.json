@@ -21,6 +21,7 @@
     },
     "devDependencies": {
         "@vercel/analytics": "^2.0.1",
+        "devicon": "^2.17.0",
         "nushell": "latest",
         "vitepress": "2.0.0-alpha.16",
         "vitepress-plugin-llmstxt": "^0.5.2",

@@ -57,16 +57,3 @@ custom_target(
   install_dir: prefix / bindir,
   install_mode: 'rwxr-xr-x',
 )
-
-# schemas
-custom_target(
-  command: [gnim, 'schemas', root / 'src', '-o', 'schemas'],
-  output: 'schemas',
-  install: true,
-  install_dir: prefix / datadir / 'glib-2.0',
-)
-
-# post install
-import('gnome').post_install(
-  glib_compile_schemas: true,
-)

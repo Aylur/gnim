@@ -29,6 +29,9 @@ importers:
       '@vercel/analytics':
         specifier: ^2.0.1
         version: 2.0.1(vue@3.5.40(typescript@6.0.3))
+      devicon:
+        specifier: ^2.17.0
+        version: 2.17.0
       nushell:
         specifier: latest
         version: 0.114.1
@@ -399,7 +402,7 @@ packages:
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
   '@gnim-js/linux-x64@2.0.0-beta.8':
-    resolution: {integrity: sha512-VeaXUGmxcjYedUZhcMBStMbiZ0R3dD4inGFrU6Mw2YCwQgB46e+uTGR4kmZs9FMbB2QL6m2wstw/ijreqKNDVQ==}
+    resolution: {integrity: sha512-cHuc2Nuj+3xFou4d7pOx92vidctf9GVwhXjF8OK8QcVY/4y6YIemjltmSHze2j0tzDZORs4uxpZXTSrO/eamwg==}
     cpu: [x64]
     os: [linux]
 
@@ -973,6 +976,9 @@ packages:
   dequal@2.0.3:
     resolution: {integrity: sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==}
     engines: {node: '>=6'}
+
+  devicon@2.17.0:
+    resolution: {integrity: sha512-2nKUdjobJlmRSaCHa50PGsVq0VDURnq9gVzQoJggsM/NKN0tLhC/Uq2zmy2pH36Q/1q3gvYwp/GjTgv/R0Ysbg==}
 
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
@@ -2183,6 +2189,8 @@ snapshots:
   deep-is@0.1.4: {}
 
   dequal@2.0.3: {}
+
+  devicon@2.17.0: {}
 
   devlop@1.1.0:
     dependencies:

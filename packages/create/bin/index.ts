@@ -12,7 +12,7 @@ import {
 import { execFile } from "node:child_process"
 import { readdirSync, statSync } from "node:fs"
 import { cp, mkdir, readFile, rename, writeFile } from "node:fs/promises"
-import { promisify } from "node:util"
+import { parseArgs, promisify } from "node:util"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 
@@ -23,6 +23,42 @@ type TemplateProps = {
     name: string
     id: string
     description: string
+}
+
+const templateOptions = [
+    { value: "adwaita", label: "Adwaita Application" },
+    { value: "layer-shell", label: "Gtk4 Layer Shell" },
+    {
+        value: "gnome-shell",
+        label: "Gnome Shell Extension",
+        hint: "experimental",
+    },
+] as const
+
+type Template = (typeof templateOptions)[number]["value"]
+
+function templateFromArgs() {
+    const args = parseArgs({
+        options: {
+            template: { type: "string", short: "t" },
+        },
+        strict: false,
+    })
+
+    const { template } = args.values
+    if (typeof template === "undefined") {
+        return null
+    }
+
+    const valid: string[] = templateOptions.map((option) => option.value)
+    if (typeof template !== "string" || !valid.includes(template)) {
+        console.error(
+            `Invalid template "${template}". Valid templates: ${valid.join(", ")}`,
+        )
+        process.exit(1)
+    }
+
+    return template as Template
 }
 
 function detectPackageManager() {
@@ -409,21 +445,19 @@ async function main() {
     console.log()
     intro(`\x1b[7;34m\x1b[1m${" Gnim "}\x1b[0m`)
 
-    const template = await select({
-        message: "Pick a template",
-        options: [
-            { value: "adwaita", label: "Adwaita Application" },
-            { value: "layer-shell", label: "Gtk4 Layer Shell" },
-            {
-                value: "gnome-shell",
-                label: "Gnome Shell Extension",
-                hint: "experimental",
-            },
-        ],
-    })
+    let template = templateFromArgs()
 
-    if (isCancel(template)) {
-        process.exit(0)
+    if (!template) {
+        const answer = await select({
+            message: "Pick a template",
+            options: [...templateOptions],
+        })
+
+        if (isCancel(answer)) {
+            process.exit(0)
+        }
+
+        template = answer
     }
 
     let id: string
