@@ -40,20 +40,15 @@ const renderer: Renderer = {
         Object.assign(object, { [key]: value })
     },
     setChildren(parent: Widget, children: Widget[], prev: Widget[]) {
-        for (const child of prev) this.removeChild(parent, child)
-        for (const child of children) this.appendChild(parent, child)
-        for (const child of prev.filter((child) => !children.includes(child))) {
-            this.destroyChild(parent, child)
+        for (const child of prev) {
+            parent.children = parent.children.filter((ch) => ch !== child)
         }
-    },
-    appendChild(parent: Widget, child: Widget) {
-        parent.children.push(child)
-    },
-    removeChild(parent: Widget, child: Widget) {
-        parent.children = parent.children.filter((ch) => ch !== child)
-    },
-    destroyChild(_, child: Widget) {
-        child.destroyed = true
+        for (const child of children) {
+            parent.children.push(child)
+        }
+        for (const child of prev.filter((child) => !children.includes(child))) {
+            child.destroyed = true
+        }
     },
 }
 
