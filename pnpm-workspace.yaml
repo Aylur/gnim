@@ -16,3 +16,6 @@ catalog:
 
 allowBuilds:
     esbuild: false
+
+minimumReleaseAgeExclude:
+    - "@gnim-js/linux-x64"

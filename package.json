@@ -13,7 +13,7 @@
         "types": "./scripts.nu types",
         "build": "pnpm -r build",
         "test": "vitest run",
-        "lint": "pnpm -r run lint",
+        "lint": "ESLINT_FLAGS=\"unstable_native_nodejs_ts_config\" pnpm -r run lint",
         "fmt": "pnpm -r run fmt",
         "test:watch": "vitest",
         "docs:dev": "vitepress dev docs",

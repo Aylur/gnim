@@ -336,7 +336,7 @@ onMounted(() => {
 ::: code-group
 
 ```tsx [Gnim]
-import { createState } from "gnim"
+import { createState, computed, With } from "gnim"
 
 const TRAFFIC_LIGHTS = ["red", "orange", "green"]
 

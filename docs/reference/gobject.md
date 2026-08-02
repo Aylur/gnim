@@ -81,15 +81,6 @@ GObject.registerClass(
 )
 ```
 
-> [!NOTE]
->
-> Property accessors are defined on the object instance and not the prototype.
-> This might change in the future. Stage 3 decorators are adding a new keyword
-> [`accessor`](https://github.com/tc39/proposal-decorators?tab=readme-ov-file#class-auto-accessors)
-> for declaring properties, which marks properties to expand as `get` and `set`
-> methods on the prototype. The `accessor` keyword is currently not supported by
-> these decorators.
-
 :::
 
 ## Property decorator

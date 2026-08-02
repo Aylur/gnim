@@ -133,8 +133,9 @@ handlers can be defined with an `onNotify` prefix.
 ### Ref
 
 It is possible to define an arbitrary function to do something with the instance
-imperatively. It is run **after** properties are set, signals are connected, and
-children are appended, but **before** the instance is appended to parents.
+imperatively. It is run **after** the instance is constructed, but **before**
+children are appended, signals are connected, and reactive properties are
+applied.
 
 ```tsx
 <Gtk.Stack ref={(self) => print(self, "is about to be returned")} />

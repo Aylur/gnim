@@ -18,7 +18,7 @@ import {
 Using the `Schema` class you can use the builder pattern to define schemas.
 
 ```ts
-const schema = new Schema({
+export const schema = new Schema({
   id: "com.example.MyApp",
   path: "/com/example/MyApp/",
 })

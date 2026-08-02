@@ -22,7 +22,7 @@ import Gtk from "gi://Gtk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
 import { register } from "gnim/gobject"
-import { render } from "gnim/gtk4"
+import { render } from "@gnim-js/gtk4"
 import { programInvocationName, programArgs } from "system"
 
 @register
@@ -54,7 +54,7 @@ app.runAsync([programInvocationName, ...programArgs])
 import Gtk from "gi://Gtk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
-import { render } from "gnim/gtk4"
+import { render } from "@gnim-js/gtk4"
 import { programInvocationName, programArgs } from "system"
 
 GLib.set_prgname("example-myapp")
@@ -67,9 +67,9 @@ export const app = new Gtk.Application({
 
 app.connect("activate", () => {
   const dispose = render(() => {
-    app.connect("shutdown", dispose)
     // show windows here
   }, app)
+  app.connect("shutdown", dispose)
 })
 
 app.runAsync([programInvocationName, ...programArgs])
@@ -98,8 +98,6 @@ class MyApp extends Gtk.Application {
     }
 
     const dispose = render(() => {
-      this.connect("shutdown", dispose)
-
       effect(() => {
         this.window.present()
       })
@@ -108,6 +106,7 @@ class MyApp extends Gtk.Application {
         <Gtk.Window application={this} ref={(self) => (this.window = self)} />
       )
     })
+    this.connect("shutdown", dispose)
   }
 }
 ```

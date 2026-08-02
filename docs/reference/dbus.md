@@ -109,7 +109,7 @@ Attempt to own `name` and export this object at `objectPath` on `busType`.
 
 ```ts
 class Service {
-  async serve(props: {
+  async serve(props?: {
     busType?: Gio.BusType
     name?: string
     objectPath?: string
@@ -121,11 +121,12 @@ class Service {
 
 ### `proxy`
 
-Attempt to proxy `name`'s object at `objectPath` on `busType`.
+Attempt to proxy `name`'s object at `objectPath` on the `bus` connection
+(defaults to the session bus).
 
 ```ts
 class Service {
-  async proxy(props: {
+  async proxy(props?: {
     bus?: Gio.DBusConnection
     name?: string
     objectPath?: string
@@ -161,7 +162,7 @@ Registers a DBus method.
 ```ts
 type Arg = string | { name: string; type: string }
 
-function method(inArgs: Arg[], outArgs: Arg[])
+function method(inArgs?: Arg[], outArgs?: Arg[])
 
 function method(...inArgs: Arg[])
 ```
@@ -192,7 +193,7 @@ Async version of the `method` decorator, which is useful for proxies.
 ```ts
 type Arg = string | { name: string; type: string }
 
-function methodAsync(inArgs: Arg[], outArgs: Arg[])
+function methodAsync(inArgs?: Arg[], outArgs?: Arg[])
 
 function methodAsync(...inArgs: Arg[])
 ```

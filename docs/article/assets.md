@@ -25,9 +25,9 @@ the
 
 ```meson
 # install with meson
-install_data(
-   'data' / 'icons' / 'hicolor',
-  install_dir: prefix / datadir / 'icons' / 'hicolor',
+install_subdir(
+  'data' / 'icons' / 'hicolor',
+  install_dir: prefix / datadir / 'icons',
 )
 ```
 
@@ -49,7 +49,7 @@ const app = new Gtk.Application({
 During development the dev server will append `$PWD/data/icons` to Gtk's icon
 theme search paths. For example, you'd put icons at
 `data/icons/hicolor/scalable/actions/my-icon-symbolic.svg` for system-wide, or
-`data/icons/my-icon-symbolic` for bundled icons.
+`data/icons/my-icon-symbolic.svg` for bundled icons.
 
 ```tsx
 <Gtk.Image iconName="my-icon-symbolic" />
@@ -78,7 +78,7 @@ the codebase.
 
 ```ts
 import "gi://Gtk?version=4.0"
-import { render } from "gnim/gtk4" // this also counts
+import { render } from "@gnim-js/gtk4" // this also counts
 ```
 
 :::

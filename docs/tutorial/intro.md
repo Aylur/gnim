@@ -133,7 +133,7 @@ yarn create gnim@beta
        "skipLibCheck": true,
        "jsx": "react-jsx",
        "jsxImportSource": "gnim",
-       "types": ["gi"],
+       "types": ["gi", "gnim"],
        "typeRoots": ["./.gnim/types"]
      },
      "include": ["./src/**/*"]

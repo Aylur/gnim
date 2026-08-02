@@ -142,7 +142,7 @@ if (variantStrv1.get_strv().every((value) => stringList.includes(value))) {
 }
 ```
 
-This method makes creating complex variants much easier including arrays (`[]`),
+This method makes creating complex variants much easier including arrays (`as`),
 dictionaries (`a{sv}`) and tuples (`()`). Note that JavaScript has no tuple
 type, so they are packed and unpacked as `Array`.
 

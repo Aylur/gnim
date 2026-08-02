@@ -156,7 +156,7 @@ Some common controllers:
 - [EventControllerScroll](https://docs.gtk.org/gtk4/class.EventControllerScroll.html)
 - [GestureClick](https://docs.gtk.org/gtk4/class.GestureClick.html)
 - [GestureDrag](https://docs.gtk.org/gtk4/class.GestureDrag.html)
-- [GestureSwipe](https://docs.gtk.org/gtk4/class.GestureDrag.html)
+- [GestureSwipe](https://docs.gtk.org/gtk4/class.GestureSwipe.html)
 
 ```ts
 let widget: Gtk.Widget

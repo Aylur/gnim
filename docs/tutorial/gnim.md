@@ -33,6 +33,7 @@ function Box() {
   })
 
   function onClicked() {
+    counter++
     label.label = `clicked ${counter} times`
   }
 
@@ -79,7 +80,7 @@ To instantiate JSX, you have to render it into a parent object using the
 invoked, will detach widgets from the parent and dispose of them.
 
 ```jsx
-import { render } from "gnim/gtk4"
+import { render } from "@gnim-js/gtk4"
 
 const app: Gtk.Application
 

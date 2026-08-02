@@ -84,13 +84,12 @@ setObject((obj) => {
 })
 ```
 
-You can pass in a custom `equals` function to customize this behavior:
+You can pass in a custom `equals` function to customize this behavior, for
+example to always notify subscribers:
 
 ```ts
 const [value, setValue] = createState("initial value", {
-  equals: (prev, next): boolean => {
-    return prev != next
-  },
+  equals: () => false,
 })
 ```
 
@@ -142,7 +141,7 @@ type Bindable = Store | GObject.Object
 function bind<T extends Bindable, P extends PropKeys<T>>(
   object: T,
   property: P,
-): Accessor<T[P]>
+): Accessor<Prop<T, P>>
 ```
 
 > [!IMPORTANT]
@@ -310,21 +309,23 @@ A scope is essentially a global object which holds cleanup functions and context
 values.
 
 ```js
-let scope = new Scope()
+createRoot(() => {
+  const scope = getScope()
 
-// Inside this function, synchronously executed code will have access
-// to `scope` and will attach any allocated resources, such as signal
-// subscriptions.
-scopedFunction()
+  // Inside this function scope, synchronously executed code will have access
+  // to `scope` through `getScope()` and will attach any allocated resources,
+  // such as signal subscriptions.
+  scopedFunction()
 
-// At a later point it can be disposed.
-scope.dispose()
+  // At a later point it can be disposed.
+  scope.dispose()
+})
 ```
 
 ### `createRoot`
 
 ```ts
-function createRoot<T>(fn: (dispose: () => void) => T, owner?: Scope)
+function createRoot<T>(fn: (dispose: () => void) => T, parent?: Scope | null): T
 ```
 
 Creates a root scope. You likely won't need to use it since `render()` will
