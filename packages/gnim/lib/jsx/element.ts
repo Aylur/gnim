@@ -196,38 +196,24 @@ function unpackSlot(node: GObject.Object | Accessor<GnimNode>): GObject.Object[]
 export function mountChildren(children: GnimNode, mount?: GObject.Object) {
     const renderer = getRenderer()
     const nodes = resolveNode(children)
+    let currentChildren: GObject.Object[] = []
+
+    if (nodes.length === 0) return
 
     if (!nodes.some((node) => isAccessor(node)) && mount) {
-        for (const child of nodes as Array<GObject.Object>) {
-            renderer.appendChild(mount, child)
-        }
+        renderer.setChildren(mount, nodes as Array<GObject.Object>, currentChildren)
         onCleanup(() => {
-            for (const child of nodes as Array<GObject.Object>) {
-                renderer.removeChild(mount, child)
-            }
-            for (const child of nodes as Array<GObject.Object>) {
-                renderer.destroyChild(mount, child)
-            }
+            renderer.setChildren(mount, currentChildren, nodes as Array<GObject.Object>)
         })
         return
     }
-
-    let currentChildren: GObject.Object[] = []
 
     effect(
         function mountEffect() {
             const children = nodes.map(unpackSlot).flat()
 
             if (mount) {
-                for (const child of currentChildren) {
-                    renderer.removeChild(mount, child)
-                }
-                for (const child of currentChildren.filter((child) => !children.includes(child))) {
-                    renderer.destroyChild(mount, child)
-                }
-                for (const child of children) {
-                    renderer.appendChild(mount, child)
-                }
+                renderer.setChildren(mount, children, currentChildren)
             }
 
             currentChildren = children
@@ -237,12 +223,7 @@ export function mountChildren(children: GnimNode, mount?: GObject.Object) {
 
     if (mount) {
         onCleanup(() => {
-            for (const child of currentChildren) {
-                renderer.removeChild(mount, child)
-            }
-            for (const child of currentChildren) {
-                renderer.destroyChild(mount, child)
-            }
+            renderer.setChildren(mount, [], currentChildren)
         })
     }
 }
@@ -311,21 +292,9 @@ function modelToAccessor<T>(model: Gio.ListModel) {
     )
 }
 
-type ForEachProps<Item> = {
-    each: Accessor<Iterable<Item>>
+export interface ForProps<Item, Key = Item> {
+    each: Gio.ListModel | Accessor<Iterable<Item>>
     children: (item: Item, index: Accessor<number>) => GnimNode
-}
-
-type ForModelProps<Item> = {
-    each: Gio.ListModel
-    children: (item: Item, index: Accessor<number>) => GnimNode
-}
-
-export type ForProps<Item, Key = Item> = (ForEachProps<Item> | ForModelProps<Item>) & {
-    /**
-     * Function that generates the key for each item.
-     * By default the items are the keys themselves.
-     */
     id?(item: Item): Key | Item
 }
 
@@ -389,7 +358,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
     })
 }
 
-export type WithProps<T> = {
+export interface WithProps<T> {
     value: Accessor<T>
     children: (value: T) => GnimNode
 }
@@ -412,7 +381,7 @@ export function With<T>(props: WithProps<T>): GnimNode {
     return computed(() => resolveNode(mkChild(value())))
 }
 
-export type PortalProps = {
+export interface PortalProps {
     mount?: GObject.Object
     children: GnimNode
 }

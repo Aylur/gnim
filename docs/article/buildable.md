@@ -3,18 +3,50 @@
 The buildable interface allows you to implement custom object relations.
 
 ```ts
-const setChildren: unique symbol
 const appendChild: unique symbol
 const removeChild: unique symbol
+const setChildren: unique symbol
 
 interface Buildable {
-  [setChildren]?(children: GObject.Object[], prev: GObject.Object[]): boolean
   [appendChild]?(child: GObject.Object): boolean
   [removeChild]?(child: GObject.Object): boolean
+  [setChildren]?(children: GObject.Object[], prev: GObject.Object[]): boolean
 }
 ```
 
-## Grid layouts
+All three methods are optional. Each returns whether it handled the operation:
+on `false` the renderer falls back to its default behavior.
+
+## `[appendChild]`
+
+It is called with each child being attached to the object: once per child in JSX
+order on first render, and for every child of the new list on reactive updates.
+The child can be any kind of `GObject.Object` and may already be attached.
+Return `true` if the child was attached.
+
+## `[removeChild]`
+
+It is called with each child being detached: on unmount, and for every child of
+the previous list on reactive updates, before the new list is appended. Removal
+does not imply destruction: during a reorder the same child is removed and
+appended again. Return `true` if the child was detached.
+
+## `[setChildren]`
+
+It handles an update as a single bulk operation instead of per-child calls. It
+receives the new and the previous child lists: `prev` is empty on first mount,
+`children` is empty on unmount. When implemented, it takes precedence over
+`[appendChild]` and `[removeChild]`. Return `true` if the update was handled,
+`false` to fall back to the default behavior.
+
+> [!NOTE]
+>
+> When a child is present in `prev` but not in `children` it implies the child
+> should be disposed.
+
+## Examples
+
+### Grid Layout
 
 The `Gtk.Buildable` interface uses custom tags in its UI definitions to define
 the layout of `Gtk.Grid`. These tags don't exist at runtime and so cannot be
@@ -97,7 +129,7 @@ export class Grid extends Gtk.Grid implements Buildable {
 
 > [!NOTE]
 >
-> This implementation does not handle every use case since it's possible that
+> This implementation does not cover every use case since it's possible that
 > `appendChild` is called with a new widget after it's already a child of a
 > Grid. It would also require a widget recreation to move the widget around. To
 > support reactive position and child properties you can implement
@@ -105,25 +137,21 @@ export class Grid extends Gtk.Grid implements Buildable {
 > the parent or implement signal handlers in `Grid` so that when a property
 > changes it will move the widget accordingly.
 
-### Example Grid and GridChild usage
-
 ```tsx
-function Comp() {
-  return (
-    <Grid rowHomogeneous columnHomogeneous>
-      <GridChild col={0} row={0}>
-        <Gtk.Button>0 0</Gtk.Button>
-      </GridChild>
-      <GridChild col={1} row={0} colSpan={2}>
-        <Gtk.Button>1 0</Gtk.Button>
-      </GridChild>
-      <GridChild col={0} row={1} colSpan={2}>
-        <Gtk.Button>0 1</Gtk.Button>
-      </GridChild>
-      <GridChild col={2} row={1}>
-        <Gtk.Button>2 1</Gtk.Button>
-      </GridChild>
-    </Grid>
-  )
-}
+return (
+  <Grid rowHomogeneous columnHomogeneous>
+    <GridChild col={0} row={0}>
+      <Gtk.Button>0 0</Gtk.Button>
+    </GridChild>
+    <GridChild col={1} row={0} colSpan={2}>
+      <Gtk.Button>1 0</Gtk.Button>
+    </GridChild>
+    <GridChild col={0} row={1} colSpan={2}>
+      <Gtk.Button>0 1</Gtk.Button>
+    </GridChild>
+    <GridChild col={2} row={1}>
+      <Gtk.Button>2 1</Gtk.Button>
+    </GridChild>
+  </Grid>
+)
 ```
