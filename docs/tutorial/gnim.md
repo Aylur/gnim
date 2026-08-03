@@ -123,7 +123,7 @@ function MyWindow() {
 ```
 
 Notice that widgets start with a capital letter. Lowercase widgets are
-[intrinsic elements](/reference/jsx#intrinsic-elements)
+[intrinsic elements](/reference/jsx#intrinsic-elements).
 
 ### Displaying Data
 
@@ -370,6 +370,9 @@ function Counter() {
 > <Gtk.Label label={value.as(v => v.toString())} />
 > <Gtk.Label label={value.as(String)} />
 > ```
+>
+> Note that the above three lines are not the same: `computed` memoizes its
+> result, while the body of `.as()` runs on each access.
 
 ## Dynamic rendering
 

@@ -24,12 +24,36 @@ order on first render, and for every child of the new list on reactive updates.
 The child can be any kind of `GObject.Object` and may already be attached.
 Return `true` if the child was attached.
 
+```ts
+class MyWidget extends Gtk.Widget {
+  [appendChild](child: GObject.Object) {
+    if (child instanceof Gtk.Widget) {
+      child.set_parent(this)
+      return true
+    }
+    return false
+  }
+}
+```
+
 ## `[removeChild]`
 
 It is called with each child being detached: on unmount, and for every child of
 the previous list on reactive updates, before the new list is appended. Removal
 does not imply destruction: during a reorder the same child is removed and
 appended again. Return `true` if the child was detached.
+
+```ts
+class MyWidget extends Gtk.Widget {
+  [removeChild](child: GObject.Object) {
+    if (child instanceof Gtk.Widget && child.parent === this) {
+      child.unparent()
+      return true
+    }
+    return false
+  }
+}
+```
 
 ## `[setChildren]`
 
@@ -43,6 +67,22 @@ receives the new and the previous child lists: `prev` is empty on first mount,
 >
 > When a child is present in `prev` but not in `children` it implies the child
 > should be disposed.
+
+```ts
+class MyWidget extends Gtk.Widget {
+  [setChildren](children: GObject.Object[], prev: GObject.Object[]) {
+    for (const child of prev) {
+      // remove child
+    }
+    for (const child of children) {
+      // append child
+    }
+    for (const child of prev.filter((child) => !children.includes(child))) {
+      // destroy child
+    }
+  }
+}
+```
 
 ## Examples
 

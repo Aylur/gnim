@@ -81,7 +81,7 @@ of the return value will be described in the documentation for the signal.
 ```ts
 const linkLabel = new Gtk.Label({
   label: '<a href="https://www.gnome.org">GNOME</a>',
-  use_markup: true,
+  useMarkup: true,
 })
 
 linkLabel.connect("activate-link", (label, uri) => {
@@ -169,7 +169,7 @@ markupLabel.set_use_markup(true)
 ### Property Change Notification
 
 Most GObject properties will emit
-[`GObject.Object::notify`](https://gjs-docs.gnome.org/gobject20/gobject.object#signals-notify)
+[`GObject.Object::notify`](https://docs.gtk.org/gobject/signal.Object.notify.html)
 signal when the value is changed. You can connect to this signal in the form of
 `notify::property-name` to invoke a callback when it changes:
 
@@ -194,7 +194,8 @@ import { register, property, signal } from "gnim/gobject"
 
 @register
 class MyObj extends GObject.Object {
-  @property myProp: string = ""
+  @property
+  myProp: string = ""
 
   @signal
   mySignal(a: string, b: number): void {

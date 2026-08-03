@@ -285,6 +285,9 @@ export class Schema<
     // }
 }
 
+// TODO: move the xml builder code to the compile time evaluator process
+// remove `defineSchemaList()`, and instead import the whole schema module
+// and filter exported symbols using instanceof Schema
 export function defineSchemaList(
     props: Array<Schema> | { gettextDomain: string; schemas: Array<Schema> },
 ) {

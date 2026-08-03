@@ -72,7 +72,7 @@ function createSettings<const T extends Record<string, string>>(
 ): Settings<T>
 ```
 
-The `createSettings` function can consume schemas and turn them into objects
+The `createSettings` function can understand schemas and turn them into objects
 that will have an Accessor and setter function for each defined key.
 
 ```ts
@@ -81,7 +81,10 @@ import { createSettings } from "gnim/schema"
 
 const settings = createSettings(schema)
 
-console.log(settings.myKey.peek())
+effect(() => {
+  console.log(settings.myKey())
+})
+
 settings.setMyKey("new value")
 ```
 

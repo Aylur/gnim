@@ -13,12 +13,13 @@ A valid JSX component must either be a function that returns a `GnimNode` or a
 class that inherits from `GObject.Object`.
 
 ```ts
-type FC = (props: any) => GnimNode
-type CC = new (props: any) => GObject.Object
+type Props = Record<PropertyKey, unknown>
+type FC = (props: Props) => GnimNode
+type CC = new (props: Props) => GObject.Object
 
 interface ConstructorNode {
   type: string | FC | CC
-  props: Record<string, unknown>
+  props: Props
 }
 
 type GnimNode =
@@ -54,18 +55,16 @@ naturally using JSX syntax. For example, this applies to types like
 > ```tsx
 > let str: Accessor<string>
 >
-> function Comp() {
->   return (
->     <Gtk.Button>
->       // [!code --:3]
->       {str.as((s) => (
->         <Gtk.Label label={s} />
->       ))}
->       // [!code ++]
->       <With value={str}>{(s) => <Gtk.Label label={s} />}</With>
->     </Gtk.Button>
->   )
-> }
+> return (
+>   <Gtk.Button>
+>     // [!code --:3]
+>     {str.as((s) => (
+>       <Gtk.Label label={s} />
+>     ))}
+>     // [!code ++]
+>     <With value={str}>{(s) => <Gtk.Label label={s} />}</With>
+>   </Gtk.Button>
+> )
 > ```
 
 ## Class Components
@@ -95,7 +94,11 @@ in combination with the `render` function to use JSX in subclasses.
 class MyWidget extends Gtk.Widget {
   constructor() {
     super()
-    render(() => <MyWidget construct={this}>Hello</MyWidget>)
+    render(() => (
+      <MyWidget construct={this}>
+        <Child />
+      </MyWidget>
+    ))
   }
 }
 ```
@@ -128,7 +131,9 @@ children are appended, signals are connected, and reactive properties are
 applied.
 
 ```tsx
-<Gtk.Stack ref={(self) => print(self, "is about to be returned")} />
+<Gtk.Stack
+  ref={(self) => print(self, "is about to be appended to its parent")}
+/>
 ```
 
 The most common use case is to acquire a reference to the widget in the scope of
@@ -311,8 +316,8 @@ return (
 
 > [!TIP]
 >
-> In a lot of cases it is better to always render the component and set its
-> `visible` property instead.
+> In almost every case it is better to always render the component and set its
+> `visible` property instead. Using `<With>` should be a last resort.
 >
 > ```tsx
 > const member = computed(() => value()?.member || "")
@@ -325,7 +330,8 @@ return (
 
 The `<For>` component lets you render based on an array dynamically. Each time
 the array changes, it is compared with its previous state. Widgets for new items
-are inserted, while widgets associated with removed items are removed.
+are inserted, while widgets associated with removed items are removed and
+disposed.
 
 ```tsx
 let list: Accessor<Iterable<T>>
@@ -367,5 +373,11 @@ Example:
 ## Intrinsic Elements
 
 Intrinsic elements are globally available components, which in web frameworks
-are usually HTMLElements such as `<div>` `<span>` `<p>`. There are no intrinsic
-elements by default but custom renderers may define them.
+are usually HTMLElements such as `<div>` `<span>` `<p>`. They are written with
+lowercase tag names, and unlike class and function components they don't have to
+be imported: the renderer resolves the tag name to a component at render time.
+
+There are no intrinsic elements by default, but custom renderers may define
+them.
+
+<!-- TODO: ## Custom Renderers -->

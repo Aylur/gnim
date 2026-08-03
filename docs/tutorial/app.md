@@ -243,3 +243,14 @@ gdbus call \
   --method com.example.MyApp.MyService.MyMethod \
   'Hello World!'
 ```
+
+Or even from another Gnim application reusing the same service class.
+
+```ts
+const proxy = await new MyService().proxy({
+  name: "com.example.MyApp",
+  objectPath: "/com/example/MyApp/MyService",
+})
+
+proxy.MyMethod("hello!")
+```

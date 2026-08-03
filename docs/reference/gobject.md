@@ -8,10 +8,15 @@ Read more about GObjects in GJS on
 
 > [!INFO] Required TypeScript settings
 >
-> Make sure `experimentalDecorators` is set to `true`.
+> Make sure to enable `experimentalDecorators` and `emitDecoratorMetadata`.
 >
 > ```json
-> { "compilerOptions": { "experimentalDecorators": true } }
+> {
+>   "compilerOptions": {
+>     "experimentalDecorators": true,
+>     "emitDecoratorMetadata": true
+>   }
+> }
 > ```
 
 ## Example Usage
@@ -104,6 +109,10 @@ class MyObject {
 }
 ```
 
+> [!IMPORTANT]
+>
+> When defining a setter you will have to explicitly emit the `notify` signal.
+
 ### Property type declaration
 
 The runtime type of the property will be inferred from TypeScript annotations.
@@ -148,6 +157,9 @@ class MyObject {
 }
 ```
 
+Omitting the explicit property declaration will use a default type guessed from
+the TypeScript annotation. Omitting both will result in a runtime error.
+
 ### Property accessors
 
 When implementing property setters you will also need to explicitly emit notify
@@ -183,7 +195,8 @@ class {
 ### Signal type declaration
 
 The runtime type of the parameters and return type will be inferred from
-TypeScript annotations. Optionally they can be explicitly declared.
+TypeScript annotations. Optionally they can be explicitly declared similarly to
+the `property` decorator.
 
 ```ts
 class MyObject {

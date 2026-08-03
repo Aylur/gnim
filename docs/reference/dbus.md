@@ -237,9 +237,16 @@ class MyService {
   }
 
   @property("s")
-  set WriteOnly(v: string) {}
+  set WriteOnly(v: string) {
+    this.notify("WriteOnly")
+  }
 }
 ```
+
+> [!IMPORTANT]
+>
+> Unlike GObjects, `.notify()` expects the property in the casing as it is
+> written in code which by convention is `PascalCase`.
 
 ## `signal`
 
@@ -259,3 +266,5 @@ class MyService {
   MySignal(arg0: string, arg1: number) {}
 }
 ```
+
+Unlike GObjects, DBus interfaces do not have a return type on signals.

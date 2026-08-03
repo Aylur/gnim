@@ -166,7 +166,7 @@ const gestureClick = new Gtk.GestureClick({
 })
 
 gestureClick.connect("pressed", () => {
-  console.log("clicked")
+  console.log("pressed")
   return true
 })
 
@@ -177,6 +177,9 @@ Gtk provides widgets for various forms of user input so you might not need an
 event controller.
 
 - [`Button`](https://docs.gtk.org/gtk4/class.Button.html)
+- [`ToggleButton`](https://docs.gtk.org/gtk4/class.ToggleButton.html)
+- [`CheckButton`](https://docs.gtk.org/gtk4/class.CheckButton.html)
 - [`Switch`](https://docs.gtk.org/gtk4/class.Switch.html)
 - [`Scale`](https://docs.gtk.org/gtk4/class.Scale.html)
+- [`Text`](https://docs.gtk.org/gtk4/class.Text.html)
 - [`Entry`](https://docs.gtk.org/gtk4/class.Entry.html)

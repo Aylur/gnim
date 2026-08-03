@@ -45,6 +45,11 @@ const n: Accessor<number>
 const s: Accessor<string> = n.as((v) => v.toString())
 ```
 
+> [!IMPORTANT]
+>
+> The body of `.as()` is run on each access. If you need memoization use
+> [`computed()`](#computed).
+
 ### `createState`
 
 Creates a writable reactive value.
@@ -120,14 +125,14 @@ const c: Accessor<number> = computed(() => a() + b())
 
 ### `untrack`
 
-An alternative to `.peek()`: it lets you read `Accessor` values without tracking
-them.
+Lets you read `Accessor` and [`Store`](#createstate) without tracking them.
 
 ```ts
-let value: Accessor<T>
+const value: Accessor<T>
+const store: Store<{ field: string }>
 
-const a = value.peek()
-const b = untrack(() => value())
+const _ = untrack(() => value())
+const _ = untrack(() => store.field)
 ```
 
 ### `bind`
@@ -138,10 +143,10 @@ Creates an `Accessor` on a `GObject.Object`'s `property` or a
 ```ts
 type Bindable = Store | GObject.Object
 
-function bind<T extends Bindable, P extends PropKeys<T>>(
-  object: T,
-  property: P,
-): Accessor<Prop<T, P>>
+function bind<T extends Bindable, K extends PropKeys<T>>(
+  bindable: T,
+  key: K,
+): Accessor<Prop<T, K>>
 ```
 
 > [!IMPORTANT]
@@ -302,6 +307,9 @@ To pass them as reactive props you can use [`bind`](#bind)
 >   ...store.nested,
 > })
 > ```
+>
+> Note that using the spread operator assigns values meaning that derived values
+> defined using the getter syntax will no longer track its dependencies.
 
 ## Scopes and Life cycle
 
@@ -374,7 +382,7 @@ Example:
 
 ```tsx
 function MyComponent() {
-  const dispose = signal.subscribe(() => {})
+  const dispose = accessor.subscribe(() => {})
 
   onCleanup(() => {
     dispose()
