@@ -1,5 +1,5 @@
 import Gettext from "gettext"
-import { type JSX, type GnimNode, resolveNode } from "../jsx/element"
+import { type GnimNode, type JSX } from "../jsx/element"
 
 const { fromEntries, entries } = Object
 
@@ -139,7 +139,19 @@ function parseToAst(input: string): AstNode[] {
     return root.children
 }
 
-type Prettify<T> = { [K in keyof T]: T[K] } & {}
+function renderElements(
+    nodes: AstNode[],
+    fns: Record<string, (e: GnimNode) => GnimNode>,
+): GnimNode {
+    return nodes.flatMap((n): GnimNode => {
+        if (n.type === "text") {
+            return [n.value]
+        } else {
+            const content = renderElements(n.children, fns)
+            return [fns[n.name]?.(content) ?? content]
+        }
+    })
+}
 
 type SlotsOnly<S> = S extends {
     [slots]: any
@@ -156,13 +168,29 @@ type Values<S> = S extends {
 }
     ? [S[typeof slots], S[typeof tags]] extends [never, never]
         ? never
-        : Prettify<
-              Record<S[typeof slots], string | number> &
-                  Record<S[typeof tags], (content: GnimNode) => GnimNode>
-          >
+        : Record<S[typeof slots], string | number> &
+              Record<S[typeof tags], (content: GnimNode) => GnimNode>
     : never
 
-function format<S extends string>(input: Text<S>, values: Values<Text<S>> | SlotsOnly<Text<S>>) {
+export function sfmt<const S extends string>(
+    input: Text<S>,
+    slots: Record<TemplateStrings<S>, string | number>,
+): string
+
+export function sfmt<const S extends string>(
+    input: Text<S>,
+    slots: Record<string, string | number>,
+) {
+    return input.replace(/\{\{([^{}]+)\}\}/g, (match, key: string) => `${slots[key] ?? match}`)
+}
+
+export function fmt<const S extends string>(input: Text<S>, slots: SlotsOnly<Text<S>>): string
+export function fmt<const S extends string>(input: Text<S>, values: Values<Text<S>>): JSX.Element
+
+export function fmt<const S extends string>(
+    input: Text<S>,
+    values: Record<string, string | number | ((e: GnimNode) => GnimNode)>,
+): GnimNode {
     const slots = fromEntries(
         entries(values).filter(
             (v): v is [string, string | number] =>
@@ -176,43 +204,8 @@ function format<S extends string>(input: Text<S>, values: Values<Text<S>> | Slot
         ),
     )
 
-    const text = input.replace(
-        /\{\{([^{}]+)\}\}/g,
-        (match, key: string) => `${slots[key] ?? match}`,
-    )
-
+    const text = sfmt(input, slots as Record<TemplateStrings<S>, string | number>)
     const nodes = parseToAst(text)
 
-    return { tags, nodes }
-}
-
-function renderString(nodes: AstNode[]): string[] {
-    return nodes.map((n) => (n.type === "text" ? n.value : renderString(n.children).join("")))
-}
-
-function renderElements(
-    nodes: AstNode[],
-    fns: Record<string, (s: GnimNode) => GnimNode>,
-): JSX.Element {
-    return nodes.flatMap((n): GnimNode => {
-        if (n.type === "text") {
-            return [n.value]
-        } else {
-            const content = renderElements(n.children, fns)
-            return [fns[n.name]?.(content) ?? content]
-        }
-    })
-}
-
-export function fmt<const S extends string>(input: Text<S>, slots: SlotsOnly<Text<S>>): string
-export function fmt<const S extends string>(input: Text<S>, values: Values<Text<S>>): JSX.Element
-
-export function fmt<const S extends string>(
-    input: Text<S>,
-    values: SlotsOnly<Text<S>> | Values<Text<S>>,
-): string | JSX.Element {
-    const { tags, nodes } = format(input, values)
-    return entries(tags).length === 0
-        ? renderString(nodes).join("")
-        : resolveNode(renderElements(nodes, tags))
+    return entries(tags).length === 0 ? text : renderElements(nodes, tags)
 }

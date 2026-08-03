@@ -13,6 +13,7 @@ export default defineConfig({
             { find: "gi://GObject?version=2.0", replacement: giMock("GObject") },
             { find: "gi://GLib?version=2.0", replacement: giMock("GLib") },
             { find: "gi://Gio?version=2.0", replacement: giMock("Gio") },
+            { find: "gettext", replacement: giMock("Gettext") },
         ],
     },
 })
