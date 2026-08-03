@@ -4,6 +4,24 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    '@eslint/js':
+      specifier: ^10.0.1
+      version: 10.0.1
+    '@types/node':
+      specifier: ^26.1.2
+      version: 26.1.2
+    eslint:
+      specifier: ^10.7.0
+      version: 10.8.0
+    typescript:
+      specifier: ^6.0.0
+      version: 6.0.3
+    typescript-eslint:
+      specifier: ^8.64.0
+      version: 8.65.0
+
 importers:
 
   .:
@@ -77,10 +95,6 @@ importers:
       typescript-eslint:
         specifier: 'catalog:'
         version: 8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
-    optionalDependencies:
-      '@gnim-js/linux-x64':
-        specifier: 2.0.0-beta.8
-        version: 2.0.0-beta.8
 
   packages/gnome-shell:
     dependencies:
@@ -396,11 +410,6 @@ packages:
 
   '@girgen/linux-x64@0.3.20':
     resolution: {integrity: sha512-Nyt++1eLGoPkgftzX/tmQ7/gbxWnx84hGR9nCLiIpUQelTOuKkzkxJPkbbM48HlyHxE4EP9qNeIbjHKNaP4ckg==}
-    cpu: [x64]
-    os: [linux]
-
-  '@gnim-js/linux-x64@2.0.0-beta.8':
-    resolution: {integrity: sha512-cHuc2Nuj+3xFou4d7pOx92vidctf9GVwhXjF8OK8QcVY/4y6YIemjltmSHze2j0tzDZORs4uxpZXTSrO/eamwg==}
     cpu: [x64]
     os: [linux]
 
@@ -1678,9 +1687,6 @@ snapshots:
     optional: true
 
   '@girgen/linux-x64@0.3.20':
-    optional: true
-
-  '@gnim-js/linux-x64@2.0.0-beta.8':
     optional: true
 
   '@humanfs/core@0.19.2':
