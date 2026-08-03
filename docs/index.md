@@ -14,24 +14,16 @@ A library that brings JSX, reactivity, and type safety to GNOME JavaScript.
 
 ::: code-group
 
-```sh [npm]
+```sh [<i class="devicon-npm-plain"></i> npm]
 npm create gnim@beta
 ```
 
-```sh [pnpm]
+```sh [<i class="devicon-pnpm-plain"></i> pnpm]
 pnpm create gnim@beta
 ```
 
-```sh [yarn]
+```sh [<i class="devicon-yarn-original"></i> yarn]
 yarn create gnim@beta
-```
-
-```sh [bun]
-bun create gnim@beta
-```
-
-```sh [deno]
-deno init --npm gnim@beta
 ```
 
 :::
