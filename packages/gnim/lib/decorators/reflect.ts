@@ -20,6 +20,10 @@ declare global {
         ): void
         function hasMetadata(metadataKey: unknown, target: object, propertyKey?: Key): boolean
         function getMetadata(metadataKey: unknown, target: object, propertyKey?: Key): unknown
+        function metadata(
+            metadataKey: unknown,
+            metadataValue: unknown,
+        ): (target: object, propertyKey?: Key) => void
     }
 }
 
@@ -59,10 +63,17 @@ if (!("metadata" in Reflect)) {
         }
     }
 
+    const metadata: typeof Reflect.metadata = (metadataKey, metadataValue) => {
+        return (target, propertyKey) => {
+            defineMetadata(metadataKey, metadataValue, target, propertyKey)
+        }
+    }
+
     Object.assign(Reflect, {
         hasMetadata,
         getMetadata,
         defineMetadata,
+        metadata,
     })
 }
 
