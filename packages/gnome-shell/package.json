@@ -14,7 +14,9 @@
         "girs": "./scripts.nu girs",
         "build": "./scripts.nu girs && tsc",
         "lint": "eslint .",
-        "fmt": "prettier . --write"
+        "fmt": "prettier --write .",
+        "fmt:check": "prettier --check .",
+        "typecheck": "tsc --noEmit"
     },
     "dependencies": {
         "gnim": "workspace:^"

@@ -12,7 +12,9 @@
     },
     "scripts": {
         "build": "tsc",
-        "fmt": "prettier . --write"
+        "fmt": "prettier --write .",
+        "fmt:check": "prettier --check .",
+        "typecheck": "tsc --noEmit"
     },
     "devDependencies": {
         "@eslint/js": "catalog:",

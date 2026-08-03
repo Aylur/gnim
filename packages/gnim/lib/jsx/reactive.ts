@@ -798,11 +798,13 @@ export function bind(object: Bindable, key: PropertyKey, ...props: string[]): Ac
 
 type SignalsOf<O> = O extends GObject.Object
     ? {
-          [S in Keyof<O["$signals"]> as S extends `${infer Name}::{}`
-              ? Name extends "notify"
-                  ? never
-                  : Name | `${Name}::${string}`
-              : S]: O["$signals"][S]
+          [
+              S in Keyof<O["$signals"]> as S extends `${infer Name}::{}`
+                  ? Name extends "notify"
+                      ? never
+                      : Name | `${Name}::${string}`
+                  : S
+          ]: O["$signals"][S]
       } & {
           [S in Keyof<O["$readableProperties"]> as `notify::${S}`]: (
               pspec: GObject.ParamSpec<O["$readableProperties"][S]>,

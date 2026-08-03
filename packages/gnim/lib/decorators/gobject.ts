@@ -48,9 +48,7 @@ type SignalDeclaration = {
 }
 
 type PropertyTypeDeclaration<T = unknown> =
-    | ((name: string, flags: ParamFlags) => ParamSpec<T>)
-    | ParamSpec<T>
-    | TypeParameter<T>
+    ((name: string, flags: ParamFlags) => ParamSpec<T>) | ParamSpec<T> | TypeParameter<T>
 
 type Meta = {
     properties: Record<

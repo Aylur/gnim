@@ -16,7 +16,9 @@
     "scripts": {
         "build": "tsc",
         "lint": "eslint .",
-        "fmt": "prettier . --write"
+        "fmt": "prettier --write .",
+        "fmt:check": "prettier --check .",
+        "typecheck": "tsc --noEmit"
     },
     "optionalDependencies": {
         "@gnim-js/linux-x64": "2.0.0-beta.8"

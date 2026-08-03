@@ -13,7 +13,9 @@
     "scripts": {
         "build": "tsc",
         "lint": "eslint .",
-        "fmt": "prettier . --write"
+        "fmt": "prettier --write .",
+        "fmt:check": "prettier --check .",
+        "typecheck": "tsc --noEmit"
     },
     "dependencies": {
         "gnim": "workspace:^"

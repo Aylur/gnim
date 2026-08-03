@@ -9,34 +9,46 @@ jobs:
     lint:
         runs-on: ubuntu-latest
 
+        env:
+            GNOME_RUNTIME: "50"
+
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             - name: Setup pnpm
-              uses: pnpm/action-setup@v4
+              uses: pnpm/action-setup@v6
               with:
                   version: 10
 
             - name: Setup Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v7
               with:
-                  node-version: 20
+                  node-version: 24
                   cache: "pnpm"
 
             - name: Install dependencies
               run: pnpm -r install --frozen-lockfile
 
-            # TODO: get .gir files from a faster source, no need to pull everything
-            - name: Install Gtk deps
+            - name: Cache generated types
+              id: types-cache
+              uses: actions/cache@v6
+              with:
+                  path: .gnim/types/gi
+                  key: gi-types-${{ runner.os }}-gnome${{ env.GNOME_RUNTIME }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+            - name: Fetch gir files from GNOME SDK
+              if: steps.types-cache.outputs.cache-hit != 'true'
               run: |
                   sudo apt update -y
-                  sudo apt install -y libgtk-4-dev
+                  sudo apt install -y ostree
+                  ostree init --repo=/tmp/flathub --mode=bare-user-only
+                  ostree remote add --repo=/tmp/flathub --no-gpg-verify flathub https://dl.flathub.org/repo/
+                  ostree pull --repo=/tmp/flathub --subpath=/files/share/gir-1.0 \
+                      flathub "runtime/org.gnome.Sdk/x86_64/$GNOME_RUNTIME"
+                  mkdir -p .gnim
+                  ostree checkout --repo=/tmp/flathub --user-mode --subpath=/files/share/gir-1.0 \
+                      "flathub:runtime/org.gnome.Sdk/x86_64/$GNOME_RUNTIME" .gnim/girs
 
-            - name: Generate types
-              run: |
-                  chmod +x ./packages/gnim/node_modules/@gnim-js/linux-x64/gnim
-                  ./packages/gnim/node_modules/@gnim-js/linux-x64/gnim types -d /usr/share/gir-1.0
-
-            - name: Lint
-              run: pnpm -r lint
+            - name: Run checks in parallel
+              run: pnpm run ci

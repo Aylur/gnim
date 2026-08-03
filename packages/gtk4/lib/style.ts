@@ -149,8 +149,7 @@ export function style(s: Style | (() => Style)): MaybeAccessor<string> {
 }
 
 export type Keyframes =
-    | { from: CssProperties; to: CssProperties }
-    | { [Percentage in number]: CssProperties }
+    { from: CssProperties; to: CssProperties } | { [Percentage in number]: CssProperties }
 
 export type Style = Prettify<CssProperties & StyleProperties & MediaQuery>
 
