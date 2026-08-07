@@ -7,7 +7,7 @@
   "devDependencies": {
     "esbuild": "^0.28.0",
     "nushell": "^0.111.0",
-    "rolldown": "1.0.0-rc.15"
+    "rolldown": "^1.2.0"
   },
   "scripts": {
     "types": "nu ./scripts.nu types",
