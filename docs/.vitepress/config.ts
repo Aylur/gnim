@@ -22,7 +22,7 @@ export default defineConfig({
                     { text: "Gtk", link: "/tutorial/gtk" },
                     { text: "Gnim", link: "/tutorial/gnim" },
                     { text: "App", link: "/tutorial/app" },
-                    { text: "Translations", link: "/tutorial/i18n" },
+                    { text: "Internationalization", link: "/tutorial/intl" },
                     { text: "Packaging", link: "/tutorial/packaging" },
                 ],
             },

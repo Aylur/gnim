@@ -20,6 +20,9 @@
         "fmt:check": "prettier --check .",
         "typecheck": "tsc --noEmit"
     },
+    "dependencies": {
+        "intl-messageformat": "^11.2.13"
+    },
     "optionalDependencies": {
         "@gnim-js/linux-x64": "2.0.0-beta.10"
     },
@@ -34,7 +37,7 @@
         ".": "./lib/index.ts",
         "./dbus": "./lib/decorators/dbus.ts",
         "./gobject": "./lib/decorators/gobject.ts",
-        "./i18n": "./lib/i18n/index.ts",
+        "./intl": "./lib/intl/index.ts",
         "./schema": "./lib/schema/index.ts",
         "./fetch": "./lib/polyfill/fetch.ts",
         "./jsx-runtime": "./lib/jsx-runtime.ts",
@@ -55,9 +58,9 @@
                 "import": "./dist/lib/decorators/gobject.js",
                 "types": "./dist/lib/decorators/gobject.d.ts"
             },
-            "./i18n": {
-                "import": "./dist/lib/i18n/index.js",
-                "types": "./dist/lib/i18n/index.d.ts"
+            "./intl": {
+                "import": "./dist/lib/intl/index.js",
+                "types": "./dist/lib/intl/index.d.ts"
             },
             "./schema": {
                 "import": "./dist/lib/schema/index.js",

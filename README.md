@@ -131,12 +131,13 @@ settings.setMyKey("hello")
 
 ## Text formatting
 
-Type-safe text formatting that warns you on missing slots.
+Type-safe text formatting using the
+[ICU Message Format](https://unicode-org.github.io/icu/userguide/format_parse/messages/).
 
 ```tsx
-import { createDomain, fmt } from "gnim/i18n"
+import { createDomain, fmt } from "gnim/intl"
 
-const { gettext: t, ngettext: n } = createDomain("com.example.MyApp")
+const { gettext: t } = createDomain("com.example.MyApp")
 
 function App() {
   const [count, setCount] = createState(0)
@@ -145,8 +146,15 @@ function App() {
     <Gtk.Button onClicked={() => setCount((c) => c + 1)}>
       <Gtk.Label label={t("Click Me!")} />
       <Gtk.Label
-        label={count.as((c) =>
-          fmt(n("Clicked once", "Clicked {{count}} times", c), { count: c }),
+        label={count.as((count) =>
+          fmt(
+            t(`{count, plural,
+              =0 {Not yet clicked}
+              =1 {Clicked once}
+              other {Clicked # times}
+            }`),
+            { count },
+          ),
         )}
       />
     </Gtk.Button>

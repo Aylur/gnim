@@ -5,7 +5,7 @@ import Gdk from "gi://Gdk?version=4.0"
 import GLib from "gi://GLib?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
 import { createState, Portal } from "gnim"
-import { fmt } from "gnim/i18n"
+import { fmt } from "gnim/intl"
 import { App } from "./main"
 
 export default function Bar(props: { monitor: Gdk.Monitor }) {
@@ -55,7 +55,7 @@ export default function Bar(props: { monitor: Gdk.Monitor }) {
         <Gtk.Label
           slot="center"
           class="clock"
-          label={clock.as((time) => fmt(t("Time is: {{time}}"), { time }))}
+          label={clock.as((time) => fmt(t("Time is: {time}"), { time }))}
         />
         <Gtk.Button slot="end" onClicked={() => setOpen((o) => !o)}>
           <Gtk.Label label={t("Toggle Popup")} />

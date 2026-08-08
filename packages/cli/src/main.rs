@@ -74,13 +74,11 @@ async fn main() -> std::process::ExitCode {
                     "gnim" => format!("{gnim}/index.js"),
                     "gnim/dbus" => format!("{gnim}/decorators/dbus.js"),
                     "gnim/gobject" => format!("{gnim}/decorators/gobject.js"),
-                    "gnim/i18n" => format!("{gnim}/i18n/index.js"),
+                    "gnim/intl" => format!("{gnim}/intl/index.js"),
                     "gnim/schema" => format!("{gnim}/schema/index.js"),
                     "gnim/fetch" => format!("{gnim}/polyfill/fetch.js"),
                     "gnim/jsx-runtime" => format!("{gnim}/jsx-runtime.js"),
                     "gnim/jsx-dev-runtime" => format!("{gnim}/jsx-dev-runtime.js"),
-                    "gnim-gtk4" => format!("file://{dir}/gnim-gtk4/dist/index.js"),
-                    "gnim-gtk3" => format!("file://{dir}/gnim-gtk3/dist/index.js"),
                     _ => id.to_string(),
                 };
 
