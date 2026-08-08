@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "type": "module",
   "dependencies": {
-    "@gnim-js/io": "^2.0.0-beta.10",
-    "@gnim-js/gtk4": "^2.0.0-beta.10",
-    "gnim": "^2.0.0-beta.10"
+    "@gnim-js/io": "^2.0.0-beta.11",
+    "@gnim-js/gtk4": "^2.0.0-beta.11",
+    "gnim": "^2.0.0-beta.11"
   },
   "scripts": {
     "types": "gnim types",
