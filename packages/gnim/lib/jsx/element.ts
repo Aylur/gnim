@@ -120,7 +120,7 @@ function signalName(key: string): string {
 
 export function newObject<C extends CC>(
     constructor: C,
-    ccProps: CCProps<InstanceType<C>, ConstructorParameters<C>[0]>,
+    ccProps: CCProps<InstanceType<C>>,
 ): InstanceType<C> {
     const { children, ref, construct, ...rest } = ccProps as Partial<CCProps<GObject.Object>>
     const renderer = getRenderer()
@@ -434,7 +434,7 @@ type GObjectProps<T> = T extends {
           // onSignalName and onDetailedSignal:detail
           [
               S in Keyof<T["$signals"]> as S extends `${infer Name}::{}`
-                  ? `on${PascalCase<Name>}:${string}`
+                  ? `on${PascalCase<Name>}:${string}` | `on${PascalCase<Name>}`
                   : `on${PascalCase<S>}`
           ]: GObject.SignalCallback<T, T["$signals"][S]>
       } & {
