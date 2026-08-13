@@ -477,6 +477,9 @@ This produces a `.pot` template file which can be used to write translations.
 > const t = createDomain()
 > const wrapper = t
 > wrapper("This will be ignored by xgettext")
+>
+> const text = "This is also ignored"
+> t(text)
 > ```
 
 ## Init locale translation

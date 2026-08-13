@@ -12,7 +12,7 @@ type FmtArgs<T, Fn> = T extends {
     ? Prettify<Args & Record<Extract<Tags, string>, Fn>>
     : never
 
-const preferredLocale = getPreferredLocale()
+const preferredLocale = /* @__PURE__ */ getPreferredLocale()
 
 /**
  * Replace placeholders and format XML tags as strings.
