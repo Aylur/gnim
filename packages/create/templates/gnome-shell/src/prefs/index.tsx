@@ -32,13 +32,14 @@ export default class extends ExtensionPreferences {
     const dispose = render(() => {
       return (
         <PrefsContext value={{ settings, logger, gettext, window }}>
-          <Adw.PreferencesWindow construct={window}>
+          <Adw.PreferencesWindow
+            construct={window}
+            onCloseRequest={() => (dispose(), false)}
+          >
             <PreferencesPage />
           </Adw.PreferencesWindow>
         </PrefsContext>
       )
     })
-
-    window.connect("close-request", () => (dispose(), false))
   }
 }
