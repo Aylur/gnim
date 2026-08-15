@@ -85,12 +85,15 @@ export class Scope {
         try {
             return fn()
         } finally {
-            try {
-                this.after?.forEach((cb) => cb())
-            } finally {
-                this.after = null
-                Scope.current = prevOwner
-            }
+            this.after?.forEach((cb) => {
+                try {
+                    cb()
+                } catch (err) {
+                    console.error(err)
+                }
+            })
+            this.after = null
+            Scope.current = prevOwner
         }
     }
 

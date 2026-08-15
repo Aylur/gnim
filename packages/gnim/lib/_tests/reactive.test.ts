@@ -737,18 +737,24 @@ describe("edge cases", () => {
 })
 
 describe("throwing effects", () => {
-    it("propagates a mount error and restores the current scope", () => {
+    it("logs a mount error and keeps mounting sibling effects", () => {
+        const error = vi.spyOn(console, "error").mockImplementation(() => {})
+        const spy = vi.fn()
+
+        const dispose = createRoot((dispose) => {
+            effect(() => {
+                throw Error("boom")
+            })
+            effect(spy)
+            return dispose
+        })
+
+        expect(error).toHaveBeenCalledTimes(1)
+        expect(spy).toHaveBeenCalledTimes(1)
         expect(Scope.current).toBeNull()
 
-        expect(() =>
-            createRoot(() => {
-                effect(() => {
-                    throw Error("boom")
-                })
-            }),
-        ).toThrow("boom")
-
-        expect(Scope.current).toBeNull()
+        error.mockRestore()
+        dispose()
     })
 
     it("restores the current scope when an immediate effect throws", () => {
