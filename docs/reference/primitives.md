@@ -123,6 +123,18 @@ let b: Accessor<number>
 const c: Accessor<number> = computed(() => a() + b())
 ```
 
+> [!IMPORTANT] It only memoizes while observed
+>
+> Creating a `computed` value outside of a `Scope` and reading its value
+> _before_ anything observes it will not memoize the result.
+>
+> ```ts
+> const a = computed(() => ({}))
+> console.log(a() === a()) // false
+> a.subscribe(() => {})
+> console.log(a() === a()) // true
+> ```
+
 ### `untrack`
 
 Lets you read `Accessor` and [`Store`](#createstate) without tracking them.
