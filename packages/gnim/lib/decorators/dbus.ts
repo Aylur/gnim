@@ -42,6 +42,15 @@ export type ServeProps = {
     timeout?: number
 }
 
+function gtypeNamePrefix() {
+    if (!GObject.gtypeNameBasedOnJSPath) return ""
+
+    // GJS's builtin prefix builder is not reliable with package managers and bundlers
+    return import.meta.url
+        .replace(/[^a-z0-9]+(.)?/gi, (_, c) => (c ? c.toUpperCase() : ""))
+        .replace(/^[^a-z]+/i, "")
+}
+
 /**
  * Base type for DBus services and proxies. Interface name is set with
  * the {@link iface} decorator which also registers it as a GObject type.
@@ -51,7 +60,7 @@ export class Service extends GObject.Object {
     #info: Gio.DBusInterfaceInfo
 
     static {
-        GObject.registerClass(this)
+        GObject.registerClass({ GTypeName: gtypeNamePrefix() + "GnimDBusService" }, this)
     }
 
     [internals]: {
