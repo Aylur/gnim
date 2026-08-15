@@ -231,6 +231,98 @@ describe("render", () => {
         expect(root.children).toHaveLength(0)
         expect(widget.destroyed).toBe(true)
     })
+
+    it("detaches and destroys nested widgets innermost-first when disposed", () => {
+        const order: string[] = []
+
+        // records the order of ref cleanups and of destructions
+        const track = (name: string) => (self: Widget) => {
+            let destroyed = false
+            Object.defineProperty(self, "destroyed", {
+                get: () => destroyed,
+                set: (value: boolean) => {
+                    destroyed = value
+                    if (value) order.push(`destroy:${name}`)
+                },
+            })
+            onCleanup(() => order.push(`cleanup:${name}`))
+        }
+
+        const root = new Box()
+        const dispose = renderTree(
+            () =>
+                jsx(Widget, {
+                    ref: track("third"),
+                    children: jsx(Widget, {
+                        ref: track("second"),
+                        children: jsx(Widget, {
+                            ref: track("first"),
+                        }),
+                    }),
+                }),
+            root,
+        )
+
+        dispose()
+
+        expect(order).toEqual([
+            "cleanup:first",
+            "cleanup:second",
+            "cleanup:third",
+            "destroy:first",
+            "destroy:second",
+            "destroy:third",
+        ])
+    })
+
+    it("constructs nested widgets top-down and appends them to their parents bottom-up", () => {
+        const order: string[] = []
+
+        // records the children appended to a widget by name
+        const recordAppends = (widget: Widget) => {
+            widget.children.push = (...appended: Widget[]) => {
+                for (const child of appended) order.push(`append:${child.label}`)
+                return Array.prototype.push.apply(widget.children, appended)
+            }
+        }
+
+        // `ref` runs right after construction, before children are mounted
+        const track = (name: string) => (self: Widget) => {
+            order.push(`construct:${name}`)
+            recordAppends(self)
+        }
+
+        const root = new Box()
+        recordAppends(root)
+
+        const dispose = renderTree(
+            () =>
+                jsx(Widget, {
+                    label: "outer",
+                    ref: track("outer"),
+                    children: jsx(Widget, {
+                        label: "middle",
+                        ref: track("middle"),
+                        children: jsx(Widget, {
+                            label: "inner",
+                            ref: track("inner"),
+                        }),
+                    }),
+                }),
+            root,
+        )
+
+        expect(order).toEqual([
+            "construct:outer",
+            "construct:middle",
+            "construct:inner",
+            "append:inner",
+            "append:middle",
+            "append:outer",
+        ])
+
+        dispose()
+    })
 })
 
 describe("<Fragment />", () => {

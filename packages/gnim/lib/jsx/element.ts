@@ -195,6 +195,7 @@ function unpackSlot(node: GObject.Object | Accessor<GnimNode>): GObject.Object[]
 
 export function mountChildren(children: GnimNode, mount?: GObject.Object) {
     const renderer = getRenderer()
+    const scope = getScope()
     const nodes = resolveNode(children)
     let currentChildren: GObject.Object[] = []
 
@@ -202,7 +203,7 @@ export function mountChildren(children: GnimNode, mount?: GObject.Object) {
 
     if (!nodes.some((node) => isAccessor(node)) && mount) {
         renderer.setChildren(mount, nodes as Array<GObject.Object>, currentChildren)
-        onCleanup(() => {
+        scope.cleanups.push(() => {
             renderer.setChildren(mount, currentChildren, nodes as Array<GObject.Object>)
         })
         return
@@ -222,7 +223,7 @@ export function mountChildren(children: GnimNode, mount?: GObject.Object) {
     )
 
     if (mount) {
-        onCleanup(() => {
+        scope.cleanups.push(() => {
             renderer.setChildren(mount, [], currentChildren)
         })
     }

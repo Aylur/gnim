@@ -40,6 +40,7 @@ export {
     appendChild,
     removeChild,
     setChildren,
+    MissingMethodError,
     type Buildable,
     type Renderer,
 } from "./jsx/render.js"
