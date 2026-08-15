@@ -3,7 +3,7 @@
 def "main types" [] {
     mkdir .gnim
     flatpak run --command=cp --filesystem=home org.gnome.Sdk -r /usr/share/gir-1.0 ./.gnim/girs
-    girgen -d .gnim/girs -i Gee-0.8 gjs -o .gnim/types/gi
+    girgen -d packages/gnome-shell/gir-1.0/gnome50 -d .gnim/girs -i Gee-0.8 gjs -o .gnim/types/gi
 }
 
 def "main ci" [] {

@@ -5,6 +5,7 @@ import {
     appendChild,
     computed,
     isAccessor,
+    MissingMethodError,
     newObject,
     removeChild,
     render as renderGnim,
@@ -20,12 +21,6 @@ import {
 const dummyBuilder = new Gtk.Builder()
 const slotType = Symbol("gnim.gtk4.slot")
 const cssprovider = Symbol("gnim.gtk4.cssprovider")
-
-class MissingMethodError extends Error {
-    constructor(name: string, parent: GObject.Object, child: GObject.Object) {
-        super(`Missing "${name}" implementation for parent "${parent}" and child "${child}".`)
-    }
-}
 
 function snakecase(str: string) {
     return str
@@ -221,6 +216,8 @@ export class GtkRenderer implements Renderer {
         throw new MissingMethodError("appendChild", parent, child)
     }
     removeChild(parent: GObject.Object, child: GObject.Object): void {
+        // TODO: Adw.Breakpoint -> Adw.BreakpointBin
+
         if (removeChild in parent && typeof parent[removeChild] === "function") {
             if (parent[removeChild](child)) return
         }

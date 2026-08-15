@@ -1,6 +1,7 @@
 import GObject from "gi://GObject?version=2.0"
 import {
     appendChild,
+    MissingMethodError,
     newObject,
     removeChild,
     render as renderGnim,
@@ -12,42 +13,13 @@ import {
     type Renderer,
 } from "gnim"
 
-interface Actor extends GObject.Object {
-    add_child(actor: Actor): void
-    remove_child(actor: Actor): void
-    add_action(action: GObject.Object): void
-    remove_action(action: GObject.Object): void
-    add_constraint(constraint: GObject.Object): void
-    remove_constraint(constraint: GObject.Object): void
-    set_layout_manager(layout_manager: GObject.Object | null): void
-    destroy(): void
-}
+// @ts-expect-error we don't generate versionless to avoid pinning gnome version
+import _St from "gi://St"
+// @ts-expect-error we don't generate versionless to avoid pinning gnome version
+import _Clutter from "gi://Clutter"
 
-interface ActorClass extends GObject.ObjectClass {
-    [Symbol.hasInstance](i: unknown): i is Actor
-}
-
-// gnome-shell only ships Clutter but not St. Their version number is also incremented each version
-// which would make maintenance annoying and since EGO does not support modern typescript anyway
-// we just shim some required interfaces instead of maintaining .gir files.
-const { St, Clutter } = imports.gi as unknown as {
-    St: {
-        Widget: GObject.ObjectClass
-        Label: { new: (label: string) => Actor }
-    }
-    Clutter: {
-        Actor: ActorClass
-        Action: GObject.ObjectClass & {
-            [Symbol.hasInstance](i: unknown): i is GObject.Object & { __: "action" }
-        }
-        Constraint: GObject.ObjectClass & {
-            [Symbol.hasInstance](i: unknown): i is GObject.Object & { __: "constraint" }
-        }
-        LayoutManager: GObject.ObjectClass & {
-            [Symbol.hasInstance](i: unknown): i is GObject.Object & { __: "layout_manager" }
-        }
-    }
-}
+const St = _St as typeof import("gi://St?version=18").GI.St
+const Clutter = _Clutter as typeof import("gi://Clutter?version=18").GI.Clutter
 
 function snakecase(str: string) {
     return str
@@ -126,7 +98,7 @@ export class GnomeRenderer implements Renderer {
             }
         }
 
-        throw Error(`cannot add ${child} to ${parent}`)
+        throw new MissingMethodError("appendChild", parent, child)
     }
     removeChild(parent: GObject.Object, child: GObject.Object): void {
         if (removeChild in parent && typeof parent[removeChild] === "function") {
@@ -148,7 +120,7 @@ export class GnomeRenderer implements Renderer {
             }
         }
 
-        throw Error(`cannot remove ${child} from ${parent}`)
+        throw new MissingMethodError("removeChild", parent, child)
     }
     destroyChild(_: GObject.Object, child: GObject.Object): void {
         if (child instanceof Clutter.Actor) {

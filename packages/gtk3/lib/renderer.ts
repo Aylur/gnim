@@ -4,6 +4,7 @@ import {
     appendChild,
     computed,
     isAccessor,
+    MissingMethodError,
     newObject,
     removeChild,
     render as renderGnim,
@@ -193,7 +194,7 @@ export class GtkRenderer implements Renderer {
             return parent.vfunc_add_child(dummyBuilder, child, getSlot(child))
         }
 
-        throw Error(`cannot add ${child} to ${parent}`)
+        throw new MissingMethodError("appendChild", parent, child)
     }
     removeChild(parent: GObject.Object, child: GObject.Object): void {
         if (removeChild in parent && typeof parent[removeChild] === "function") {
@@ -216,7 +217,7 @@ export class GtkRenderer implements Renderer {
             return parent.remove_window(child)
         }
 
-        throw Error(`cannot remove ${child} from ${parent}`)
+        throw new MissingMethodError("removeChild", parent, child)
     }
     destroyChild(_: GObject.Object, child: GObject.Object): void {
         if (child instanceof Gtk.Window) {

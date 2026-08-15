@@ -8,6 +8,16 @@ export const setChildren = Symbol("gnim.setChildren")
 export const appendChild = Symbol("gnim.appendChild")
 export const removeChild = Symbol("gnim.removeChild")
 
+export class MissingMethodError extends Error {
+    constructor(
+        name: "removeChild" | "appendChild",
+        parent: GObject.Object,
+        child: GObject.Object,
+    ) {
+        super(`Missing "${name}" implementation for parent "${parent}" and child "${child}".`)
+    }
+}
+
 /**
  * Gtk independent `Gtk.Buildable` alternative.
  * Each method returns whether the operation succeeded. If `false` it will fall back to the default behavior.
