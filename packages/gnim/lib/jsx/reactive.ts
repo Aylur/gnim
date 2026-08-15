@@ -160,8 +160,9 @@ export function createContext<T>(defaultValue: T): Context<T> {
     function use(): T {
         let scope = Scope.current
         while (scope) {
-            const value = scope.contexts.get(ctx)
-            if (value !== undefined) return value as T
+            if (scope.contexts.has(ctx)) {
+                return scope.contexts.get(ctx) as T
+            }
             scope = scope.owner
         }
         return defaultValue

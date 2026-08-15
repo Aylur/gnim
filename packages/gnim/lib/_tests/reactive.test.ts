@@ -12,6 +12,7 @@ import {
     bind,
     connectSignal,
     createStore,
+    createContext,
     prop,
     Scope,
 } from "../jsx/reactive.js"
@@ -797,6 +798,45 @@ describe("throwing effects", () => {
 
         error.mockRestore()
         dispose()
+    })
+})
+
+describe("createContext", () => {
+    it("falls back to the default value when never provided", () => {
+        const Ctx = createContext("fallback")
+
+        createRoot(() => {
+            expect(Ctx.use()).toBe("fallback")
+        })
+    })
+
+    it("resolves the provided value through nested scopes", () => {
+        const Ctx = createContext("fallback")
+
+        createRoot(() => {
+            Ctx.provide("outer", () => {
+                createRoot((dispose) => {
+                    expect(Ctx.use()).toBe("outer")
+                    dispose()
+                }, getScope())
+
+                Ctx.provide("inner", () => {
+                    expect(Ctx.use()).toBe("inner")
+                })
+
+                expect(Ctx.use()).toBe("outer")
+            })
+        })
+    })
+
+    it("resolves an explicitly provided undefined value", () => {
+        const Ctx = createContext<string | undefined>("fallback")
+
+        createRoot(() => {
+            Ctx.provide(undefined, () => {
+                expect(Ctx.use()).toBeUndefined()
+            })
+        })
     })
 })
 
