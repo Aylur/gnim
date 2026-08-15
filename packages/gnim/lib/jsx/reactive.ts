@@ -85,9 +85,12 @@ export class Scope {
         try {
             return fn()
         } finally {
-            this.after?.forEach((cb) => cb())
-            this.after = null
-            Scope.current = prevOwner
+            try {
+                this.after?.forEach((cb) => cb())
+            } finally {
+                this.after = null
+                Scope.current = prevOwner
+            }
         }
     }
 
@@ -345,9 +348,11 @@ export function createState<T>(init: T, options?: StateOptions<NoInfer<T>>): Sta
 function push<T>(fn: () => T) {
     const deps = new Set<Accessor>()
     AccessStack.push(deps)
-    const res = fn()
-    AccessStack.pop()
-    return [res, deps] as const
+    try {
+        return [fn(), deps] as const
+    } finally {
+        AccessStack.pop()
+    }
 }
 
 /**
@@ -518,11 +523,14 @@ export function effect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions) {
         currentScope.dispose()
         currentScope = new Scope(parentScope)
 
-        const [value, deps] = currentScope.run(() => push(() => fn(currentValue)))
+        try {
+            const [value, deps] = currentScope.run(() => push(() => fn(currentValue)))
 
-        currentDeps = diff(parentScope, currentDeps, deps, () => queueEffect(syncEffect))
-        currentValue = value
-        EffectDepth--
+            currentDeps = diff(parentScope, currentDeps, deps, () => queueEffect(syncEffect))
+            currentValue = value
+        } finally {
+            EffectDepth--
+        }
     }
 
     function dispose() {

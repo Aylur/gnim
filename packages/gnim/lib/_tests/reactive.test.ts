@@ -13,6 +13,7 @@ import {
     connectSignal,
     createStore,
     prop,
+    Scope,
 } from "../jsx/reactive.js"
 
 const emit = GObject.signal_emit_by_name
@@ -731,6 +732,71 @@ describe("edge cases", () => {
 
         // Desired behavior: no runs for n = 3 or n = 4.
         expect(spy.mock.calls).toEqual([[0], [1], [2]])
+    })
+})
+
+describe("throwing effects", () => {
+    it("propagates a mount error and restores the current scope", () => {
+        expect(Scope.current).toBeNull()
+
+        expect(() =>
+            createRoot(() => {
+                effect(() => {
+                    throw Error("boom")
+                })
+            }),
+        ).toThrow("boom")
+
+        expect(Scope.current).toBeNull()
+    })
+
+    it("restores the current scope when an immediate effect throws", () => {
+        expect(Scope.current).toBeNull()
+
+        expect(() =>
+            createRoot(() => {
+                effect(
+                    () => {
+                        throw Error("boom")
+                    },
+                    { immediate: true },
+                )
+            }),
+        ).toThrow("boom")
+
+        expect(Scope.current).toBeNull()
+    })
+
+    it("logs errors thrown during re-runs and keeps other effects running", async () => {
+        const error = vi.spyOn(console, "error").mockImplementation(() => {})
+        const spy = vi.fn()
+
+        const { setValue, dispose } = createRoot((dispose) => {
+            const [value, setValue] = createState(0)
+
+            effect(() => {
+                if (value() === 1) throw Error("boom")
+            })
+            effect(() => spy(value()))
+
+            return { setValue, dispose }
+        })
+
+        setValue(1)
+        await flush()
+
+        expect(error).toHaveBeenCalled()
+        expect(spy).toHaveBeenLastCalledWith(1)
+
+        // the throwing effect kept its subscriptions and the system stays live
+        setValue(2)
+        await flush()
+
+        expect(spy).toHaveBeenLastCalledWith(2)
+        expect(Scope.current).toBeNull()
+
+        error.mockRestore()
+        dispose()
     })
 })
 
