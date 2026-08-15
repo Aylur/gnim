@@ -143,7 +143,7 @@ export class Schema<
             this.gettextDomain = props.gettextDomain
         }
 
-        if (this.path && !this.path.startsWith("/") && !this.path.endsWith("/")) {
+        if (this.path && (!this.path.startsWith("/") || !this.path.endsWith("/"))) {
             throw Error("Schema path should start and end with a forward slash '/'")
         }
 
