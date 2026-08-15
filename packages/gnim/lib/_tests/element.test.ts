@@ -774,6 +774,33 @@ describe("<For />", () => {
         dispose()
     })
 
+    it("logs an error for duplicate keys", async () => {
+        const error = vi.spyOn(console, "error").mockImplementation(() => {})
+        const [items, setItems] = createState(["a", "a", "b"])
+
+        const root = new Box()
+        const dispose = renderTree(
+            () =>
+                jsx(For, {
+                    each: items,
+                    children: (item: string) => jsx(Widget, { label: item }),
+                }),
+            root,
+        )
+
+        expect(error).toHaveBeenCalledTimes(1)
+        expect(String(error.mock.calls[0][0])).toContain("duplicate keys in <For>: a")
+
+        // no error once the keys are unique again
+        setItems(["a", "b"])
+        await flush()
+
+        expect(error).toHaveBeenCalledTimes(1)
+
+        error.mockRestore()
+        dispose()
+    })
+
     it("accepts a Gio.ListModel as its source", async () => {
         const GioListModel = Gio.ListModel as unknown as new () => object
         class MockListModel extends GioListModel {

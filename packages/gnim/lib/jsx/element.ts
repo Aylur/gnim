@@ -333,6 +333,11 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
         const ids = items.map(id)
         const idSet = new Set(ids)
 
+        if (idSet.size !== ids.length) {
+            const dupes = new Set(ids.filter((id, i) => ids.indexOf(id) !== i))
+            console.error(Error(`duplicate keys in <For>: ${[...dupes].join(", ")}.`))
+        }
+
         for (const [key, value] of map.entries()) {
             if (!idSet.has(key)) {
                 value.scope.dispose()
