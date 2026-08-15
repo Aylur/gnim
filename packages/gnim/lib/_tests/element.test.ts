@@ -1,7 +1,7 @@
 import GObject from "gi://GObject?version=2.0"
 import Gio from "gi://Gio?version=2.0"
 import { describe, expect, it, vi } from "vitest"
-import type { GnimNode } from "../jsx/element.js"
+import type { CCProps, GnimNode } from "../jsx/element.js"
 import { For, Fragment, Portal, With, jsx, newObject } from "../jsx/element.js"
 import { createState, onCleanup, type Accessor } from "../jsx/reactive.js"
 import { render, type Renderer } from "../jsx/render.js"
@@ -28,7 +28,7 @@ const renderer: Renderer = {
         throw Error(`unresolved JSX tag: "${tag}"`)
     },
     constructObject(klass, props) {
-        return newObject(klass, props)
+        return newObject(klass, props as CCProps<GObject.Object>)
     },
     createText(text) {
         return new Widget({ label: text })

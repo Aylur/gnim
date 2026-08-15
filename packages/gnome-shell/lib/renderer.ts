@@ -6,6 +6,7 @@ import {
     render as renderGnim,
     setChildren,
     type CC,
+    type CCProps,
     type FC,
     type GnimNode,
     type Renderer,
@@ -60,7 +61,7 @@ export class GnomeRenderer implements Renderer {
         throw new Error("Function not implemented.")
     }
     constructObject(element: CC, props: Record<string, unknown>): GObject.Object {
-        return newObject(element, props)
+        return newObject(element, props as CCProps<GObject.Object>)
     }
     createText(string: string): GObject.Object {
         return St.Label.new(string)

@@ -1,6 +1,6 @@
 import GObject from "gi://GObject?version=2.0"
 import { describe, expect, it, vi } from "vitest"
-import type { CC, GnimNode } from "../jsx/element.js"
+import type { CC, CCProps, GnimNode } from "../jsx/element.js"
 import { For, With, jsx, newObject } from "../jsx/element.js"
 import { createState, type Accessor } from "../jsx/reactive.js"
 import { getRenderer, render, type Renderer } from "../jsx/render.js"
@@ -37,7 +37,7 @@ function createRenderer() {
             throw Error(`unresolved JSX tag: "${tag}"`)
         }),
         constructObject: vi.fn((klass: CC, props: Record<string, unknown>) =>
-            newObject(klass, props),
+            newObject(klass, props as CCProps<GObject.Object>),
         ),
         createText: vi.fn((text: string) => new Widget({ label: text })),
         prepareProps: vi.fn((_klass: CC, props: Record<string, unknown>) => props),
