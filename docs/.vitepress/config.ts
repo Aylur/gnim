@@ -48,6 +48,7 @@ export default defineConfig({
                     { text: "Buildable", link: "/article/buildable" },
                     { text: "Web framework comparisons", link: "/article/comparisons" },
                     { text: "GLib.Variant", link: "/article/gvariant" },
+                    { text: "Roadmap", link: "/article/roadmap" },
                 ],
             },
             {
