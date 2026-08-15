@@ -649,15 +649,15 @@ export function createStore<S extends Record<PropertyKey, any>>(store: S): Store
     for (const [key, desc] of properties) {
         if ("value" in desc) {
             const [get, set] = createState(desc.value)
-            accessors[key] = get
             Object.defineProperty(obj, key, {
-                get,
+                get: (accessors[key] = get),
                 set,
                 enumerable: true,
             })
         } else if ("get" in desc) {
+            const get = computed(desc.get!.bind(obj))
             Object.defineProperty(obj, key, {
-                get: computed(desc.get!.bind(obj)),
+                get: (accessors[key] = get),
                 set: desc.set,
                 enumerable: true,
             })
@@ -668,7 +668,9 @@ export function createStore<S extends Record<PropertyKey, any>>(store: S): Store
 
     Object.assign(obj, {
         subscribe(key: PropertyKey, callback: Fn): Fn {
-            return accessors[key].subscribe(callback)
+            const accessor = accessors[key]
+            if (!accessor) throw Error(`cannot subscribe: "${String(key)}" is not reactive`)
+            return accessor.subscribe(callback)
         },
     })
 

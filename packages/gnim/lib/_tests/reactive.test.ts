@@ -1143,6 +1143,56 @@ describe("createStore", () => {
         expect(store.double).toBe(20)
     })
 
+    it("notifies subscribers of getter fields", () => {
+        const store = createStore({
+            value: 2,
+            get double() {
+                return this.value * 2
+            },
+        })
+        const observer = vi.fn()
+
+        const unsubscribe = store.subscribe("double", observer)
+        store.value = 3
+
+        expect(observer).toHaveBeenCalledTimes(1)
+        expect(store.double).toBe(6)
+
+        unsubscribe()
+        store.value = 4
+        expect(observer).toHaveBeenCalledTimes(1)
+    })
+
+    it("binds getter fields", async () => {
+        const spy = vi.fn()
+
+        const { store, dispose } = createRoot((dispose) => {
+            const store = createStore({
+                value: 1,
+                get double() {
+                    return this.value * 2
+                },
+            })
+            effect(() => spy(bind(store, "double")()))
+            return { store, dispose }
+        })
+
+        expect(spy).toHaveBeenLastCalledWith(2)
+
+        store.value = 5
+        await flush()
+
+        expect(spy).toHaveBeenLastCalledWith(10)
+
+        dispose()
+    })
+
+    it("throws a descriptive error when subscribing to an unknown key", () => {
+        const store = createStore({ value: 1 })
+
+        expect(() => store.subscribe("missing" as never, vi.fn())).toThrow(/not reactive/)
+    })
+
     it("tracks store properties in effects", async () => {
         const spy = vi.fn()
 
