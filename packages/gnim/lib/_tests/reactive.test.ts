@@ -245,6 +245,54 @@ describe("effect", () => {
     })
 })
 
+describe("scope bookkeeping", () => {
+    it("does not grow the owning scope on effect and computed re-runs", async () => {
+        const { scope, setValue, dispose } = createRoot((dispose) => {
+            const scope = getScope()
+            const [value, setValue] = createState(0)
+            const double = computed(() => value() * 2)
+            effect(() => double())
+            return { scope, setValue, dispose }
+        })
+
+        const cleanups = scope.cleanups.length
+        const children = scope.children.size
+
+        for (let i = 1; i <= 10; i++) {
+            setValue(i)
+            await flush()
+        }
+
+        expect(scope.cleanups.length).toBe(cleanups)
+        expect(scope.children.size).toBe(children)
+
+        dispose()
+
+        expect(scope.children.size).toBe(0)
+        expect(scope.cleanups.length).toBe(0)
+    })
+
+    it("runs effect cleanups when the owner disposes after re-runs", async () => {
+        const cleanup = vi.fn()
+
+        const { setValue, dispose } = createRoot((dispose) => {
+            const [value, setValue] = createState(0)
+            effect(() => {
+                value()
+                onCleanup(cleanup)
+            })
+            return { setValue, dispose }
+        })
+
+        setValue(1)
+        await flush()
+        expect(cleanup).toHaveBeenCalledTimes(1)
+
+        dispose()
+        expect(cleanup).toHaveBeenCalledTimes(2)
+    })
+})
+
 describe("computed", () => {
     it("derives a value from its dependencies", () => {
         createRoot((dispose) => {

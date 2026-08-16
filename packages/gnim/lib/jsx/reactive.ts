@@ -70,11 +70,12 @@ export class Scope {
     contexts = new Map<Context<any>, unknown>()
     cleanups: Fn[] = []
     after: Fn[] | null = []
+    children = new Set<Scope>()
 
     constructor(parent?: Scope | null) {
         if (parent) {
             this.owner = parent
-            parent.cleanups.unshift(() => this.dispose())
+            parent.children.add(this)
         }
     }
 
@@ -98,8 +99,15 @@ export class Scope {
     }
 
     dispose() {
+        this.owner?.children.delete(this)
+
+        const ordered = this.children.values().toArray().toReversed()
+        for (const child of ordered) child.dispose()
+        this.children.clear()
+
         this.cleanups.forEach((cb) => cb())
         this.cleanups.length = 0
+
         this.owner = null
         this.disposed = true
     }
@@ -812,11 +820,13 @@ export function bind(object: Bindable, key: PropertyKey, ...props: string[]): Ac
 
 type SignalsOf<O> = O extends GObject.Object
     ? {
-          [S in Keyof<O["$signals"]> as S extends `${infer Name}::{}`
-              ? Name extends "notify"
-                  ? never
-                  : Name | `${Name}::${string}`
-              : S]: O["$signals"][S]
+          [
+              S in Keyof<O["$signals"]> as S extends `${infer Name}::{}`
+                  ? Name extends "notify"
+                      ? never
+                      : Name | `${Name}::${string}`
+                  : S
+          ]: O["$signals"][S]
       } & {
           [S in Keyof<O["$readableProperties"]> as `notify::${S}`]: (
               pspec: GObject.ParamSpec<O["$readableProperties"][S]>,
