@@ -1,7 +1,7 @@
 # Internationalization
 
 It is very important to make your applications as accessible as possible. Even
-if the only language you speak as a developer is English the rest of the world
+if the only language you speak as a developer is English, the rest of the world
 might not speak it, but there might be others who will be eager enough to
 contribute translations for your application. To make their work easy, all you
 have to do is mark text in code as translatable.
@@ -136,8 +136,8 @@ format numbers and dates for the current locale.
 
 The strings returned by `gettext`, `ngettext` and `pgettext` carry their
 arguments at the type level, so `fmt` is fully type checked: forgetting an
-argument, misspelling its name, or passing the wrong will result in an error at
-compile-time.
+argument, misspelling its name, or passing the wrong type will result in an
+error at compile-time.
 
 > [!NOTE]
 >
@@ -320,7 +320,7 @@ getLocale("LC_COLLATE") // Intl.Collator
 ```
 
 Anything that reads as part of a sentence should follow the language the
-sentence itself is in for which you can use `getPreferredLocale`.
+sentence itself is in, for which you can use `getPreferredLocale`.
 
 ```ts
 import { getPreferredLocale } from "gnim/intl"
@@ -493,7 +493,7 @@ msginit \
   --no-translator
 ```
 
-After filling the translations restart the dev server with the chosen
+After filling in the translations, restart the dev server with the chosen
 application ID and chosen locale.
 
 ```sh

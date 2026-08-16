@@ -3,7 +3,7 @@
 The reactive system was implemented from scratch without any prior experience
 with similar systems. I did not yet understand the complexity of the problem at
 first, so most edge-cases were fixed as I encountered them. However, there are
-some problems that still require a solution builtin.
+some problems that still require a builtin solution.
 
 ## States are synchronous, effects use the microtask queue
 
@@ -23,7 +23,7 @@ setItems(["a", "b"])
 
 Solid, in comparison, propagates everything synchronously. This is intentional
 mainly due to the fact that
-[diamond dependencies are not coalesced](#diamond-dependencies-are-not-coalesced)
+[diamond dependencies are not coalesced](#diamond-dependencies-are-not-coalesced).
 
 Planned: make everything synchronous and introduce a `batch()` API.
 
@@ -52,8 +52,8 @@ notified with consistent values.
 
 ## Reactive text children are recreated on every change
 
-A text children from an accessor destroys the previous text node and constructs
-a new one each time the value changes, instead of updating the existing node's
+A text child from an accessor destroys the previous text node and constructs a
+new one each time the value changes, instead of updating the existing node's
 label in place.
 
 This is not a big issue, since it can be fixed from user code by using the text
@@ -62,7 +62,7 @@ node directly and using its label property instead.
 Planned: introduce an `updateText` Renderer API and update the existing text
 node in place.
 
-## Errors boundaries
+## Error boundaries
 
 An effect that throws is logged with `console.error` and there is no way for
 application code to catch these errors. The exception is

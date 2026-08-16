@@ -218,7 +218,7 @@ type SignalOptions = {
 ```
 
 Passing `default: false` to the signal will skip registering the method as a
-default handler
+default handler.
 
 ```ts
 class MyObject {

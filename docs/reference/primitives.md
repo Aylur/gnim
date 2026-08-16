@@ -137,7 +137,7 @@ const c: Accessor<number> = computed(() => a() + b())
 
 ### `untrack`
 
-Lets you read `Accessor` and [`Store`](#createstate) without tracking them.
+Lets you read `Accessor` and [`Store`](#createstore) without tracking them.
 
 ```ts
 const value: Accessor<T>
@@ -150,7 +150,7 @@ const _ = untrack(() => store.field)
 ### `bind`
 
 Creates an `Accessor` on a `GObject.Object`'s `property` or a
-[Store](#createStore).
+[Store](#createstore).
 
 ```ts
 type Bindable = Store | GObject.Object
@@ -296,7 +296,7 @@ effect(() => {
 })
 ```
 
-To pass them as reactive props you can use [`bind`](#bind)
+To pass them as reactive props you can use [`bind`](#bind).
 
 ```tsx
 <Component value={bind(store, "value")} />
@@ -321,7 +321,7 @@ To pass them as reactive props you can use [`bind`](#bind)
 > ```
 >
 > Note that using the spread operator assigns values meaning that derived values
-> defined using the getter syntax will no longer track its dependencies.
+> defined using the getter syntax will no longer track their dependencies.
 
 ## Scopes and Life cycle
 

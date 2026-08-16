@@ -347,8 +347,8 @@ return (
 
 ### Fragment
 
-A `<Fragment>` often used via `<>...</>` syntax, lets you group elements without
-a wrapper widget.
+A `<Fragment>`, often used via `<>...</>` syntax, lets you group elements
+without a wrapper widget.
 
 ```tsx
 <>

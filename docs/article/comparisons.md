@@ -525,9 +525,9 @@ onUnmounted(() => {
 
 > [!NOTE]
 >
-> In Gnim, props are explicitly declared whether they can be reactive due to
-> GObjects having possible `construct-only` properties that cannot be mutated
-> after instantiation.
+> In Gnim, props explicitly declare whether they can be reactive due to GObjects
+> having possible `construct-only` properties that cannot be mutated after
+> instantiation.
 
 ::: code-group
 

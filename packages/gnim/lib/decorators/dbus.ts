@@ -700,7 +700,7 @@ export function methodAsync<
  *
  * ```ts
  * class MyService extends Service {
- *   \@method(["i", "s"], ["s"])
+ *   \@methodAsync(["i", "s"], ["s"])
  *   async MyMethod(i: number, s: string): Promise<[string]> {}
  * }
  * ```

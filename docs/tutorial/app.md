@@ -1,9 +1,9 @@
 # Writing an Application
 
 So far this tutorial used a simple `GLib.MainLoop` to display Gtk Widgets which
-works, but it does not let you integrate your app into the desktop. No way to
-name your app and launching the script will simply open a new window. This is
-where `Gtk.Application` comes in, which does most of the heavy lifting.
+works, but it does not let you integrate your app into the desktop. There is no
+way to name your app, and launching the script will simply open a new window.
+This is where `Gtk.Application` comes in, which does most of the heavy lifting.
 
 > [!TIP]
 >
@@ -115,7 +115,7 @@ class MyApp extends Gtk.Application {
 
 If you want to persist some data, for example some setting values, Gtk provides
 you the [Gio.Settings](https://docs.gtk.org/gio/class.Settings.html) API which
-is a way to store key value pairs in a predefined schema. Gnim provides a
+is a way to store key-value pairs in a predefined schema. Gnim provides a
 type-safe wrapper over this API which during development will automatically
 compile the store and provide it to GJS.
 

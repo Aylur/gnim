@@ -280,7 +280,7 @@ export class Schema<
         throw Error()
     }
 
-    // TODO: support children nodes
+    // TODO: support child nodes
     // child<const Name extends string>(name: Name, schema: Schema) {
     // }
 }

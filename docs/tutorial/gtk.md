@@ -94,7 +94,7 @@ implement some common layouts:
   ```
 
 - [`CenterBox`](https://docs.gtk.org/gtk4/class.CenterBox.html) which positions
-  its children in three separate sections similar to `Box`
+  its children in three separate sections similar to `Box`.
 
   ```ts
   const centerBox = new Gtk.CenterBox({

@@ -1,8 +1,8 @@
 # TypeScript
 
 GObject has a few additional concepts about class methods and properties that
-cannot be expressed with TypeScript alone. For these we have a few special type
-only fields on classes.
+cannot be expressed with TypeScript alone. For these we have a few special
+type-only fields on classes.
 
 We have annotations for:
 

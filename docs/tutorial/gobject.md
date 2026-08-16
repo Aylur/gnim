@@ -1,7 +1,8 @@
 # GObject
 
-GObject is the base library Gtk is built upon. GObject implements object
-oriented concepts in C which GJS will call into using GObject Introspection.
+GObject is the base library Gtk is built upon. GObject implements
+object-oriented concepts in C which GJS will call into using GObject
+Introspection.
 
 ## GObject Construction
 
@@ -162,13 +163,13 @@ markupLabel.set_use_markup(true)
 
 > [!IMPORTANT]
 >
-> Gnim, by convention only uses `camelCase` where appropriate so type
+> Gnim, by convention, only uses `camelCase` where appropriate so type
 > annotations might be intentionally missing. For example while
 > `markupLabel["use-markup"]` works at runtime, types are not generated for it.
 
 ### Property Change Notification
 
-Most GObject properties will emit
+Most GObject properties will emit the
 [`GObject.Object::notify`](https://docs.gtk.org/gobject/signal.Object.notify.html)
 signal when the value is changed. You can connect to this signal in the form of
 `notify::property-name` to invoke a callback when it changes:

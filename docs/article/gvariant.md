@@ -41,7 +41,7 @@ including GDBus, GSettings, GAction, GMenu and others.
 
 ## Basic Usage
 
-Standard usage of GVariant is very straight-forward. You can use the constructor
+Standard usage of GVariant is very straightforward. You can use the constructor
 methods like `GLib.Variant.new_string()` to create new `GLib.Variant` objects
 and the instance methods like `GLib.Variant.prototype.get_string()` to extract
 their values.
@@ -219,7 +219,7 @@ print(deepDict.deepUnpack()) // { "key1": [object variant of type "s"] }
 descendants.
 
 Note that `GLib.Variant.prototype.recursiveUnpack()` will unpack all variants to
-JS native values (ie. `Number`) so type information may be lost. You will have
+JS native values (i.e. `Number`) so type information may be lost. You will have
 to know the original types to repack those values.
 
 ```ts

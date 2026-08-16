@@ -26,7 +26,7 @@ JavaScript engine and the GNOME platform libraries.
 > [`GObject`](https://docs.gtk.org/gobject/) which are libraries written in C
 > and exposed to GJS through
 > [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) using
-> [GObject Introspection](https://gi.readthedocs.io/en/latest/)
+> [GObject Introspection](https://gi.readthedocs.io/en/latest/).
 
 ## Installing system dependencies
 
@@ -101,7 +101,7 @@ yarn create gnim@beta
 
 > [!TIP] Nix
 >
-> For nix users, Gnim provides a nix template
+> For nix users, Gnim provides a nix template.
 >
 > ```sh
 > nix flake init --template github:aylur/gnim

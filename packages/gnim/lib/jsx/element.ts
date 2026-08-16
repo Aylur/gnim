@@ -448,16 +448,14 @@ type GObjectProps<T> = T extends {
           >
       } & {
           // onSignalName and onDetailedSignal:detail
-          [
-              S in Keyof<T["$signals"]> as S extends `${infer Name}::{}`
-                  ? `on${PascalCase<Name>}:${string}` | `on${PascalCase<Name>}`
-                  : `on${PascalCase<S>}`
-          ]: GObject.SignalCallback<T, T["$signals"][S]>
+          [S in Keyof<T["$signals"]> as S extends `${infer Name}::{}`
+              ? `on${PascalCase<Name>}:${string}` | `on${PascalCase<Name>}`
+              : `on${PascalCase<S>}`]: GObject.SignalCallback<T, T["$signals"][S]>
       } & {
           // onNotifyProperty
-          [
-              S in Keyof<T["$readableProperties"]> as `onNotify${PascalCase<S>}`
-          ]: GObject.SignalCallback<
+          [S in Keyof<
+              T["$readableProperties"]
+          > as `onNotify${PascalCase<S>}`]: GObject.SignalCallback<
               T,
               (pspec: GObject.ParamSpec<T["$readableProperties"][S]>) => void
           >
