@@ -167,6 +167,38 @@ describe("render", () => {
         expect(handler).toHaveBeenCalledTimes(1)
     })
 
+    it("does not treat lowercase on* props as signal handlers", () => {
+        const [onto, setOnto] = createState("initial")
+
+        const root = new Box()
+        const dispose = renderTree(() => jsx(Widget, { online: true, onto }), root)
+        const widget = root.children[0] as Widget & { online: boolean; onto: string }
+
+        expect(widget.online).toBe(true)
+        expect(widget.onto).toBe("initial")
+
+        setOnto("updated")
+        expect(widget.onto).toBe("updated")
+
+        dispose()
+    })
+
+    it("does not treat non-function on* props as signal handlers", () => {
+        const [onDuty, setOnDuty] = createState(false)
+
+        const root = new Box()
+        const dispose = renderTree(() => jsx(Widget, { onDemand: 5, onDuty }), root)
+        const widget = root.children[0] as Widget & { onDemand: number; onDuty: boolean }
+
+        expect(widget.onDemand).toBe(5)
+        expect(widget.onDuty).toBe(false)
+
+        setOnDuty(true)
+        expect(widget.onDuty).toBe(true)
+
+        dispose()
+    })
+
     it("converts camel cased and detailed signal prop names", () => {
         const onNotify = vi.fn()
         const onDetail = vi.fn()

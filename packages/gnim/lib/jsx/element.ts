@@ -135,11 +135,10 @@ export function newObject<C extends CC>(
 
     // collect signals and bindings
     for (const [key, value] of Object.entries(props)) {
-        if (key.startsWith("on")) {
+        if (/^on[A-Z]/.test(key) && typeof value === "function") {
             signals.push([key, value as () => unknown])
             delete props[key]
-        }
-        if (isAccessor(value)) {
+        } else if (isAccessor(value)) {
             bindings.push([key, value])
             delete props[key]
         }
@@ -448,14 +447,16 @@ type GObjectProps<T> = T extends {
           >
       } & {
           // onSignalName and onDetailedSignal:detail
-          [S in Keyof<T["$signals"]> as S extends `${infer Name}::{}`
-              ? `on${PascalCase<Name>}:${string}` | `on${PascalCase<Name>}`
-              : `on${PascalCase<S>}`]: GObject.SignalCallback<T, T["$signals"][S]>
+          [
+              S in Keyof<T["$signals"]> as S extends `${infer Name}::{}`
+                  ? `on${PascalCase<Name>}:${string}` | `on${PascalCase<Name>}`
+                  : `on${PascalCase<S>}`
+          ]: GObject.SignalCallback<T, T["$signals"][S]>
       } & {
           // onNotifyProperty
-          [S in Keyof<
-              T["$readableProperties"]
-          > as `onNotify${PascalCase<S>}`]: GObject.SignalCallback<
+          [
+              S in Keyof<T["$readableProperties"]> as `onNotify${PascalCase<S>}`
+          ]: GObject.SignalCallback<
               T,
               (pspec: GObject.ParamSpec<T["$readableProperties"][S]>) => void
           >
