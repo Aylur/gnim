@@ -2,8 +2,10 @@
 
 The reactive system was implemented from scratch without any prior experience
 with similar systems. I did not yet understand the complexity of the problem at
-first, so most edge-cases were fixed as I encountered them. However, there are
-some problems that still require a builtin solution.
+first, so most edge-cases, which there are a lot, were fixed as I encountered
+them and so it turned out to be bit of a spaghetti. There are some problems that
+currently cannot be fixed with the current implementation so the plan for 2.1 is
+a full rewrite of the reactive system.
 
 ## States are synchronous, effects use the microtask queue
 
