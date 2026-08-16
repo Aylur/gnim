@@ -20,6 +20,16 @@ const EffectQueue = new Set<Fn>()
 let EffectDepth = 0
 let EffectsPending = false
 
+function notify(observers: Iterable<Fn>) {
+    for (const cb of Array.from(observers)) {
+        try {
+            cb()
+        } catch (err) {
+            console.error(err)
+        }
+    }
+}
+
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 export type MaybeAccessor<T> = T | Accessor<T>
 
@@ -360,7 +370,7 @@ export function createState<T>(init: T, options?: StateOptions<NoInfer<T>>): Sta
 
         if (!equals(currentValue, value)) {
             currentValue = value
-            Array.from(observers).forEach((cb) => cb())
+            notify(observers)
         }
     }
 
@@ -432,6 +442,8 @@ function createComputed<T>(fn: (prev?: T) => T): Accessor<T> {
     let scope = new Scope(parentScope)
     let deps = new Map<Accessor, Fn>()
 
+    let preValid = false
+    let preFailed = false
     let preValue: T | null
     let preDeps = new Set<Accessor>()
 
@@ -439,7 +451,7 @@ function createComputed<T>(fn: (prev?: T) => T): Accessor<T> {
         scope.dispose()
         state.value = null
         state.dirty = true
-        Array.from(observers).forEach((cb) => cb())
+        notify(observers)
     }
 
     function computeEffect() {
@@ -456,14 +468,24 @@ function createComputed<T>(fn: (prev?: T) => T): Accessor<T> {
 
     function subscribe(callback: Fn): Fn {
         if (observers.size === 0) {
-            if (EffectDepth > 0) {
+            if (EffectDepth > 0 && preValid) {
                 state.dirty = false
                 state.value = preValue
                 deps = new Map([...preDeps].map((dep) => [dep, dep.subscribe(invalidate)]))
                 preDeps.clear()
                 preValue = null
+                preValid = false
+                preFailed = false
+            } else if (EffectDepth > 0 && preFailed) {
+                // the pre-computation threw and was already reported:
+                // stay dirty so the error resurfaces through reads
+                preFailed = false
             } else {
-                computeEffect()
+                try {
+                    computeEffect()
+                } catch (err) {
+                    console.error(err)
+                }
             }
         }
 
@@ -486,10 +508,20 @@ function createComputed<T>(fn: (prev?: T) => T): Accessor<T> {
 
         if (observers.size === 0) {
             if (EffectDepth > 0) {
-                const [res, deps] = scope.run(() => push(fn))
-                preDeps = deps
-                preValue = res
-                return res
+                try {
+                    const [res, deps] = scope.run(() => push(fn))
+                    preDeps = deps
+                    preValue = res
+                    preValid = true
+                    preFailed = false
+                    return res
+                } catch (err) {
+                    preDeps.clear()
+                    preValue = null
+                    preValid = false
+                    preFailed = true
+                    throw err
+                }
             } else {
                 return fn()
             }
@@ -603,18 +635,29 @@ export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>
     function subscribe(callback: Fn): Fn {
         if (subscribers.size === 0) {
             EffectDepth += 1
-            currentValue = value.peek()
-            init = true
-            dispose = value.subscribe(() => {
-                EffectDepth += 1
-                const v = value.peek()
-                if (!equals(currentValue, v)) {
-                    currentValue = v
-                    Array.from(subscribers).forEach((cb) => cb())
+            try {
+                try {
+                    currentValue = value.peek()
+                    init = true
+                } catch (err) {
+                    console.error(err)
                 }
+                dispose = value.subscribe(() => {
+                    EffectDepth += 1
+                    try {
+                        const v = value.peek()
+                        if (!init || !equals(currentValue, v)) {
+                            currentValue = v
+                            init = true
+                            notify(subscribers)
+                        }
+                    } finally {
+                        EffectDepth -= 1
+                    }
+                })
+            } finally {
                 EffectDepth -= 1
-            })
-            EffectDepth -= 1
+            }
         }
 
         subscribers.add(callback)

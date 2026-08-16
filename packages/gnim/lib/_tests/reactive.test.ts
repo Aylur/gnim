@@ -179,6 +179,23 @@ describe("createState", () => {
         expect(observer).not.toHaveBeenCalled()
     })
 
+    it("notifies remaining subscribers and logs when one throws", () => {
+        const error = vi.spyOn(console, "error").mockImplementation(() => void 0)
+        const sibling = vi.fn()
+
+        const [value, setValue] = createState(0)
+        value.subscribe(() => {
+            throw Error("boom")
+        })
+        value.subscribe(sibling)
+
+        expect(() => setValue(1)).not.toThrow()
+        expect(sibling).toHaveBeenCalledTimes(1)
+        expect(error).toHaveBeenCalledTimes(1)
+
+        error.mockRestore()
+    })
+
     it("honors a custom equality function", () => {
         const [value, setValue] = createState({ id: 1 }, { equals: (a, b) => a.id === b.id })
         const observer = vi.fn()
@@ -373,6 +390,66 @@ describe("scope bookkeeping", () => {
 })
 
 describe("computed", () => {
+    it("notifies remaining subscribers and logs when one throws", () => {
+        const error = vi.spyOn(console, "error").mockImplementation(() => void 0)
+        const sibling = vi.fn()
+
+        const [a, setA] = createState(0)
+        const doubled = computed(() => a() * 2)
+
+        const unsubBoom = doubled.subscribe(() => {
+            throw Error("boom")
+        })
+        const unsubSibling = doubled.subscribe(sibling)
+
+        expect(() => setA(1)).not.toThrow()
+        expect(sibling).toHaveBeenCalledTimes(1)
+        expect(error).toHaveBeenCalledTimes(1)
+
+        unsubBoom()
+        unsubSibling()
+
+        error.mockRestore()
+    })
+
+    it("does not throw from subscribe when the computation throws", () => {
+        const error = vi.spyOn(console, "error").mockImplementation(() => void 0)
+
+        const boom = computed((): number => {
+            throw Error("boom")
+        })
+
+        expect(() => boom.subscribe(() => void 0)).not.toThrow()
+        expect(error).toHaveBeenCalledTimes(1)
+
+        expect(() => boom.peek()).toThrow("boom")
+
+        error.mockRestore()
+    })
+
+    it("recovers through reads after the computation throws on subscribe", () => {
+        const error = vi.spyOn(console, "error").mockImplementation(() => void 0)
+        const spy = vi.fn()
+
+        const [a, setA] = createState(-1)
+        const abs = computed(() => {
+            const v = a()
+            if (v < 0) throw Error("negative")
+            return v * 2
+        })
+
+        expect(() => abs.subscribe(spy)).not.toThrow()
+
+        setA(1)
+        expect(abs.peek()).toBe(2)
+
+        setA(2)
+        expect(spy).toHaveBeenCalledTimes(1)
+        expect(abs()).toBe(4)
+
+        error.mockRestore()
+    })
+
     it("derives a value from its dependencies", () => {
         createRoot((dispose) => {
             const [a] = createState(2)
