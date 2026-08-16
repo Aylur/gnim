@@ -18,6 +18,9 @@ import {
     type Renderer,
 } from "gnim"
 
+// optional
+const Adw = await import("gi://Adw?version=1").then((mod) => mod.default).catch(() => null)
+
 const dummyBuilder = new Gtk.Builder()
 const slotType = Symbol("gnim.gtk4.slot")
 const cssprovider = Symbol("gnim.gtk4.cssprovider")
@@ -164,7 +167,7 @@ export class GtkRenderer implements Renderer {
 
         if (
             child instanceof Gtk.Widget &&
-            parent instanceof Gtk.Stack &&
+            (parent instanceof Gtk.Stack || (Adw && parent instanceof Adw.ViewStack)) &&
             child.name !== "" &&
             child.name !== null &&
             getSlot(child) === "named"
@@ -182,7 +185,9 @@ export class GtkRenderer implements Renderer {
 
         if (
             child instanceof Gio.MenuModel &&
-            (parent instanceof Gtk.MenuButton || parent instanceof Gtk.PopoverMenu)
+            (parent instanceof Gtk.MenuButton ||
+                parent instanceof Gtk.PopoverMenu ||
+                (Adw && parent instanceof Adw.SplitButton))
         ) {
             return parent.set_menu_model(child)
         }
@@ -216,10 +221,38 @@ export class GtkRenderer implements Renderer {
         throw new MissingMethodError("appendChild", parent, child)
     }
     removeChild(parent: GObject.Object, child: GObject.Object): void {
-        // TODO: Adw.Breakpoint -> Adw.BreakpointBin
-
         if (removeChild in parent && typeof parent[removeChild] === "function") {
             if (parent[removeChild](child)) return
+        }
+
+        if (Adw) {
+            if (parent instanceof Adw.BreakpointBin && child instanceof Adw.Breakpoint) {
+                return parent.remove_breakpoint(child)
+            }
+
+            if (parent instanceof Adw.SplitButton) {
+                if (child instanceof Gtk.Popover && parent.popover === child) {
+                    return parent.set_popover(null)
+                }
+                if (child instanceof Gio.MenuModel && parent.menuModel === child) {
+                    return parent.set_menu_model(null)
+                }
+            }
+
+            if (
+                (parent instanceof Adw.Window || parent instanceof Adw.ApplicationWindow) &&
+                parent.content === child
+            ) {
+                return parent.set_content(null)
+            }
+
+            if (
+                parent instanceof Adw.NavigationSplitView ||
+                parent instanceof Adw.OverlaySplitView
+            ) {
+                if (parent.sidebar === child) return parent.set_sidebar(null)
+                if (parent.content === child) return parent.set_content(null)
+            }
         }
 
         if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
@@ -292,14 +325,14 @@ export class GtkRenderer implements Renderer {
                 return parent.set_popover(null)
             }
 
+            // Most containers have a .remove()
+            if ("remove" in parent && typeof parent.remove == "function") {
+                return parent.remove(child)
+            }
+
             // Most Bin-like containers have a .set_child()
             if ("set_child" in parent && typeof parent.set_child == "function") {
                 return parent.set_child(null)
-            }
-
-            // Most multi-child containers have a .remove()
-            if ("remove" in parent && typeof parent.remove == "function") {
-                return parent.remove(child)
             }
         }
 
