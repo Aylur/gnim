@@ -48,9 +48,7 @@ type SignalDeclaration = {
 }
 
 type PropertyTypeDeclaration<T = unknown> =
-    | ((name: string, flags: ParamFlags) => ParamSpec<T>)
-    | ParamSpec<T>
-    | TypeParameter<T>
+    ((name: string, flags: ParamFlags) => ParamSpec<T>) | ParamSpec<T> | TypeParameter<T>
 
 type Meta = {
     properties: Record<
@@ -210,8 +208,8 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
 
     const properties = entries(meta.properties).map(([key, { declaration, descriptor }]) => {
         const name = kebabcase(key)
-        const readable = !descriptor || "get" in descriptor
-        const writeable = !descriptor || "set" in descriptor
+        const readable = !descriptor || typeof descriptor.get === "function"
+        const writeable = !descriptor || typeof descriptor.set === "function"
         const flags = (readable ? ParamFlags.READABLE : 0) + (writeable ? ParamFlags.WRITABLE : 0)
         const type = declaration || getMetadata(proto, key)?.type
         if (!type) throw Error(`missing property type declaration "${constructor.name}.${key}"`)
