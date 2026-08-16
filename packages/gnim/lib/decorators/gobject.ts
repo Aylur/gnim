@@ -329,6 +329,15 @@ function pspecFromGType(type: GType<unknown>, name: string, flags: ParamFlags) {
             return GObject.param_spec_string(name, null, null, "", flags)
         case GObject.TYPE_JSOBJECT:
             return GObject.param_spec_boxed(name, null, null, GObject.TYPE_JSOBJECT, flags)
+        case GObject.TYPE_VARIANT:
+            return GObject.param_spec_variant(
+                name,
+                null,
+                null,
+                new GLib.VariantType("*"),
+                null,
+                flags,
+            )
         default:
             if (GObject.type_is_a(type, GObject.TYPE_OBJECT)) {
                 return GObject.param_spec_object(name, null, null, type, flags)
