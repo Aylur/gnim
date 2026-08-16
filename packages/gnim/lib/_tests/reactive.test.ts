@@ -15,6 +15,7 @@ import {
     createContext,
     prop,
     Scope,
+    type Accessor,
 } from "../jsx/reactive.js"
 
 const emit = GObject.signal_emit_by_name
@@ -1269,7 +1270,35 @@ describe("bind", () => {
 
     it("resolves to null when an intermediate property is null", () => {
         const parent = new Parent()
-        expect(bind(parent, "child", "value")()).toBeNull()
+        const value: Accessor<string | null> = bind(parent, "child", "value")
+        expect(value()).toBeNull()
+    })
+
+    it("resolves to undefined when an intermediate property is undefined", async () => {
+        class LooseParent extends GObject.Object {
+            child?: Child
+        }
+
+        const spy = vi.fn()
+        const parent = new LooseParent()
+        const value = bind(parent, "child", "value")
+
+        expect(() => spy(value())).not.toThrow()
+        expect(spy).toHaveBeenLastCalledWith(undefined)
+
+        const { dispose } = createRoot((dispose) => {
+            effect(() => spy(value()))
+            return { dispose }
+        })
+
+        // The chain recovers once the intermediate is set.
+        parent.child = new Child()
+        emit(parent, "notify::child")
+        await flush()
+
+        expect(spy).toHaveBeenLastCalledWith("a")
+
+        dispose()
     })
 })
 

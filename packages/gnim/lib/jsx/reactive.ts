@@ -767,6 +767,8 @@ type Prop<O, K> = O extends GObject.Object
       : never
 
 type NProp<O, K> = NonNullable<Prop<O, K>>
+// `extends infer T` instantiates the type so hovering shows the result
+type ChainProp<Links, V> = V | Extract<Links, null | undefined> extends infer T ? T : never
 
 /**
  * Reactively read a {@link GObject.Object}'s registered property.
@@ -784,7 +786,7 @@ export function bind<O extends Bindable, P1 extends PropKeys<O>, P2 extends Prop
     object: O,
     property1: P1,
     property2: P2,
-): Accessor<null extends Prop<O, P1> ? Prop<NProp<O, P1>, P2> | null : Prop<NProp<O, P1>, P2>>
+): Accessor<ChainProp<Prop<O, P1>, Prop<NProp<O, P1>, P2>>>
 
 export function bind<
     O extends Bindable,
@@ -796,13 +798,7 @@ export function bind<
     property1: P1,
     property2: P2,
     property3: P3,
-): Accessor<
-    null extends Prop<O, P1>
-        ? Prop<NProp<NProp<O, P1>, P2>, P3> | null
-        : null extends Prop<NProp<O, P1>, P2>
-          ? Prop<NProp<NProp<O, P1>, P2>, P3> | null
-          : Prop<NProp<NProp<O, P1>, P2>, P3>
->
+): Accessor<ChainProp<Prop<O, P1> | Prop<NProp<O, P1>, P2>, Prop<NProp<NProp<O, P1>, P2>, P3>>>
 
 export function bind<
     O extends Bindable,
@@ -817,13 +813,10 @@ export function bind<
     property3: P3,
     property4: P4,
 ): Accessor<
-    null extends Prop<O, P1>
-        ? Prop<NProp<NProp<NProp<O, P1>, P2>, P3>, P4> | null
-        : null extends Prop<NProp<O, P1>, P2>
-          ? Prop<NProp<NProp<NProp<O, P1>, P2>, P3>, P4> | null
-          : null extends Prop<NProp<NProp<O, P1>, P2>, P3>
-            ? Prop<NProp<NProp<NProp<O, P1>, P2>, P3>, P4> | null
-            : Prop<NProp<NProp<NProp<O, P1>, P2>, P3>, P4>
+    ChainProp<
+        Prop<O, P1> | Prop<NProp<O, P1>, P2> | Prop<NProp<NProp<O, P1>, P2>, P3>,
+        Prop<NProp<NProp<NProp<O, P1>, P2>, P3>, P4>
+    >
 >
 
 export function bind(object: Bindable, key: PropertyKey, ...props: string[]): Accessor {
@@ -864,7 +857,8 @@ export function bind(object: Bindable, key: PropertyKey, ...props: string[]): Ac
         () => {
             let v = bind(object, key)()
             for (const prop of props) {
-                v = v !== null ? bind(v as Bindable, prop)() : null
+                if (v === null || v === undefined) break
+                v = bind(v as Bindable, prop)()
             }
             return v
         },
