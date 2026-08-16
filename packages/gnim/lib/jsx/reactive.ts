@@ -99,17 +99,25 @@ export class Scope {
     }
 
     dispose() {
+        if (this.disposed) return
+        this.disposed = true
+
         this.owner?.children.delete(this)
 
         const ordered = this.children.values().toArray().toReversed()
         for (const child of ordered) child.dispose()
         this.children.clear()
 
-        this.cleanups.forEach((cb) => cb())
-        this.cleanups.length = 0
+        for (const cb of Array.from(this.cleanups)) {
+            try {
+                cb()
+            } catch (err) {
+                console.error(err)
+            }
+        }
 
+        this.cleanups = []
         this.owner = null
-        this.disposed = true
     }
 
     setContext<V>(ctx: Context<V>, value: V): void {

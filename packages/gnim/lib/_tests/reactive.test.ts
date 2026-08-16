@@ -90,6 +90,43 @@ describe("onCleanup", () => {
 
         expect(order).toEqual([3, 2, 1])
     })
+
+    it("runs remaining cleanups and completes disposal when one throws", () => {
+        const error = vi.spyOn(console, "error").mockImplementation(() => void 0)
+        const first = vi.fn()
+        const last = vi.fn()
+
+        const { scope, dispose } = createRoot((dispose) => {
+            onCleanup(last)
+            onCleanup(() => {
+                throw Error("boom")
+            })
+            onCleanup(first)
+            return { scope: getScope(), dispose }
+        })
+
+        expect(() => dispose()).not.toThrow()
+
+        expect(first).toHaveBeenCalledTimes(1)
+        expect(last).toHaveBeenCalledTimes(1)
+        expect(error).toHaveBeenCalledTimes(1)
+        expect(scope.disposed).toBe(true)
+        expect(scope.cleanups.length).toBe(0)
+
+        error.mockRestore()
+    })
+
+    it("does not re-run cleanups when disposed twice", () => {
+        const cleanup = vi.fn()
+
+        createRoot((dispose) => {
+            onCleanup(cleanup)
+            dispose()
+            dispose()
+        })
+
+        expect(cleanup).toHaveBeenCalledTimes(1)
+    })
 })
 
 describe("createState", () => {
