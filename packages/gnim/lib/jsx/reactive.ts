@@ -244,6 +244,9 @@ function onMount(fn: Fn) {
             scope = scope.owner
         }
     }
+
+    // every scope in the chain already mounted (e.g. a re-entered scope.run):
+    queueEffect(fn)
 }
 
 /**

@@ -245,6 +245,48 @@ describe("effect", () => {
     })
 })
 
+describe("effect in a re-entered scope", () => {
+    it("runs and re-runs when created after the scope mounted", async () => {
+        const spy = vi.fn()
+
+        const { scope, value, setValue, dispose } = createRoot((dispose) => {
+            const scope = getScope()
+            const [value, setValue] = createState(0)
+            return { scope, value, setValue, dispose }
+        })
+
+        scope.run(() => {
+            effect(() => spy(value()))
+        })
+
+        await flush()
+        expect(spy).toHaveBeenNthCalledWith(1, 0)
+
+        setValue(1)
+        await flush()
+        expect(spy).toHaveBeenNthCalledWith(2, 1)
+
+        dispose()
+    })
+
+    it("does not run if the scope is disposed before the flush", async () => {
+        const spy = vi.fn()
+
+        const { scope, dispose } = createRoot((dispose) => {
+            return { scope: getScope(), dispose }
+        })
+
+        scope.run(() => {
+            effect(spy)
+        })
+
+        dispose()
+        await flush()
+
+        expect(spy).not.toHaveBeenCalled()
+    })
+})
+
 describe("scope bookkeeping", () => {
     it("does not grow the owning scope on effect and computed re-runs", async () => {
         const { scope, setValue, dispose } = createRoot((dispose) => {
