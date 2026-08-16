@@ -109,3 +109,114 @@ const settings = createSettings(gioSettings, {
   "my-key": "s",
 })
 ```
+
+## Relocatable schemas
+
+A schema without a `path` is
+[relocatable](https://docs.gtk.org/gio/class.Settings.html#relocatable-schemas):
+it can be instantiated at any number of paths, which is useful when the same set
+of keys has to be stored multiple times, for example once per profile or per
+account. To define one, omit the `path` property.
+
+```ts
+export const profileSchema = new Schema({ id: "com.example.MyApp.Profile" })
+  //
+  .key("name", "s", {
+    summary: "Name of the profile",
+    default: "",
+  })
+```
+
+```xml
+<schemalist>
+  <schema id="com.example.MyApp.Profile">
+    <key name="name" type="s">
+      <summary>Name of the profile</summary>
+      <default><![CDATA[ '' ]]></default>
+    </key>
+  </schema>
+</schemalist>
+```
+
+> [!NOTE] Passing a string to the `Schema` constructor derives the path from the
+> id, so only the object form without `path` produces a relocatable schema.
+
+Since a relocatable schema has no path of its own, it cannot be instantiated
+with `createSettings(schema)` directly. Create a `Gio.Settings` with an explicit
+`path` and pass that in instead.
+
+```ts
+import Gio from "gi://Gio?version=2.0"
+import { createSettings } from "gnim/schema"
+import { profileSchema } from "./com.example.MyApp.Profile.gschema"
+
+const profile = createSettings(
+  new Gio.Settings({
+    schemaId: profileSchema.id,
+    path: "/com/example/MyApp/profiles/0/",
+  }),
+  profileSchema,
+)
+
+profile.setName("Work")
+```
+
+### Managing instances
+
+GSettings cannot enumerate the paths a relocatable schema has been instantiated
+at, so you have to keep track of them yourself. A common pattern is a "manager"
+key in a regular schema that stores the list of instances.
+
+```ts
+export const managerSchema = new Schema("com.example.MyApp")
+  //
+  .key("profiles", "as", {
+    summary: "List of profile ids",
+    default: [],
+  })
+
+export const profileSchema = new Schema({ id: "com.example.MyApp.Profile" })
+  //
+  .key("name", "s", {
+    summary: "Name of the profile",
+    default: "",
+  })
+
+export default defineSchemaList([managerSchema, profileSchema])
+```
+
+```ts
+const manager = createSettings(managerSchema)
+
+function profileGioSettings(id: string) {
+  return new Gio.Settings({
+    schemaId: profileSchema.id,
+    path: `/com/example/MyApp/profiles/${id}/`,
+  })
+}
+
+function addProfile(id: string) {
+  manager.setProfiles((prev) => [...prev, id])
+  return createSettings(profileGioSettings(id), profileSchema)
+}
+
+const work = addProfile("work")
+work.setName("Work")
+```
+
+### Cleaning up an instance
+
+GSettings has no operation for deleting a settings object. To remove an
+instance, reset every key at its path, which removes the stored values from the
+backend, then drop it from the manager list.
+
+```ts
+function removeProfile(id: string) {
+  const gioSettings = profileGioSettings(id)
+  for (const key of gioSettings.settingsSchema.list_keys()) {
+    gioSettings.reset(key)
+  }
+
+  manager.setProfiles((prev) => prev.filter((profile) => profile !== id))
+}
+```
