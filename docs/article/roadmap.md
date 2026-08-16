@@ -52,11 +52,15 @@ notified with consistent values.
 
 ## Reactive text children are recreated on every change
 
-A text child driven by an accessor destroys the previous text node and
-constructs a new one each time the value changes, instead of updating the
-existing node's label in place.
+A text children from an accessor destroys the previous text node and constructs
+a new one each time the value changes, instead of updating the existing node's
+label in place.
 
-Planned: update the existing text node in place.
+This is not a big issue, since it can be fixed from user code by using the text
+node directly and using its label property instead.
+
+Planned: introduce an `updateText` Renderer API and update the existing text
+node in place.
 
 ## Errors boundaries
 

@@ -46,9 +46,9 @@ const renderer: Renderer = {
         for (const child of children) {
             parent.children.push(child)
         }
-        for (const child of prev.filter((child) => !children.includes(child))) {
-            child.destroyed = true
-        }
+    },
+    disposeObject(object: Widget) {
+        object.destroyed = true
     },
 }
 

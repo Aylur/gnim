@@ -193,18 +193,34 @@ function unpackSlot(node: GObject.Object | Accessor<GnimNode>): GObject.Object[]
     return resolveNode(node()).map(unpackSlot).flat()
 }
 
+function isStaticChildren(
+    nodes: Array<GObject.Object | Accessor<GnimNode>>,
+): nodes is GObject.Object[] {
+    return !nodes.some((node) => isAccessor(node))
+}
+
 export function mountChildren(children: GnimNode, mount?: GObject.Object) {
     const renderer = getRenderer()
     const scope = getScope()
     const nodes = resolveNode(children)
-    let currentChildren: GObject.Object[] = []
 
     if (nodes.length === 0) return
 
-    if (!nodes.some((node) => isAccessor(node)) && mount) {
-        renderer.setChildren(mount, nodes as Array<GObject.Object>, currentChildren)
+    let currentChildren: GObject.Object[] = []
+
+    function setChildren(children: GObject.Object[], prev: GObject.Object[]) {
+        if (mount) renderer.setChildren(mount, children, prev)
+        for (const child of prev) {
+            if (!children.includes(child)) {
+                renderer.disposeObject(child, mount)
+            }
+        }
+    }
+
+    if (isStaticChildren(nodes)) {
+        setChildren(nodes, currentChildren)
         scope.cleanups.push(() => {
-            renderer.setChildren(mount, currentChildren, nodes as Array<GObject.Object>)
+            setChildren(currentChildren, nodes as Array<GObject.Object>)
         })
         return
     }
@@ -212,21 +228,15 @@ export function mountChildren(children: GnimNode, mount?: GObject.Object) {
     effect(
         function mountEffect() {
             const children = nodes.map(unpackSlot).flat()
-
-            if (mount) {
-                renderer.setChildren(mount, children, currentChildren)
-            }
-
+            setChildren(children, currentChildren)
             currentChildren = children
         },
         { immediate: true },
     )
 
-    if (mount) {
-        scope.cleanups.push(() => {
-            renderer.setChildren(mount, [], currentChildren)
-        })
-    }
+    scope.cleanups.push(() => {
+        setChildren([], currentChildren)
+    })
 }
 
 export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<GnimNode>> {

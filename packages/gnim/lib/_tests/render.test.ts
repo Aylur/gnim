@@ -27,9 +27,6 @@ function createRenderer() {
     const removeChild = vi.fn((parent: Widget, child: Widget) => {
         parent.children = parent.children.filter((ch) => ch !== child)
     })
-    const destroyChild = vi.fn((_parent: Widget, child: Widget) => {
-        child.destroyed = true
-    })
 
     return {
         resolveTag: vi.fn((tag: string) => {
@@ -47,9 +44,9 @@ function createRenderer() {
         setChildren: vi.fn((parent: Widget, children: Widget[], prev: Widget[]) => {
             for (const child of prev) removeChild(parent, child)
             for (const child of children) appendChild(parent, child)
-            for (const child of prev.filter((child) => !children.includes(child))) {
-                destroyChild(parent, child)
-            }
+        }),
+        disposeObject: vi.fn((object: Widget) => {
+            object.destroyed = true
         }),
     } satisfies Renderer
 }
@@ -84,6 +81,10 @@ describe("render", () => {
         expect(renderer.setChildren).not.toHaveBeenCalled()
 
         dispose()
+
+        expect(renderer.setChildren).not.toHaveBeenCalled()
+        expect(renderer.disposeObject).toHaveBeenCalledTimes(1)
+        expect(renderer.disposeObject.mock.calls[0][0].label).toBe("detached")
     })
 
     it("scopes each render call to its own renderer", () => {

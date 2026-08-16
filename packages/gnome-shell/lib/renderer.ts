@@ -74,9 +74,6 @@ export class GnomeRenderer implements Renderer {
         for (const child of children) {
             this.appendChild(parent, child)
         }
-        for (const child of prev.filter((child) => !children.includes(child))) {
-            this.destroyChild(parent, child)
-        }
     }
     appendChild(parent: GObject.Object, child: GObject.Object): void {
         if (appendChild in parent && typeof parent[appendChild] === "function") {
@@ -122,9 +119,9 @@ export class GnomeRenderer implements Renderer {
 
         throw new MissingMethodError("removeChild", parent, child)
     }
-    destroyChild(_: GObject.Object, child: GObject.Object): void {
-        if (child instanceof Clutter.Actor) {
-            child.destroy()
+    disposeObject(object: GObject.Object): void {
+        if (object instanceof Clutter.Actor) {
+            object.destroy()
         }
     }
 }

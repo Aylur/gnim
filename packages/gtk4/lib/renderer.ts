@@ -152,9 +152,6 @@ export class GtkRenderer implements Renderer {
         for (const child of children) {
             this.appendChild(parent, child)
         }
-        for (const child of prev.filter((child) => !children.includes(child))) {
-            this.destroyChild(parent, child)
-        }
     }
     appendChild(parent: GObject.Object, child: GObject.Object): void {
         if (appendChild in parent && typeof parent[appendChild] === "function") {
@@ -342,9 +339,9 @@ export class GtkRenderer implements Renderer {
 
         throw new MissingMethodError("removeChild", parent, child)
     }
-    destroyChild(parent: GObject.Object, child: GObject.Object): void {
-        if (parent instanceof Gio.Application && child instanceof Gtk.Window) {
-            child.destroy()
+    disposeObject(object: GObject.Object): void {
+        if (object instanceof Gtk.Window) {
+            object.destroy()
         }
     }
 }
