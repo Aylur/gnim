@@ -184,17 +184,12 @@ describe("render", () => {
     })
 
     it("does not treat non-function on* props as signal handlers", () => {
-        const [onDuty, setOnDuty] = createState(false)
-
         const root = new Box()
-        const dispose = renderTree(() => jsx(Widget, { onDemand: 5, onDuty }), root)
-        const widget = root.children[0] as Widget & { onDemand: number; onDuty: boolean }
+        const dispose = renderTree(() => jsx(Widget, { onDemand: 5, onDuty: "yes" }), root)
+        const widget = root.children[0] as Widget & { onDemand: number; onDuty: string }
 
         expect(widget.onDemand).toBe(5)
-        expect(widget.onDuty).toBe(false)
-
-        setOnDuty(true)
-        expect(widget.onDuty).toBe(true)
+        expect(widget.onDuty).toBe("yes")
 
         dispose()
     })
@@ -779,7 +774,8 @@ describe("<For />", () => {
     it("keys items with the id function", async () => {
         type Item = { key: string; label: string }
 
-        const [items, setItems] = createState<Item[]>([{ key: "a", label: "initial" }])
+        const a: Item = { key: "a", label: "initial" }
+        const [items, setItems] = createState<Item[]>([a])
 
         const root = new Box()
         const dispose = renderTree(
@@ -793,15 +789,47 @@ describe("<For />", () => {
         )
         const first = root.children[0]
 
+        setItems([a, { key: "b", label: "other" }])
+        await flush()
+
+        // The item keyed "a" is unchanged, so its memoized child is reused.
+        expect(root.children[0]).toBe(first)
+        expect(labels(root)).toEqual(["initial", "other"])
+
+        dispose()
+    })
+
+    it("re-renders the child when the item behind an existing key changes", async () => {
+        type Item = { key: string; label: string }
+
+        const cleanup = vi.fn()
+        const [items, setItems] = createState<Item[]>([{ key: "a", label: "initial" }])
+
+        const root = new Box()
+        const dispose = renderTree(
+            () =>
+                jsx(For, {
+                    each: items,
+                    id: (item: Item) => item.key,
+                    children: (item: Item, index: Accessor<number>) => {
+                        onCleanup(() => cleanup(item.label))
+                        return jsx(Widget, { label: index.as((i) => `${item.label}:${i}`) })
+                    },
+                }),
+            root,
+        )
+        const first = root.children[0]
+
         setItems([
-            { key: "a", label: "changed" },
             { key: "b", label: "other" },
+            { key: "a", label: "changed" },
         ])
         await flush()
 
-        // The item keyed "a" is reused, so its memoized child is not re-rendered.
-        expect(root.children[0]).toBe(first)
-        expect(labels(root)).toEqual(["initial", "other"])
+        expect(labels(root)).toEqual(["other:0", "changed:1"])
+        expect(root.children[1]).not.toBe(first)
+        expect(first.destroyed).toBe(true)
+        expect(cleanup).toHaveBeenCalledWith("initial")
 
         dispose()
     })

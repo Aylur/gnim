@@ -360,6 +360,14 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
                 const mapItem = map.get(key)
                 if (mapItem) {
                     mapItem.index[1](i)
+                    if (!Object.is(mapItem.item, item)) {
+                        mapItem.scope.dispose()
+                        mapItem.item = item
+                        mapItem.scope = new Scope(currentScope)
+                        mapItem.child = mapItem.scope.run(() =>
+                            resolveNode(mkChild(item, mapItem.index[0])),
+                        )
+                    }
                     return mapItem.child
                 } else {
                     const [index, setIndex] = createState(i)
