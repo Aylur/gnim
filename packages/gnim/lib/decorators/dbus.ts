@@ -94,13 +94,7 @@ export class Service extends GObject.Object {
     }
 
     emit(name: string, ...params: unknown[]): unknown {
-        const signal = this.#info.lookup_signal(name)
-
-        if (signal && this[internals].dbusObject) {
-            const signature = `(${signal.args.map((a) => a.signature).join("")})`
-            this[internals].dbusObject.emit_signal(name, new GLib.Variant(signature, params))
-        }
-
+        // bus emission happens in the signal's closure installed by the decorator
         return emit(this, kebabcase(name), ...params)
     }
 
@@ -825,17 +819,22 @@ export function signal<const Params extends DBusType[]>(...params: Params) {
     ) {
         const method = descriptor?.value
 
-        getMeta(proto).dbusSignals[name] = params.map((arg) =>
-            typeof arg === "string" ? { type: arg } : arg,
-        )
+        const signalArgs = params.map((arg) => (typeof arg === "string" ? { type: arg } : arg))
+        const signature = `(${signalArgs.map((arg) => arg.type).join("")})`
+
+        getMeta(proto).dbusSignals[name] = signalArgs
 
         gsignal(params.map(inferGTypeFromVariant), GObject.VoidType)(proto, name, {
             value(this: Service, ...args: InferDBusTypes<Params>) {
-                if (this[internals].proxy) {
+                const { proxy, dbusObject } = this[internals]
+
+                if (proxy) {
                     console.warn(`cannot emit signal "${name}" on remote object`)
                 }
 
-                if (this[internals].dbusObject || !this[internals].proxy) {
+                dbusObject?.emit_signal(name, new GLib.Variant(signature, args))
+
+                if (dbusObject || !proxy) {
                     method?.apply(this, args)
                 }
             },
