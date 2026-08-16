@@ -42,8 +42,8 @@ export class Timer extends GObject.Object {
      */
     static interval(interval: number, callback?: () => void) {
         const timer = Timer.create(callback, () => {
-            if (immediate.is_destroyed()) immediate.destroy()
-            if (source.is_destroyed()) source.destroy()
+            if (!immediate.is_destroyed()) immediate.destroy()
+            if (!source.is_destroyed()) source.destroy()
         })
         const immediate = setTimeout(() => timer.now())
         const source = setInterval(() => timer.now(), interval)
@@ -67,7 +67,7 @@ export class Timer extends GObject.Object {
      */
     static timeout(interval: number, callback?: () => void) {
         const timer = Timer.create(callback, () => {
-            if (source.is_destroyed()) source.destroy()
+            if (!source.is_destroyed()) source.destroy()
         })
         const source = setTimeout(() => timer.now(), interval)
         return timer
@@ -89,7 +89,7 @@ export class Timer extends GObject.Object {
      */
     static idle(callback?: () => void) {
         const timer = Timer.create(callback, () => {
-            if (source.is_destroyed()) source.destroy()
+            if (!source.is_destroyed()) source.destroy()
         })
         const source = setTimeout(() => timer.now())
         return timer
