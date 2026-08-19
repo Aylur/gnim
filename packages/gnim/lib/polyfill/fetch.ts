@@ -384,8 +384,8 @@ export async function fetch(url: string | URL, { method, headers, body }: Reques
     })
 
     if (headers) {
-        for (const [key, value] of Object.entries(headers))
-            message.get_request_headers().append(key, String(value))
+        for (const [key, value] of new Headers(headers))
+            message.get_request_headers().append(key, value)
     }
 
     if (typeof body === "string") {
@@ -403,7 +403,13 @@ export async function fetch(url: string | URL, { method, headers, body }: Reques
         })
     })
 
+    const responseHeaders = new Headers()
+    message.get_response_headers().foreach((name, value) => {
+        responseHeaders.append(name, value)
+    })
+
     return new Response(inputStream, {
+        headers: responseHeaders,
         statusText: message.reasonPhrase ?? "",
         status: message.statusCode,
     })
