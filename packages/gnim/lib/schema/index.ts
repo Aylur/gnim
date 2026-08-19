@@ -285,9 +285,6 @@ export class Schema<
     // }
 }
 
-// TODO: move the xml builder code to the compile time evaluator process
-// remove `defineSchemaList()`, and instead import the whole schema module
-// and filter exported symbols using instanceof Schema
 export function defineSchemaList(
     props: Array<Schema> | { gettextDomain: string; schemas: Array<Schema> },
 ) {
@@ -301,7 +298,7 @@ export function defineSchemaList(
 
     return xml({
         name: "schemalist",
-        attributes: "gettextDomain" in props ? { gettextDomain: props.gettextDomain } : {},
+        attributes: "gettextDomain" in props ? { "gettext-domain": props.gettextDomain } : {},
         children: [
             ...[...enums.values()].map(({ id, values }) => ({
                 name: "enum",
@@ -326,7 +323,7 @@ export function defineSchemaList(
                 attributes: {
                     id: s.id,
                     ...(s.path && { path: s.path }),
-                    ...(s.gettextDomain && { gettextDomain: s.gettextDomain }),
+                    ...(s.gettextDomain && { "gettext-domain": s.gettextDomain }),
                 },
                 children: s[internal].nodes,
             })),

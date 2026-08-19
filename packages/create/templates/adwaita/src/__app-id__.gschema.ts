@@ -10,4 +10,7 @@ export const appSchema = new Schema({ id, path })
     summary: "String to display",
   })
 
-export default defineSchemaList([appSchema])
+export default defineSchemaList({
+  gettextDomain: id,
+  schemas: [appSchema],
+})
