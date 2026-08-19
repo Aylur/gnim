@@ -208,18 +208,38 @@ export class Service extends GObject.Object {
         this.#info.cache_build()
 
         return new Promise((resolve, reject) => {
-            let source =
+            let settled = false
+
+            const dispose = () => {
+                Gio.bus_unown_name(busId)
+                this.#info.cache_release()
+                if (this[internals].dbusObject === impl) {
+                    impl.unexport()
+                    delete this[internals].dbusObject
+                }
+            }
+
+            let timeoutSource =
                 timeout > 0
                     ? setTimeout(() => {
-                          reject(Error(`serve timed out`))
-                          source = null
+                          timeoutSource = null
+                          fail(Error(`serve timed out`))
                       }, timeout)
                     : null
 
-            const clear = () => {
-                if (source) {
-                    clearTimeout(source)
-                    source = null
+            const clearServeTimeout = () => {
+                if (timeoutSource) {
+                    clearTimeout(timeoutSource)
+                    timeoutSource = null
+                }
+            }
+
+            const fail = (error: unknown) => {
+                clearServeTimeout()
+                if (!settled) {
+                    settled = true
+                    dispose()
+                    reject(error)
                 }
             }
 
@@ -231,20 +251,28 @@ export class Service extends GObject.Object {
                     try {
                         impl.export(conn, objectPath)
                         this[internals].dbusObject = impl
-                        this[internals].onStop.add(() => {
-                            Gio.bus_unown_name(busId)
-                            impl.unexport()
-                            this.#info.cache_release()
-                            delete this[internals].dbusObject
-                        })
-
-                        resolve(this)
                     } catch (error) {
-                        reject(error)
+                        fail(error)
                     }
                 },
-                clear,
-                clear,
+                () => {
+                    clearServeTimeout()
+                    if (!settled) {
+                        settled = true
+                        this[internals].onStop.add(dispose)
+                        resolve(this)
+                    }
+                },
+                (conn) => {
+                    // name-lost is only final when the connection failed or queueing
+                    // is disabled: when waiting in line it fires while queued and
+                    // name-acquired can still follow, so keep waiting on the timeout
+                    if (!conn) {
+                        fail(Error("could not connect to the bus"))
+                    } else if (flags & Gio.BusNameOwnerFlags.DO_NOT_QUEUE) {
+                        fail(Error(`dbus name "${name}" is owned by another process`))
+                    }
+                },
             )
         })
     }
