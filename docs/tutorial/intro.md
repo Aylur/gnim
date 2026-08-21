@@ -124,9 +124,10 @@ yarn create gnim@beta
      "compilerOptions": {
        "experimentalDecorators": true,
        "emitDecoratorMetadata": true,
-       "target": "ES2022",
+       "useDefineForClassFields": false,
+       "target": "ES2024",
        "module": "ES2022",
-       "lib": ["ES2024"],
+       "lib": ["ESNext"],
        "outDir": "dist",
        "strict": true,
        "moduleResolution": "Bundler",

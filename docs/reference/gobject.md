@@ -8,16 +8,22 @@ Read more about GObjects in GJS on
 
 > [!INFO] Required TypeScript settings
 >
-> Make sure to enable `experimentalDecorators` and `emitDecoratorMetadata`.
+> Make sure to enable `experimentalDecorators` and `emitDecoratorMetadata`, and
+> to disable `useDefineForClassFields`.
 >
 > ```json
 > {
 >   "compilerOptions": {
 >     "experimentalDecorators": true,
->     "emitDecoratorMetadata": true
+>     "emitDecoratorMetadata": true,
+>     "useDefineForClassFields": false
 >   }
 > }
 > ```
+>
+> With `target` set to ES2022 or later, `useDefineForClassFields` defaults to
+> `true` which shadows the getters and setters that `@property` installs on the
+> prototype and field initializers bypass GObject entirely.
 
 ## Example Usage
 

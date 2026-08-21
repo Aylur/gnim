@@ -8,11 +8,20 @@ Read more about using DBus in GJS on
 
 > [!INFO] Required TypeScript settings
 >
-> Make sure `experimentalDecorators` is set to `true`.
+> Make sure `experimentalDecorators` is set to `true` and
+> `useDefineForClassFields` to `false`.
 >
 > ```json
-> { "compilerOptions": { "experimentalDecorators": true } }
+> {
+>   "compilerOptions": {
+>     "experimentalDecorators": true,
+>     "useDefineForClassFields": false
+>   }
+> }
 > ```
+>
+> See [GObject decorators](/reference/gobject) for why `useDefineForClassFields`
+> must be disabled.
 
 ## Example usage
 
