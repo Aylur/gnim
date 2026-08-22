@@ -78,12 +78,12 @@ export class Process extends GObject.Object {
     }
 
     /**
-     * Write a line to the subprocess' stdin asynchronously.
+     * Write to the subprocess' stdin asynchronously.
      * See {@link Gio.DataOutputStream.prototype.write_bytes_async}
      *
      * @param str String to be written to stdin
      */
-    write(str: string): Promise<[boolean, number]> {
+    write(str: string): Promise<number> {
         return new Promise((resolve, reject) => {
             this.#inStream.write_bytes_async(
                 this.#encoder.encode(str),
@@ -91,7 +91,7 @@ export class Process extends GObject.Object {
                 null,
                 (_, res) => {
                     try {
-                        resolve(this.#inStream.write_all_finish(res))
+                        resolve(this.#inStream.write_bytes_finish(res))
                     } catch (error) {
                         reject(error)
                     }
@@ -216,12 +216,12 @@ export class Process extends GObject.Object {
      * @return stdout of the subprocess
      */
     static execAsyncv(cmd: string[]): Promise<string> {
-        const process = Gio.Subprocess.new(
-            cmd,
-            Gio.SubprocessFlags.STDERR_PIPE | Gio.SubprocessFlags.STDOUT_PIPE,
-        )
-
         return new Promise((resolve, reject) => {
+            const process = Gio.Subprocess.new(
+                cmd,
+                Gio.SubprocessFlags.STDERR_PIPE | Gio.SubprocessFlags.STDOUT_PIPE,
+            )
+
             process.communicate_utf8_async(null, null, (_, res) => {
                 try {
                     const [, out, err] = process.communicate_utf8_finish(res)

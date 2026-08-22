@@ -143,11 +143,21 @@ export function monitorFile(
         null,
     )
 
+    const monitorSubdir = (dirpath: string) => {
+        const m = monitorFile(dirpath, callback)
+        mon.connect("notify::cancelled", () => {
+            m.cancel()
+        })
+    }
+
     mon.connect("changed", (_, file, _file, event) => {
         const path = file.get_path()
         if (path) {
-            if (event === Gio.FileMonitorEvent.CREATED && path) {
-                monitorFile(path, callback)
+            if (
+                event === Gio.FileMonitorEvent.CREATED &&
+                GLib.file_test(path, GLib.FileTest.IS_DIR)
+            ) {
+                monitorSubdir(path)
             }
 
             if (event === Gio.FileMonitorEvent.DELETED && path === monitoredFile.get_path()) {
@@ -170,10 +180,7 @@ export function monitorFile(
             if (i.get_file_type() == Gio.FileType.DIRECTORY) {
                 const filepath = monitoredFile.get_child(i.get_name()).get_path()
                 if (filepath != null) {
-                    const m = monitorFile(filepath, callback)
-                    mon.connect("notify::cancelled", () => {
-                        m.cancel()
-                    })
+                    monitorSubdir(filepath)
                 }
             }
         }
@@ -181,7 +188,6 @@ export function monitorFile(
 
     monitorFiles.add(mon)
     mon.connect("notify::cancelled", () => {
-        print(path, "cancelled")
         monitorFiles.delete(mon)
     })
     return mon
