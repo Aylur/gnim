@@ -7,6 +7,7 @@ import {
     isAccessor,
     MissingMethodError,
     newObject,
+    prop,
     removeChild,
     render as renderGnim,
     setChildren,
@@ -32,25 +33,21 @@ function snakecase(str: string) {
         .toLowerCase()
 }
 
-function setCss(object: GObject.Object, css: string) {
-    if (!(object instanceof Gtk.Widget)) {
-        return console.warn(Error(`cannot set css on ${object}`))
-    }
-
+function setCss(widget: Gtk.Widget, css: string) {
     if (!css.includes("{") || !css.includes("}")) {
         css = `* { ${css} }`
     }
 
-    const ctx = object.get_style_context()
+    const ctx = widget.get_style_context()
 
-    if (cssprovider in object) {
-        ctx.remove_provider(object[cssprovider] as Gtk.CssProvider)
+    if (cssprovider in widget) {
+        ctx.remove_provider(widget[cssprovider] as Gtk.CssProvider)
     }
 
     const provider = new Gtk.CssProvider()
     provider.load_from_string(css)
     ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-    Object.assign(object, { [cssprovider]: provider })
+    Object.assign(widget, { [cssprovider]: provider })
 }
 
 function flattenClassList(classList: unknown): MaybeAccessor<string> {
@@ -82,20 +79,12 @@ export class GtkRenderer implements Renderer {
         throw Error(`unresolved JSX tag: "${tag}"`)
     }
     constructObject(element: CC, props: Record<string, unknown>): GObject.Object {
-        const { slot, css, classList, ...rest } = props
+        const { slot, ...rest } = props
 
         const object = newObject(element, rest as Partial<CCProps<GObject.Object>>)
 
         if (typeof slot === "string") {
             Object.assign(object, { [slotType]: slot })
-        }
-
-        if (typeof css === "string") {
-            this.setProperty(object, "css", css)
-        }
-
-        if (typeof classList === "string") {
-            this.setProperty(object, "class", classList)
         }
 
         return object
@@ -104,15 +93,20 @@ export class GtkRenderer implements Renderer {
         return Gtk.Label.new(string)
     }
     prepareProps(klass: CC, props: Record<string, unknown>): Record<string, unknown> {
-        if (klass.prototype instanceof GObject.Object && "class" in props) {
+        if (klass.prototype instanceof Gtk.Widget && "class" in props) {
             const cn = props.class
             props.class = computed(() => flattenClassList(cn))
+            return props
+        }
+        if (klass.prototype instanceof Gtk.Widget && "css" in props) {
+            const css = props.css
+            props.css = prop(css) // force it to an Accessor so it is applied, after construction
             return props
         }
         return props
     }
     setProperty(object: GObject.Object, key: string, value: unknown): void {
-        if (key === "css" && typeof value === "string") {
+        if (object instanceof Gtk.Widget && key === "css" && typeof value === "string") {
             return setCss(object, value)
         }
 
