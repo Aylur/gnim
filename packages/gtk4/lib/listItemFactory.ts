@@ -1,4 +1,4 @@
-import { render } from "./renderer"
+import { render } from "./renderer.js"
 import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
 import {

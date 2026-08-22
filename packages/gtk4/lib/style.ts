@@ -50,11 +50,12 @@ function injectCss(stylesheet: string): () => void {
     const display = Gdk.Display.get_default()!
 
     const provider = new Gtk.CssProvider()
-    provider.load_from_string(stylesheet)
 
     let id = provider.connect("parsing-error", (_, _section, error) => {
         console.error(`css error: ${error.message}`)
     })
+
+    provider.load_from_string(stylesheet)
 
     Gtk.StyleContext.add_provider_for_display(display, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
