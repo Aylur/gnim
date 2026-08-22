@@ -261,3 +261,29 @@ class MyObj extends GObject.Object {}
 >
 > This decorator registers properties and signals defined with decorators, so
 > make sure to use this and **not** `GObject.registerClass`.
+
+## Annotations
+
+Signals and properties defined with decorators can be declared on the special
+`$`-prefixed type fields with the `Annotations` type helper, which makes them
+inferable by methods such as `connect()` and `notify()`.
+
+```ts
+import { register, property, signal, type Annotations } from "gnim/gobject"
+
+@register
+class MyObj extends GObject.Object {
+  declare readonly $signals: GObject.Object.SignalSignatures &
+    Annotations<MyObj, "mySignal">
+
+  declare readonly $readableProperties: GObject.Object.ReadableProperties &
+    Annotations<MyObj, "myProp">
+
+  @property myProp: string = ""
+
+  @signal
+  mySignal(arg: string): void {}
+}
+```
+
+See [Type annotations](/reference/typescript#type-annotations) for details.

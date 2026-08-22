@@ -1,5 +1,8 @@
 import GObject from "gi://GObject?version=2.0"
 
+export { type Annotations, gtype } from "./gtype"
+export * from "./decorators"
+
 export const { Object } = GObject
 export type Object = GObject.Object
 export type ConstructorProps<Class> = GObject.ConstructorProps<Class>

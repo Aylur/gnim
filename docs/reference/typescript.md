@@ -113,6 +113,36 @@ connectSignal(instance, "my-signal", (arg) => {
 const myProp = bind(instance, "my-prop")
 ```
 
+Writing these interfaces by hand means spelling every member out twice: once on
+the class and once kebab-cased in the annotation. The `Annotations` type helper
+generates the annotation entries from a set of class members by kebab-casing
+their names.
+
+```ts
+import GObject from "gi://GObject?version=2.0"
+import { register, property, signal, type Annotations } from "gnim/gobject"
+
+@register
+class MyClass extends GObject.Object {
+  declare readonly $signals: GObject.Object.SignalSignatures &
+    Annotations<MyClass, "mySignal">
+
+  declare readonly $readableProperties: GObject.Object.ReadableProperties &
+    Annotations<MyClass, "myProp" | "myOtherProp">
+
+  @property myProp: string = ""
+  @property myOtherProp: number = 0
+
+  @signal
+  mySignal(arg: string): void {}
+}
+
+const instance = new MyClass()
+
+instance.connect("my-signal", (_, arg) => console.log(arg))
+instance.connect("notify::my-prop", () => console.log(instance.myProp))
+```
+
 Due to how TypeScript's `this` type works, you need to annotate `this` or use a
 type cast to correctly infer types within the class.
 

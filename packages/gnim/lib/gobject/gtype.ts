@@ -1,5 +1,6 @@
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
+import type { KebabCase } from "../util"
 
 const MININT8 = GLib.MININT8
 const MAXINT8 = GLib.MAXINT8
@@ -122,3 +123,7 @@ Array.$gtype = GObject.TYPE_JSOBJECT as ArrayConstructor["$gtype"]
 Date.$gtype = GObject.TYPE_JSOBJECT as DateConstructor["$gtype"]
 Map.$gtype = GObject.TYPE_JSOBJECT as MapConstructor["$gtype"]
 Set.$gtype = GObject.TYPE_JSOBJECT as SetConstructor["$gtype"]
+
+export type Annotations<O extends GObject.Object, S extends keyof O> = {
+    [K in S as K extends string ? KebabCase<K> : never]: O[K]
+}
