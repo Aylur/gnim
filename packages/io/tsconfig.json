@@ -6,7 +6,7 @@
 
         "module": "ES2022",
         "target": "ES2024",
-        "lib": ["ES2022"],
+        "lib": ["ESNext"],
 
         "declaration": true,
         "inlineSourceMap": true,

@@ -37,7 +37,7 @@ importers:
         version: 0.3.20
       nushell:
         specifier: latest
-        version: 0.114.1
+        version: 0.115.0
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
@@ -99,10 +99,6 @@ importers:
       typescript-eslint:
         specifier: 'catalog:'
         version: 8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
-    optionalDependencies:
-      '@gnim-js/linux-x64':
-        specifier: 2.0.0-beta.11
-        version: 2.0.0-beta.11
 
   packages/gnome-shell:
     dependencies:
@@ -430,11 +426,6 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@gnim-js/linux-x64@2.0.0-beta.11':
-    resolution: {integrity: sha512-+gLGyjGKNXYPWZiTyqJZFWKDX+uGXLibhMLs+3JmHIY93WygwCfn3STRVWXCHbs39X3VMxc9Uj/ZG6znIYFQhw==}
-    cpu: [x64]
-    os: [linux]
-
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
     engines: {node: '>=18.18.0'}
@@ -471,43 +462,43 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@nushell/darwin-arm64@0.114.1':
-    resolution: {integrity: sha512-JUKtVAmO/riIj+Tv+GCUD6aX4NoPJHpIzXAaaVZWk1MJyTNA7jF5B4pQ/gik4c8ME5h94QVAyrmwgCl4Sf/T5A==}
+  '@nushell/darwin-arm64@0.115.0':
+    resolution: {integrity: sha512-Obze1xTjFk9HpPyCqu8D2IJ79W3ps81MjUgW325ibPPNRqVOjEmxjkunDTKyEDRfH/N+G2EQqlun3EvPhrQsZA==}
     cpu: [arm64]
     os: [darwin]
 
-  '@nushell/darwin-x64@0.114.1':
-    resolution: {integrity: sha512-dj3tOz/rpntyxWztgXf+1/uku7ZhopFpPmlhjSnMzVmq1/qHJtzWxhicmavE1bFE9YrRHFz6Gwi0K5K4eRuA8A==}
+  '@nushell/darwin-x64@0.115.0':
+    resolution: {integrity: sha512-//N3O3MRCztoeOw0DJJ04i3zyU8j2GxzSQ8JBNHFpnbL49rkzDbDL7eJYuv4LkkzFxfXmdqeIUUCueGDYwTlyg==}
     cpu: [x64]
     os: [darwin]
 
-  '@nushell/linux-arm64@0.114.1':
-    resolution: {integrity: sha512-QUHVQQXYSynZEMWf2WdQmd0fuiwg+C03oa+P1AJk5Y8BiXufp/zY9VUtLojcH/OsEIIL7CEOGLyapJzXR1BUcA==}
+  '@nushell/linux-arm64@0.115.0':
+    resolution: {integrity: sha512-bAFm82B5lSrPiIaGUumTszUWr5D7fFGojYOpDPo2I1eq7M6jIyY4N8qCKQ4Dn2mxSeVdBaA9fHxrObtD+7R/BQ==}
     cpu: [arm64]
     os: [linux]
 
-  '@nushell/linux-arm@0.114.1':
-    resolution: {integrity: sha512-vusS8DBu+/3i1p2O0y6HF7UphokyEvl4oz8v7g5cKMBFh8Own1M2Bzh973VGDBfA37Bx8wZs5LFfcgmTiqt7pQ==}
+  '@nushell/linux-arm@0.115.0':
+    resolution: {integrity: sha512-XHapR2FoqpI97qauH1Vw9A0ZUPDdo0vJx6SeZDhfnLkNKXiI+HGg+ijbEUYllk8zwB6Fl3UmAeJ8A2Mwagc3Bg==}
     cpu: [arm]
     os: [linux]
 
-  '@nushell/linux-riscv64@0.114.1':
-    resolution: {integrity: sha512-+nVsjpQgTnGk9ClbipNol2+oz5g/clUJqtF677R4aS4WOUJMngjHQfVGsN7T2GIyIJImDV7SnFeBSK0IW7S1iw==}
+  '@nushell/linux-riscv64@0.115.0':
+    resolution: {integrity: sha512-QXE2jQnfGwEfCUMknq7+b5j4iDhlKysUiuVEdpaWtsFZwE7XHlQFtGaQcecu6aV5KXO7AUkyGGw7yHrWvYZvfg==}
     cpu: [riscv64]
     os: [linux]
 
-  '@nushell/linux-x64@0.114.1':
-    resolution: {integrity: sha512-q6doOqDVNihG0zx2TTarNX4AWd7krtB59QgwuXBH3yn6S1Mfa6V/e4V2YwLsu7T6SXQB951gXtjBCQnbGRsO7A==}
+  '@nushell/linux-x64@0.115.0':
+    resolution: {integrity: sha512-elIHNTRCH0sQToOPOuya1GVHZihZLY3mQ79vrpRhWJ6B68XlVzSiFaOOzFCHmHl2Srohe7X7FCMIlxCDsP0cQA==}
     cpu: [x64]
     os: [linux]
 
-  '@nushell/windows-arm64@0.114.1':
-    resolution: {integrity: sha512-d6XhZqluOX8h3A7xGEyZlsLN25p7QtKS9yogcAP/wIZPVuKT62Q0DFcp3SSkxw3pUmx2KVvIx0j8OhQmUsOQGQ==}
+  '@nushell/windows-arm64@0.115.0':
+    resolution: {integrity: sha512-9rYBGajjTaE4JVKqRPwQ8q3feV88eJh1qSshkHC7t7aEXyw7qDlvvumD+Nib/KO8xshl+ReeeRLZuced3yoZHQ==}
     cpu: [arm64]
     os: [win32]
 
-  '@nushell/windows-x64@0.114.1':
-    resolution: {integrity: sha512-5dnpzYpFxmob9u6ZVV53ku++m0iShFg8g5mzlN8NxEXeUU4z5QxGl0FTrxGigImTwDsH8w1yvYaaJY0uhSWKKg==}
+  '@nushell/windows-x64@0.115.0':
+    resolution: {integrity: sha512-86F5W/tTAeJJVHitfMkaKhjFHZhAXmcD/Mfbm3ORyjHUh4D6OWYHZnd5LcuFOBgSo3bpQfVelgjZGhaZsMWIbQ==}
     cpu: [x64]
     os: [win32]
 
@@ -1242,8 +1233,8 @@ packages:
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
-  nushell@0.114.1:
-    resolution: {integrity: sha512-09zIiTUxpFawywtepnb3mkJR7FG5HtUCeNXQ03MZO7K1FpatC5ga1aVQITJlb4TW9SW0oPgCbwn4JjbUXjhp+g==}
+  nushell@0.115.0:
+    resolution: {integrity: sha512-sgZJcD8NgOd/q7x/G8y/2WE99yGnz+Z0lSX7kfRXKW74yrkIwqkVsfB48WmeCeSGrXltQJo7yJzy/vLElm52Lg==}
     engines: {node: '>=22.0.0', pnpm: '>=10'}
     hasBin: true
 
@@ -1722,9 +1713,6 @@ snapshots:
   '@girgen/linux-x64@0.3.20':
     optional: true
 
-  '@gnim-js/linux-x64@2.0.0-beta.11':
-    optional: true
-
   '@humanfs/core@0.19.2':
     dependencies:
       '@humanfs/types': 0.15.0
@@ -1752,28 +1740,28 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
-  '@nushell/darwin-arm64@0.114.1':
+  '@nushell/darwin-arm64@0.115.0':
     optional: true
 
-  '@nushell/darwin-x64@0.114.1':
+  '@nushell/darwin-x64@0.115.0':
     optional: true
 
-  '@nushell/linux-arm64@0.114.1':
+  '@nushell/linux-arm64@0.115.0':
     optional: true
 
-  '@nushell/linux-arm@0.114.1':
+  '@nushell/linux-arm@0.115.0':
     optional: true
 
-  '@nushell/linux-riscv64@0.114.1':
+  '@nushell/linux-riscv64@0.115.0':
     optional: true
 
-  '@nushell/linux-x64@0.114.1':
+  '@nushell/linux-x64@0.115.0':
     optional: true
 
-  '@nushell/windows-arm64@0.114.1':
+  '@nushell/windows-arm64@0.115.0':
     optional: true
 
-  '@nushell/windows-x64@0.114.1':
+  '@nushell/windows-x64@0.115.0':
     optional: true
 
   '@rolldown/pluginutils@1.0.1': {}
@@ -2491,16 +2479,16 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  nushell@0.114.1:
+  nushell@0.115.0:
     optionalDependencies:
-      '@nushell/darwin-arm64': 0.114.1
-      '@nushell/darwin-x64': 0.114.1
-      '@nushell/linux-arm': 0.114.1
-      '@nushell/linux-arm64': 0.114.1
-      '@nushell/linux-riscv64': 0.114.1
-      '@nushell/linux-x64': 0.114.1
-      '@nushell/windows-arm64': 0.114.1
-      '@nushell/windows-x64': 0.114.1
+      '@nushell/darwin-arm64': 0.115.0
+      '@nushell/darwin-x64': 0.115.0
+      '@nushell/linux-arm': 0.115.0
+      '@nushell/linux-arm64': 0.115.0
+      '@nushell/linux-riscv64': 0.115.0
+      '@nushell/linux-x64': 0.115.0
+      '@nushell/windows-arm64': 0.115.0
+      '@nushell/windows-x64': 0.115.0
 
   obug@2.1.4: {}
 
