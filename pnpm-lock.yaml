@@ -99,6 +99,10 @@ importers:
       typescript-eslint:
         specifier: 'catalog:'
         version: 8.65.0(eslint@10.8.0(jiti@2.7.0))(typescript@6.0.3)
+    optionalDependencies:
+      '@gnim-js/linux-x64':
+        specifier: 2.0.0-beta.12
+        version: 2.0.0-beta.12
 
   packages/gnome-shell:
     dependencies:
@@ -423,6 +427,11 @@ packages:
 
   '@girgen/linux-x64@0.3.20':
     resolution: {integrity: sha512-Nyt++1eLGoPkgftzX/tmQ7/gbxWnx84hGR9nCLiIpUQelTOuKkzkxJPkbbM48HlyHxE4EP9qNeIbjHKNaP4ckg==}
+    cpu: [x64]
+    os: [linux]
+
+  '@gnim-js/linux-x64@2.0.0-beta.12':
+    resolution: {integrity: sha512-172MHtRv6Kd/Ghy6f1F9RnhAqweITAof22JSVaOAWt0PT1La9mEUrrPrMSC+DH5FL7bqg351sOVo1NaopqwIYA==}
     cpu: [x64]
     os: [linux]
 
@@ -1711,6 +1720,9 @@ snapshots:
     optional: true
 
   '@girgen/linux-x64@0.3.20':
+    optional: true
+
+  '@gnim-js/linux-x64@2.0.0-beta.12':
     optional: true
 
   '@humanfs/core@0.19.2':
