@@ -1,4 +1,5 @@
 use crate::{dev_rundir, is_in_path};
+use quick_xml::escape::escape;
 use rolldown::ModuleType;
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -31,12 +32,18 @@ pub fn generate_resource(
             let files: Vec<String> = r
                 .files
                 .iter()
-                .map(|f| format!("<file alias={:?}>{}</file>", f.alias, f.file))
+                .map(|f| {
+                    format!(
+                        "<file alias=\"{}\">{}</file>",
+                        escape(f.alias.as_str()),
+                        escape(f.file.as_str())
+                    )
+                })
                 .collect();
 
             format!(
-                "<gresource prefix={:?}>{}</gresource>",
-                r.prefix,
+                "<gresource prefix=\"{}\">{}</gresource>",
+                escape(r.prefix.as_str()),
                 files.join("")
             )
         })
