@@ -1,14 +1,6 @@
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import {
-    connect,
-    disconnect,
-    isGObjectCtor,
-    kebabcase,
-    type CamelCase,
-    type Keyof,
-    type PascalCase,
-} from "../util.js"
+import { isGObjectCtor, kebabcase, type CamelCase, type Keyof, type PascalCase } from "../util.js"
 import {
     computed,
     createAccessor,
@@ -163,8 +155,8 @@ export function newObject<C extends CC>(
 
     // handle signals
     const disposeHandlers = signals.map(([sig, handler]) => {
-        const id = connect(obj, signalName(sig), handler)
-        return () => disconnect(obj, id)
+        const id = GObject.signal_connect(obj, signalName(sig), handler)
+        return () => GObject.signal_handler_disconnect(obj, id)
     })
 
     // handle bindings

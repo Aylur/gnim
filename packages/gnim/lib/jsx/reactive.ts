@@ -1,6 +1,6 @@
 import GObject from "gi://GObject?version=2.0"
 import { resolveNode, type GnimNode } from "./element.js"
-import { connect, disconnect, kebabcase, type Keyof } from "../util.js"
+import { kebabcase, type Keyof } from "../util.js"
 
 type Fn = () => void
 
@@ -825,8 +825,10 @@ export function bind(object: Bindable, key: PropertyKey, ...props: string[]): Ac
             const name = kebabcase(key)
 
             function subscribe(callback: Fn): Fn {
-                const id = connect(object as GObject.Object, `notify::${name}`, () => callback())
-                return () => disconnect(object as GObject.Object, id)
+                const id = GObject.signal_connect(object as GObject.Object, `notify::${name}`, () =>
+                    callback(),
+                )
+                return () => GObject.signal_handler_disconnect(object as GObject.Object, id)
             }
 
             function get() {
@@ -899,8 +901,8 @@ export function connectSignal<O extends GObject.Object, S extends Keyof<SignalsO
     signal: S,
     handler: ConnectionCallback<O, S>,
 ): void {
-    const id = connect(object, signal, (_, ...args) => handler(...args))
-    onCleanup(() => disconnect(object, id))
+    const id = GObject.signal_connect(object, signal, (_, ...args) => handler(...args))
+    onCleanup(() => GObject.signal_handler_disconnect(object, id))
 }
 
 /**

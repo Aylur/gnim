@@ -35,8 +35,8 @@
     },
     "exports": {
         ".": "./lib/index.ts",
-        "./dbus": "./lib/decorators/dbus.ts",
-        "./gobject": "./lib/decorators/gobject.ts",
+        "./dbus": "./lib/dbus/index.ts",
+        "./gobject": "./lib/gobject/index.ts",
         "./intl": "./lib/intl/index.ts",
         "./schema": "./lib/schema/index.ts",
         "./fetch": "./lib/polyfill/fetch.ts",
@@ -51,12 +51,12 @@
                 "types": "./dist/lib/index.d.ts"
             },
             "./dbus": {
-                "import": "./dist/lib/decorators/dbus.js",
-                "types": "./dist/lib/decorators/dbus.d.ts"
+                "import": "./dist/lib/dbus/index.js",
+                "types": "./dist/lib/dbus/index.d.ts"
             },
             "./gobject": {
-                "import": "./dist/lib/decorators/gobject.js",
-                "types": "./dist/lib/decorators/gobject.d.ts"
+                "import": "./dist/lib/gobject/index.js",
+                "types": "./dist/lib/gobject/index.d.ts"
             },
             "./intl": {
                 "import": "./dist/lib/intl/index.js",

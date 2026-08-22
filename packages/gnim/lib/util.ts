@@ -12,11 +12,26 @@ export function camelcase(str: string) {
     return str.replace(/[-_](.)/g, (_, char) => char.toUpperCase())
 }
 
+export function pascalcase(str: string) {
+    return str
+        .replace(/[-_](.)/g, (_, char) => char.toUpperCase())
+        .replace(/^./, (char) => char.toUpperCase())
+}
+
 export function snakecase(str: string) {
     return str
         .replace(/([a-z])([A-Z])/g, "$1-$2")
         .replaceAll("-", "_")
         .toLowerCase()
+}
+
+export function gtypeNamePrefix(moduleUrl: string) {
+    if (!GObject.gtypeNameBasedOnJSPath) return ""
+
+    // GJS's builtin prefix builder is not reliable with package managers and bundlers
+    return moduleUrl
+        .replace(/[^a-z0-9]+(.)?/gi, (_, c) => (c ? c.toUpperCase() : ""))
+        .replace(/^[^a-z]+/i, "")
 }
 
 export type Prettify<T> = { [K in keyof T]: T[K] } & {}
@@ -49,13 +64,20 @@ export type KebabCase<
 export type DeepInferVariant<S extends string> = ReturnType<GLib.Variant<S>["deepUnpack"]>
 export type RecursiveInferVariant<S extends string> = ReturnType<GLib.Variant<S>["recursiveUnpack"]>
 
+export function findDescriptor(
+    obj: object | null,
+    key: PropertyKey,
+): PropertyDescriptor | undefined {
+    if (obj === null) return
+
+    return (
+        Object.getOwnPropertyDescriptor(obj, key) ?? findDescriptor(Object.getPrototypeOf(obj), key)
+    )
+}
+
 export function isGObjectCtor(ctor: any): ctor is { new (...args: any): GObject.Object } {
     return ctor.prototype instanceof GObject.Object
 }
-
-export const connect = GObject.signal_connect
-export const disconnect = GObject.signal_handler_disconnect
-export const emit = GObject.signal_emit_by_name
 
 export type XmlNode = {
     name: string

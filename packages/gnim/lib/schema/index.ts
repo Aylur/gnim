@@ -4,15 +4,14 @@ import { type Accessor, createAccessor, type Setter } from "../jsx/reactive.js"
 import {
     type CamelCase,
     camelcase,
-    connect,
     type DeepInferVariant as DeepInfer,
-    disconnect,
     type PascalCase,
     type Prettify,
     type RecursiveInferVariant as RecursiveInfer,
     xml,
     type XmlNode,
 } from "../util.js"
+import GObject from "gi://GObject?version=2.0"
 
 type SetterName<T> = `set${PascalCase<T>}`
 
@@ -41,8 +40,8 @@ function settingsObject<const T extends Record<string, string>>(
         createAccessor(
             () => settings.get_value(key).recursiveUnpack(),
             (callback) => {
-                const id = connect(settings, `changed::${key}`, callback)
-                return () => disconnect(settings, id)
+                const id = GObject.signal_connect(settings, `changed::${key}`, callback)
+                return () => GObject.signal_handler_disconnect(settings, id)
             },
         ),
     ])
