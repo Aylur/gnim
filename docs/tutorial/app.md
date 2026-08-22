@@ -178,8 +178,8 @@ settings.setMyKey("new value")
 
 If you want other apps or processes to communicate with your application, the
 standard way to do IPC on Linux is via D-Bus. Gnim offers a convenient
-[decorator API](/reference/dbus) that lets you easily implement services for
-your app through D-Bus.
+[typed API](/reference/dbus) that lets you easily implement services for your
+app through D-Bus.
 
 At a very high level, D-Bus lets you export _objects_ that have _interfaces_ on
 a system bus, identified by a _name_.
@@ -197,38 +197,41 @@ slightly lower level.
 First define an interface.
 
 ```ts
-import { Service, iface, method } from "gnim/dbus"
+import { createDBusInterface, method } from "gnim/dbus"
 
-@iface("com.example.MyApp.MyService")
-class MyService extends Service {
-  @method("s") MyMethod(arg: string) {
-    console.log("MyMethod has been invoked: ", arg)
-  }
-}
+const MyService = createDBusInterface("com.example.MyApp.MyService", {
+  MyMethod: method("s"),
+})
 ```
 
-Then instantiate it and export it.
+Then serve an implementation of it.
 
 ```ts
 @register
 class MyApp extends Gtk.Application {
-  private service: MyService
+  private service?: Awaited<ReturnType<typeof MyService.serve>>
 
   constructor() {
     super({ applicationId: "com.example.MyApp" })
-    this.service = new MyService()
   }
 
   vfunc_shutdown(): void {
     super.vfunc_shutdown()
-    this.service.stop()
+    this.service?.unexport()
   }
 
   vfunc_activate(): void {
-    this.service.serve({
+    MyService.serve({
       name: "com.example.MyApp",
       objectPath: "/com/example/MyApp/MyService",
+      implementation: () => ({
+        MyMethod(arg) {
+          console.log("MyMethod has been invoked: ", arg)
+        },
+      }),
     })
+      .then((service) => (this.service = service))
+      .catch(console.error)
   }
 }
 ```
@@ -244,13 +247,13 @@ gdbus call \
   'Hello World!'
 ```
 
-Or even from another Gnim application reusing the same service class.
+Or even from another Gnim application reusing the same interface declaration.
 
 ```ts
-const proxy = await new MyService().proxy({
+const proxy = await MyService.proxy({
   name: "com.example.MyApp",
   objectPath: "/com/example/MyApp/MyService",
 })
 
-proxy.MyMethod("hello!")
+await proxy.MyMethod("hello!")
 ```
