@@ -15,6 +15,7 @@ import { cp, mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import { parseArgs, promisify } from "node:util"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 
 const execFileAsync = promisify(execFile)
 
@@ -295,9 +296,7 @@ async function doOutro(dir: string, install?: boolean) {
 }
 
 async function copyAdwaita({ dir, id, name }: TemplateProps) {
-    const template = import.meta
-        .resolve("../templates/adwaita")
-        .replace("file://", "")
+    const template = fileURLToPath(import.meta.resolve("../templates/adwaita"))
 
     await mkdir(dir, { recursive: true })
     await cp(template, dir, { recursive: true })
@@ -498,15 +497,21 @@ async function main() {
         }
     }
 
+    await createGitignore(dir)
     if (install) {
         await doInstall(dir)
     }
     if (git) {
-        await createGitignore(dir)
         await doGit(dir)
     }
-    await doTypes(dir)
+    if (install) {
+        await doTypes(dir)
+    }
     await doOutro(dir, install)
 }
 
-main()
+try {
+    main()
+} catch (err) {
+    console.error(err)
+}
