@@ -46,19 +46,22 @@ async fn transpile_typescript(
     })
 }
 
-fn format_xml(input: &str) -> String {
+fn format_xml(input: &str) -> Result<String, String> {
     let mut reader = Reader::from_str(input);
     let mut writer = Writer::new_with_indent(Cursor::new(Vec::new()), b' ', 2);
 
     loop {
         match reader.read_event() {
             Ok(Event::Eof) => break,
-            Ok(event) => writer.write_event(event).unwrap(),
-            Err(e) => panic!("Error: {e}"),
+            Ok(event) => writer
+                .write_event(event)
+                .map_err(|e| format!("Failed to format xml: {e}"))?,
+            Err(e) => return Err(format!("Failed to parse xml: {e}")),
         }
     }
 
-    String::from_utf8(writer.into_inner().into_inner()).unwrap()
+    String::from_utf8(writer.into_inner().into_inner())
+        .map_err(|e| format!("Failed to format xml: {e}"))
 }
 
 fn compile(directory: &str) -> Result<process::ExitStatus, String> {
@@ -106,12 +109,24 @@ pub async fn schemas(args: &SchemasArgs) -> Result<(), String> {
         let output = process::Command::new("gjs")
             .args(["-m", tmpjs.as_str()])
             .output()
-            .expect("failed to evaluate schemalist");
+            .map_err(|e| format!("Failed to run gjs: {e}"))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!(
+                "Failed to evaluate {}:\n{}",
+                path.display(),
+                stderr.trim()
+            ));
+        }
 
         let xml = String::from_utf8_lossy(&output.stdout);
+        let formatted = format_xml(xml.as_ref())
+            .map_err(|e| format!("Invalid schemalist from {}: {e}", path.display()))?;
+
         let mut outfile = path::PathBuf::from(&outdir);
         outfile.push(format!("{stem}.xml"));
-        fs::write(outfile, format_xml(xml.as_ref())).expect("failed to write file");
+        fs::write(outfile, formatted).expect("failed to write file");
     }
 
     if args.compile {
