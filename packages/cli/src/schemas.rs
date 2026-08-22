@@ -64,13 +64,18 @@ fn format_xml(input: &str) -> Result<String, String> {
         .map_err(|e| format!("Failed to format xml: {e}"))
 }
 
-fn compile(directory: &str) -> Result<process::ExitStatus, String> {
+fn compile(directory: &str) -> Result<(), String> {
     if is_in_path("glib-compile-schemas") {
         let status = process::Command::new("glib-compile-schemas")
             .args([&directory])
-            .status();
+            .status()
+            .map_err(|e| format!("Failed to compile: {e}"))?;
 
-        status.map_err(|e| format!("Failed to compile: {e}"))
+        if !status.success() {
+            return Err(format!("glib-compile-schemas failed: {status}"));
+        }
+
+        Ok(())
     } else {
         Err("Cannot compile: glib-compile-schemas was not found".into())
     }

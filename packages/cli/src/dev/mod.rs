@@ -156,8 +156,15 @@ fn init_translations(app_id: &str) -> Result<(), String> {
                 .arg(localedir.join(format!("{}.mo", app_id)))
                 .status();
 
-            if let Err(err) = status {
-                eprintln!("{err}")
+            match status {
+                Err(err) => return Err(format!("Failed to run msgfmt: {err}")),
+                Ok(status) if !status.success() => {
+                    return Err(format!(
+                        "msgfmt failed for {}: {status}",
+                        translation.display()
+                    ));
+                }
+                Ok(_) => {}
             }
         }
     }

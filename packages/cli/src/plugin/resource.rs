@@ -55,8 +55,12 @@ pub fn generate_resource(
             .args(["--target", outfile.as_ref().to_str().unwrap(), &xml_file])
             .status();
 
-        if let Err(e) = status {
-            return Err(format!("Failed to compile: {e}"));
+        match status {
+            Err(e) => return Err(format!("Failed to compile: {e}")),
+            Ok(status) if !status.success() => {
+                return Err(format!("glib-compile-resources failed: {status}"));
+            }
+            Ok(_) => {}
         }
     } else {
         return Err("Cannot compile: glib-compile-resources was not found".to_string());
