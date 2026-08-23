@@ -48,11 +48,11 @@ export type ServiceInstance<
     [K in keyof S as K extends keyof ServiceImplementation<T> ? K : never]: S[K]
 } & {
     implementation: S
-    export(connection: Gio.DBusConnection, objectPath: string): boolean
+    export(connection: Gio.DBusConnection, objectPath?: string): boolean
     unexport(): void
 }
 
-interface ServiceClass<T extends InterfaceDeclaration> {
+export interface ServiceClass<T extends InterfaceDeclaration> {
     readonly $gtype: GObject.GType<ServiceInstance<T, ServiceImplementation<any>>>
     readonly info: InterfaceInfo<T>
 
@@ -60,6 +60,11 @@ interface ServiceClass<T extends InterfaceDeclaration> {
         impl: ServiceImplementationFactory<T, S>,
     ): ServiceInstance<T, NoInfer<S>>
 }
+
+/**
+ * Create a GObject.Object subclass based on the given interface
+ * that registers its properties and signals.
+ */
 export function createServiceClass<T extends InterfaceDeclaration>(
     info: InterfaceInfo<T>,
 ): ServiceClass<T>
@@ -173,7 +178,10 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo): any {
             )
         }
 
-        export(connection: Gio.DBusConnection, objectPath: string): boolean {
+        export(
+            connection: Gio.DBusConnection,
+            objectPath: string = "/" + info.name.split(".").join("/"),
+        ): boolean {
             return this.#dbusObject.export(connection, objectPath)
         }
 
@@ -315,4 +323,130 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo): any {
             }
         }
     }
+}
+
+export interface ServeProps<T extends InterfaceDeclaration, S extends ServiceImplementation<T>> {
+    /**
+     * @default Gio.BusType.SESSION
+     */
+    busType?: Gio.BusType
+    /**
+     * Bus name to own.
+     * @default the interface name
+     */
+    name?: string
+    /**
+     * Path to export the object at.
+     * @default the interface name as a path
+     */
+    objectPath?: string
+    /**
+     * @default Gio.BusNameOwnerFlags.NONE
+     */
+    flags?: Gio.BusNameOwnerFlags
+    /**
+     * Rejects the pending promise and unexports the service when cancelled.
+     */
+    cancellable?: Gio.Cancellable | null
+    /**
+     * Implementation instance provider.
+     */
+    implementation: ServiceImplementationFactory<T, S>
+}
+
+function isNameOwned(conn: Gio.DBusConnection, name: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        conn.call(
+            "org.freedesktop.DBus",
+            "/org/freedesktop/DBus",
+            "org.freedesktop.DBus",
+            "GetNameOwner",
+            new GLib.Variant("(s)", [name]),
+            new GLib.VariantType("(s)"),
+            Gio.DBusCallFlags.NONE,
+            -1,
+            null,
+            (_, result) => {
+                try {
+                    const [owner] = conn.call_finish(result).deepUnpack() as [string]
+                    resolve(owner === conn.uniqueName)
+                } catch (error) {
+                    reject(error)
+                }
+            },
+        )
+    })
+}
+
+/**
+ * Attempt to own a `name` on `busType` and export an instance of `serviceClass`.
+ */
+export async function serve<T extends InterfaceDeclaration, S extends ServiceImplementation<T>>(
+    serviceClass: ServiceClass<T>,
+    props: ServeProps<T, S>,
+): Promise<ServiceInstance<NoInfer<T>, NoInfer<S>>> {
+    const {
+        implementation,
+        cancellable,
+        busType = Gio.BusType.SESSION,
+        flags = Gio.BusNameOwnerFlags.NONE,
+        name = serviceClass.info.name,
+        objectPath = "/" + serviceClass.info.name.split(".").join("/"),
+    } = props
+
+    return new Promise((resolve, reject) => {
+        cancellable?.set_error_if_cancelled()
+        const service = new serviceClass(implementation)
+        const unexport = service.unexport.bind(service)
+
+        Object.defineProperty(service, "unexport", {
+            value() {
+                if (cancelId) cancellable!.disconnect(cancelId)
+                unexport()
+                Gio.bus_unown_name(busId)
+            },
+        })
+
+        function resolveService() {
+            try {
+                cancellable?.set_error_if_cancelled()
+                resolve(service as any)
+            } catch (error) {
+                reject(error)
+            }
+        }
+
+        const busId = Gio.bus_own_name(
+            busType,
+            name,
+            flags,
+            (conn) => {
+                try {
+                    cancellable?.set_error_if_cancelled()
+                    service.export(conn, objectPath)
+                } catch (error) {
+                    reject(error)
+                }
+            },
+            resolveService,
+            (conn) => {
+                if (!conn) {
+                    unexport()
+                    return reject(Error("could not connect to the bus"))
+                }
+
+                isNameOwned(conn, name).then(resolveService).catch(reject)
+            },
+        )
+
+        const cancelId = cancellable?.connect(() => {
+            unexport()
+            Gio.bus_unown_name(busId)
+            try {
+                cancellable.set_error_if_cancelled()
+            } catch (error) {
+                reject(error)
+            }
+        })
+    })
 }

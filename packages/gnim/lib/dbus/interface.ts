@@ -50,20 +50,20 @@ export class PropertyDeclaration<Type extends string = string> {
 
         return { name: "property", attributes }
     }
+}
 
-    static property<const Type extends string>(type: Type): ReadWritePropertyDeclaration<Type>
-    static property<const Type extends string>(
-        type: Type,
-        flags: "r",
-    ): ReadOnlyPropertyDeclaration<Type>
-    static property<const Type extends string>(
-        type: Type,
-        flags: "w",
-    ): WriteOnlyPropertyDeclaration<Type>
+export function property<const Type extends string>(type: Type): ReadWritePropertyDeclaration<Type>
+export function property<const Type extends string>(
+    type: Type,
+    flags: "r",
+): ReadOnlyPropertyDeclaration<Type>
+export function property<const Type extends string>(
+    type: Type,
+    flags: "w",
+): WriteOnlyPropertyDeclaration<Type>
 
-    static property<const Type extends string>(type: Type, flags: "r" | "w" | "rw" = "rw") {
-        return new PropertyDeclaration<Type>(type, flags)
-    }
+export function property<const Type extends string>(type: Type, flags: "r" | "w" | "rw" = "rw") {
+    return new PropertyDeclaration<Type>(type, flags)
 }
 
 export class SignalDeclaration<ArgTypes extends TypeDeclaration[] = TypeDeclaration[]> {
@@ -85,10 +85,10 @@ export class SignalDeclaration<ArgTypes extends TypeDeclaration[] = TypeDeclarat
             children: args,
         }
     }
+}
 
-    static signal<const ArgTypes extends TypeDeclaration[]>(...args: ArgTypes) {
-        return new SignalDeclaration<ArgTypes>(args)
-    }
+export function signal<const ArgTypes extends TypeDeclaration[]>(...args: ArgTypes) {
+    return new SignalDeclaration<ArgTypes>(args)
 }
 
 export class MethodDeclaration<
@@ -126,20 +126,20 @@ export class MethodDeclaration<
             children: [...inargs, ...outargs],
         }
     }
+}
 
-    static method<const In extends TypeDeclaration[]>(...inargs: In): MethodDeclaration<In, []>
+export function method<const In extends TypeDeclaration[]>(...inargs: In): MethodDeclaration<In, []>
 
-    static method<
-        const In extends TypeDeclaration[],
-        const Out extends TypeDeclaration[] = TypeDeclaration[],
-    >(inargs: In, outargs: Out): MethodDeclaration<In, Out>
+export function method<
+    const In extends TypeDeclaration[],
+    const Out extends TypeDeclaration[] = TypeDeclaration[],
+>(inargs: In, outargs: Out): MethodDeclaration<In, Out>
 
-    static method(...args: [TypeDeclaration[], TypeDeclaration[]] | TypeDeclaration[]) {
-        if (args.length === 2 && Array.isArray(args[0]) && Array.isArray(args[1])) {
-            return new MethodDeclaration(args[0], args[1])
-        }
-        return new MethodDeclaration(args as TypeDeclaration[], [])
+export function method(...args: [TypeDeclaration[], TypeDeclaration[]] | TypeDeclaration[]) {
+    if (args.length === 2 && Array.isArray(args[0]) && Array.isArray(args[1])) {
+        return new MethodDeclaration(args[0], args[1])
     }
+    return new MethodDeclaration(args as TypeDeclaration[], [])
 }
 
 type InferParams<T extends Array<TypeDeclaration>> = {
@@ -265,7 +265,7 @@ export function inferGType(type: string): GObject.GType<any> {
 }
 
 export type InterfaceInfo<T extends InterfaceDeclaration> = Gio.DBusInterfaceInfo & {
-    $declarations: T
+    readonly $declarations: T
 }
 
 export function createInterfaceInfo<T extends InterfaceDeclaration>(

@@ -199,7 +199,7 @@ First define an interface.
 ```ts
 import { createDBusInterface, method } from "gnim/dbus"
 
-const MyService = createDBusInterface("com.example.MyApp.MyService", {
+const MyInterface = createDBusInterface("com.example.MyApp", {
   MyMethod: method("s"),
 })
 ```
@@ -209,29 +209,28 @@ Then serve an implementation of it.
 ```ts
 @register
 class MyApp extends Gtk.Application {
-  private service?: Awaited<ReturnType<typeof MyService.serve>>
+  private service: InstanceType<typeof MyInterface.Service>
 
   constructor() {
     super({ applicationId: "com.example.MyApp" })
+
+    this.service = new MyInterface.Service(() => ({
+      MyMethod(arg) {
+        console.log("MyMethod has been invoked: ", arg)
+      },
+    }))
   }
 
-  vfunc_shutdown(): void {
-    super.vfunc_shutdown()
-    this.service?.unexport()
+  vfunc_dbus_register(
+    connection: Gio.DBusConnection,
+    objectPath: string,
+  ): boolean {
+    this.service.export(connection, objectPath)
+    return super.vfunc_dbus_register(connection, objectPath)
   }
 
   vfunc_activate(): void {
-    MyService.serve({
-      name: "com.example.MyApp",
-      objectPath: "/com/example/MyApp/MyService",
-      implementation: () => ({
-        MyMethod(arg) {
-          console.log("MyMethod has been invoked: ", arg)
-        },
-      }),
-    })
-      .then((service) => (this.service = service))
-      .catch(console.error)
+    // main
   }
 }
 ```
@@ -242,17 +241,17 @@ Now you can invoke this from other processes.
 gdbus call \
   --session \
   --dest com.example.MyApp \
-  --object-path /com/example/MyApp/MyService \
-  --method com.example.MyApp.MyService.MyMethod \
+  --object-path /com/example/MyApp \
+  --method com.example.MyApp.MyMethod \
   'Hello World!'
 ```
 
 Or even from another Gnim application reusing the same interface declaration.
 
 ```ts
-const proxy = await MyService.proxy({
+const proxy = new MyInterface.Proxy({
   name: "com.example.MyApp",
-  objectPath: "/com/example/MyApp/MyService",
+  objectPath: "/com/example/MyApp",
 })
 
 await proxy.MyMethod("hello!")

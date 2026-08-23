@@ -28,16 +28,35 @@ export type ProxyInstance<T extends InterfaceDeclaration> = DBusGObject<T> &
     }
 
 export interface ProxyProps {
+    /**
+     * @default Gio.DBus.session
+     */
     bus?: Gio.DBusConnection
+    /**
+     * Bus name to connect to.
+     * @default the interface name
+     */
     name?: string
+    /**
+     * Path of the object to proxy.
+     * @default the interface name as a path
+     */
     objectPath?: string
+    /**
+     * @default Gio.DBusProxyFlags.NONE
+     */
     flags?: Gio.DBusProxyFlags
+    /**
+     * Timeout of method calls in milliseconds.
+     * @default 10_000
+     */
     timeout?: number
 }
 
-interface ProxyClass<T extends InterfaceDeclaration> {
+export interface ProxyClass<T extends InterfaceDeclaration> {
     readonly $gtype: GObject.GType<ProxyInstance<T>>
     readonly info: InterfaceInfo<T>
+
     new (props?: ProxyProps): ProxyInstance<T>
 }
 
@@ -262,4 +281,16 @@ export function createProxyClass(info: Gio.DBusInterfaceInfo): any {
             })
         }
     }
+}
+
+/**
+ * Asynchronously instantitates `proxyClass`.
+ */
+export async function proxy<T extends InterfaceDeclaration>(
+    proxyClass: ProxyClass<T>,
+    props?: ProxyProps,
+): Promise<ProxyInstance<T>> {
+    const proxy = new proxyClass(props)
+    await proxy.initAsync()
+    return proxy
 }

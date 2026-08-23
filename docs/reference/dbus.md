@@ -6,6 +6,26 @@ proxies in a fully typed manner.
 Read more about using DBus in GJS on
 [gjs.guide](https://gjs.guide/guides/gio/dbus.html).
 
+::: details What is DBus
+
+DBus is a message bus for interprocess communication: processes connect to a
+shared bus, usually the session bus, or the system bus for system-wide services,
+and exchange messages.
+
+On connection, each process is assigned a unique name such as `:1.42`. Since
+unique names are unpredictable, a process can additionally request a well-known
+name such as `com.example.MyApplication`, which is what makes IPC practical:
+clients address the service by its well-known name without having to know which
+process currently provides it. A `Gio.Application` instance automatically owns
+its application ID as a well-known name on the session bus.
+
+Under a name, a process exports objects identified by object paths such as
+`/com/example/MyApplication/window1`, and each object can export multiple
+interfaces that they implement. Addressing a remote property, method or signal
+therefore takes the triple of name, object path and interface name.
+
+:::
+
 ## Example usage
 
 Declare an interface
@@ -70,6 +90,44 @@ Both services and proxies are `GObject.Object` instances: DBus signals are also
 GObject signals and DBus properties are also GObject properties, using
 kebab-cased names.
 
+## Synchronous instantiation
+
+You can instead use the `new` operator, export services and init proxies.
+
+```ts
+const service = new MyInterface.Service((emitter) => ({
+  // impl
+}))
+
+service.export(Gio.DBus.session, "/example/gjs/MyInterface")
+```
+
+> [!NOTE]
+>
+> To own a name other than the application ID of the main `Gio.Application`
+> instance, you can use
+> [`Gio.bus_own_name`](https://docs.gtk.org/gio/func.bus_own_name.html).
+
+```ts
+const proxy = new MyInterface.Proxy({
+  name: "example.gjs.MyInterface",
+  objectPath: "/example/gjs/MyInterface",
+})
+
+proxy.init() // blocks IO
+print(proxy.MyProperty)
+
+// non blocking
+proxy.initAsync().then(() => {
+  print(proxy.MyProperty)
+})
+```
+
+> [!NOTE]
+>
+> The `proxy` function on `MyInterface` is just a wrapper over asynchronous
+> initialization.
+
 ## `createDBusInterface`
 
 Declares a DBus interface from which both services and proxies can be created.
@@ -81,10 +139,55 @@ function createDBusInterface<T extends InterfaceDeclaration>(
 ): DBusInterface<T>
 
 interface DBusInterface<T extends InterfaceDeclaration> {
+  Proxy: ProxyClass<T>
+  Service: ServiceClass<T>
   serve(props: ServeProps<T>): Promise<ServiceInstance<T>>
-  proxy(props?: ProxyProps): Promise<ProxyInstance<T>>
+  proxy(props: ProxyProps): Promise<ProxyInstance<T>>
 }
 ```
+
+::: details Primitives it is composed of
+
+If you only need the proxy part or the service part, you can use the underlying
+primitives instead.
+
+```ts
+import { createInterfaceInfo } from "gnim/dbus"
+
+const ExampleServiceInterface = createInterfaceInfo("example.Service", {
+  Method: method(),
+  Signal: signal(),
+})
+```
+
+Services only:
+
+```ts
+import { createServiceClass, serve } from "gnim/dbus"
+
+const ExampleService = createServiceClass(ExampleServiceInterface)
+
+const exampleService = await serve(ExampleService, {
+  implementation: (emitter) => ({
+    Method: () => emitter.Signal(),
+  }),
+})
+```
+
+Proxies only:
+
+```ts
+import { createProxyClass, proxy } from "gnim/dbus"
+
+const ExampleProxy = createProxyClass(ExampleServiceInterface)
+
+const exampleProxy = await proxy(ExampleProxy, {
+  name: "example.Service",
+  objectPath: "/example/Service",
+})
+```
+
+:::
 
 ## `property`
 
@@ -134,10 +237,12 @@ function signal(...args: Arg[])
 
 Unlike GObject signals, DBus signals do not have return types.
 
-## `serve`
+## Services
 
-Attempts to own `name` and export an object implementing the interface at
-`objectPath` on `busType`.
+### `serve`
+
+Instantiates an instance of service with the given implementation and attempts
+to own `name` and export it at `objectPath` on `busType`.
 
 ```ts
 interface DBusInterface<T extends InterfaceDeclaration> {
@@ -146,18 +251,16 @@ interface DBusInterface<T extends InterfaceDeclaration> {
     name?: string // default: the interface name
     objectPath?: string // default: the interface name as a path
     flags?: Gio.BusNameOwnerFlags // default: Gio.BusNameOwnerFlags.NONE
-    timeout?: number // default: 10_000
+    cancellable?: Gio.Cancellable
     implementation: (emitter: ServiceEmitter<T>) => ServiceImplementation<T>
   }): Promise<ServiceInstance<T>>
 }
 ```
 
-The returned promise rejects if the name is already owned by another process,
-the connection could not be established or `timeout` milliseconds elapsed.
-
-The `implementation` factory receives an `emitter` object, which has a notifier
-function for each readable property and an emitter function for each signal, and
-returns the object implementing the interface.
+> [!NOTE]
+>
+> It is mostly a wrapper over
+> [`Gio.bus_own_name`](https://docs.gtk.org/gio/func.bus_own_name.html).
 
 ### Implementing properties
 
@@ -218,68 +321,19 @@ const service = await MyInterface.serve({
 
 Thrown errors are returned to the caller as DBus errors.
 
-### The service object
+### Implementation classes
 
-The object resolved by `serve` is a `GObject.Object` exposing the interface.
-
-- Its properties read and write through the implementation and enforce access
-  flags: reading a write-only or assigning a read-only property throws.
-  Assigning a data property automatically emits `PropertiesChanged` and
-  `notify::` just like a remote write does.
-- Its methods invoke the implementation directly.
-- DBus signals and property changes are also emitted as GObject signals, which
-  can be connected to with their kebab-cased names, such as `my-signal` or
-  `notify::my-property`.
+`InferImplementation` and `InferEmitter` extract the implementation and emitter
+types of a declared interface, which is useful for implementing services as
+classes.
 
 ```ts
-class ServiceInstance extends GObject.Object {
-  implementation: ServiceImplementation<T>
-  unexport(): void
-}
-```
-
-Serving stops with `unexport`, which also releases the owned name.
-
-## `proxy`
-
-Attempts to proxy `name`'s object at `objectPath` on the `bus` connection.
-
-```ts
-interface DBusInterface<T extends InterfaceDeclaration> {
-  proxy(props?: {
-    bus?: Gio.DBusConnection // default: Gio.DBus.session
-    name?: string // default: the interface name
-    objectPath?: string // default: the interface name as a path
-    flags?: Gio.DBusProxyFlags // default: Gio.DBusProxyFlags.NONE
-    timeout?: number // default: 10_000
-  }): Promise<ProxyInstance<T>>
-}
-```
-
-- Property reads are served from a cache which is kept in sync through
-  `PropertiesChanged` signals. If a value is missing from the cache, it is
-  fetched with a blocking call.
-- Property writes update the cache optimistically and set the remote property
-  asynchronously. If the remote write fails, the cached value is rolled back.
-- Methods are invoked asynchronously and resolve their out arguments as a tuple,
-  or an empty tuple for methods without out arguments. They reject with a
-  `GLib.Error` if the remote implementation throws.
-- DBus signals and property changes are emitted as GObject signals, which can be
-  connected to with their kebab-cased names, such as `my-signal` or
-  `notify::my-property`.
-
-## Type helpers
-
-`InferImplementation`, `InferEmitter` and `InferProxy` extract the
-implementation, emitter and proxy types of a declared interface, which is useful
-for implementing services as classes.
-
-```ts
-import { type InferEmitter, type InferImplementation } from "gnim/dbus"
+import type { InferEmitter, InferImplementation } from "gnim/dbus"
 
 type Emitter = InferEmitter<typeof MyInterface>
+type Impl = InferImplementation<typeof MyInterface>
 
-class Implementation implements InferImplementation<typeof MyInterface> {
+class Implementation implements Impl {
   private emitter: Emitter
 
   constructor(emitter: Emitter) {
@@ -299,25 +353,62 @@ const service = await MyInterface.serve({
 })
 ```
 
-## Lower level API
+### The service object
 
-`createDBusInterface` is built on top of `createInterfaceInfo`, which turns a
-declaration into a `Gio.DBusInterfaceInfo`, and `createServiceClass` and
-`createProxyClass`, which create `GObject.Object` subclasses from it. These are
-also exported from `gnim/dbus` for cases that need manual control over
-instantiation, initialization or exporting.
+It is an instance of `GObject.Object` exposing the interface.
+
+- Its properties read and write through the implementation and enforce access
+  flags: reading a write-only or assigning a read-only property throws.
+  Assigning a data property automatically emits `PropertiesChanged` and
+  `notify::` just like a remote write does.
+- Its methods invoke the implementation directly.
+- DBus signals and property changes are also emitted as GObject signals, which
+  can be connected to with their kebab-cased names, such as `my-signal` or
+  `notify::my-property`.
 
 ```ts
-function createInterfaceInfo<T extends InterfaceDeclaration>(
-  name: string,
-  interfaceDeclaration: T,
-): InterfaceInfo<T>
-
-function createServiceClass<T extends InterfaceDeclaration>(
-  info: InterfaceInfo<T>,
-): ServiceClass<T>
-
-function createProxyClass<T extends InterfaceDeclaration>(
-  info: InterfaceInfo<T>,
-): ProxyClass<T>
+class ServiceInstance extends GObject.Object {
+  implementation: ServiceImplementation<T>
+  unexport(): void
+}
 ```
+
+Serving stops with `unexport`, which also releases the owned name when the
+`serve` function was used to instantiate the service.
+
+## Proxies
+
+### `proxy`
+
+Attempts to proxy `name`'s object at `objectPath` on the `bus` connection.
+
+```ts
+interface DBusInterface<T extends InterfaceDeclaration> {
+  proxy(props?: {
+    bus?: Gio.DBusConnection // default: Gio.DBus.session
+    name?: string // default: the interface name
+    objectPath?: string // default: the interface name as a path
+    flags?: Gio.DBusProxyFlags // default: Gio.DBusProxyFlags.NONE
+    timeout?: number // default: 10_000
+  }): Promise<ProxyInstance<T>>
+}
+```
+
+> [!NOTE]
+>
+> It is a wrapper over the `initAsync` method of the Proxy class produced by
+> [`createDBusInterface`](#createdbusinterface).
+
+### The proxy object
+
+- Property reads are served from a cache which is kept in sync through
+  `PropertiesChanged` signals. If a value is missing from the cache, it is
+  fetched with a blocking call.
+- Property writes update the cache optimistically and set the remote property
+  asynchronously. If the remote write fails, the cached value is rolled back.
+- Methods are invoked asynchronously and resolve their out arguments as a tuple,
+  or an empty tuple for methods without out arguments. They reject with a
+  `GLib.Error` if the remote implementation throws.
+- DBus signals and property changes are emitted as GObject signals, which can be
+  connected to with their kebab-cased names, such as `my-signal` or
+  `notify::my-property`.
