@@ -25,7 +25,7 @@ export function useExtension() {
 }
 
 export default class extends Extension {
-  enable(): void {
+  override enable(): void {
     const ctx: ExtensionContext = {
       gettext: createDomain(this),
       settings: createSettings(this.getSettings(), schema),

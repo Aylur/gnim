@@ -24,7 +24,7 @@ export function usePrefs() {
 }
 
 export default class extends ExtensionPreferences {
-  async fillPreferencesWindow(window: Adw.PreferencesWindow) {
+  override async fillPreferencesWindow(window: Adw.PreferencesWindow) {
     const settings = createSettings(this.getSettings(), schema)
     const logger = this.getLogger()
     const gettext = createDomain(this)

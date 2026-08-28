@@ -24,13 +24,13 @@ export default class App extends Adw.Application {
     })
   }
 
-  vfunc_startup(this: App): void {
+  override vfunc_startup(this: App): void {
     super.vfunc_startup()
     const dispose = render(AppWindow, this)
     this.connect("shutdown", dispose)
   }
 
-  vfunc_activate(): void {
+  override vfunc_activate(): void {
     for (const window of this.get_windows()) {
       window.present()
     }
