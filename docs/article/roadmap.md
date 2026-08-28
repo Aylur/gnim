@@ -5,7 +5,8 @@ with similar systems. I did not yet understand the complexity of the problem at
 first, so most edge-cases, which there are a lot, were fixed as I encountered
 them and so it turned out to be bit of a spaghetti. There are some problems that
 currently cannot be fixed with the current implementation so the plan for 2.1 is
-a full rewrite of the reactive system.
+a full internal rewrite of the reactive system, without breaking the user facing
+API.
 
 ## States are synchronous, effects use the microtask queue
 
@@ -80,3 +81,12 @@ There is currently no builtin support for async mechanisms.
 
 Planned: `Suspense` that displays a fallback component while its subtree is
 doing async work.
+
+## Dev server
+
+The CLI is written in Rust and uses Rolldown's Rust API. Since it is not a
+Rolldown plugin it is impossible to use it with other plugins. This decision was
+mostly because I wanted to fit it into a single binary so that there is no
+dependency on Node and npm packages to make it is easier to distribute.
+
+Planned: rewrite it in TypeScript as a Rolldown plugin.
