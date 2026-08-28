@@ -1,8 +1,8 @@
 {
   "dependencies": {
-    "@gnim-js/gnome-shell": "^2.0.0-beta.13",
-    "@gnim-js/gtk4": "^2.0.0-beta.13",
-    "gnim": "^2.0.0-beta.13"
+    "@gnim-js/gnome-shell": "^2.0.0-beta.14",
+    "@gnim-js/gtk4": "^2.0.0-beta.14",
+    "gnim": "^2.0.0-beta.14"
   },
   "devDependencies": {
     "esbuild": "^0.28.0",
