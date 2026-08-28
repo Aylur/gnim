@@ -96,12 +96,10 @@ export class GtkRenderer implements Renderer {
         if (klass.prototype instanceof Gtk.Widget && "class" in props) {
             const cn = props.class
             props.class = computed(() => flattenClassList(cn))
-            return props
         }
         if (klass.prototype instanceof Gtk.Widget && "css" in props) {
             const css = props.css
             props.css = prop(css) // force it to an Accessor so it is applied, after construction
-            return props
         }
         return props
     }
