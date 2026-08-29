@@ -1,10 +1,10 @@
-import { useExtension } from "extension"
 import Clutter from "gi://Clutter"
 import St from "gi://St"
 import { effect, onCleanup } from "gnim"
 import { register } from "gnim/gobject"
 import * as Main from "resource:///org/gnome/shell/ui/main.js"
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js"
+import { useExtension } from "./index"
 
 @register
 class PanelMenuButton extends PanelMenu.Button {

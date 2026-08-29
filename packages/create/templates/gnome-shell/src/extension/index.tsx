@@ -5,7 +5,7 @@ import type { CreateSettings } from "gnim/schema"
 import { createContext } from "gnim"
 import { createDomain } from "gnim/intl"
 import { createSettings } from "gnim/schema"
-import { schema } from "org.gnome.shell.extensions.__extension-id__.gschema"
+import { schema } from "../org.gnome.shell.extensions.__extension-id__.gschema"
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js"
 import PanelButton from "./PanelButton"
 

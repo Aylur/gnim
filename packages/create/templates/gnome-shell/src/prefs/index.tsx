@@ -4,7 +4,7 @@ import Adw from "gi://Adw"
 import { createContext } from "gnim"
 import { createDomain, type GettextDomain } from "gnim/intl"
 import { createSettings, type CreateSettings } from "gnim/schema"
-import { schema } from "org.gnome.shell.extensions.__extension-id__.gschema"
+import { schema } from "../org.gnome.shell.extensions.__extension-id__.gschema"
 import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js"
 import PreferencesPage from "./PreferencesPage"
 

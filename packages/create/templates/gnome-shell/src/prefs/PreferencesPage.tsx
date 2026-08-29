@@ -1,7 +1,7 @@
 import Gtk from "gi://Gtk"
 import Adw from "gi://Adw"
-import { usePrefs } from "prefs"
 import { style } from "@gnim-js/gtk4"
+import { usePrefs } from "./index"
 
 export default function PreferencesPage() {
   const { settings, gettext } = usePrefs()
