@@ -1,6 +1,6 @@
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import { isGObjectCtor, kebabcase, snakecase } from "../util.js"
+import { createGTypeName, isGObjectCtor, kebabcase, snakecase } from "../util.js"
 import { pspecFromGType } from "./gtype.js"
 import { getMetadata } from "./reflect.js"
 
@@ -265,6 +265,9 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
             ...options,
             Properties: fromEntries(properties),
             Signals: fromEntries(signals),
+            ...(!options.GTypeName && {
+                GTypeName: createGTypeName(constructor.name, import.meta.url),
+            }),
         },
         constructor,
     )

@@ -2,7 +2,7 @@ import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { pspecFromGType } from "../gobject/gtype.js"
-import { findDescriptor, gtypeNamePrefix, kebabcase, pascalcase } from "../util.js"
+import { createGTypeName, findDescriptor, kebabcase, pascalcase } from "../util.js"
 import {
     inferGType,
     type DBusGObject,
@@ -14,6 +14,8 @@ import {
     type Signals,
     type WritableProperties,
 } from "./interface.js"
+
+export const createServiceName = (s: string) => pascalcase(s.replaceAll(".", "_")) + "Service"
 
 type ServiceMethods<T extends InterfaceDeclaration> = {
     [K in keyof Methods<T>]: (
@@ -67,9 +69,10 @@ export interface ServiceClass<T extends InterfaceDeclaration> {
  */
 export function createServiceClass<T extends InterfaceDeclaration>(
     info: InterfaceInfo<T>,
+    gtypeName?: string,
 ): ServiceClass<T>
 
-export function createServiceClass(info: Gio.DBusInterfaceInfo): any {
+export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: string): any {
     const { READABLE, WRITABLE } = Gio.DBusPropertyInfoFlags
 
     return class DBusService extends GObject.Object {
@@ -80,11 +83,6 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo): any {
         implementation: Record<string, unknown>
 
         static {
-            const name =
-                gtypeNamePrefix(import.meta.url) +
-                pascalcase(info.name.replaceAll(".", "_")) +
-                "Service"
-
             const props = info.properties.map((prop) => {
                 const gtype = inferGType(prop.signature)
                 const name = kebabcase(prop.name)
@@ -124,9 +122,10 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo): any {
 
             GObject.registerClass(
                 {
-                    GTypeName: name,
                     Properties: Object.fromEntries(props),
                     Signals: Object.fromEntries(signals),
+                    GTypeName:
+                        gtypeName ?? createGTypeName(createServiceName(info.name), import.meta.url),
                 },
                 this,
             )

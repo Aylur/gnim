@@ -2,7 +2,7 @@ import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { pspecFromGType } from "../gobject/gtype.js"
-import { gtypeNamePrefix, kebabcase, pascalcase } from "../util.js"
+import { createGTypeName, kebabcase, pascalcase } from "../util.js"
 import {
     inferGType,
     type DBusGObject,
@@ -12,6 +12,8 @@ import {
     type ReadOnlyProperties,
     type WritableProperties,
 } from "./interface.js"
+
+export const createProxyName = (s: string) => pascalcase(s.replaceAll(".", "_")) + "Proxy"
 
 type ProxyMethods<T extends InterfaceDeclaration> = {
     [K in keyof Methods<T>]: (
@@ -62,20 +64,16 @@ export interface ProxyClass<T extends InterfaceDeclaration> {
 
 export function createProxyClass<T extends InterfaceDeclaration>(
     info: InterfaceInfo<T>,
+    gtypeName?: string,
 ): ProxyClass<T>
 
-export function createProxyClass(info: Gio.DBusInterfaceInfo): any {
+export function createProxyClass(info: Gio.DBusInterfaceInfo, gtypeName?: string): any {
     return class DBusProxy extends GObject.Object {
         static info = info as InterfaceInfo<any>
         static name = info.name
 
         static {
             const { READABLE, WRITABLE } = Gio.DBusPropertyInfoFlags
-
-            const name =
-                gtypeNamePrefix(import.meta.url) +
-                pascalcase(info.name.replaceAll(".", "_")) +
-                "Proxy"
 
             const props = info.properties.map((prop) => {
                 const gtype = inferGType(prop.signature)
@@ -116,9 +114,10 @@ export function createProxyClass(info: Gio.DBusInterfaceInfo): any {
 
             GObject.registerClass(
                 {
-                    GTypeName: name,
                     Properties: Object.fromEntries(props),
                     Signals: Object.fromEntries(signals),
+                    GTypeName:
+                        gtypeName ?? createGTypeName(createProxyName(info.name), import.meta.url),
                 },
                 this,
             )

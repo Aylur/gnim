@@ -1,4 +1,4 @@
-import type GLib from "gi://GLib?version=2.0"
+import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 
 export function kebabcase(str: string) {
@@ -25,13 +25,50 @@ export function snakecase(str: string) {
         .toLowerCase()
 }
 
-export function gtypeNamePrefix(moduleUrl: string) {
-    if (!GObject.gtypeNameBasedOnJSPath) return ""
+// port of GJS's `_getCallerBasename` that lets us skip middlemen urls
+function callerBasename(...skipUrls: string[]): string | null {
+    const scriptRegex = /^(.+:\/\/)?(.*\/)?(.+)\.js$/
+    const stackLineRegex = /@(.+:\/\/)?(.*\/)?(.+)\.js:\d+(:[\d]+)?$/
+    const stackLines = new Error().stack?.trim().split("\n") ?? []
 
-    // GJS's builtin prefix builder is not reliable with package managers and bundlers
-    return moduleUrl
-        .replace(/[^a-z0-9]+(.)?/gi, (_, c) => (c ? c.toUpperCase() : ""))
-        .replace(/^[^a-z]+/i, "")
+    const skip = skipUrls.map((url) => {
+        const match = url.match(scriptRegex)
+        return match ? { dir: match[2], file: match[3] } : null
+    })
+
+    for (const line of stackLines) {
+        const match = line.match(stackLineRegex)
+        if (!match) continue
+
+        let scriptDir = match[2]
+        const scriptBasename = match[3]
+
+        if (skip.some((s) => s && s.dir === scriptDir && s.file === scriptBasename)) continue
+        if (scriptDir && scriptDir.startsWith("/org/gnome/gjs/")) continue
+
+        let basename = scriptBasename
+        if (scriptDir) {
+            scriptDir = scriptDir.replace(/^\/|\/$/g, "")
+            basename = `${scriptDir.split("/").reverse()[0]}_${basename}`
+        }
+        return basename
+    }
+
+    return null
+}
+
+// mimics GJS's `_createGTypeName`
+export function createGTypeName(name: string, ...skipUrls: string[]) {
+    if (GObject.gtypeNameBasedOnJSPath) {
+        const caller = callerBasename(import.meta.url, ...skipUrls)
+        if (caller) name = `${caller}_${name}`
+    }
+
+    if (name === "") {
+        name = `anonymous_${GLib.uuid_string_random()}`
+    }
+
+    return `Gjs_${name}`.replace(/[^a-z0-9+_-]/gi, "_")
 }
 
 export type Prettify<T> = { [K in keyof T]: T[K] } & {}

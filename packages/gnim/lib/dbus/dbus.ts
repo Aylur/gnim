@@ -1,6 +1,8 @@
+import { createGTypeName } from "../util.js"
 import { createInterfaceInfo, type InterfaceDeclaration } from "./interface.js"
 import {
     createProxyClass,
+    createProxyName,
     proxy,
     type ProxyClass,
     type ProxyInstance,
@@ -8,6 +10,7 @@ import {
 } from "./proxy.js"
 import {
     createServiceClass,
+    createServiceName,
     serve,
     type ServeProps,
     type ServiceClass,
@@ -38,8 +41,15 @@ export function createDBusInterface<T extends InterfaceDeclaration>(
 
     info.cache_build()
 
-    const DBusProxy = createProxyClass(info)
-    const DBusService = createServiceClass(info)
+    const DBusProxy = createProxyClass(
+        info,
+        createGTypeName(createProxyName(info.name), import.meta.url),
+    )
+
+    const DBusService = createServiceClass(
+        info,
+        createGTypeName(createServiceName(info.name), import.meta.url),
+    )
 
     return {
         Proxy: DBusProxy,
