@@ -118,11 +118,14 @@ declare global {
     }
 }
 
-Function.$gtype = GObject.TYPE_JSOBJECT as FunctionConstructor["$gtype"]
-Array.$gtype = GObject.TYPE_JSOBJECT as ArrayConstructor["$gtype"]
-Date.$gtype = GObject.TYPE_JSOBJECT as DateConstructor["$gtype"]
-Map.$gtype = GObject.TYPE_JSOBJECT as MapConstructor["$gtype"]
-Set.$gtype = GObject.TYPE_JSOBJECT as SetConstructor["$gtype"]
+// @ts-expect-error let gnome-shell extensions disable it
+if (!import.meta.DISABLE_GLOBAL_OVERRIDES) {
+    Function.$gtype = GObject.TYPE_JSOBJECT as FunctionConstructor["$gtype"]
+    Array.$gtype = GObject.TYPE_JSOBJECT as ArrayConstructor["$gtype"]
+    Date.$gtype = GObject.TYPE_JSOBJECT as DateConstructor["$gtype"]
+    Map.$gtype = GObject.TYPE_JSOBJECT as MapConstructor["$gtype"]
+    Set.$gtype = GObject.TYPE_JSOBJECT as SetConstructor["$gtype"]
+}
 
 export type Annotations<O extends GObject.Object, S extends keyof O> = {
     [K in S as K extends string ? KebabCase<K> : never]: O[K]

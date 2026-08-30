@@ -27,54 +27,57 @@ declare global {
     }
 }
 
-/**
- * Partial polyfill of https://github.com/tc39/proposal-decorator-metadata
- */
-if (!("metadata" in Reflect)) {
-    const store = new WeakMap<object, Map<Key | undefined, Map<unknown, unknown>>>()
+// @ts-expect-error let gnome-shell extensions disable it
+if (!import.meta.DISABLE_GLOBAL_OVERRIDES) {
+    /**
+     * Partial polyfill of https://github.com/tc39/proposal-decorator-metadata
+     */
+    if (!("metadata" in Reflect)) {
+        const store = new WeakMap<object, Map<Key | undefined, Map<unknown, unknown>>>()
 
-    const defineMetadata: typeof Reflect.defineMetadata = (
-        metadataKey,
-        metadataValue,
-        target,
-        propertyKey,
-    ) => {
-        const targetMetadata = store.get(target) ?? new Map()
-        const propertyMetadata = targetMetadata.get(propertyKey) ?? new Map()
-        propertyMetadata.set(metadataKey, metadataValue)
-        targetMetadata.set(propertyKey, propertyMetadata)
-        store.set(target, targetMetadata)
-    }
+        const defineMetadata: typeof Reflect.defineMetadata = (
+            metadataKey,
+            metadataValue,
+            target,
+            propertyKey,
+        ) => {
+            const targetMetadata = store.get(target) ?? new Map()
+            const propertyMetadata = targetMetadata.get(propertyKey) ?? new Map()
+            propertyMetadata.set(metadataKey, metadataValue)
+            targetMetadata.set(propertyKey, propertyMetadata)
+            store.set(target, targetMetadata)
+        }
 
-    const hasMetadata: typeof Reflect.hasMetadata = (metadataKey, target, propertyKey) => {
-        for (let t: object | null = target; t !== null; t = Object.getPrototypeOf(t)) {
-            if (store.get(t)?.get(propertyKey)?.has(metadataKey)) {
-                return true
+        const hasMetadata: typeof Reflect.hasMetadata = (metadataKey, target, propertyKey) => {
+            for (let t: object | null = target; t !== null; t = Object.getPrototypeOf(t)) {
+                if (store.get(t)?.get(propertyKey)?.has(metadataKey)) {
+                    return true
+                }
+            }
+            return false
+        }
+
+        const getMetadata: typeof Reflect.getMetadata = (metadataKey, target, propertyKey) => {
+            for (let t: object | null = target; t !== null; t = Object.getPrototypeOf(t)) {
+                if (store.get(t)?.get(propertyKey)?.has(metadataKey)) {
+                    return store.get(t)?.get(propertyKey)?.get(metadataKey)
+                }
             }
         }
-        return false
-    }
 
-    const getMetadata: typeof Reflect.getMetadata = (metadataKey, target, propertyKey) => {
-        for (let t: object | null = target; t !== null; t = Object.getPrototypeOf(t)) {
-            if (store.get(t)?.get(propertyKey)?.has(metadataKey)) {
-                return store.get(t)?.get(propertyKey)?.get(metadataKey)
+        const metadata: typeof Reflect.metadata = (metadataKey, metadataValue) => {
+            return (target, propertyKey) => {
+                defineMetadata(metadataKey, metadataValue, target, propertyKey)
             }
         }
-    }
 
-    const metadata: typeof Reflect.metadata = (metadataKey, metadataValue) => {
-        return (target, propertyKey) => {
-            defineMetadata(metadataKey, metadataValue, target, propertyKey)
-        }
+        Object.assign(Reflect, {
+            hasMetadata,
+            getMetadata,
+            defineMetadata,
+            metadata,
+        })
     }
-
-    Object.assign(Reflect, {
-        hasMetadata,
-        getMetadata,
-        defineMetadata,
-        metadata,
-    })
 }
 
 export function getMetadata(proto: object, key: Key): Meta | void {
