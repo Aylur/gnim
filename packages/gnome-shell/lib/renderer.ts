@@ -42,6 +42,15 @@ export class GnomeRenderer implements Renderer {
         return props
     }
     setProperty(object: GObject.Object, key: string, value: unknown): void {
+        if (object instanceof Clutter.Actor && key === "visible" && typeof value === "boolean") {
+            /**
+             * special-cased for conveniency, otherwise users would have to specify a reactive
+             * `visible` prop with {@link Clutter.Actor.prototype.showOnSetParent} set to false
+             */
+            object.visible = value
+            return
+        }
+
         const getter = `get_${snakecase(key)}` as keyof typeof object
 
         let current: unknown
