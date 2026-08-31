@@ -28,7 +28,7 @@ declare global {
 }
 
 // @ts-expect-error let gnome-shell extensions disable it
-if (!import.meta.DISABLE_GLOBAL_OVERRIDES) {
+if (!import.meta.GNIM_DISABLE_GLOBAL_OVERRIDES) {
     /**
      * Partial polyfill of https://github.com/tc39/proposal-decorator-metadata
      */

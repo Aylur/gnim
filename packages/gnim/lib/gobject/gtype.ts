@@ -1,6 +1,20 @@
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
+import GIRepository from "gi://GIRepository"
 import type { KebabCase } from "../util"
+
+function getEnumDefaultValue(gtype: GObject.GType) {
+    if (GIRepository.__version__ === "3.0") {
+        const info = GIRepository.Repository.dup_default().find_by_gtype(gtype)
+        if (info instanceof GIRepository.EnumInfo || info instanceof GIRepository.FlagsInfo) {
+            return info.get_value(0).get_value()
+        }
+    } else {
+        const info = GIRepository.Repository.get_default().find_by_gtype(gtype)
+        return GIRepository.value_info_get_value(GIRepository.enum_info_get_value(info, 0))
+    }
+    throw Error(`failed to find default value for ${gtype.name}`)
+}
 
 const MININT8 = GLib.MININT8
 const MAXINT8 = GLib.MAXINT8
@@ -72,6 +86,14 @@ export function pspecFromGType(
             if (GObject.type_is_a(type, GObject.TYPE_BOXED)) {
                 return GObject.param_spec_boxed(name, null, null, type, flags)
             }
+            if (GObject.type_is_a(type, GObject.TYPE_ENUM)) {
+                const defaultValue = getEnumDefaultValue(type)
+                return GObject.param_spec_enum(name, null, null, type, defaultValue, flags)
+            }
+            if (GObject.type_is_a(type, GObject.TYPE_FLAGS)) {
+                const defaultValue = getEnumDefaultValue(type)
+                return GObject.param_spec_flags(name, null, null, type, defaultValue, flags)
+            }
             throw Error(`cannot guess ParamSpec from GObject.GType "${type}"`)
     }
 }
@@ -119,7 +141,7 @@ declare global {
 }
 
 // @ts-expect-error let gnome-shell extensions disable it
-if (!import.meta.DISABLE_GLOBAL_OVERRIDES) {
+if (!import.meta.GNIM_DISABLE_GLOBAL_OVERRIDES) {
     Function.$gtype = GObject.TYPE_JSOBJECT as FunctionConstructor["$gtype"]
     Array.$gtype = GObject.TYPE_JSOBJECT as ArrayConstructor["$gtype"]
     Date.$gtype = GObject.TYPE_JSOBJECT as DateConstructor["$gtype"]

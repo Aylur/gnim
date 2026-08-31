@@ -280,20 +280,15 @@ function pspec(
 ) {
     if (declaration instanceof GObject.ParamSpec) return declaration
 
-    if (declaration === Object || declaration === Function || declaration === Array) {
+    // special cased for `import.meta.GNIM_DISABLE_GLOBAL_OVERRIDES`
+    if (
+        declaration === Date ||
+        declaration === Function ||
+        declaration === Array ||
+        declaration === Set ||
+        declaration === Map
+    ) {
         return GObject.ParamSpec.jsobject(name, "", "", flags)
-    }
-
-    if (declaration === String) {
-        return GObject.ParamSpec.string(name, "", "", flags, "")
-    }
-
-    if (declaration === Number) {
-        return GObject.ParamSpec.double(name, "", "", flags, -Number.MAX_VALUE, Number.MAX_VALUE, 0)
-    }
-
-    if (declaration === Boolean) {
-        return GObject.ParamSpec.boolean(name, "", "", flags, false)
     }
 
     if ("$gtype" in declaration) {
