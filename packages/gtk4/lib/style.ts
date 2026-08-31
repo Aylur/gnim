@@ -4,7 +4,10 @@ import { computed, onCleanup, type Accessor, type MaybeAccessor } from "gnim"
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {}
 
-Gtk.init()
+// @ts-expect-error let gnome-shell extensions disable it
+if (!import.meta.GNIM_DISABLE_GLOBAL_OVERRIDES) {
+    Gtk.init()
+}
 
 function fnv1aHash(str: string) {
     let hash = 0x811c9dc5
