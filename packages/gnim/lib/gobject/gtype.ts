@@ -1,17 +1,22 @@
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import GIRepository from "gi://GIRepository"
 import type { KebabCase } from "../util"
+// @ts-expect-error missing union type
+import GIRepository from "gi://GIRepository"
 
 function getEnumDefaultValue(gtype: GObject.GType) {
-    if (GIRepository.__version__ === "3.0") {
-        const info = GIRepository.Repository.dup_default().find_by_gtype(gtype)
-        if (info instanceof GIRepository.EnumInfo || info instanceof GIRepository.FlagsInfo) {
+    const Repo = GIRepository as
+        | typeof import("gi://GIRepository?version=3.0").default
+        | typeof import("gi://GIRepository?version=2.0").default
+
+    if (Repo.__version__ === "3.0") {
+        const info = Repo.Repository.dup_default().find_by_gtype(gtype)
+        if (info instanceof Repo.EnumInfo || info instanceof Repo.FlagsInfo) {
             return info.get_value(0).get_value()
         }
     } else {
-        const info = GIRepository.Repository.get_default().find_by_gtype(gtype)
-        return GIRepository.value_info_get_value(GIRepository.enum_info_get_value(info, 0))
+        const info = Repo.Repository.get_default().find_by_gtype(gtype)
+        return Repo.value_info_get_value(Repo.enum_info_get_value(info, 0))
     }
     throw Error(`failed to find default value for ${gtype.name}`)
 }
