@@ -14,12 +14,12 @@ import {
 } from "gnim"
 
 // @ts-expect-error we don't generate versionless to avoid pinning gnome version
-import _St from "gi://St"
+import St from "gi://St"
 // @ts-expect-error we don't generate versionless to avoid pinning gnome version
-import _Clutter from "gi://Clutter"
+import Clutter from "gi://Clutter"
 
-const St = _St as typeof import("gi://St?version=18").GI.St
-const Clutter = _Clutter as typeof import("gi://Clutter?version=18").GI.Clutter
+const _St = St as typeof import("gi://St?version=18").GI.St
+const _Clutter = Clutter as typeof import("gi://Clutter?version=18").GI.Clutter
 
 function snakecase(str: string) {
     return str
@@ -36,16 +36,16 @@ export class GnomeRenderer implements Renderer {
         return newObject(element, props as CCProps<GObject.Object>)
     }
     createText(string: string): GObject.Object {
-        return St.Label.new(string)
+        return _St.Label.new(string)
     }
     prepareProps(_: CC, props: Record<string, unknown>): Record<string, unknown> {
         return props
     }
     setProperty(object: GObject.Object, key: string, value: unknown): void {
-        if (object instanceof Clutter.Actor && key === "visible" && typeof value === "boolean") {
+        if (object instanceof _Clutter.Actor && key === "visible" && typeof value === "boolean") {
             /**
              * special-cased for conveniency, otherwise users would have to specify a reactive
-             * `visible` prop with {@link Clutter.Actor.prototype.showOnSetParent} set to false
+             * `visible` prop with {@link _Clutter.Actor.prototype.showOnSetParent} set to false
              */
             object.visible = value
             return
@@ -89,17 +89,17 @@ export class GnomeRenderer implements Renderer {
             if (parent[appendChild](child)) return
         }
 
-        if (parent instanceof Clutter.Actor) {
-            if (child instanceof Clutter.Actor) {
+        if (parent instanceof _Clutter.Actor) {
+            if (child instanceof _Clutter.Actor) {
                 return parent.add_child(child)
             }
-            if (child instanceof Clutter.Action) {
+            if (child instanceof _Clutter.Action) {
                 return parent.add_action(child)
             }
-            if (child instanceof Clutter.Constraint) {
+            if (child instanceof _Clutter.Constraint) {
                 return parent.add_constraint(child)
             }
-            if (child instanceof Clutter.LayoutManager) {
+            if (child instanceof _Clutter.LayoutManager) {
                 return parent.set_layout_manager(child)
             }
         }
@@ -111,17 +111,17 @@ export class GnomeRenderer implements Renderer {
             if (parent[removeChild](child)) return
         }
 
-        if (parent instanceof Clutter.Actor) {
-            if (child instanceof Clutter.Action) {
+        if (parent instanceof _Clutter.Actor) {
+            if (child instanceof _Clutter.Action) {
                 return parent.remove_action(child)
             }
-            if (child instanceof Clutter.Actor) {
+            if (child instanceof _Clutter.Actor) {
                 return parent.remove_child(child)
             }
-            if (child instanceof Clutter.Constraint) {
+            if (child instanceof _Clutter.Constraint) {
                 return parent.remove_constraint(child)
             }
-            if (child instanceof Clutter.LayoutManager) {
+            if (child instanceof _Clutter.LayoutManager) {
                 return parent.set_layout_manager(null)
             }
         }
@@ -129,7 +129,7 @@ export class GnomeRenderer implements Renderer {
         throw new MissingMethodError("removeChild", parent, child)
     }
     disposeObject(object: GObject.Object): void {
-        if (object instanceof Clutter.Actor) {
+        if (object instanceof _Clutter.Actor) {
             object.destroy()
         }
     }
