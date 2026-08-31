@@ -1,10 +1,11 @@
 use super::ModuleTracker;
-use oxc::allocator::Allocator;
-use oxc::ast::AstBuilder;
+use oxc::allocator::{Allocator, ArenaVec, TakeIn};
 use oxc::ast::ast::*;
+use oxc::ast::builder::AstBuilder;
 use oxc::codegen::{Codegen, CodegenOptions};
 use oxc::parser::Parser;
-use oxc::span::{Atom, SPAN, SourceType};
+use oxc::span::{SPAN, SourceType};
+use oxc::str::Ident;
 use std::path::Path;
 
 fn is_component_name(name: &str) -> bool {
@@ -54,45 +55,39 @@ fn add_version_query(source: &str, version: u64) -> String {
 
 /// Creates `$$register(import.meta.url, "name", expr)`
 fn wrap_with_register<'a>(
-    ast: AstBuilder<'a>,
-    name: Atom<'a>,
+    ast: &AstBuilder<'a>,
+    name: Ident<'a>,
     expr: Expression<'a>,
 ) -> Expression<'a> {
     // $$register
-    let callee = ast.expression_identifier(SPAN, "$$registerComponent");
+    let callee = Expression::new_identifier(SPAN, "$$registerComponent", ast);
 
     // import.meta
-    let import_meta = ast.expression_meta_property(
-        SPAN,
-        ast.identifier_name(SPAN, "import"),
-        ast.identifier_name(SPAN, "meta"),
-    );
+    let import_meta = Expression::new_import_meta(SPAN, ast);
 
     // import.meta.url
-    let import_meta_url = Expression::StaticMemberExpression(ast.alloc_static_member_expression(
+    let import_meta_url = Expression::new_static_member_expression(
         SPAN,
         import_meta,
-        ast.identifier_name(SPAN, "url"),
+        IdentifierName::new(SPAN, "url", ast),
         false,
-    ));
+        ast,
+    );
 
     // "name"
-    let name_str = ast.expression_string_literal(SPAN, name, None);
+    let name_str = Expression::new_string_literal(SPAN, name, None, ast);
 
     // arguments: [import.meta.url, "name", expr]
-    let args = ast.vec_from_array([
-        Argument::from(import_meta_url),
-        Argument::from(name_str),
-        Argument::from(expr),
-    ]);
+    let args = ArenaVec::from_array_in(
+        [
+            Argument::from(import_meta_url),
+            Argument::from(name_str),
+            Argument::from(expr),
+        ],
+        ast,
+    );
 
-    ast.expression_call(
-        SPAN,
-        callee,
-        None::<TSTypeParameterInstantiation>,
-        args,
-        false,
-    )
+    Expression::new_call_expression(SPAN, callee, None, args, false, ast)
 }
 
 pub fn transform_code(source: &str, id: &str) -> Result<String, String> {
@@ -101,8 +96,8 @@ pub fn transform_code(source: &str, id: &str) -> Result<String, String> {
 
     let ret = Parser::new(&allocator, source, source_type).parse();
 
-    if !ret.errors.is_empty() {
-        return Err(format!("parse errors: {}", ret.errors.len()));
+    if !ret.diagnostics.is_empty() {
+        return Err(format!("parse errors: {}", ret.diagnostics.len()));
     }
 
     let mut program = ret.program;
@@ -110,58 +105,46 @@ pub fn transform_code(source: &str, id: &str) -> Result<String, String> {
 
     for statement in program.body.iter_mut() {
         match statement {
-            Statement::ExportNamedDeclaration(export_decl) => {
+            Statement::ExportDeclaration(export_decl) => {
                 // `export const Name = () => {}` -> `export const Name = $$register(...)`
-                if let Some(Declaration::VariableDeclaration(var_decl)) =
-                    &mut export_decl.declaration
-                {
+                if let Declaration::VariableDeclaration(var_decl) = &mut export_decl.declaration {
                     for declarator in var_decl.declarations.iter_mut() {
                         if let BindingPattern::BindingIdentifier(ident) = &declarator.id
                             && is_component_name(ident.name.as_str())
+                            && let name = ident.name
                             && let Some(init) = declarator.init.take()
                         {
-                            declarator.init =
-                                Some(wrap_with_register(ast, ident.name.into(), init));
+                            declarator.init = Some(wrap_with_register(&ast, name, init));
                         }
                     }
                 }
 
                 // `export function Name() {}` -> `export const Name = $$register(...)`
-                if let Some(Declaration::FunctionDeclaration(func)) = &export_decl.declaration
+                if let Declaration::FunctionDeclaration(func) = &export_decl.declaration
                     && let Some(id) = &func.id
                 {
                     let name = id.name;
                     if is_component_name(name.as_str()) {
-                        let func = match export_decl.declaration.take() {
-                            Some(Declaration::FunctionDeclaration(f)) => f,
+                        let func = match export_decl.declaration.take_in(&ast) {
+                            Declaration::FunctionDeclaration(f) => f,
                             _ => unreachable!(),
                         };
 
-                        let func_expr = Expression::FunctionExpression(ast.alloc(func.unbox()));
-                        let wrapped = wrap_with_register(ast, name.into(), func_expr);
+                        let func_expr = Expression::FunctionExpression(func);
+                        let wrapped = wrap_with_register(&ast, name, func_expr);
 
-                        let binding = BindingPattern::BindingIdentifier(
-                            ast.alloc_binding_identifier(SPAN, name),
-                        );
+                        let binding = BindingPattern::new_binding_identifier(SPAN, name, &ast);
 
-                        let declarator = ast.variable_declarator(
+                        let declarator =
+                            VariableDeclarator::new(SPAN, binding, None, Some(wrapped), false, &ast);
+
+                        export_decl.declaration = Declaration::new_variable_declaration(
                             SPAN,
                             VariableDeclarationKind::Const,
-                            binding,
-                            None::<TSTypeAnnotation>,
-                            Some(wrapped),
+                            ArenaVec::from_array_in([declarator], &ast),
                             false,
+                            &ast,
                         );
-
-                        let var_decl = ast.variable_declaration(
-                            SPAN,
-                            VariableDeclarationKind::Const,
-                            ast.vec1(declarator),
-                            false,
-                        );
-
-                        export_decl.declaration =
-                            Some(Declaration::VariableDeclaration(ast.alloc(var_decl)));
                     }
                 }
             }
@@ -177,14 +160,12 @@ pub fn transform_code(source: &str, id: &str) -> Result<String, String> {
                         .is_some_and(|id| is_component_name(id.name.as_str()));
 
                     if has_component_name {
-                        let func = std::mem::replace(
-                            &mut export_default.declaration,
-                            ExportDefaultDeclarationKind::NullLiteral(ast.alloc_null_literal(SPAN)),
-                        );
+                        let func = export_default.declaration.take_in(&ast);
 
                         if let ExportDefaultDeclarationKind::FunctionDeclaration(func) = func {
-                            let func_expr = Expression::FunctionExpression(ast.alloc(func.unbox()));
-                            let wrapped = wrap_with_register(ast, Atom::from("default"), func_expr);
+                            let func_expr = Expression::FunctionExpression(func);
+                            let wrapped =
+                                wrap_with_register(&ast, Ident::from("default"), func_expr);
                             export_default.declaration =
                                 ExportDefaultDeclarationKind::from(wrapped);
                         }
@@ -216,8 +197,8 @@ pub fn transform_imports(
 
     let ret = Parser::new(&allocator, source, source_type).parse();
 
-    if !ret.errors.is_empty() {
-        return Err(format!("parse errors: {}", ret.errors.len()));
+    if !ret.diagnostics.is_empty() {
+        return Err(format!("parse errors: {}", ret.diagnostics.len()));
     }
 
     let mut program = ret.program;
@@ -237,15 +218,13 @@ pub fn transform_imports(
                     ));
                 }
             }
-            Statement::ExportNamedDeclaration(export_decl) => {
-                if let Some(ref src) = export_decl.source {
-                    let import_source = src.value.as_str();
-                    if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
-                        transforms.push((
-                            idx,
-                            add_version_query(import_source, tracker.get_version(&resolved)),
-                        ));
-                    }
+            Statement::ExportFromDeclaration(export_decl) => {
+                let import_source = export_decl.source.value.as_str();
+                if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
+                    transforms.push((
+                        idx,
+                        add_version_query(import_source, tracker.get_version(&resolved)),
+                    ));
                 }
             }
             Statement::ExportAllDeclaration(export_all) => {
@@ -276,15 +255,13 @@ pub fn transform_imports(
         let versioned = versioned_strings[i];
         match &mut program.body[*idx] {
             Statement::ImportDeclaration(import_decl) => {
-                import_decl.source = ast.string_literal(SPAN, versioned, None);
+                import_decl.source = StringLiteral::new(SPAN, versioned, None, &ast);
             }
-            Statement::ExportNamedDeclaration(export_decl) => {
-                if let Some(ref mut src) = export_decl.source {
-                    *src = ast.string_literal(SPAN, versioned, None);
-                }
+            Statement::ExportFromDeclaration(export_decl) => {
+                export_decl.source = StringLiteral::new(SPAN, versioned, None, &ast);
             }
             Statement::ExportAllDeclaration(export_all) => {
-                export_all.source = ast.string_literal(SPAN, versioned, None);
+                export_all.source = StringLiteral::new(SPAN, versioned, None, &ast);
             }
             _ => {}
         }

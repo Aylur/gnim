@@ -10,11 +10,12 @@ include = ["/bin/gnim.rs", "/bin/command"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-quick-xml = "0"
+# girgen declares `quick-xml = "0"` but does not compile against 0.42
+quick-xml = "0.41"
 colored = "3"
-girgen = "0.3.19"
+girgen = "0.3.21"
 grass = "0.13.4"
-lightningcss = "1.0.0-alpha.71"
+lightningcss = "1.0.0-alpha.72"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rolldown = { git = "https://github.com/rolldown/rolldown" }
@@ -22,5 +23,5 @@ rolldown_watcher = { git = "https://github.com/rolldown/rolldown" }
 rolldown_plugin = { git = "https://github.com/rolldown/rolldown" }
 rolldown_common = { git = "https://github.com/rolldown/rolldown" }
 rolldown_utils = { git = "https://github.com/rolldown/rolldown" }
-oxc = { version = "0.115.0", features = ["transformer", "codegen"] }
+oxc = { version = "0.147.0", features = ["transformer", "codegen"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net", "io-util", "sync", "process"] }
