@@ -34,3 +34,7 @@ export {
     type InferEmitter,
     type InferImplementation,
 } from "./dbus.js"
+
+import GLib from "gi://GLib?version=2.0"
+export const Variant = GLib.Variant
+export type Variant<T extends string = any> = GLib.Variant<T>
