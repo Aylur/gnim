@@ -5,15 +5,7 @@ let UUID = open metadata.json | get uuid
 def "main build" [] {
     rm -rf dist
 
-    (rolldown
-        extension.ts
-        prefs.ts
-        --dir=dist
-        --format=esm
-        --sourcemap=inline
-        --transform.decorator.emit-decorator-metadata
-        --preserve-modules
-    )
+    rolldown --config rolldown.config.ts
 
     # rolldown does not support css
     (esbuild
@@ -24,8 +16,12 @@ def "main build" [] {
 
     gnim schemas src -o dist/schemas --compile
     cp metadata.json dist
-    # cp -r src/prefs/data/* dist/data
-    # cp -r po/*.po dist/po
+
+    if ("po" | path exists) {
+        cp -r po/*.po dist/po
+    }
+
+    prettier --write dist --ignore-path /dev/null
 }
 
 def "main types" [] {
@@ -66,7 +62,8 @@ def "main gettext" [] {
 def "main pack" [] {
     main build
     cd dist/
-    ^zip -r $"($UUID).shell-extension.zip" .
+    rm schemas/gschemas.compiled
+    ^zip -r $"../($UUID).shell-extension.zip" .
 }
 
 def main [] {

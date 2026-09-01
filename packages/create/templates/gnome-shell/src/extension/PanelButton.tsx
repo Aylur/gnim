@@ -21,10 +21,6 @@ class PanelMenuButton extends PanelMenu.Button {
     effect(() => {
       Main.panel.addToStatusArea(props.role, this, props.position, props.box)
     })
-
-    onCleanup(() => {
-      this.destroy()
-    })
   }
 }
 

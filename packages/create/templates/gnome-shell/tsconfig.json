@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "erasableSyntaxOnly": true,
+    "emitDecoratorMetadata": false,
     "useDefineForClassFields": false,
+    "erasableSyntaxOnly": true,
 
     "module": "ES2022",
     "target": "ES2024",

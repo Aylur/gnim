@@ -1,3 +1,4 @@
+import "./style.css"
 import { render } from "@gnim-js/gtk4"
 import Gdk from "gi://Gdk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
@@ -8,7 +9,6 @@ import { register } from "gnim/gobject"
 import { createDomain } from "gnim/intl"
 import { programArgs, programInvocationName } from "system"
 import Bar from "./Bar"
-import "./style.css"
 
 @register
 export class App extends Gtk.Application {
