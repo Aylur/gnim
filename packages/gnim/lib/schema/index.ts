@@ -1,5 +1,6 @@
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
+import GObject from "gi://GObject?version=2.0"
 import { type Accessor, createAccessor, type Setter } from "../jsx/reactive.js"
 import {
     type CamelCase,
@@ -11,48 +12,89 @@ import {
     xml,
     type XmlNode,
 } from "../util.js"
-import GObject from "gi://GObject?version=2.0"
 
-type SetterName<T> = `set${PascalCase<T>}`
-
-type Settings<T extends Record<string, string>> = {
-    [K in keyof T as Uncapitalize<PascalCase<K>>]: Accessor<RecursiveInfer<T[K]>>
-} & {
-    [K in keyof T as SetterName<K>]: Setter<DeepInfer<T[K]>>
+type TypedKey<Name extends string = string, Type extends string = string> = {
+    name: Name
+    type: Type
 }
 
-function settingsObject<const T extends Record<string, string>>(
-    settings: Gio.Settings,
-    record: T,
-): Settings<T> {
-    const entries = Object.entries(record)
+type EnumKey<Name extends string = string, Enumeration extends Enum = Enum> = {
+    name: Name
+    enum: Enumeration
+    aliases: Record<string, Enumeration["nicks"][number]>
+}
 
-    const setters = entries.map(([key, type]) => [
-        `set${key[0].toUpperCase() + camelcase(key).slice(1)}`,
-        (v: unknown) => {
-            const next = typeof v === "function" ? v(settings.get_value(key).deepUnpack()) : v
-            settings.set_value(key, new GLib.Variant(type, next))
-        },
-    ])
+type FlagsKey<Name extends string = string, Flag extends Flags = Flags> = {
+    name: Name
+    flag: Flag
+}
 
-    const accessors = entries.map(([key]) => [
-        camelcase(key),
-        createAccessor(
-            () => settings.get_value(key).recursiveUnpack(),
-            (callback) => {
-                const id = GObject.signal_connect(settings, `changed::${key}`, callback)
-                return () => GObject.signal_handler_disconnect(settings, id)
-            },
-        ),
-    ])
+type TranslatedText = string | [context: string, text: string]
+type TranslationMarker = (textOrContext: string, text?: string) => TranslatedText
+type Text = string | ((t: TranslationMarker) => TranslatedText)
+type TextResult = { text: string; translatable?: "yes"; context?: string }
 
-    return Object.fromEntries([...setters, ...accessors])
+type BaseKeyProps = {
+    summary?: Text
+    description?: Text
+}
+
+type TypedKeyProps<T extends string = any> = BaseKeyProps & {
+    l10n?: "messages" | "time"
+    default: DeepInfer<T> | ((t: TranslationMarker) => TranslatedText)
+    range?: { min?: number; max?: number }
+}
+
+type EnumKeyProps<T = any> = BaseKeyProps & {
+    default: T
+}
+
+type FlagsKeyProps<T = any> = BaseKeyProps & {
+    default: T[]
+}
+
+const translationMarker: TranslationMarker = (textOrContext, text) => {
+    return typeof text === "string" ? [textOrContext, text] : textOrContext
+}
+
+function getText(text: Text): TextResult {
+    if (typeof text === "string") {
+        return { text }
+    }
+    const res = text(translationMarker)
+    if (typeof res === "string") {
+        return { text: res, translatable: "yes" }
+    }
+    const [ctx, txt] = res
+    return {
+        text: txt,
+        translatable: "yes",
+        context: ctx,
+    }
 }
 
 const internal = Symbol("gnim.gschema.internals")
 
-function serialize(type: string, value: any) {
-    return `<![CDATA[ ${GLib.Variant.new(type, value).print(false)} ]]>`
+function variant(type: string, value: any) {
+    return GLib.Variant.new(type, value).print(false)
+}
+
+function defaultContent(type: string, value: unknown) {
+    if (typeof value === "function") {
+        const { text, context, translatable } = getText(
+            value as (t: TranslationMarker) => TranslatedText,
+        )
+
+        try {
+            GLib.Variant.parse(new GLib.VariantType(type), text, null, null)
+        } catch (cause) {
+            throw new Error(`content "${text}" is not valid for type "${type}"`, { cause })
+        }
+
+        return { children: text, context, translatable }
+    }
+
+    return { children: variant(type, value) }
 }
 
 function childIf<T>(value: T, child: (value: NonNullable<T>) => XmlNode) {
@@ -91,30 +133,13 @@ export class Flags<Id extends string = string, Nick extends string = string> {
     }
 }
 
-type TypedKey<Name extends string = string, Type extends string = string> = {
-    name: Name
-    type: Type
-}
+// TODO: support
+// - <override> nodes
+// - `extends` attribute
+// - <choices> nodes
+// - <aliases> nodes
+// - <child> nodes
 
-type EnumKey<Name extends string = string, Enumeration extends Enum = Enum> = {
-    name: Name
-    enum: Enumeration
-    aliases: Record<string, Enumeration["nicks"][number]>
-}
-
-type FlagsKey<Name extends string = string, Flag extends Flags = Flags> = {
-    name: Name
-    flag: Flag
-}
-
-type KeyProps<T = any> = {
-    default: T
-    summary?: string
-    description?: string
-}
-
-// `override` child nodes are unsupported: use composition instead
-// `extends` attribute is unsupported: use composition instead
 export class Schema<
     TypedKeys extends Array<TypedKey> = [],
     EnumKeys extends Array<EnumKey> = [],
@@ -203,50 +228,62 @@ export class Schema<
     key<const Name extends string, const Type extends string>(
         name: Name,
         type: Type,
-        props: KeyProps<DeepInfer<Type>> & {
-            range?: {
-                min?: number
-                max?: number
-            }
-        },
+        props: TypedKeyProps<Type>,
     ): Schema<[...TypedKeys, { name: Name; type: Type }], EnumKeys, FlagsKeys>
 
     // TODO: `aliases`
     key<const Name extends string, const E extends Enum<string, string>>(
         name: Name,
         enumeration: E,
-        props: KeyProps<E["nicks"]>,
+        props: EnumKeyProps<E["nicks"]>,
     ): Schema<TypedKeys, [...EnumKeys, EnumKey<Name, E>], FlagsKeys>
 
     key<const Name extends string, const F extends Flags<string, string>>(
         name: Name,
         flags: F,
-        props: KeyProps<Array<F["nicks"]>>,
+        props: FlagsKeyProps<F["nicks"]>,
     ): Schema<TypedKeys, EnumKeys, [...FlagsKeys, FlagsKey<Name, F>]>
 
     key(
-        name: string,
-        type: string | Flags | Enum,
-        props: KeyProps & {
-            range?: { min?: number; max?: number }
-        },
+        ...input:
+            | [name: string, type: string, props: TypedKeyProps]
+            | [name: string, type: Enum, props: EnumKeyProps]
+            | [name: string, type: Flags, props: FlagsKeyProps]
     ) {
-        const summary = childIf(props.summary, (summary) => ({
-            name: "summary",
-            children: summary,
-        }))
+        const [name, type, props] = input
 
-        const description = childIf(props.description, (description) => ({
-            name: "description",
-            children: description,
-        }))
+        const summary = childIf(props.summary, (summary) => {
+            const { text, translatable, context } = getText(summary)
+            return {
+                name: "summary",
+                attributes: { translatable, context },
+                children: text,
+            }
+        })
+
+        const description = childIf(props.description, (description) => {
+            const { text, translatable, context } = getText(description)
+            return {
+                name: "description",
+                attributes: { translatable, context },
+                children: text,
+            }
+        })
 
         if (typeof type === "string") {
+            const { range, l10n } = props as TypedKeyProps
+            const { children, translatable, context } = defaultContent(type, props.default)
+
+            const attributes = {
+                l10n: translatable ? (l10n ?? "messages") : l10n,
+                translatable,
+                context,
+            }
             return this.#addTypedKey({ name, type }).#addKey(name, { type }, [
-                { name: "default", children: serialize(type, props.default) },
+                { name: "default", attributes, children },
                 ...summary,
                 ...description,
-                ...childIf(props.range, ({ min, max }) => ({
+                ...childIf(range, ({ min, max }) => ({
                     name: "range",
                     attributes: {
                         ...(typeof min === "number" && { min }),
@@ -261,7 +298,7 @@ export class Schema<
                 name,
                 { enum: type.id },
                 [
-                    { name: "default", children: serialize("s", props.default) },
+                    { name: "default", children: variant("s", props.default) },
                     ...summary,
                     ...description,
                 ],
@@ -270,7 +307,7 @@ export class Schema<
 
         if (type instanceof Flags) {
             return this.#addFlagsKey({ name, flag: type }).#addKey(name, { flags: type.id }, [
-                { name: "default", children: serialize("as", props.default) },
+                { name: "default", children: variant("as", props.default) },
                 ...summary,
                 ...description,
             ])
@@ -280,8 +317,7 @@ export class Schema<
     }
 
     // TODO: support child nodes
-    // child<const Name extends string>(name: Name, schema: Schema) {
-    // }
+    // child<const Name extends string>(name: Name, schema: Schema)
 }
 
 export function defineSchemaList(
@@ -330,6 +366,14 @@ export function defineSchemaList(
     })
 }
 
+type SetterName<T> = `set${PascalCase<T>}`
+
+type Settings<T extends Record<string, string>> = {
+    [K in keyof T as Uncapitalize<PascalCase<K>>]: Accessor<RecursiveInfer<T[K]>>
+} & {
+    [K in keyof T as SetterName<K>]: Setter<DeepInfer<T[K]>>
+}
+
 // prettier-ignore
 type SchemaSettings<S> = S extends Schema<infer TypedKeys, infer EnumKeys, infer FlagsKeys>
     ? { [K in TypedKeys[number] as CamelCase<K["name"]>]: Accessor<RecursiveInfer<K["type"]>> }
@@ -339,6 +383,34 @@ type SchemaSettings<S> = S extends Schema<infer TypedKeys, infer EnumKeys, infer
     & { [F in FlagsKeys[number] as CamelCase<F["name"]>]: Accessor<Array<F["flag"]["nicks"]>> }
     & { [F in FlagsKeys[number] as SetterName<F["name"]>]: Setter< Array<F["flag"]["nicks"]>> }
     : never
+
+function settingsObject<const T extends Record<string, string>>(
+    settings: Gio.Settings,
+    record: T,
+): Settings<T> {
+    const entries = Object.entries(record)
+
+    const setters = entries.map(([key, type]) => [
+        `set${key[0].toUpperCase() + camelcase(key).slice(1)}`,
+        (v: unknown) => {
+            const next = typeof v === "function" ? v(settings.get_value(key).deepUnpack()) : v
+            settings.set_value(key, new GLib.Variant(type, next))
+        },
+    ])
+
+    const accessors = entries.map(([key]) => [
+        camelcase(key),
+        createAccessor(
+            () => settings.get_value(key).recursiveUnpack(),
+            (callback) => {
+                const id = GObject.signal_connect(settings, `changed::${key}`, callback)
+                return () => GObject.signal_handler_disconnect(settings, id)
+            },
+        ),
+    ])
+
+    return Object.fromEntries([...setters, ...accessors])
+}
 
 /**
  * Wrap a {@link Gio.Settings} into a collection of setters and accessors.

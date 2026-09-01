@@ -21,16 +21,17 @@ Using the `Schema` class you can use the builder pattern to define schemas.
 export const schema = new Schema({
   id: "com.example.MyApp",
   path: "/com/example/MyApp/",
+  gettextDomain: "com.example.MyApp",
 })
   .key("my-key", "s", {
-    summary: "Simple string key",
     default: "",
+    summary: (t) => t("Simple string key"),
   })
   .key("complex-key", "a{sv}", {
-    summary: "Variant dict key",
     default: {
       key: GLib.Variant.new("s", "value"),
     },
+    summary: (t) => t("Variant dict key"),
   })
 
 export default defineSchemaList([schema])
@@ -43,14 +44,18 @@ can be integrated into build pipelines, for example
 
 ```xml
 <schemalist>
-  <schema id="com.example.MyApp" path="/com/example/MyApp/">
+  <schema
+    id="com.example.MyApp"
+    path="/com/example/MyApp/"
+    gettext-domain="com.example.MyApp"
+  >
     <key name="my-key" type="s">
-      <summary>Simple string key</summary>
-      <default><![CDATA[ '' ]]></default>
+      <default>''</default>
+      <summary translatable="yes">Simple string key</summary>
     </key>
     <key name="complex-key" type="a{sv}">
-      <summary>Variant dict key</summary>
-      <default><![CDATA[ {'key': <'value'>} ]]></default>
+      <default>{'key': &lt;'value'&gt;}</default>
+      <summary translatable="yes">Variant dict key</summary>
     </key>
   </schema>
 </schemalist>
@@ -110,6 +115,66 @@ const settings = createSettings(gioSettings, {
 })
 ```
 
+### Translatable values
+
+Summaries, descriptions and default values can be marked as translatable by
+passing a function instead of a plain value. The function receives a translation
+marker which works like [gettext and pgettext](/tutorial/intl#gettext): call it
+with a single argument to mark the text as translatable, or with two arguments
+to also attach a [context](/tutorial/intl#pgettext).
+
+```ts
+export const schema = new Schema({
+  id: "com.example.MyApp",
+  gettextDomain: "com.example.MyApp",
+})
+  //
+  .key("title", "s", {
+    default: (t) => t("'Hello'"),
+    summary: (t) => t("Window title"),
+    description: (p) => p("headerbar", "Title shown in the header bar"),
+  })
+```
+
+```xml
+<key name="title" type="s">
+  <default l10n="messages" translatable="yes">'Hello'</default>
+  <summary translatable="yes">Window title</summary>
+  <description translatable="yes" context="headerbar">
+    Title shown in the header bar
+  </description>
+</key>
+```
+
+Unlike a regular default value, a translatable default is written in
+[GVariant text format](https://docs.gtk.org/glib/gvariant-text-format.html).
+
+```ts
+.key("greeting", "s", {
+  default: (t) => t("'Hello'"), // note the quotes
+})
+.key("dict", "a{sv}", {
+  default: (t) => t("{ 'key': <'value'> }"),
+})
+```
+
+`gnim schemas` validates the text against the key's type and reports an error if
+it does not parse. Translatable defaults are only supported on typed keys: enum
+and flags keys can only have translatable summaries and descriptions.
+
+By default a translatable default value is emitted with `l10n="messages"`, which
+means it is translated with the locale of the
+[`LC_MESSAGES`](/tutorial/intl#locale) category. For locale-dependent values
+such as date or time formats, you can set the `l10n` property to `"time"` to use
+the [`LC_TIME`](/tutorial/intl#locale) category instead.
+
+```ts
+.key("time-format", "s", {
+  l10n: "time",
+  default: (t) => t("'%H:%M'"),
+})
+```
+
 ## Relocatable schemas
 
 A schema without a `path` is
@@ -122,8 +187,8 @@ account. To define one, omit the `path` property.
 export const profileSchema = new Schema({ id: "com.example.MyApp.Profile" })
   //
   .key("name", "s", {
-    summary: "Name of the profile",
     default: "",
+    summary: "Name of the profile",
   })
 ```
 
@@ -131,8 +196,8 @@ export const profileSchema = new Schema({ id: "com.example.MyApp.Profile" })
 <schemalist>
   <schema id="com.example.MyApp.Profile">
     <key name="name" type="s">
+      <default>''</default>
       <summary>Name of the profile</summary>
-      <default><![CDATA[ '' ]]></default>
     </key>
   </schema>
 </schemalist>

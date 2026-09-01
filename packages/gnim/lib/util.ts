@@ -118,34 +118,24 @@ export function isGObjectCtor(ctor: any): ctor is { new (...args: any): GObject.
 
 export type XmlNode = {
     name: string
-    attributes?: Record<string, string | number>
+    attributes?: Record<string, string | number | undefined>
     children?: Array<XmlNode> | string
 }
 
-export function xml(node: XmlNode | string) {
-    if (typeof node === "string") {
-        return node
-    }
+export function xml(node: XmlNode | string): string {
+    if (typeof node === "string") return GLib.markup_escape_text(node, -1)
+
     const { name, attributes, children } = node
-    let builder = `<${name}`
 
-    const attrs = Object.entries(attributes ?? [])
+    const attrs = Object.entries(attributes ?? {})
+        .filter((entry): entry is [string, string | number] => typeof entry[1] !== "undefined")
+        .map(([key, value]) => ` ${key}="${GLib.markup_escape_text(String(value), -1)}"`)
+        .join("")
 
-    if (attrs.length > 0) {
-        for (const [key, value] of attrs) {
-            builder += ` ${key}="${value}"`
-        }
-    }
+    const inner =
+        typeof children === "string"
+            ? GLib.markup_escape_text(children, -1)
+            : (children ?? []).map(xml).join("")
 
-    if (children && children.length > 0) {
-        builder += ">"
-        for (const node of children) {
-            builder += xml(node)
-        }
-        builder += `</${name}>`
-    } else {
-        builder += " />"
-    }
-
-    return builder
+    return inner.length > 0 ? `<${name}${attrs}>${inner}</${name}>` : `<${name}${attrs} />`
 }

@@ -2,11 +2,21 @@ use crate::dev_rundir;
 
 use super::{is_in_path, rolldown_config};
 use clap::Args;
-use quick_xml::events::Event;
+use quick_xml::escape::{partial_escape, resolve_xml_entity};
+use quick_xml::events::{BytesStart, BytesText, Event};
 use quick_xml::reader::Reader;
 use quick_xml::writer::Writer;
 use std::io::Cursor;
 use std::{fs, path, process};
+
+const PRINTER: &str = r#"
+import(import.meta.url).then((m) => {
+    if (typeof m.default !== 'string') {
+        throw Error('missing `export default defineSchemaList()`')
+    }
+    print(m.default)
+})
+"#;
 
 #[derive(Args)]
 pub struct SchemasArgs {
@@ -31,7 +41,7 @@ async fn transpile_typescript(
         input: Some(vec![target.to_owned().into()]),
         file: Some(outfile.into()),
         footer: Some(rolldown::AddonOutputOption::String(Some(
-            "import(import.meta.url).then((m) => print(m.default))".to_owned(),
+            PRINTER.to_owned(),
         ))),
         ..rolldown_config()
     })
@@ -46,22 +56,102 @@ async fn transpile_typescript(
     })
 }
 
+fn escape_attribute(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            '&' => escaped.push_str("&amp;"),
+            '"' => escaped.push_str("&quot;"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
+}
+
+fn parse_err(e: impl std::fmt::Display) -> String {
+    format!("Failed to parse xml: {e}")
+}
+
+fn write_err(e: impl std::fmt::Display) -> String {
+    format!("Failed to format xml: {e}")
+}
+
+fn rebuild_tag(elem: &BytesStart) -> Result<BytesStart<'static>, String> {
+    let name = String::from_utf8_lossy(elem.name().as_ref()).into_owned();
+    let mut tag = BytesStart::new(name);
+
+    for attr in elem.attributes() {
+        let attr = attr.map_err(parse_err)?;
+        let key = String::from_utf8_lossy(attr.key.as_ref()).into_owned();
+        let value = attr
+            .normalized_value(quick_xml::XmlVersion::Implicit1_0)
+            .map_err(parse_err)?;
+        tag.push_attribute((key.as_bytes(), escape_attribute(&value).as_bytes()));
+    }
+
+    Ok(tag)
+}
+
 fn format_xml(input: &str) -> Result<String, String> {
     let mut reader = Reader::from_str(input);
     let mut writer = Writer::new_with_indent(Cursor::new(Vec::new()), b' ', 2);
 
+    let mut pending_start: Option<BytesStart> = None;
+    let mut text = String::new();
+
     loop {
-        match reader.read_event() {
-            Ok(Event::Eof) => break,
-            Ok(event) => writer
-                .write_event(event)
-                .map_err(|e| format!("Failed to format xml: {e}"))?,
-            Err(e) => return Err(format!("Failed to parse xml: {e}")),
+        let event = reader.read_event().map_err(parse_err)?;
+
+        match event {
+            Event::Text(e) => text.push_str(&e.decode().map_err(parse_err)?),
+            Event::GeneralRef(e) => match e.resolve_char_ref().map_err(parse_err)? {
+                Some(ch) => text.push(ch),
+                None => {
+                    let name = e.decode().map_err(parse_err)?;
+                    let resolved = resolve_xml_entity(&name)
+                        .ok_or_else(|| format!("Failed to parse xml: unknown entity &{name};"))?;
+                    text.push_str(resolved);
+                }
+            },
+            event => {
+                let content = text.trim();
+
+                if let Some(start) = pending_start.take() {
+                    if content.is_empty() && matches!(event, Event::End(_)) {
+                        writer.write_event(Event::Empty(start)).map_err(write_err)?;
+                        text.clear();
+                        continue;
+                    }
+                    writer.write_event(Event::Start(start)).map_err(write_err)?;
+                }
+
+                if !content.is_empty() {
+                    writer
+                        .write_event(Event::Text(BytesText::from_escaped(partial_escape(
+                            content,
+                        ))))
+                        .map_err(write_err)?;
+                }
+                text.clear();
+
+                match event {
+                    Event::Eof => break,
+                    Event::Start(e) => pending_start = Some(rebuild_tag(&e)?),
+                    Event::Empty(e) => writer
+                        .write_event(Event::Empty(rebuild_tag(&e)?))
+                        .map_err(write_err)?,
+                    event => writer.write_event(event).map_err(write_err)?,
+                }
+            }
         }
     }
 
-    String::from_utf8(writer.into_inner().into_inner())
-        .map_err(|e| format!("Failed to format xml: {e}"))
+    let result = String::from_utf8(writer.into_inner().into_inner())
+        .map_err(|e| format!("Failed to format xml: {e}"))?;
+
+    Ok(result)
 }
 
 fn compile(directory: &str) -> Result<(), String> {
