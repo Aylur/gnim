@@ -18,6 +18,8 @@ import {
 Using the `Schema` class you can use the builder pattern to define schemas.
 
 ```ts
+import { Schema, defineSchemaList, variant as v } from "gnim/schema"
+
 export const schema = new Schema({
   id: "com.example.MyApp",
   path: "/com/example/MyApp/",
@@ -25,13 +27,11 @@ export const schema = new Schema({
 })
   .key("my-key", "s", {
     default: "",
-    summary: (t) => t("Simple string key"),
+    summary: "Simple string key",
   })
   .key("complex-key", "a{sv}", {
-    default: {
-      key: GLib.Variant.new("s", "value"),
-    },
-    summary: (t) => t("Variant dict key"),
+    default: { key: v("s", "value") },
+    summary: "Variant dict key",
   })
 
 export default defineSchemaList([schema])
@@ -51,11 +51,11 @@ can be integrated into build pipelines, for example
   >
     <key name="my-key" type="s">
       <default>''</default>
-      <summary translatable="yes">Simple string key</summary>
+      <summary>Simple string key</summary>
     </key>
     <key name="complex-key" type="a{sv}">
       <default>{'key': &lt;'value'&gt;}</default>
-      <summary translatable="yes">Variant dict key</summary>
+      <summary>Variant dict key</summary>
     </key>
   </schema>
 </schemalist>
@@ -117,32 +117,34 @@ const settings = createSettings(gioSettings, {
 
 ### Translatable values
 
-Summaries, descriptions and default values can be marked as translatable by
-passing a function instead of a plain value. The function receives a translation
-marker which works like [gettext and pgettext](/tutorial/intl#gettext): call it
-with a single argument to mark the text as translatable, or with two arguments
-to also attach a [context](/tutorial/intl#pgettext).
+GSettings uses gettext to look up translations for summaries and descriptions.
+To mark them translatable for
+[`xgettext`](/tutorial/intl.md#extract-translatable-strings), `gnim/schema`
+exports its own `gettext` function. Default values can also be marked
+translatable using an optional context with `pgettext`.
 
 ```ts
-export const schema = new Schema({
-  id: "com.example.MyApp",
-  gettextDomain: "com.example.MyApp",
-})
-  //
+import { gettext as t, pgettext as p, Schema } from "gnim/schema"
+
+new Schema()
   .key("title", "s", {
-    default: (t) => t("'Hello'"),
-    summary: (t) => t("Window title"),
-    description: (p) => p("headerbar", "Title shown in the header bar"),
+    default: t("'Hello'"),
+    summary: t("Window title"),
+  })
+  .key("subtitle", "s", {
+    default: p("subtitle", "'Hello'"),
+    summary: t("Window subtitle"),
   })
 ```
 
 ```xml
 <key name="title" type="s">
-  <default l10n="messages" translatable="yes">'Hello'</default>
-  <summary translatable="yes">Window title</summary>
-  <description translatable="yes" context="headerbar">
-    Title shown in the header bar
-  </description>
+  <default l10n="messages">'Hello'</default>
+  <summary>Window title</summary>
+</key>
+<key name="subtitle" type="s">
+  <default l10n="messages" context="subtitle">'Hello'</default>
+  <summary>Window subtitle</summary>
 </key>
 ```
 
@@ -151,10 +153,10 @@ Unlike a regular default value, a translatable default is written in
 
 ```ts
 .key("greeting", "s", {
-  default: (t) => t("'Hello'"), // note the quotes
+  default: t("'Hello'"), // note the quotes
 })
 .key("dict", "a{sv}", {
-  default: (t) => t("{ 'key': <'value'> }"),
+  default: t("{ 'key': <'value'> }"),
 })
 ```
 
@@ -171,7 +173,7 @@ the [`LC_TIME`](/tutorial/intl#locale) category instead.
 ```ts
 .key("time-format", "s", {
   l10n: "time",
-  default: (t) => t("'%H:%M'"),
+  default: t("'%H:%M'"),
 })
 ```
 

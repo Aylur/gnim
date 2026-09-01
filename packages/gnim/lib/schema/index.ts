@@ -13,6 +13,14 @@ import {
     type XmlNode,
 } from "../util.js"
 
+const internal = Symbol("gnim.gschema.internals")
+
+export const variant = GLib.Variant.new
+export const gettext = (text: string): LocalizedText => ({ [internal]: text })
+export const pgettext = (ctx: string, text: string): LocalizedCtxText => ({
+    [internal]: [ctx, text],
+})
+
 type TypedKey<Name extends string = string, Type extends string = string> = {
     name: Name
     type: Type
@@ -29,19 +37,17 @@ type FlagsKey<Name extends string = string, Flag extends Flags = Flags> = {
     flag: Flag
 }
 
-type TranslatedText = string | [context: string, text: string]
-type TranslationMarker = (textOrContext: string, text?: string) => TranslatedText
-type Text = string | ((t: TranslationMarker) => TranslatedText)
-type TextResult = { text: string; translatable?: "yes"; context?: string }
+type LocalizedText = { [internal]: string }
+type LocalizedCtxText = { [internal]: [ctx: string, text: string] }
 
 type BaseKeyProps = {
-    summary?: Text
-    description?: Text
+    summary?: string | LocalizedText
+    description?: string | LocalizedText
 }
 
 type TypedKeyProps<T extends string = any> = BaseKeyProps & {
     l10n?: "messages" | "time"
-    default: DeepInfer<T> | ((t: TranslationMarker) => TranslatedText)
+    default: DeepInfer<T> | LocalizedText | LocalizedCtxText
     range?: { min?: number; max?: number }
 }
 
@@ -53,37 +59,26 @@ type FlagsKeyProps<T = any> = BaseKeyProps & {
     default: T[]
 }
 
-const translationMarker: TranslationMarker = (textOrContext, text) => {
-    return typeof text === "string" ? [textOrContext, text] : textOrContext
+function getText(text: string | LocalizedText): string {
+    if (typeof text === "string") return text
+    return text[internal]
 }
 
-function getText(text: Text): TextResult {
+function getDefaultValue({ [internal]: text }: LocalizedText | LocalizedCtxText) {
     if (typeof text === "string") {
         return { text }
     }
-    const res = text(translationMarker)
-    if (typeof res === "string") {
-        return { text: res, translatable: "yes" }
-    }
-    const [ctx, txt] = res
-    return {
-        text: txt,
-        translatable: "yes",
-        context: ctx,
-    }
+    const [ctx, txt] = text
+    return { text: txt, context: ctx }
 }
 
-const internal = Symbol("gnim.gschema.internals")
-
-function variant(type: string, value: any) {
+function printVariant(type: string, value: any) {
     return GLib.Variant.new(type, value).print(false)
 }
 
 function defaultContent(type: string, value: unknown) {
-    if (typeof value === "function") {
-        const { text, context, translatable } = getText(
-            value as (t: TranslationMarker) => TranslatedText,
-        )
+    if (typeof value === "object" && value !== null && internal in value) {
+        const { text, context } = getDefaultValue(value as LocalizedText | LocalizedCtxText)
 
         try {
             GLib.Variant.parse(new GLib.VariantType(type), text, null, null)
@@ -91,10 +86,10 @@ function defaultContent(type: string, value: unknown) {
             throw new Error(`content "${text}" is not valid for type "${type}"`, { cause })
         }
 
-        return { children: text, context, translatable }
+        return { children: text, localized: true, context }
     }
 
-    return { children: variant(type, value) }
+    return { children: printVariant(type, value) }
 }
 
 function childIf<T>(value: T, child: (value: NonNullable<T>) => XmlNode) {
@@ -252,33 +247,25 @@ export class Schema<
     ) {
         const [name, type, props] = input
 
-        const summary = childIf(props.summary, (summary) => {
-            const { text, translatable, context } = getText(summary)
-            return {
-                name: "summary",
-                attributes: { translatable, context },
-                children: text,
-            }
-        })
+        const summary = childIf(props.summary, (summary) => ({
+            name: "summary",
+            children: getText(summary),
+        }))
 
-        const description = childIf(props.description, (description) => {
-            const { text, translatable, context } = getText(description)
-            return {
-                name: "description",
-                attributes: { translatable, context },
-                children: text,
-            }
-        })
+        const description = childIf(props.description, (description) => ({
+            name: "description",
+            children: getText(description),
+        }))
 
         if (typeof type === "string") {
             const { range, l10n } = props as TypedKeyProps
-            const { children, translatable, context } = defaultContent(type, props.default)
+            const { children, localized, context } = defaultContent(type, props.default)
 
             const attributes = {
-                l10n: translatable ? (l10n ?? "messages") : l10n,
-                translatable,
+                l10n: localized ? (l10n ?? "messages") : l10n,
                 context,
             }
+
             return this.#addTypedKey({ name, type }).#addKey(name, { type }, [
                 { name: "default", attributes, children },
                 ...summary,
@@ -298,7 +285,7 @@ export class Schema<
                 name,
                 { enum: type.id },
                 [
-                    { name: "default", children: variant("s", props.default) },
+                    { name: "default", children: printVariant("s", props.default) },
                     ...summary,
                     ...description,
                 ],
@@ -307,7 +294,7 @@ export class Schema<
 
         if (type instanceof Flags) {
             return this.#addFlagsKey({ name, flag: type }).#addKey(name, { flags: type.id }, [
-                { name: "default", children: variant("as", props.default) },
+                { name: "default", children: printVariant("as", props.default) },
                 ...summary,
                 ...description,
             ])
