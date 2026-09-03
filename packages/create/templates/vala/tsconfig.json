@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
+
+    "module": "ES2022",
+    "target": "ES2024",
+    "lib": ["ESNext"],
+
+    "inlineSourceMap": true,
+    "outDir": "dist",
+    "moduleResolution": "Bundler",
+
+    "skipLibCheck": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+
+    "jsx": "react-jsx",
+    "jsxImportSource": "gnim",
+
+    "types": ["gi", "gnim"],
+    "typeRoots": ["./.gnim/types"]
+  },
+  "include": ["./src/**/*"]
+}

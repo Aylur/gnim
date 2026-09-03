@@ -9,7 +9,7 @@
   },
   "scripts": {
     "types": "gnim types",
-    "dev": "LD_PRELOAD=\"$(pkg-config --variable=libdir gtk4-layer-shell-0)/libgtk4-layer-shell.so\" gnim dev src/main.tsx",
+    "dev": "LD_PRELOAD=\"$(pkg-config --variable=libdir gtk4-layer-shell-0)/libgtk4-layer-shell.so\" gnim dev --id __app-id__ src/main.tsx",
     "build": "meson setup build --wipe --prefix \"$(pwd)/dist\" ; meson install -C build"
   }
 }

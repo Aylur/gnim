@@ -29,6 +29,7 @@ type TemplateProps = {
 const templateOptions = [
     { value: "adwaita", label: "Adwaita Application" },
     { value: "layer-shell", label: "Gtk4 Layer Shell" },
+    { value: "vala", label: "Empty", hint: "with Vala" },
     {
         value: "gnome-shell",
         label: "Gnome Shell Extension",
@@ -327,6 +328,7 @@ async function copyAdwaita({ dir, id, name }: TemplateProps) {
     await replaceInFile(`${dir}/meson.build`, "__app-name__", name)
 
     // package.json
+    await replaceInFile(`${dir}/package.json`, "__app-id__", id)
     await replaceInFile(`${dir}/package.json`, "__app-name__", name)
 }
 
@@ -347,6 +349,42 @@ async function copyLayerShell({ dir, id, name }: TemplateProps) {
     await replaceInFile(`${dir}/meson.build`, "__app-name__", name)
 
     // package.json
+    await replaceInFile(`${dir}/package.json`, "__app-id__", id)
+    await replaceInFile(`${dir}/package.json`, "__app-name__", name)
+}
+
+async function copyVala({ dir, id, name }: TemplateProps) {
+    const template = fileURLToPath(import.meta.resolve("../templates/vala"))
+    const ns = name
+        .split(/[^A-Za-z0-9]+/)
+        .filter(Boolean)
+        .map((part) => part[0].toUpperCase() + part.slice(1))
+        .join("")
+
+    const namespace = ns.length === 0 ? "App" : /^\d/.test(ns) ? `App${ns}` : ns
+
+    await mkdir(dir, { recursive: true })
+    await cp(template, dir, { recursive: true })
+
+    // main
+    await replaceInFile(`${dir}/src/main.ts`, "__vala_namespace__", namespace)
+    await replaceInFile(`${dir}/src/main.ts`, "__app-id__", id)
+    await replaceInFile(`${dir}/src/main.ts`, "__app-name__", name)
+
+    // vala lib
+    await replaceInFile(`${dir}/lib/lib.vala`, "__vala_namespace__", namespace)
+    await replaceInFile(
+        `${dir}/lib/meson.build`,
+        "__vala_namespace__",
+        namespace,
+    )
+
+    // meson
+    await replaceInFile(`${dir}/meson.build`, "__app-id__", id)
+    await replaceInFile(`${dir}/meson.build`, "__app-name__", name)
+
+    // package.json
+    await replaceInFile(`${dir}/package.json`, "__app-id__", id)
     await replaceInFile(`${dir}/package.json`, "__app-name__", name)
 }
 
@@ -412,10 +450,10 @@ async function copyGnomeShell({
 
 async function createGitignore(dir: string) {
     const ignore = [
-        "node_modules",
-        "dist",
-        "build",
-        ".gnim",
+        "node_modules/",
+        "dist/",
+        "build/",
+        ".gnim/",
         "*.local",
 
         "# Logs",
@@ -470,6 +508,11 @@ async function main() {
             name = await askAppName("my-shell")
             break
         }
+        case "vala": {
+            id = await askAppId("com.example.MyApp")
+            name = await askAppName("my-app")
+            break
+        }
         case "gnome-shell": {
             id = await askGnomeUuid()
             name = await askAppName("My Extension")
@@ -491,6 +534,10 @@ async function main() {
             await copyLayerShell({ dir, id, name, description })
             break
         }
+        case "vala": {
+            await copyVala({ dir, id, name, description })
+            break
+        }
         case "gnome-shell": {
             await copyGnomeShell({ dir, id, name, description })
             break
@@ -503,6 +550,13 @@ async function main() {
     }
     if (git) {
         await doGit(dir)
+    }
+    if (template === "vala" && install) {
+        const pm = detectPackageManager()
+        const s = spinner()
+        s.start("Building lib")
+        await execFileAsync(pm, ["run", "build"], { cwd: dir })
+        s.stop("Built lib")
     }
     if (install) {
         await doTypes(dir)
