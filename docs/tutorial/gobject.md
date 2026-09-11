@@ -196,7 +196,12 @@ import { register, property, signal } from "gnim/gobject"
 @register
 class MyObj extends GObject.Object {
   @property
-  myProp: string = ""
+  myProp: string
+
+  constructor({ myProp = "" } = {}) {
+    super()
+    this.myProp = myProp
+  }
 
   @signal
   mySignal(a: string, b: number): void {

@@ -193,14 +193,16 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
     const meta = getMeta(proto)
 
     const properties = entries(meta.properties).map(([key, { declaration, descriptor }]) => {
+        const type = declaration || getMetadata(proto, key)?.type
+        if (!type) throw Error(`missing property type declaration "${constructor.name}.${key}"`)
+
         const name = kebabcase(key)
         const readable = !descriptor || typeof descriptor.get === "function"
         const writable = !descriptor || typeof descriptor.set === "function"
         const flags =
             (readable ? GObject.ParamFlags.READABLE : 0) +
             (writable ? GObject.ParamFlags.WRITABLE : 0)
-        const type = declaration || getMetadata(proto, key)?.type
-        if (!type) throw Error(`missing property type declaration "${constructor.name}.${key}"`)
+        const spec = pspec(name, flags, type)
 
         if (!descriptor) {
             defineProperty(proto, key, {
@@ -214,7 +216,9 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
                     }
                 },
                 get() {
-                    return this[priv]?.[key]
+                    return this[priv] && key in this[priv]
+                        ? this[priv]?.[key]
+                        : spec.get_default_value()
                 },
             })
         }
@@ -225,7 +229,7 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
             },
         })
 
-        return [name, pspec(name, flags, type)] as const
+        return [name, spec] as const
     })
 
     const signals = entries(meta.signals).map(([key, { options, declaration, descriptor }]) => {

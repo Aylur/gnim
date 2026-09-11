@@ -29,11 +29,23 @@ Read more about GObjects in GJS on
 
 ```ts
 import GObject from "gi://GObject?version=2.0"
-import { register, property, signal } from "gnim/gobject"
+import { register, property, signal, type Annotations } from "gnim/gobject"
 
 @register
 class MyObj extends GObject.Object {
-  @property myProp: string = ""
+  declare readonly $writableProperties: GObject.Object.WritableProperties &
+    Annotations<MyObj, "myProp">
+
+  declare readonly $readableProperties: GObject.Object.ReadableProperties &
+    Annotations<MyObj, "myProp">
+
+  @property myProp: string
+
+  constructor(props: Partial<GObject.ConstructorProps<MyObj>> = {}) {
+    const { myProp = "", ...rest } = props
+    super(rest)
+    this.myProp = myProp
+  }
 
   @signal
   mySignal(a: string, b: number): void {
@@ -48,7 +60,13 @@ class MyObj extends GObject.Object {
 const priv = Symbol("private props")
 
 class MyObj extends GObject.Object {
-  [priv] = { "my-prop": "" }
+  [priv] = {}
+
+  constructor(props = {}) {
+    const { myProp = "", ...rest } = props
+    super(rest)
+    this.myProp = myProp
+  }
 
   get myProp() {
     return this[priv]["my-prop"]
@@ -118,6 +136,66 @@ class MyObject {
 > [!IMPORTANT]
 >
 > When defining a setter you will have to explicitly emit the `notify` signal.
+
+### Initial values
+
+A field initializers take precedence over props passed to `super()`.
+
+```ts
+@register
+class MyObject extends GObject.Object {
+  declare readonly $writableProperties: Annotations<MyObject, "field">
+
+  @property field: string = "default"
+
+  constructor(props?: Partial<GObject.ConstructorProps<MyObject>>) {
+    super(props)
+  }
+}
+
+new MyObject({ field: "given" }).field // "default"
+```
+
+You should generally not rely on `GObject.Object` constructor to initialize the
+properties of the subclass because it does not typecheck. Instead, explicitly
+assign the value in the constructor.
+
+```ts
+@register
+class MyObject extends GObject.Object {
+  @property field: string
+
+  constructor(props: Partial<GObject.ConstructorProps<MyObject>> = {}) {
+    const { field = "default", ...rest } = props
+    super(rest)
+    this.field = field
+  }
+}
+```
+
+> [!TIP]
+>
+> `GObject.ConstructorProps` infers the accepted props from the
+> `$writableProperties` and `$constructOnlyProperties`
+> [type annotations](/reference/typescript#type-annotations), so make sure the
+> property is declared there.
+
+You can also use the `declare` keyword to initialize the field to the default
+value of its type.
+
+```ts
+@register
+class MyObject extends GObject.Object {
+  @property declare field: string
+
+  constructor(props?: Partial<GObject.ConstructorProps<MyObject>>) {
+    super(props)
+  }
+}
+
+new MyObject().field // ""
+new MyObject({ field: "hello" }).field // "hello"
+```
 
 ### Property type declaration
 

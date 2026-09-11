@@ -71,14 +71,6 @@ class MyClass extends GObject.Object {
   declare readonly $writableProperties: MyClass.WritableProperties
   declare readonly $constructOnlyProperties: MyClass.ConstructOnlyProperties
 
-  // GObject.ConstructorProps can be used to infer props from the annotations
-  constructor(props: Partial<GObject.ConstructorProps<MyClass>>) {
-    super(props)
-
-    // note that properties will be annotated as camelCase
-    console.log(props.myProp, props.myCtorProp)
-  }
-
   @signal
   mySignal(arg: number): void {}
 
@@ -86,7 +78,17 @@ class MyClass extends GObject.Object {
   myDetailedSignal(arg: number): void {}
 
   @property
-  myProp: number = 0
+  myProp: number
+
+  // GObject.ConstructorProps can be used to infer props from the annotations
+  constructor(props: Partial<GObject.ConstructorProps<MyClass>> = {}) {
+    // note that properties will be annotated as camelCase
+    const { myProp = 0, ...rest } = props
+    super(rest)
+    this.myProp = myProp
+
+    console.log(props.myCtorProp)
+  }
 }
 ```
 
@@ -130,8 +132,8 @@ class MyClass extends GObject.Object {
   declare readonly $readableProperties: GObject.Object.ReadableProperties &
     Annotations<MyClass, "myProp" | "myOtherProp">
 
-  @property myProp: string = ""
-  @property myOtherProp: number = 0
+  @property declare myProp: string
+  @property declare myOtherProp: number
 
   @signal
   mySignal(arg: string): void {}
