@@ -86,23 +86,6 @@ instead, you can specify it with `construct`.
 />
 ```
 
-The `construct` property can also be given an existing instance. It can be used
-in combination with the `render` function to use JSX in subclasses.
-
-```tsx
-@register
-class MyWidget extends Gtk.Widget {
-  constructor() {
-    super()
-    render(() => (
-      <MyWidget construct={this}>
-        <Child />
-      </MyWidget>
-    ))
-  }
-}
-```
-
 ### Signal handlers
 
 Signal handlers can be defined with an `on` prefix.

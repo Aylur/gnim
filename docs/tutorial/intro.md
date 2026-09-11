@@ -54,11 +54,11 @@ sudo apt install libgjs-dev libgtk-4-dev npm
 {
   inputs.nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
-  outputs = {
-    self,
-    nixpkgs,
-  }: let
-    forAllSystems = nixpkgs.lib.genAttrs ["x86_64-linux" "aarch64-linux"];
+  outputs = { self, nixpkgs }: let
+    forAllSystems = nixpkgs.lib.genAttrs [
+      "x86_64-linux"
+      "aarch64-linux"
+    ];
   in {
     devShells = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
@@ -99,7 +99,7 @@ yarn create gnim@beta
 
 :::
 
-> [!TIP] Nix
+> [!TIP] <i class="devicon-nixos-plain"></i> Nix
 >
 > For nix users, Gnim provides a nix template.
 >
@@ -174,7 +174,7 @@ yarn create gnim@beta
    import Gtk from "gi://Gtk?version=4.0"
    import { render } from "@gnim-js/gtk4"
 
-   function App() {
+   function AppWindow() {
      return (
        <Gtk.Window visible>
          <Gtk.Label label="Hello from Gnim!" />
@@ -184,7 +184,7 @@ yarn create gnim@beta
 
    const app = new Gtk.Application()
    app.connect("activate", () => {
-     const dispose = render(App, app)
+     const dispose = render(AppWindow, app)
      app.connect("shutdown", dispose)
    })
    app.runAsync(null)

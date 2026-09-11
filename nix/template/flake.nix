@@ -34,6 +34,7 @@
         pkgs.nodejs # used to run scripts
         pkgs.gettext # used to scan source code and generate translation files
         pkgs.desktop-file-utils # used to install .desktop files
+        pkgs.vala # used by the empty template
         pkgs.zip # used by the gnome-shell template's pack command
         pkgs.dbus # used by the gnome-shell template's dev command
       ];
