@@ -16,24 +16,6 @@ Global flags:
 
 <!-- TODO: add note about system installation -->
 
-## `gnim run`
-
-```sh
-gnim run <SCRIPT> [ARGS]...
-```
-
-Bundles a script into a temporary file and executes it with `gjs -m`, forwarding
-any additional arguments.
-
-| Flag                       | Description                                          |
-| -------------------------- | ---------------------------------------------------- |
-| `-d, --define <KEY=VALUE>` | Replace global identifiers with constant expressions |
-
-```sh
-gnim run src/main.ts
-gnim run -d DEBUG=true -d ENV="DEV" src/main.ts -- --some-flag-for-the-script
-```
-
 ## `gnim types`
 
 ```sh

@@ -2,7 +2,6 @@ pub mod bundle;
 pub mod dev;
 pub mod exe;
 pub mod plugin;
-pub mod run;
 pub mod schemas;
 pub mod types;
 
@@ -84,4 +83,25 @@ pub fn is_in_path(program: &str) -> bool {
     std::env::var_os("PATH")
         .and_then(|paths| std::env::split_paths(&paths).find(|dir| dir.join(program).is_file()))
         .is_some()
+}
+
+pub fn gsettings_schema_dir() -> std::ffi::OsString {
+    use std::env::{join_paths, split_paths, var_os};
+
+    // nix uses GSETTINGS_SCHEMAS_PATH
+    let schema_paths = var_os("GSETTINGS_SCHEMAS_PATH")
+        .map(|paths| {
+            split_paths(&paths)
+                .map(|p| p.join("glib-2.0").join("schemas"))
+                .collect::<Vec<PathBuf>>()
+        })
+        .unwrap_or_default();
+
+    let schema_dirs = var_os("GSETTINGS_SCHEMA_DIR")
+        .map(|dirs| split_paths(&dirs).collect::<Vec<PathBuf>>())
+        .unwrap_or_default();
+
+    let gnim_schemas = vec![PathBuf::from("./.gnim/schemas")];
+
+    join_paths([gnim_schemas, schema_paths, schema_dirs].concat()).unwrap()
 }

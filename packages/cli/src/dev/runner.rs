@@ -1,7 +1,7 @@
 use super::tracker::ModuleTracker;
 use crate::dev_rundir;
 use crate::plugin::resource::{GResource, ResourceFile, generate_resource};
-use crate::run::gsettings_schema_dir;
+use crate::gsettings_schema_dir;
 use serde_json::json;
 use std::fs;
 use std::path::{Path, PathBuf};
