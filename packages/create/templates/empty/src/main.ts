@@ -1,4 +1,6 @@
+/*% if vala %*/
 import __vala_namespace__ from "gi://__vala_namespace__?version=0"
+/*% endif %*/
 import GLib from "gi://GLib?version=2.0"
 import Gio from "gi://Gio?version=2.0"
 import { createDomain } from "gnim/intl"
@@ -12,12 +14,15 @@ const app = Gio.Application.new(
 )
 
 app.connect("activate", () => {
+  /*% if vala %*/
   app.hold()
-
   __vala_namespace__.hello((_, res) => {
     print(__vala_namespace__.hello_finish(res))
     app.release()
   })
+  /*% else %*/
+  print(t("Hello!"))
+  /*% endif %*/
 })
 
 GLib.set_prgname("__app-name__")

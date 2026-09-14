@@ -19,6 +19,7 @@
     "devDependencies": {
         "@eslint/js": "catalog:",
         "@types/node": "catalog:",
+        "@types/nunjucks": "^3.2.6",
         "eslint": "catalog:",
         "typescript": "catalog:",
         "typescript-eslint": "catalog:"
@@ -42,11 +43,13 @@
         "JSX"
     ],
     "dependencies": {
-        "@clack/prompts": "^1.7.0"
+        "@clack/prompts": "^1.7.0",
+        "nunjucks": "^3.2.4"
     },
     "prettier": {
         "semi": false,
         "tabWidth": 4,
+        "quoteProps": "consistent",
         "overrides": [
             {
                 "files": "./templates/**/*",

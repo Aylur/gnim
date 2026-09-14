@@ -1,4 +1,7 @@
 import "./style.css"
+/*% if vala %*/
+import __vala_namespace__ from "gi://__vala_namespace__?version=0"
+/*% endif %*/
 import { render } from "@gnim-js/gtk4"
 import Gdk from "gi://Gdk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
@@ -47,6 +50,12 @@ export class App extends Gtk.Application {
     )
 
     this.connect("shutdown", dispose)
+    /*% if vala %*/
+
+    __vala_namespace__.hello((_, res) => {
+      print(__vala_namespace__.hello_finish(res))
+    })
+    /*% endif %*/
 
     if (args.includes("--hello")) {
       print("Hello!")

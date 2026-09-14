@@ -1,4 +1,8 @@
+#% if vala %#
 project('__app-name__', 'vala', 'c', version: '0.0.0')
+#% else %#
+project('__app-name__', version: '0.0.0')
+#% endif %#
 
 app_id = '__app-id__'
 name = meson.project_name()
@@ -8,12 +12,16 @@ datadir = get_option('datadir')
 bindir = get_option('bindir')
 libdir = get_option('libdir')
 pkgdatadir = prefix / datadir / app_id
+#% if vala %#
 pkglibdir = prefix / libdir / app_id
+#% endif %#
 
 gnim = find_program('gnim', 'node_modules/.bin/gnim')
 
+#% if vala %#
 # vala library
 subdir('lib')
+#% endif %#
 
 # bundle
 custom_target(

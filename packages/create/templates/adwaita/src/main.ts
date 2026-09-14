@@ -1,4 +1,7 @@
 import "./style.css"
+/*% if vala %*/
+import __vala_namespace__ from "gi://__vala_namespace__?version=0"
+/*% endif %*/
 import Adw from "gi://Adw?version=1"
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
@@ -28,6 +31,11 @@ export default class App extends Adw.Application {
     super.vfunc_startup()
     const dispose = render(AppWindow, this)
     this.connect("shutdown", dispose)
+    /*% if vala %*/
+    __vala_namespace__.hello((_, res) => {
+      print(__vala_namespace__.hello_finish(res))
+    })
+    /*% endif %*/
   }
 
   override vfunc_activate(): void {

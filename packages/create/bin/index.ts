@@ -11,25 +11,19 @@ import {
 } from "@clack/prompts"
 import { execFile } from "node:child_process"
 import { statSync } from "node:fs"
-import { cp, mkdir, readFile, rename, writeFile } from "node:fs/promises"
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises"
 import { parseArgs, promisify } from "node:util"
 import { existsSync } from "node:fs"
-import { join } from "node:path"
+import { dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
+import nunjucks from "nunjucks"
 
 const execFileAsync = promisify(execFile)
-
-type TemplateProps = {
-    dir: string
-    name: string
-    id: string
-    description: string
-}
 
 const templateOptions = [
     { value: "adwaita", label: "Adwaita Application" },
     { value: "layer-shell", label: "Gtk4 Layer Shell" },
-    { value: "vala", label: "Empty", hint: "with Vala" },
+    { value: "empty", label: "Empty" },
     {
         value: "gnome-shell",
         label: "Gnome Shell Extension",
@@ -39,28 +33,31 @@ const templateOptions = [
 
 type Template = (typeof templateOptions)[number]["value"]
 
-function templateFromArgs() {
+function parseCliArgs() {
     const args = parseArgs({
         options: {
             template: { type: "string", short: "t" },
+            vala: { type: "boolean" },
         },
         strict: false,
     })
 
-    const { template } = args.values
-    if (typeof template === "undefined") {
-        return null
+    const { template, vala } = args.values
+
+    if (typeof template !== "undefined") {
+        const valid: string[] = templateOptions.map((option) => option.value)
+        if (typeof template !== "string" || !valid.includes(template)) {
+            console.error(
+                `Invalid template "${template}". Valid templates: ${valid.join(", ")}`,
+            )
+            process.exit(1)
+        }
     }
 
-    const valid: string[] = templateOptions.map((option) => option.value)
-    if (typeof template !== "string" || !valid.includes(template)) {
-        console.error(
-            `Invalid template "${template}". Valid templates: ${valid.join(", ")}`,
-        )
-        process.exit(1)
+    return {
+        template: (template ?? null) as Template | null,
+        vala: vala === true ? true : null,
     }
-
-    return template as Template
 }
 
 function detectPackageManager() {
@@ -95,16 +92,6 @@ function defaultGirDirs(): string[] {
     return dirs.filter(function (dir, index) {
         return index === 0 || dirs[index - 1] !== dir
     })
-}
-
-async function replaceInFile(
-    path: string,
-    search: string,
-    replacement: string,
-) {
-    const input = await readFile(path, "utf8")
-    const output = input.replaceAll(search, replacement)
-    return writeFile(path, output, "utf8")
 }
 
 async function askTargetDir() {
@@ -230,6 +217,19 @@ async function askAppName(placeholder: string) {
     return name
 }
 
+async function askVala() {
+    const vala = await confirm({
+        message: "Add a Vala library?",
+        initialValue: false,
+    })
+
+    if (isCancel(vala)) {
+        process.exit(0)
+    }
+
+    return vala
+}
+
 async function askGit() {
     const git = await confirm({
         message: "Initialize git?",
@@ -296,156 +296,78 @@ async function doOutro(dir: string, install?: boolean) {
     )
 }
 
-async function copyAdwaita({ dir, id, name }: TemplateProps) {
-    const template = fileURLToPath(import.meta.resolve("../templates/adwaita"))
-
-    await mkdir(dir, { recursive: true })
-    await cp(template, dir, { recursive: true })
-
-    // rename icons
-    await rename(
-        `${dir}/data/icons/__app-id__.svg`,
-        `${dir}/data/icons/${id}.svg`,
-    )
-    await rename(
-        `${dir}/data/icons/__app-id__-symbolic.svg`,
-        `${dir}/data/icons/${id}-symbolic.svg`,
-    )
-
-    // gschema
-    await rename(
-        `${dir}/src/__app-id__.gschema.ts`,
-        `${dir}/src/${id}.gschema.ts`,
-    )
-    await replaceInFile(`${dir}/src/${id}.gschema.ts`, "__app-id__", id)
-
-    // main
-    await replaceInFile(`${dir}/src/main.ts`, "__app-id__", id)
-    await replaceInFile(`${dir}/src/main.ts`, "__app-name__", name)
-
-    // meson
-    await replaceInFile(`${dir}/meson.build`, "__app-id__", id)
-    await replaceInFile(`${dir}/meson.build`, "__app-name__", name)
-
-    // package.json
-    await replaceInFile(`${dir}/package.json`, "__app-id__", id)
-    await replaceInFile(`${dir}/package.json`, "__app-name__", name)
+function templateEnv(tags: nunjucks.ConfigureOptions["tags"]) {
+    return new nunjucks.Environment(null, {
+        autoescape: false,
+        trimBlocks: true,
+        lstripBlocks: true,
+        tags,
+    })
 }
 
-async function copyLayerShell({ dir, id, name }: TemplateProps) {
-    const template = import.meta
-        .resolve("../templates/layer-shell")
-        .replace("file://", "")
+const slashEnv = templateEnv({
+    blockStart: "/*%",
+    blockEnd: "%*/",
+    variableStart: "/*{",
+    variableEnd: "}*/",
+    commentStart: "/*#",
+    commentEnd: "#*/",
+})
 
-    await mkdir(dir, { recursive: true })
-    await cp(template, dir, { recursive: true })
+// #% if vala %#
+const hashEnv = templateEnv({
+    blockStart: "#%",
+    blockEnd: "%#",
+    variableStart: "#{",
+    variableEnd: "}#",
+    commentStart: "#{#",
+    commentEnd: "#}#",
+})
 
-    // main
-    await replaceInFile(`${dir}/src/main.tsx`, "__app-id__", id)
-    await replaceInFile(`${dir}/src/main.tsx`, "__app-name__", name)
+async function renderTemplate(
+    template: string,
+    dir: string,
+    variables: Record<string, string>,
+    context: Record<string, unknown>,
+) {
+    const root = fileURLToPath(import.meta.resolve(`../templates/${template}`))
 
-    // meson
-    await replaceInFile(`${dir}/meson.build`, "__app-id__", id)
-    await replaceInFile(`${dir}/meson.build`, "__app-name__", name)
+    function substitute(input: string) {
+        let output = input
+        for (const [variable, value] of Object.entries(variables)) {
+            output = output.replaceAll(variable, () => value)
+        }
+        return output
+    }
 
-    // package.json
-    await replaceInFile(`${dir}/package.json`, "__app-id__", id)
-    await replaceInFile(`${dir}/package.json`, "__app-name__", name)
+    const entries = await readdir(root, {
+        recursive: true,
+        withFileTypes: true,
+    })
+
+    for (const entry of entries) {
+        if (!entry.isFile()) continue
+
+        const src = join(entry.parentPath, entry.name)
+        const path = relative(root, src)
+        const env = entry.name === "meson.build" ? hashEnv : slashEnv
+        const source = await readFile(src, "utf8")
+        const content = substitute(env.renderString(source, context))
+
+        const dest = join(dir, substitute(path))
+        await mkdir(dirname(dest), { recursive: true })
+        await writeFile(dest, content, "utf8")
+    }
 }
 
-async function copyVala({ dir, id, name }: TemplateProps) {
-    const template = fileURLToPath(import.meta.resolve("../templates/vala"))
+function valaNamespace(name: string) {
     const ns = name
         .split(/[^A-Za-z0-9]+/)
         .filter(Boolean)
         .map((part) => part[0].toUpperCase() + part.slice(1))
         .join("")
 
-    const namespace = ns.length === 0 ? "App" : /^\d/.test(ns) ? `App${ns}` : ns
-
-    await mkdir(dir, { recursive: true })
-    await cp(template, dir, { recursive: true })
-
-    // main
-    await replaceInFile(`${dir}/src/main.ts`, "__vala_namespace__", namespace)
-    await replaceInFile(`${dir}/src/main.ts`, "__app-id__", id)
-    await replaceInFile(`${dir}/src/main.ts`, "__app-name__", name)
-
-    // vala lib
-    await replaceInFile(`${dir}/lib/lib.vala`, "__vala_namespace__", namespace)
-    await replaceInFile(
-        `${dir}/lib/meson.build`,
-        "__vala_namespace__",
-        namespace,
-    )
-
-    // meson
-    await replaceInFile(`${dir}/meson.build`, "__app-id__", id)
-    await replaceInFile(`${dir}/meson.build`, "__app-name__", name)
-
-    // package.json
-    await replaceInFile(`${dir}/package.json`, "__app-id__", id)
-    await replaceInFile(`${dir}/package.json`, "__app-name__", name)
-}
-
-async function copyGnomeShell({
-    dir,
-    id: uuid,
-    name,
-    description,
-}: TemplateProps) {
-    const id = uuid.split("@")[0]
-
-    const template = import.meta
-        .resolve("../templates/gnome-shell")
-        .replace("file://", "")
-
-    await mkdir(dir, { recursive: true })
-    await cp(template, dir, { recursive: true })
-
-    // metadata
-    await replaceInFile(`${dir}/metadata.json`, "__extension-uuid__", uuid)
-    await replaceInFile(`${dir}/metadata.json`, "__extension-id__", id)
-    await replaceInFile(`${dir}/metadata.json`, "__extension-name__", name)
-    await replaceInFile(
-        `${dir}/metadata.json`,
-        "__extension-description__",
-        description,
-    )
-
-    // prefs
-    await replaceInFile(`${dir}/src/prefs/index.tsx`, "__extension-id__", id)
-
-    // extension
-    await replaceInFile(
-        `${dir}/src/extension/index.tsx`,
-        "__extension-id__",
-        id,
-    )
-
-    // gschema
-    await rename(
-        `${dir}/src/org.gnome.shell.extensions.__extension-id__.gschema.ts`,
-        `${dir}/src/org.gnome.shell.extensions.${id}.gschema.ts`,
-    )
-    await replaceInFile(
-        `${dir}/src/org.gnome.shell.extensions.${id}.gschema.ts`,
-        "__extension-id__",
-        id,
-    )
-
-    // css
-    const ns = id.toLowerCase().replaceAll(".", "-").replaceAll("_", "-")
-    await replaceInFile(
-        `${dir}/src/extension/PanelButton.tsx`,
-        "__css_namespace__",
-        ns,
-    )
-    await replaceInFile(
-        `${dir}/src/extension/stylesheet.css`,
-        "__css_namespace__",
-        ns,
-    )
+    return ns.length === 0 ? "App" : /^\d/.test(ns) ? `App${ns}` : ns
 }
 
 async function createGitignore(dir: string) {
@@ -478,7 +400,9 @@ async function main() {
     console.log()
     intro(`\x1b[7;34m\x1b[1m${" Gnim "}\x1b[0m`)
 
-    let template = templateFromArgs()
+    const args = parseCliArgs()
+    let template = args.template
+    let vala = args.vala
 
     if (!template) {
         const answer = await select({
@@ -491,6 +415,12 @@ async function main() {
         }
 
         template = answer
+    }
+
+    if (template === "gnome-shell") {
+        vala = false
+    } else if (vala === null) {
+        vala = await askVala()
     }
 
     let id: string
@@ -508,7 +438,7 @@ async function main() {
             name = await askAppName("my-shell")
             break
         }
-        case "vala": {
+        case "empty": {
             id = await askAppId("com.example.MyApp")
             name = await askAppName("my-app")
             break
@@ -524,24 +454,24 @@ async function main() {
     const dir = await askTargetDir()
     const git = await askGit()
     const install = await askInstall()
+    const extenstionId = id.split("@")[0]
 
-    switch (template) {
-        case "adwaita": {
-            await copyAdwaita({ dir, id, name, description })
-            break
-        }
-        case "layer-shell": {
-            await copyLayerShell({ dir, id, name, description })
-            break
-        }
-        case "vala": {
-            await copyVala({ dir, id, name, description })
-            break
-        }
-        case "gnome-shell": {
-            await copyGnomeShell({ dir, id, name, description })
-            break
-        }
+    const variables = {
+        "__app-id__": id,
+        "__app-name__": name,
+        "__vala_namespace__": valaNamespace(name),
+        "__extension-uuid__": id,
+        "__extension-id__": extenstionId,
+        "__extension-name__": name,
+        "__extension-description__": description,
+        "__css_namespace__": extenstionId
+            .toLowerCase()
+            .replaceAll(/[._]/g, "-"),
+    }
+
+    await renderTemplate(template, dir, variables, { vala })
+    if (vala) {
+        await renderTemplate("vala", dir, variables, { vala })
     }
 
     await createGitignore(dir)
@@ -551,7 +481,7 @@ async function main() {
     if (git) {
         await doGit(dir)
     }
-    if (template === "vala" && install) {
+    if (vala && install) {
         const pm = detectPackageManager()
         const s = spinner()
         s.start("Building lib")
