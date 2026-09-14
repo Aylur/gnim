@@ -79,7 +79,7 @@ export default defineConfig({
         ],
 
         editLink: {
-            pattern: "https://github.com/aylur/gnim/edit/main/docs/:path",
+            pattern: "https://github.com/aylur/gnim/edit/v2/docs/:path",
             text: "Edit this page on GitHub",
         },
 

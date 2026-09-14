@@ -104,7 +104,7 @@ yarn create gnim@beta
 > For nix users, Gnim provides a nix template.
 >
 > ```sh
-> nix flake init --template github:aylur/gnim
+> nix flake init --template github:aylur/gnim/v2
 > ```
 
 ## Creating a new project manually
