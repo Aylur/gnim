@@ -55,28 +55,37 @@ class MyObj extends GObject.Object {
 }
 ```
 
-## DBus decorators
+## DBus
 
-Create DBus services and proxies with ease. Decorators handle interface
-generation and type marshalling for both client and server implementations.
+Create DBus services and proxies with ease in a fully typed manner.
 
 ```ts
-import { Service, iface, methodAsync, signal, property } from "gnim/dbus"
+import { createDBusInterface, property, method, signal } from "gnim/dbus"
 
-@iface("example.gjs.MyService")
-export class MyService extends Service {
-  @property("s") MyProperty = ""
+const MyInterface = createDBusInterface("example.gjs.MyInterface", {
+  MyProperty: property("s"),
+  MyMethod: method(["s"], ["s"]),
+  MySignal: signal("s"),
+})
 
-  @methodAsync(["s"], ["s"])
-  async MyMethod(str: string): Promise<[string]> {
-    return [str]
-  }
+// serve it
+const service = await MyInterface.serve({
+  name: "example.gjs.MyInterface",
+  objectPath: "/example/gjs/MyInterface",
+  implementation: (emitter) => ({
+    MyProperty: "initial value",
+    MyMethod(str): [string] {
+      emitter.MySignal(str)
+      return [str]
+    },
+  }),
+})
 
-  @signal("s")
-  MySignal(str: string) {
-    print(str)
-  }
-}
+// or proxy it
+const proxy = await MyInterface.proxy({
+  name: "example.gjs.MyInterface",
+  objectPath: "/example/gjs/MyInterface",
+})
 ```
 
 ## Gio Settings
