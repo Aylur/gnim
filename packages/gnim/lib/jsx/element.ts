@@ -5,16 +5,21 @@ import {
     computed,
     createAccessor,
     createState,
-    effect,
-    getScope,
     isAccessor,
-    onCleanup,
-    Scope,
-    untrack,
     type Accessor,
     type State,
 } from "./reactive.js"
 import { getRenderer } from "./render.js"
+import {
+    createScope,
+    Effect,
+    getScope,
+    onCleanup,
+    runScope,
+    Subscription,
+    untrack,
+    type Scope,
+} from "./signal.js"
 
 export type Props = Record<string, unknown>
 
@@ -160,19 +165,21 @@ export function newObject<C extends CC>(
     })
 
     // handle bindings
-    const disposeBindings = bindings.map(([prop, { peek, subscribe }]) => {
-        const dispose = subscribe(() => {
-            renderer.setProperty(obj, prop, peek())
+    const disposeBindings = bindings.map(([prop, accessor]) => {
+        const sub = new Subscription(accessor, () => {
+            renderer.setProperty(obj, prop, accessor.peek())
         })
-        renderer.setProperty(obj, prop, peek())
-        return dispose
+
+        renderer.setProperty(obj, prop, accessor.peek())
+        sub.track()
+        return sub
     })
 
     // cleanup
     if (disposeBindings.length > 0 || disposeHandlers.length > 0) {
         onCleanup(() => {
             disposeHandlers.forEach((cb) => cb())
-            disposeBindings.forEach((cb) => cb())
+            disposeBindings.forEach((sub) => sub.dispose())
         })
     }
 
@@ -192,7 +199,6 @@ function isStaticChildren(
 
 export function mountChildren(children: GnimNode, mount?: GObject.Object) {
     const renderer = getRenderer()
-    const scope = getScope()
     const nodes = resolveNode(children)
 
     if (nodes.length === 0) return
@@ -210,22 +216,20 @@ export function mountChildren(children: GnimNode, mount?: GObject.Object) {
 
     if (isStaticChildren(nodes)) {
         setChildren(nodes, currentChildren)
-        scope.cleanups.push(() => {
+        onCleanup(() => {
             setChildren(currentChildren, nodes as Array<GObject.Object>)
         })
         return
     }
 
-    effect(
-        function mountEffect() {
-            const children = nodes.map(unpackSlot).flat()
-            setChildren(children, currentChildren)
-            currentChildren = children
-        },
-        { immediate: true },
-    )
+    const mountEffect = new Effect(function mountEffect() {
+        const children = nodes.map(unpackSlot).flat()
+        setChildren(children, currentChildren)
+        currentChildren = children
+    })
+    mountEffect.run()
 
-    scope.cleanups.push(() => {
+    onCleanup(() => {
         setChildren([], currentChildren)
     })
 }
@@ -355,16 +359,16 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
                     if (!Object.is(mapItem.item, item)) {
                         mapItem.scope.dispose()
                         mapItem.item = item
-                        mapItem.scope = new Scope(currentScope)
-                        mapItem.child = mapItem.scope.run(() =>
+                        mapItem.scope = createScope(currentScope)
+                        mapItem.child = runScope(mapItem.scope, () =>
                             resolveNode(mkChild(item, mapItem.index[0])),
                         )
                     }
                     return mapItem.child
                 } else {
                     const [index, setIndex] = createState(i)
-                    const scope = new Scope(currentScope)
-                    const child = scope.run(() => resolveNode(mkChild(item, index)))
+                    const scope = createScope(currentScope)
+                    const child = runScope(scope, () => resolveNode(mkChild(item, index)))
                     map.set(key, { item, child, index: [index, setIndex], scope })
                     return child
                 }

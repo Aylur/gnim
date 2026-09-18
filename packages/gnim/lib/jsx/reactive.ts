@@ -1,42 +1,23 @@
-import GObject from "gi://GObject?version=2.0"
 import { resolveNode, type GnimNode } from "./element.js"
-import { kebabcase, type Keyof } from "../util.js"
-
-type Fn = () => void
+import * as Signal from "./signal.js"
 
 interface DevHooks {
     createState<T>(init: T, get: () => T): T
 }
 
+/** @internal */
 export const devHooks: DevHooks = {
     createState: (init) => init,
 }
 
-const noop = () => {}
 const accessorType = Symbol("gnim.type.accessor")
-
-const AccessStack = new Array<Set<Accessor>>()
-const EffectQueue = new Set<Fn>()
-let EffectDepth = 0
-let EffectsPending = false
-
-function notify(observers: Iterable<Fn>) {
-    for (const cb of Array.from(observers)) {
-        try {
-            cb()
-        } catch (err) {
-            console.error(err)
-        }
-    }
-}
 
 export type Accessed<T> = T extends Accessor<infer V> ? V : never
 export type MaybeAccessor<T> = T | Accessor<T>
 
 /**
- * Accessors are the base of Gnim's reactive system.
- * They are functions that let you read a value and track it in reactive scopes so that
- * when they change the reader is notified.
+ * Accessors are functions that let you read a value and track it in
+ * reactive scopes so that when they change the reader is notified.
  */
 export interface Accessor<T = unknown> {
     /**
@@ -58,90 +39,44 @@ export interface Accessor<T = unknown> {
      * @returns The current value.
      */
     peek(): T
-
-    /**
-     * Subscribe for value changes.
-     * This method is **not** scope aware; you need to dispose it when it is no longer used.
-     * You might want to consider using an {@link effect} instead.
-     * @param callback The function to run when the value changes.
-     * @returns Unsubscribe function.
-     */
-    subscribe(callback: Fn): Fn
+}
+/**
+ * Subscribe for value changes.
+ * This function is **not** {@link Scope} aware; you need to dispose it when it is no longer used.
+ * You might want to consider using an {@link effect} instead.
+ *
+ * @example
+ *
+ * ```ts
+ * let a: Accessor<number>
+ * let b: Accessor<number>
+ *
+ * subscribe(a, () => print(a()))
+ * subscribe(() => { a(); b() }, () => print(a(), b()))
+ * ```
+ *
+ * @param track Accessors to track.
+ * @param callback The function to run when the value changes.
+ * @returns Unsubscribe function.
+ */
+export function subscribe(track: Signal.Fn, fn: Signal.Fn) {
+    const sub = new Signal.Subscription(track, fn)
+    sub.track()
+    return () => sub.dispose()
 }
 
 /**
  * Scopes contain context values and cleanup functions.
  */
-export class Scope {
-    static current: Scope | null = null
-
-    disposed: boolean = false
-    owner: Scope | null = null
-    contexts = new Map<Context<any>, unknown>()
-    cleanups: Fn[] = []
-    after: Fn[] | null = []
-    children = new Set<Scope>()
-
-    constructor(parent?: Scope | null) {
-        if (parent) {
-            this.owner = parent
-            parent.children.add(this)
-        }
-    }
-
-    run<T>(fn: () => T): T {
-        const prevOwner = Scope.current
-        Scope.current = this
-
-        try {
-            return fn()
-        } finally {
-            this.after?.forEach((cb) => {
-                try {
-                    cb()
-                } catch (err) {
-                    console.error(err)
-                }
-            })
-            this.after = null
-            Scope.current = prevOwner
-        }
-    }
-
-    dispose() {
-        if (this.disposed) return
-        this.disposed = true
-
-        this.owner?.children.delete(this)
-
-        const ordered = this.children.values().toArray().toReversed()
-        for (const child of ordered) child.dispose()
-        this.children.clear()
-
-        for (const cb of Array.from(this.cleanups)) {
-            try {
-                cb()
-            } catch (err) {
-                console.error(err)
-            }
-        }
-
-        this.cleanups = []
-        this.owner = null
-    }
-
-    setContext<V>(ctx: Context<V>, value: V): void {
-        this.contexts.set(ctx, value)
-    }
-}
+export type Scope = Signal.Scope
 
 /**
- * Context lets components pass information deep down without explicitly
- * passing props.
+ * Context lets components pass information deep down
+ * without explicitly passing props.
  *
  * @see {createContext}
  */
-export interface Context<T = unknown> {
+export interface Context<T = unknown> extends Signal.Context<T> {
     use(): T
     provide<R>(value: T, fn: () => R): R
     (props: { value: T; children: GnimNode }): GnimNode
@@ -180,21 +115,15 @@ export function createContext<T>(defaultValue: T): Context<T> {
     let ctx: Context<T>
 
     function withContext<R>(value: T, fn: () => R) {
-        const parent = getScope()
-        const scope = new Scope(parent)
-        scope.contexts.set(ctx, value)
-        return scope.run(fn)
+        const scope = Signal.createScope()
+        return Signal.runScope(scope, () => {
+            Signal.setContext(ctx, value)
+            return fn()
+        })
     }
 
     function use(): T {
-        let scope = Scope.current
-        while (scope) {
-            if (scope.contexts.has(ctx)) {
-                return scope.contexts.get(ctx) as T
-            }
-            scope = scope.owner
-        }
-        return defaultValue
+        return Signal.getContext(ctx)
     }
 
     function provide<R>(value: T, fn: () => R): R {
@@ -207,9 +136,9 @@ export function createContext<T>(defaultValue: T): Context<T> {
     }
 
     return (ctx = Object.assign(Context, {
+        defaultValue,
         use,
         provide,
-        $$contextDefaultValue: defaultValue,
     }))
 }
 
@@ -223,7 +152,7 @@ export function createContext<T>(defaultValue: T): Context<T> {
  * setTimeout(() => {
  *   // This callback gets run without an owner scope.
  *   // Restore owner via scope.run:
- *   scope.run(() => {
+ *   runScope(scope, () => {
  *     const foo = FooContext.use()
  *     onCleanup(() => {
  *       print("some cleanup")
@@ -233,38 +162,32 @@ export function createContext<T>(defaultValue: T): Context<T> {
  * ```
  */
 export function getScope(): Scope {
-    if (!Scope.current) {
+    const scope = Signal.getScope()
+
+    if (!scope) {
         throw Error("cannot get scope: out of tracking context")
     }
 
-    return Scope.current
+    return scope
 }
 
 /**
  * Attach a cleanup callback to the current {@link Scope}.
  */
-export function onCleanup(callback: Fn) {
-    if (!Scope.current) {
-        console.error(Error("out of tracking context: will not be able to clean up"))
-    }
-
-    Scope.current?.cleanups.unshift(callback)
+export function onCleanup(callback: Signal.Fn) {
+    Signal.onCleanup(callback)
 }
 
-function onMount(fn: Fn) {
-    let scope = Scope.current
-
-    while (scope) {
-        if (scope.after) {
-            scope.after.push(fn)
-            return
-        } else {
-            scope = scope.owner
-        }
+/**
+ * Attach a callback to run after the current {@link Scope} returns.
+ */
+export function onMount(fn: Signal.Fn) {
+    const scope = Signal.getScope()
+    if (!scope || scope.mounted) {
+        untrack(fn)
+    } else {
+        Signal.onMount(fn)
     }
-
-    // every scope in the chain already mounted (e.g. a re-entered scope.run):
-    queueEffect(fn)
 }
 
 /**
@@ -286,11 +209,14 @@ function onMount(fn: Fn) {
  * })
  * ```
  */
-export function createRoot<T>(fn: (dispose: Fn) => T, parent?: Scope | null) {
-    const scope = new Scope(parent)
-    return scope.run(() => fn(() => scope.dispose()))
+export function createRoot<T>(fn: (dispose: Signal.Fn) => T, parent?: Scope | null) {
+    const scope = Signal.createScope(parent)
+    return Signal.runScope(scope, () => fn(() => scope.dispose()))
 }
 
+/**
+ * Check if a variable is an {@link Accessor}
+ */
 export function isAccessor(instance: unknown): instance is Accessor {
     return (
         typeof instance === "function" &&
@@ -299,34 +225,47 @@ export function isAccessor(instance: unknown): instance is Accessor {
     )
 }
 
+/**
+ * Create an Accessor. When a subscription is given the getter is assumed to be
+ * non-reactive and the resulting accessor is a wrapper over an `External` node internally.
+ * When a subscription is not given the getter is simply wrapped as an Accessor.
+ */
 export function createAccessor<T>(
     get: () => T,
-    subscribe: (callback: Fn) => Fn = () => noop,
+    subscribe?: (callback: Signal.Fn) => Signal.Fn,
 ): Accessor<T> {
-    function access(): T {
-        AccessStack.at(-1)?.add(accessor)
-        return get()
+    let access: () => T
+
+    if (subscribe) {
+        const extenal = new Signal.External(get, subscribe)
+        access = () => extenal.get()
+    } else {
+        access = () => get()
+    }
+
+    function peek(): T {
+        return untrack(access)
     }
 
     function as<R = T>(fn: (value: T) => R): Accessor<R> {
-        return createAccessor(() => fn(untrack(get)), subscribe)
+        return createAccessor(() => {
+            const value = access()
+            return Signal.untrack(fn, value)
+        })
     }
 
-    const accessor: Accessor<T> = Object.assign(access, {
+    return Object.assign(access, {
         $$typeof: accessorType,
         as,
-        peek: () => untrack(get),
-        subscribe: subscribe,
-        toString(): string {
-            return `Accessor { ${get()} }`
+        peek,
+        toString() {
+            return `Accessor { ${peek()} }`
         },
         [Symbol.toPrimitive]() {
             console.warn("Accessor implicitly converted to a primitive value.")
-            return `Accessor { ${get()} }`
+            return `Accessor { ${peek()} }`
         },
     })
-
-    return accessor
 }
 
 export type Setter<T> = {
@@ -351,41 +290,20 @@ export interface StateOptions<T> {
  * @returns An {@link Accessor} and a setter function.
  */
 export function createState<T>(init: T, options?: StateOptions<NoInfer<T>>): State<T> {
-    let currentValue = init
+    const signal = new Signal.Signal(init, options?.equals)
 
-    const observers = new Set<Fn>()
-    const equals = options?.equals ?? Object.is
+    signal.set(devHooks.createState(init, get))
 
     function get(): T {
-        return currentValue
-    }
-
-    function subscribe(callback: Fn): Fn {
-        observers.add(callback)
-        return () => observers.delete(callback)
+        return signal.get()
     }
 
     function set(newValue: unknown): void {
-        const value: T = typeof newValue === "function" ? newValue(currentValue) : newValue
-
-        if (!equals(currentValue, value)) {
-            currentValue = value
-            notify(observers)
-        }
+        const value: T = typeof newValue === "function" ? newValue(signal.pendingValue) : newValue
+        signal.set(value)
     }
 
-    currentValue = devHooks.createState(init, get)
-    return [createAccessor(get, subscribe), set]
-}
-
-function push<T>(fn: () => T) {
-    const deps = new Set<Accessor>()
-    AccessStack.push(deps)
-    try {
-        return [fn(), deps] as const
-    } finally {
-        AccessStack.pop()
-    }
+    return [createAccessor(get), set]
 }
 
 /**
@@ -404,161 +322,14 @@ function push<T>(fn: () => T) {
  * ```
  */
 export function untrack<T>(fn: () => T) {
-    return push(fn)[0]
-}
-
-function diff(scope: Scope | null, prev: Map<Accessor, Fn>, next: Set<Accessor>, fn: Fn) {
-    const newDeps = new Map<Accessor, Fn>()
-
-    for (const [dep, dispose] of prev) {
-        if (!next.has(dep)) {
-            dispose()
-        } else {
-            newDeps.set(dep, dispose)
-        }
-    }
-
-    if (!scope?.disposed) {
-        for (const dep of next) {
-            if (!newDeps.has(dep)) {
-                newDeps.set(dep, dep.subscribe(fn))
-            }
-        }
-    }
-
-    return newDeps
-}
-
-// TODO: merge this into `computed()`
-function createComputed<T>(fn: (prev?: T) => T): Accessor<T> {
-    const parentScope = Scope.current
-
-    const observers = new Set<Fn>()
-    const state: { value: null; dirty: true } | { value: T; dirty: false } = {
-        value: null,
-        dirty: true,
-    }
-
-    let scope = new Scope(parentScope)
-    let deps = new Map<Accessor, Fn>()
-
-    let preValid = false
-    let preFailed = false
-    let preValue: T | null
-    let preDeps = new Set<Accessor>()
-
-    function invalidate() {
-        scope.dispose()
-        state.value = null
-        state.dirty = true
-        notify(observers)
-    }
-
-    function computeEffect() {
-        scope = new Scope(parentScope)
-
-        const [value, next] = scope.run(() => push(() => (state.dirty ? fn() : fn(state.value))))
-
-        deps = diff(parentScope, deps, next, invalidate)
-        state.dirty = false
-        state.value = value
-
-        return value
-    }
-
-    function subscribe(callback: Fn): Fn {
-        if (observers.size === 0) {
-            if (EffectDepth > 0 && preValid) {
-                state.dirty = false
-                state.value = preValue
-                deps = new Map([...preDeps].map((dep) => [dep, dep.subscribe(invalidate)]))
-                preDeps.clear()
-                preValue = null
-                preValid = false
-                preFailed = false
-            } else if (EffectDepth > 0 && preFailed) {
-                // the pre-computation threw and was already reported:
-                // stay dirty so the error resurfaces through reads
-                preFailed = false
-            } else {
-                try {
-                    computeEffect()
-                } catch (err) {
-                    console.error(err)
-                }
-            }
-        }
-
-        observers.add(callback)
-
-        return () => {
-            observers.delete(callback)
-            if (observers.size === 0) {
-                deps.forEach((cb) => cb())
-                deps.clear()
-                invalidate()
-            }
-        }
-    }
-
-    function get(): T {
-        if (!state.dirty) {
-            return state.value
-        }
-
-        if (observers.size === 0) {
-            if (EffectDepth > 0) {
-                try {
-                    const [res, deps] = scope.run(() => push(fn))
-                    preDeps = deps
-                    preValue = res
-                    preValid = true
-                    preFailed = false
-                    return res
-                } catch (err) {
-                    preDeps.clear()
-                    preValue = null
-                    preValid = false
-                    preFailed = true
-                    throw err
-                }
-            } else {
-                return fn()
-            }
-        }
-
-        // outside an effect doing .subscribe(() => .peek())
-        // will trigger the effect here on first access
-        return computeEffect()
-    }
-
-    return createAccessor(get, subscribe)
+    return Signal.untrack(fn)
 }
 
 type EffectOptions = {
     /**
-     * Run the effect immediately instead of after the {@link Scope} returns
+     * Run the effect immediately instead of after the {@link Scope} returns.
      */
     immediate?: boolean
-}
-
-function queueEffect(fn: Fn) {
-    EffectQueue.add(fn)
-    if (!EffectsPending) {
-        EffectsPending = true
-        Promise.resolve().then(() => {
-            EffectsPending = false
-            const effects = Array.from(EffectQueue)
-            EffectQueue.clear()
-            effects.forEach((fn) => {
-                try {
-                    fn()
-                } catch (err) {
-                    console.error(err)
-                }
-            })
-        })
-    }
 }
 
 /**
@@ -566,45 +337,11 @@ function queueEffect(fn: Fn) {
  * and re-runs whenever they change.
  */
 export function effect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions) {
-    const parentScope = Scope.current
-
-    let currentValue: T
-    let currentDeps = new Map<Accessor, Fn>()
-    let currentScope = new Scope(parentScope)
-
-    function syncEffect() {
-        EffectQueue.delete(syncEffect)
-        EffectDepth++
-        currentScope.dispose()
-        currentScope = new Scope(parentScope)
-
-        try {
-            const [value, deps] = currentScope.run(() => push(() => fn(currentValue)))
-
-            currentDeps = diff(parentScope, currentDeps, deps, () => queueEffect(syncEffect))
-            currentValue = value
-        } finally {
-            EffectDepth--
-        }
-    }
-
-    function dispose() {
-        EffectQueue.delete(syncEffect)
-        currentDeps.forEach((cb) => cb())
-        currentDeps.clear()
-        currentScope.dispose()
-    }
-
-    if (!parentScope) {
-        console.warn(Error("effects created outside a `createRoot` will never be disposed"))
-        return syncEffect()
-    }
-
-    parentScope.cleanups.unshift(dispose)
-    if (opts?.immediate) {
-        syncEffect()
+    const effect = new Signal.Effect(fn)
+    if (opts?.immediate || !effect.parent || effect.parent.mounted) {
+        effect.run()
     } else {
-        onMount(syncEffect)
+        Signal.onMount(() => effect.run())
     }
 }
 
@@ -624,309 +361,6 @@ export function effect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions) {
  * ```
  */
 export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>): Accessor<T> {
-    let init = false
-    let currentValue: T
-    let dispose: Fn
-
-    const equals = opts?.equals ?? Object.is
-    const value = createComputed(fn)
-    const subscribers = new Set<Fn>()
-
-    function subscribe(callback: Fn): Fn {
-        if (subscribers.size === 0) {
-            EffectDepth += 1
-            try {
-                try {
-                    currentValue = value.peek()
-                    init = true
-                } catch (err) {
-                    console.error(err)
-                }
-                dispose = value.subscribe(() => {
-                    EffectDepth += 1
-                    try {
-                        const v = value.peek()
-                        if (!init || !equals(currentValue, v)) {
-                            currentValue = v
-                            init = true
-                            notify(subscribers)
-                        }
-                    } finally {
-                        EffectDepth -= 1
-                    }
-                })
-            } finally {
-                EffectDepth -= 1
-            }
-        }
-
-        subscribers.add(callback)
-
-        return () => {
-            subscribers.delete(callback)
-            if (subscribers.size === 0) {
-                dispose()
-                init = false
-            }
-        }
-    }
-
-    function get(): T {
-        if (init) return currentValue
-        return value.peek()
-    }
-
-    // TODO: refactor
-    if (Scope.current) {
-        Scope.current.cleanups.unshift(subscribe(noop))
-    }
-
-    return createAccessor(get, subscribe)
-}
-
-export type Store<S = Record<PropertyKey, unknown>> = S & {
-    $readableProperties: S
-    subscribe(key: keyof S, callback: Fn): Fn
-}
-
-/**
- * Create a store where each field is replaced with a reactive accessor.
- *
- * @example
- *
- * ```
- * const myStore = createStore({
- *   value: 0,
- *   get double() {
- *     return this.value * 2
- *   },
- *   nestedStore: createStore({
- *     value: "",
- *   }),
- * })
- * ```
- */
-export function createStore<S extends Record<PropertyKey, any>>(store: S): Store<S> {
-    const obj = {}
-    const properties = Object.entries(Object.getOwnPropertyDescriptors(store))
-    const accessors: Record<PropertyKey, Accessor> = {}
-
-    for (const [key, desc] of properties) {
-        if ("value" in desc) {
-            const [get, set] = createState(desc.value)
-            Object.defineProperty(obj, key, {
-                get: (accessors[key] = get),
-                set,
-                enumerable: true,
-            })
-        } else if ("get" in desc) {
-            const get = computed(desc.get!.bind(obj))
-            Object.defineProperty(obj, key, {
-                get: (accessors[key] = get),
-                set: desc.set,
-                enumerable: true,
-            })
-        } else {
-            Object.defineProperty(obj, key, desc)
-        }
-    }
-
-    Object.assign(obj, {
-        subscribe(key: PropertyKey, callback: Fn): Fn {
-            const accessor = accessors[key]
-            if (!accessor) throw Error(`cannot subscribe: "${String(key)}" is not reactive`)
-            return accessor.subscribe(callback)
-        },
-    })
-
-    return obj as Store<S>
-}
-
-type Bindable = GObject.Object | Store
-
-type PropKeys<O> = O extends GObject.Object
-    ? [Keyof<O["$readableProperties"]>] extends [never]
-        ? Keyof<O>
-        : Keyof<O["$readableProperties"]>
-    : O extends Store
-      ? keyof O["$readableProperties"]
-      : never
-
-type Prop<O, K> = O extends GObject.Object
-    ? [Keyof<O["$readableProperties"]>] extends [never]
-        ? K extends Keyof<O>
-            ? O[K]
-            : never
-        : K extends Keyof<O["$readableProperties"]>
-          ? O["$readableProperties"][K]
-          : never
-    : O extends Store
-      ? K extends Keyof<O["$readableProperties"]>
-          ? O["$readableProperties"][K]
-          : never
-      : never
-
-type NProp<O, K> = NonNullable<Prop<O, K>>
-// `extends infer T` instantiates the type so hovering shows the result
-type ChainProp<Links, V> = V | Extract<Links, null | undefined> extends infer T ? T : never
-
-/**
- * Reactively read a {@link GObject.Object}'s registered property.
- *
- * @param object The {@link GObject.Object} to create the {@link Accessor} on.
- * @param property One of its registered properties.
- * @returns Accessor which references the property value
- */
-export function bind<O extends Bindable, P extends PropKeys<O>>(
-    object: O,
-    property: P,
-): Accessor<Prop<O, P>>
-
-export function bind<O extends Bindable, P1 extends PropKeys<O>, P2 extends PropKeys<NProp<O, P1>>>(
-    object: O,
-    property1: P1,
-    property2: P2,
-): Accessor<ChainProp<Prop<O, P1>, Prop<NProp<O, P1>, P2>>>
-
-export function bind<
-    O extends Bindable,
-    P1 extends PropKeys<O>,
-    P2 extends PropKeys<NProp<O, P1>>,
-    P3 extends PropKeys<NProp<NProp<O, P1>, P2>>,
->(
-    object: O,
-    property1: P1,
-    property2: P2,
-    property3: P3,
-): Accessor<ChainProp<Prop<O, P1> | Prop<NProp<O, P1>, P2>, Prop<NProp<NProp<O, P1>, P2>, P3>>>
-
-export function bind<
-    O extends Bindable,
-    P1 extends PropKeys<O>,
-    P2 extends PropKeys<NProp<O, P1>>,
-    P3 extends PropKeys<NProp<NProp<O, P1>, P2>>,
-    P4 extends PropKeys<NProp<NProp<NProp<O, P1>, P2>, P3>>,
->(
-    object: O,
-    property1: P1,
-    property2: P2,
-    property3: P3,
-    property4: P4,
-): Accessor<
-    ChainProp<
-        Prop<O, P1> | Prop<NProp<O, P1>, P2> | Prop<NProp<NProp<O, P1>, P2>, P3>,
-        Prop<NProp<NProp<NProp<O, P1>, P2>, P3>, P4>
-    >
->
-
-export function bind(object: Bindable, key: PropertyKey, ...props: string[]): Accessor {
-    if (props.length === 0) {
-        if (object instanceof GObject.Object && typeof key === "string") {
-            const name = kebabcase(key)
-
-            function subscribe(callback: Fn): Fn {
-                const id = GObject.signal_connect(object as GObject.Object, `notify::${name}`, () =>
-                    callback(),
-                )
-                return () => GObject.signal_handler_disconnect(object as GObject.Object, id)
-            }
-
-            function get() {
-                const getter = `get_${name.replaceAll("-", "_")}` as keyof typeof object
-
-                if (getter in object && typeof object[getter] === "function") {
-                    return (object[getter] as () => unknown)()
-                }
-
-                if (key in object) return object[key as keyof typeof object]
-                if (name in object) return object[name as keyof typeof object]
-
-                throw Error(`cannot get property "${key as string}" on "${object}"`)
-            }
-
-            return createAccessor(get, subscribe)
-        } else if ("subscribe" in object) {
-            return createAccessor(
-                () => object[key],
-                (callback) => object.subscribe(key, callback),
-            )
-        } else {
-            throw Error("something went wrong: should be unreachable")
-        }
-    }
-
-    return computed(
-        () => {
-            let v = bind(object, key)()
-            for (const prop of props) {
-                if (v === null || v === undefined) break
-                v = bind(v as Bindable, prop)()
-            }
-            return v
-        },
-        { equals: () => false },
-    )
-}
-
-type SignalsOf<O> = O extends GObject.Object
-    ? {
-          [
-              S in Keyof<O["$signals"]> as S extends `${infer Name}::{}`
-                  ? Name extends "notify"
-                      ? never
-                      : Name | `${Name}::${string}`
-                  : S
-          ]: O["$signals"][S]
-      } & {
-          [S in Keyof<O["$readableProperties"]> as `notify::${S}`]: (
-              pspec: GObject.ParamSpec<O["$readableProperties"][S]>,
-          ) => void
-      } & {
-          notify: (pspec: GObject.ParamSpec) => void
-      }
-    : never
-
-type ConnectionCallback<
-    O extends GObject.Object,
-    S extends keyof SignalsOf<O>,
-> = SignalsOf<O>[S] extends (...args: infer Args) => infer Return
-    ? (...args: Args) => Return
-    : never
-
-/**
- * Connect a side-effect to a GObject signal.
- */
-export function connectSignal<O extends GObject.Object, S extends Keyof<SignalsOf<O>>>(
-    object: O,
-    signal: S,
-    handler: ConnectionCallback<O, S>,
-): void {
-    const id = GObject.signal_connect(object, signal, (_, ...args) => handler(...args))
-    onCleanup(() => GObject.signal_handler_disconnect(object, id))
-}
-
-/**
- * Maps a MaybeAccessor to an Accessor with an optional fallback value.
- *
- * @example
- *
- * ```ts
- * const props: {
- *   optional?: MaybeAccessor<string>
- *   required: MaybeAccessor<string>
- * }
- *
- * const optional: Accessor<string> = prop(props.optional, "")
- * const required: Accessor<string> = prop(props.required)
- * ```
- *
- */
-export function prop<T>(value: MaybeAccessor<T>): Accessor<T>
-
-export function prop<T>(value: MaybeAccessor<T>, fallback: NonNullable<T>): Accessor<NonNullable<T>>
-
-export function prop<T>(value: T, fallback?: unknown) {
-    return isAccessor(value)
-        ? computed(() => value() ?? fallback)
-        : createAccessor(() => value ?? fallback)
+    const computed = new Signal.Computed(fn, opts?.equals)
+    return createAccessor(computed.get.bind(computed))
 }

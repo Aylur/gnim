@@ -1,6 +1,7 @@
 import GObject from "gi://GObject?version=2.0"
 import { mountChildren, type CC, type FC, type GnimNode } from "./element.js"
-import { createContext, Scope, untrack } from "./reactive.js"
+import { createContext, untrack } from "./reactive.js"
+import { createScope, runScope, setContext } from "./signal.js"
 
 const RendererContext = createContext<Renderer | null>(null)
 
@@ -45,8 +46,10 @@ export interface Renderer {
 }
 
 export function render(renderer: Renderer, element: () => GnimNode, root?: GObject.Object) {
-    const scope = new Scope(Scope.current)
-    scope.contexts.set(RendererContext, renderer)
-    scope.run(() => mountChildren(untrack(element), root))
+    const scope = createScope()
+    runScope(scope, () => {
+        setContext(RendererContext, renderer)
+        mountChildren(untrack(element), root)
+    })
     return () => scope.dispose()
 }
