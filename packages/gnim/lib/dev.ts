@@ -43,6 +43,17 @@ function isCss(id: string) {
     return id.endsWith(".css") || id.endsWith(".scss") || id.endsWith(".sass")
 }
 
+function isContext(instance: unknown): instance is Context<any> {
+    return (
+        typeof instance === "function" &&
+        "defaultValue" in instance &&
+        "use" in instance &&
+        typeof instance.use === "function" &&
+        "provide" in instance &&
+        typeof instance.provide === "function"
+    )
+}
+
 function initGtk() {
     if (props.gtk === "4.0") {
         gi.require("Gtk", "4.0").init()
@@ -296,9 +307,10 @@ function initRegistry() {
 
         const [get, set] = entry.impl
         const prevImpl = get.peek()
-        if ("$$contextDefaultValue" in impl && "$$contextDefaultValue" in prevImpl) {
-            const prevDefaultValue = prevImpl.$$contextDefaultValue
-            const nextDefaultValue = impl.$$contextDefaultValue
+
+        if (isContext(impl) && isContext(prevImpl)) {
+            const prevDefaultValue = prevImpl.defaultValue
+            const nextDefaultValue = impl.defaultValue
             if (!Object.is(prevDefaultValue, nextDefaultValue)) {
                 set(() => impl)
             }
