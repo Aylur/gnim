@@ -6,7 +6,7 @@ import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { jsx, resolveNode, type FC } from "./jsx/element.js"
 import { computed, createState, devHooks, type State } from "./jsx/reactive.js"
-import { getContext, setContext, type Context } from "./jsx/signal.js"
+import { getContext, setContext, untrack, type Context } from "./jsx/signal.js"
 
 const props = JSON.parse(GLib.getenv("GNIM_DEV")!) as {
     applicationId?: string
@@ -319,12 +319,16 @@ function initRegistry() {
 
         set(() => impl)
         return function (props: any) {
-            return computed(() => {
+            const node = computed(() => {
                 setContext(stateCtx, entry.state)
                 const node = resolveNode(jsx(get(), props))
                 entry.state.flush()
                 return node
             })
+
+            // `Computed` is lazy: resolving eagerly to mimic prod builds
+            untrack(node)
+            return node
         }
     }
 

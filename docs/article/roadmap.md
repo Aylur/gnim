@@ -18,8 +18,9 @@ node in place.
 
 ## Error boundaries
 
-Errors simply propagate to the code that triggered it there is no declarative
-way to define boundaries.
+Errors simply propagate to the code that triggered them which makes it
+essentially impossible to track down since it is usually Gnim internals and user
+code is nowhere to be seen on the stack.
 
 Planned: an `ErrorBoundary` component that exposes mechanism to catch errors and
 recover from them.

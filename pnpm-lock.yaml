@@ -110,8 +110,8 @@ importers:
         version: 8.68.0(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)
     optionalDependencies:
       '@gnim-js/linux-x64':
-        specifier: 2.0.0-beta.22
-        version: 2.0.0-beta.22
+        specifier: 2.0.0-beta.23
+        version: 2.0.0-beta.23
 
   packages/gnome-shell:
     dependencies:
@@ -439,8 +439,8 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@gnim-js/linux-x64@2.0.0-beta.22':
-    resolution: {integrity: sha512-5hX4yiML79JEf1suhrYBxDgbUevrerGMU6SwtxRKbR2rkreC1uUc8HDf01N9T84yPa6GAnHFFL3fSRTTROg5vQ==}
+  '@gnim-js/linux-x64@2.0.0-beta.23':
+    resolution: {integrity: sha512-l2SGlFrnUXpXJVU0baIwFEQnvlqRuuxdVOgWVDt+Oa6uf/iaGE+kTSBx2FclId6gvBzWeZp9/4yu1V7LdvE/xg==}
     cpu: [x64]
     os: [linux]
 
@@ -1770,7 +1770,7 @@ snapshots:
   '@girgen/linux-x64@0.3.20':
     optional: true
 
-  '@gnim-js/linux-x64@2.0.0-beta.22':
+  '@gnim-js/linux-x64@2.0.0-beta.23':
     optional: true
 
   '@humanfs/core@0.19.2':

@@ -2437,3 +2437,114 @@ describe("Accessor.as", () => {
         expect(isAccessor(doubled)).toBe(true)
     })
 })
+
+describe("mount timing", () => {
+    it("defers onMount registered during an effect re-run until the body returns", () => {
+        const order: string[] = []
+
+        const { setValue, dispose } = createRoot((dispose) => {
+            const [value, setValue] = createState(0)
+            effect(() => {
+                const v = value()
+                onMount(() => order.push(`mount ${v}`))
+                order.push(`body ${v}`)
+            })
+            return { setValue, dispose }
+        })
+
+        setValue(1)
+        expect(order).toEqual(["body 0", "mount 0", "body 1", "mount 1"])
+        dispose()
+    })
+
+    it("defers nested effects created during an effect re-run until the body returns", () => {
+        const order: string[] = []
+
+        const { setValue, dispose } = createRoot((dispose) => {
+            const [value, setValue] = createState(0)
+            effect(() => {
+                const v = value()
+                effect(() => order.push(`inner ${v}`))
+                order.push(`outer ${v}`)
+            })
+            return { setValue, dispose }
+        })
+
+        setValue(1)
+        expect(order).toEqual(["outer 0", "inner 0", "outer 1", "inner 1"])
+        dispose()
+    })
+
+    it("defers onMount registered during a computed re-evaluation until the body returns", () => {
+        const order: string[] = []
+
+        const { setValue, dispose } = createRoot((dispose) => {
+            const [value, setValue] = createState(0)
+            const c = computed(() => {
+                const v = value()
+                onMount(() => order.push(`mount ${v}`))
+                order.push(`body ${v}`)
+                return v
+            })
+            effect(() => c())
+            return { setValue, dispose }
+        })
+
+        setValue(1)
+        expect(order).toEqual(["body 0", "mount 0", "body 1", "mount 1"])
+        dispose()
+    })
+
+    it("runs mount callbacks with the mounting scope active", () => {
+        const Ctx = createContext("default")
+        let seen: string | null = null
+        let scopeInMount: unknown = null
+
+        createRoot(() => {
+            const scope = getScope()
+            Ctx.provide("provided", () => {
+                const provider = getScope()
+                onMount(() => {
+                    seen = Ctx.use()
+                    scopeInMount = getScope()
+                })
+                expect(provider).not.toBe(scope)
+                return null
+            })
+        })
+
+        expect(seen).toBe("provided")
+        expect(scopeInMount).not.toBeNull()
+    })
+
+    it("attaches cleanups registered inside onMount to the mounting scope", () => {
+        const spy = vi.fn()
+
+        const { setValue, dispose } = createRoot((dispose) => {
+            const [value, setValue] = createState(0)
+            effect(() => {
+                value()
+                onMount(() => onCleanup(spy))
+            })
+            return { setValue, dispose }
+        })
+
+        expect(spy).not.toHaveBeenCalled()
+        setValue(1)
+        expect(spy).toHaveBeenCalledTimes(1)
+        dispose()
+        expect(spy).toHaveBeenCalledTimes(2)
+    })
+
+    it("does not leave a scope active when a mount callback throws", () => {
+        expect(() =>
+            createRoot(() => {
+                onMount(() => {
+                    throw Error("boom")
+                })
+            }),
+        ).toThrow("boom")
+
+        expect(getActiveScope()).toBeNull()
+    })
+})

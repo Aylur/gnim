@@ -126,13 +126,13 @@ export function runScope<T>(scope: Scope, fn: () => T): T {
     let result: T
     try {
         result = fn()
+        flushMounts(scope)
     } catch (e) {
         scope.mounts = []
         throw e
     } finally {
         activeScope = prevScope
     }
-    flushMounts(scope)
     return result
 }
 
@@ -151,6 +151,8 @@ function resetScope(scope: Scope): void {
     const cleanups = scope.cleanups
     scope.children = []
     scope.cleanups = []
+    scope.mounts = []
+    scope.mounted = false
     try {
         if (children) runAll(children, disposeChildScope, true)
     } finally {
