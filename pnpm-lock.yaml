@@ -41,6 +41,9 @@ importers:
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
+      reactive-framework-test-suite:
+        specifier: 0.0.2
+        version: 0.0.2
       vitepress:
         specifier: 2.0.0-alpha.16
         version: 2.0.0-alpha.16(@types/node@26.4.0)(jiti@2.7.0)(postcss@8.5.28)(typescript@6.0.3)
@@ -1352,6 +1355,9 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
+  reactive-framework-test-suite@0.0.2:
+    resolution: {integrity: sha512-wExFKyvh7u2CejdCLRPhf1qH1D9LlC4DJFAv0DNinvj3OuqMYj60ukFOMkWYoyLFt2ze0SwduK0t+1sWK7LEUQ==}
+
   regex-recursion@6.0.2:
     resolution: {integrity: sha512-0YCaSCq2VRIebiaUviZNs0cBz1kg5kVS2UKUfNIx8YVs1cN3AV7NTctO5FOKBA+UT2BPJIWZauYHPqJODG50cg==}
 
@@ -2620,6 +2626,8 @@ snapshots:
   property-information@7.2.0: {}
 
   punycode@2.3.1: {}
+
+  reactive-framework-test-suite@0.0.2: {}
 
   regex-recursion@6.0.2:
     dependencies:

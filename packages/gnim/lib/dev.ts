@@ -5,14 +5,8 @@ import GIRepository from "gi://GIRepository?version=3.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { jsx, resolveNode, type FC } from "./jsx/element.js"
-import {
-    computed,
-    createContext,
-    createState,
-    devHooks,
-    getScope,
-    type State,
-} from "./jsx/reactive.js"
+import { computed, createState, devHooks, type State } from "./jsx/reactive.js"
+import { getContext, setContext, type Context } from "./jsx/signal.js"
 
 const props = JSON.parse(GLib.getenv("GNIM_DEV")!) as {
     applicationId?: string
@@ -277,10 +271,10 @@ function initRegistry() {
     type DevComponent = { impl: State<FC>; state: StateCtx }
 
     const registry = new Map<string, DevComponent>()
-    const stateCtx = createContext<StateCtx | null>(null)
+    const stateCtx: Context<StateCtx | null> = { defaultValue: null }
 
     devHooks.createState = function (init, get) {
-        return stateCtx.use()?.push(init, get) ?? init
+        return getContext(stateCtx)?.push(init, get) ?? init
     }
 
     function $$registerComponent(mod: string, name: string, impl: FC) {
@@ -310,7 +304,7 @@ function initRegistry() {
         set(() => impl)
         return function (props: any) {
             return computed(() => {
-                getScope().contexts.set(stateCtx, entry.state)
+                setContext(stateCtx, entry.state)
                 const node = resolveNode(jsx(get(), props))
                 entry.state.flush()
                 return node

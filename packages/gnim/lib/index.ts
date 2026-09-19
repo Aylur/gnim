@@ -40,5 +40,5 @@ export {
     type Buildable,
     type Renderer,
 } from "./jsx/render.js"
-export { batch, flush, runScope } from "./jsx/signal.js"
+export { batch, flush, runScope, setContext, getContext } from "./jsx/signal.js"
 export { bind, connectSignal, createStore, prop, type Store } from "./jsx/store.js"

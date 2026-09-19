@@ -3,7 +3,7 @@ import Gio from "gi://Gio?version=2.0"
 import { describe, expect, it, vi } from "vitest"
 import type { CCProps, GnimNode } from "../jsx/element.js"
 import { For, Fragment, Portal, With, jsx, newObject } from "../jsx/element.js"
-import { createState, onCleanup, type Accessor } from "../jsx/reactive.js"
+import { createState, onCleanup, subscribe, type Accessor } from "../jsx/reactive.js"
 import { render, type Renderer } from "../jsx/render.js"
 
 const emit = GObject.signal_emit_by_name
@@ -259,7 +259,7 @@ describe("render", () => {
         expect(widget.destroyed).toBe(true)
     })
 
-    it("detaches and destroys nested widgets innermost-first when disposed", () => {
+    it("runs each widget's cleanups before destroying it, innermost-first", () => {
         const order: string[] = []
 
         // records the order of ref cleanups and of destructions
@@ -294,10 +294,10 @@ describe("render", () => {
 
         expect(order).toEqual([
             "cleanup:first",
-            "cleanup:second",
-            "cleanup:third",
             "destroy:first",
+            "cleanup:second",
             "destroy:second",
+            "cleanup:third",
             "destroy:third",
         ])
     })
@@ -671,8 +671,8 @@ describe("<For />", () => {
 
         const onA = vi.fn()
         const onB = vi.fn()
-        indices.get("a")?.subscribe(onA)
-        indices.get("b")?.subscribe(onB)
+        subscribe(indices.get("a")!, onA)
+        subscribe(indices.get("b")!, onB)
 
         // Appending an item leaves the existing positions untouched.
         setItems(["a", "b", "c"])

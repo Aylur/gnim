@@ -199,9 +199,6 @@ function isStaticChildren(
 
 export function mountChildren(children: GnimNode, mount?: GObject.Object) {
     const renderer = getRenderer()
-    const nodes = resolveNode(children)
-
-    if (nodes.length === 0) return
 
     let currentChildren: GObject.Object[] = []
 
@@ -214,11 +211,17 @@ export function mountChildren(children: GnimNode, mount?: GObject.Object) {
         }
     }
 
+    onCleanup(() => {
+        if (currentChildren.length > 0) setChildren([], currentChildren)
+    })
+
+    const nodes = resolveNode(children)
+
+    if (nodes.length === 0) return
+
     if (isStaticChildren(nodes)) {
         setChildren(nodes, currentChildren)
-        onCleanup(() => {
-            setChildren(currentChildren, nodes as Array<GObject.Object>)
-        })
+        currentChildren = nodes
         return
     }
 
@@ -228,10 +231,6 @@ export function mountChildren(children: GnimNode, mount?: GObject.Object) {
         currentChildren = children
     })
     mountEffect.run()
-
-    onCleanup(() => {
-        setChildren([], currentChildren)
-    })
 }
 
 export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<GnimNode>> {

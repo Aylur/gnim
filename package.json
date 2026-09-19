@@ -27,6 +27,7 @@
         "girgen": "^0.3.20",
         "nushell": "latest",
         "prettier": "^3.9.6",
+        "reactive-framework-test-suite": "0.0.2",
         "vitepress": "2.0.0-alpha.16",
         "vitepress-plugin-llmstxt": "^0.5.2",
         "vitest": "^4.1.10",
