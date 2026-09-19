@@ -274,7 +274,11 @@ function initRegistry() {
     const stateCtx: Context<StateCtx | null> = { defaultValue: null }
 
     devHooks.createState = function (init, get) {
-        return getContext(stateCtx)?.push(init, get) ?? init
+        try {
+            return getContext(stateCtx)?.push(init, get) ?? init
+        } catch {
+            return init
+        }
     }
 
     function $$registerComponent(mod: string, name: string, impl: FC) {
