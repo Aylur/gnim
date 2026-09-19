@@ -94,6 +94,24 @@ describe("createRoot", () => {
         dispose()
         expect(cleanup).toHaveBeenCalledTimes(1)
     })
+
+    it("does not attach to any scope when the parent is null", () => {
+        const cleanup = vi.fn()
+
+        const { detached, dispose } = createRoot((dispose) => {
+            const detached = createRoot((dispose) => {
+                onCleanup(cleanup)
+                return dispose
+            }, null)
+            return { detached, dispose }
+        })
+
+        dispose()
+        expect(cleanup).not.toHaveBeenCalled()
+
+        detached()
+        expect(cleanup).toHaveBeenCalledTimes(1)
+    })
 })
 
 describe("getScope", () => {
@@ -459,16 +477,121 @@ describe("subscribe", () => {
         unsubscribe()
     })
 
-    it("is not disposed with the enclosing scope", () => {
+    it("is disposed with the enclosing scope", () => {
         const observer = vi.fn()
 
-        const { setValue, unsubscribe, dispose } = createRoot((dispose) => {
+        const { setValue, dispose } = createRoot((dispose) => {
             const [value, setValue] = createState(0)
-            const unsubscribe = subscribe(value, observer)
-            return { setValue, unsubscribe, dispose }
+            subscribe(value, observer)
+            return { setValue, dispose }
         })
 
+        setValue(1)
+        expect(observer).toHaveBeenCalledTimes(1)
+
         dispose()
+        setValue(2)
+        expect(observer).toHaveBeenCalledTimes(1)
+    })
+
+    it("is disposed before the enclosing effect re-runs", () => {
+        const observer = vi.fn()
+
+        const { setA, setB, dispose } = createRoot((dispose) => {
+            const [a, setA] = createState(0)
+            const [b, setB] = createState(0)
+            effect(() => {
+                a()
+                subscribe(b, observer)
+            })
+            return { setA, setB, dispose }
+        })
+
+        setA(1)
+        setB(1)
+
+        // The subscription from the first run is gone, only one observer fires.
+        expect(observer).toHaveBeenCalledTimes(1)
+
+        dispose()
+    })
+
+    it("can be unsubscribed before the scope is disposed", () => {
+        const observer = vi.fn()
+
+        const { scope, setValue, dispose } = createRoot((dispose) => {
+            const [value, setValue] = createState(0)
+            const unsubscribe = subscribe(value, observer)
+            unsubscribe()
+            return { scope: getScope(), setValue, dispose }
+        })
+
+        setValue(1)
+        expect(observer).not.toHaveBeenCalled()
+        expect(scope.children ?? []).toHaveLength(0)
+
+        expect(() => dispose()).not.toThrow()
+    })
+
+    it("runs cleanups from the callback before the next notification and on dispose", () => {
+        const order: string[] = []
+        const [value, setValue] = createState(0)
+
+        const unsubscribe = subscribe(value, () => {
+            const v = value.peek()
+            order.push(`callback:${v}`)
+            onCleanup(() => order.push(`cleanup:${v}`))
+        })
+
+        setValue(1)
+        setValue(2)
+        expect(order).toEqual(["callback:1", "cleanup:1", "callback:2"])
+
+        unsubscribe()
+        expect(order).toEqual(["callback:1", "cleanup:1", "callback:2", "cleanup:2"])
+    })
+
+    it("attaches resources created in the tracker to the subscription", () => {
+        const cleanup = vi.fn()
+        const [value, setValue] = createState(0)
+
+        const unsubscribe = subscribe(
+            () => {
+                value()
+                onCleanup(cleanup)
+            },
+            () => void 0,
+        )
+
+        setValue(1)
+        expect(cleanup).toHaveBeenCalledTimes(1)
+
+        unsubscribe()
+        expect(cleanup).toHaveBeenCalledTimes(2)
+    })
+
+    it("does not leak the callback's cleanups into the setter's scope", () => {
+        const cleanup = vi.fn()
+        const [value, setValue] = createState(0)
+
+        const unsubscribe = subscribe(value, () => onCleanup(cleanup))
+
+        const dispose = createRoot((dispose) => {
+            setValue(1)
+            return dispose
+        })
+        dispose()
+        expect(cleanup).not.toHaveBeenCalled()
+
+        unsubscribe()
+        expect(cleanup).toHaveBeenCalledTimes(1)
+    })
+
+    it("keeps running outside of a scope until unsubscribed", () => {
+        const observer = vi.fn()
+        const [value, setValue] = createState(0)
+
+        const unsubscribe = subscribe(value, observer)
         setValue(1)
         expect(observer).toHaveBeenCalledTimes(1)
 
@@ -547,6 +670,56 @@ describe("effect", () => {
 
         setValue(1)
         expect(spy).toHaveBeenLastCalledWith(1)
+    })
+
+    it("returns a function that disposes the effect", () => {
+        const spy = vi.fn()
+        const cleanup = vi.fn()
+
+        const { setValue, disposeEffect, dispose } = createRoot((dispose) => {
+            const [value, setValue] = createState(0)
+            const disposeEffect = effect(() => {
+                spy(value())
+                onCleanup(cleanup)
+            })
+            return { setValue, disposeEffect, dispose }
+        })
+
+        setValue(1)
+        expect(spy).toHaveBeenCalledTimes(2)
+
+        disposeEffect()
+        expect(cleanup).toHaveBeenCalledTimes(2)
+
+        setValue(2)
+        expect(spy).toHaveBeenCalledTimes(2)
+
+        // Disposing again, or with the root, is a no-op.
+        disposeEffect()
+        dispose()
+        expect(cleanup).toHaveBeenCalledTimes(2)
+    })
+
+    it("does not run when disposed before the owning scope mounts", () => {
+        const spy = vi.fn()
+
+        createRoot(() => {
+            const disposeEffect = effect(spy)
+            disposeEffect()
+        })
+
+        expect(spy).not.toHaveBeenCalled()
+    })
+
+    it("can be disposed manually when created outside a scope", () => {
+        const spy = vi.fn()
+        const [value, setValue] = createState(0)
+
+        const disposeEffect = effect(() => spy(value()))
+        disposeEffect()
+        setValue(1)
+
+        expect(spy).toHaveBeenCalledTimes(1)
     })
 
     it("re-runs synchronously when a tracked dependency changes", () => {

@@ -15,6 +15,9 @@ export type Store<S = Record<string | symbol, unknown>> = S & {
 
 /**
  * Create a store where each field is replaced with a reactive accessor.
+ * Plain fields become writable states, getters become memoized {@link computed}
+ * values and methods are kept as they are. Reading a field in a reactive scope
+ * tracks it, assigning a field notifies its observers.
  *
  * @example
  *
@@ -87,10 +90,10 @@ type NProp<O, K> = NonNullable<Prop<O, K>>
 type ChainProp<Links, V> = V | Extract<Links, null | undefined> extends infer T ? T : never
 
 /**
- * Reactively read a {@link GObject.Object}'s registered property.
+ * Reactively read a {@link GObject.Object}'s registered property or a {@link Store}'s field.
  *
- * @param object The {@link GObject.Object} to create the {@link Accessor} on.
- * @param property One of its registered properties.
+ * @param object The {@link GObject.Object} or {@link Store} to create the {@link Accessor} on.
+ * @param property One of its registered properties or fields.
  * @returns Accessor which references the property value
  */
 export function bind<O extends Bindable, P extends PropKeys<O>>(
@@ -205,7 +208,10 @@ type ConnectionCallback<
     : never
 
 /**
- * Connect a side-effect to a GObject signal.
+ * Connect a handler to a GObject signal and disconnect it when the current
+ * scope is disposed.
+ *
+ * @throws when called outside of a scope.
  */
 export function connectSignal<O extends GObject.Object, S extends Keyof<SignalsOf<O>>>(
     object: O,

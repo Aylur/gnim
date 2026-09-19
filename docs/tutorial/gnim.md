@@ -272,7 +272,7 @@ return (
 
 ## State management
 
-State is managed using reactive values <span style="opacity: 0.6">(also known as
+State is managed using reactive values <span style="opacity:0.6">(also known as
 signals or observables in some other libraries)</span> through the
 [`Accessor`](/reference/primitives) interface. The most common primitives you
 will use are [`createState`](/reference/primitives#createstate),
@@ -494,20 +494,31 @@ effect(() => {
 
 ### Root effects
 
-If you wish to create an effect in the global scope, you have to manage its
-life-cycle with `createRoot`.
+Effects are disposed together with the scope they are created in. An effect
+created in the global scope has no owner, so you have to dispose it yourself
+with the function it returns.
 
 ```ts
 const globalObject: GObject.Object
 
 const field = bind(globalObject, "field")
 
-createRoot((dispose) => {
-  effect(() => {
-    console.log("field is", field())
-  })
+const dispose = effect(() => {
+  console.log("field is", field())
+})
 
-  dispose() // effect should be cleaned up when no longer needed
+dispose() // effect should be cleaned up when no longer needed
+```
+
+When there is more than one, `createRoot` gives them a shared owner so they can
+be disposed together.
+
+```ts
+createRoot((dispose) => {
+  effect(() => console.log("field is", field()))
+  effect(() => console.log("other is", other()))
+
+  dispose() // disposes both effects
 })
 ```
 

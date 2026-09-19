@@ -1,57 +1,8 @@
 # Roadmap
 
-The reactive system was implemented from scratch without any prior experience
-with similar systems. I did not yet understand the complexity of the problem at
-first, so most edge-cases, which there are a lot, were fixed as I encountered
-them and so it turned out to be bit of a spaghetti. There are some problems that
-currently cannot be fixed with the current implementation so the plan for 2.1 is
-a full internal rewrite of the reactive system, without breaking the user facing
-API.
-
-## States are synchronous, effects use the microtask queue
-
-Setting a state notifies synchronously, while `effect()`, `<With>`, `<For>` and
-child list updates are coalesced and run on the microtask queue.
-
-```ts
-const [label, setLabel] = createState("a")
-const [items, setItems] = createState(["a"])
-
-setLabel("b")
-// property bindings using `label` are already updated here
-
-setItems(["a", "b"])
-// children rendered with <For each={items}> update on the next microtask
-```
-
-Solid, in comparison, propagates everything synchronously. This is intentional
-mainly due to the fact that
-[diamond dependencies are not coalesced](#diamond-dependencies-are-not-coalesced).
-
-Planned: make everything synchronous and introduce a `batch()` API.
-
-## Diamond dependencies are not coalesced
-
-When a computed depends on two accessors that both derive from the same source,
-updating the source notifies direct subscribers twice — first with an
-inconsistent intermediate value:
-
-```ts
-const [s, setS] = createState(1)
-const a = computed(() => s() * 10)
-const b = computed(() => s() * 100)
-const sum = computed(() => a() + b())
-
-sum.subscribe(() => console.log(sum()))
-setS(2)
-// logs 120 (a updated, b still stale), then 220
-```
-
-Effects are protected from this because the microtask queue deduplicates
-re-runs, but `subscribe()` callbacks and JSX property bindings suffer from this.
-
-Planned: propagate updates in topological order so that observers are only ever
-notified with consistent values.
+The reactive system was rewritten for 2.0 on top of the propagation algorithm of
+[alien-signals](https://github.com/stackblitz/alien-signals). Updates are
+synchronous, propagate in topological order and can be grouped with `batch()`.
 
 ## Reactive text children are recreated on every change
 
@@ -67,13 +18,11 @@ node in place.
 
 ## Error boundaries
 
-An effect that throws is logged with `console.error` and there is no way for
-application code to catch these errors. The exception is
-`effect(fn, { immediate: true })`, which runs synchronously at the call site and
-therefore throws to the caller like any other synchronous code.
+Errors simply propagate to the code that triggered it there is no declarative
+way to define boundaries.
 
-Planned: an `ErrorBoundary` mechanism that will let users catch errors coming
-from a subtree instead of them only being logged to the console.
+Planned: an `ErrorBoundary` component that exposes mechanism to catch errors and
+recover from them.
 
 ## Suspense boundaries
 

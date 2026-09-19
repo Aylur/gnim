@@ -7,9 +7,8 @@ it in reactive scopes so that when it changes, the reader is notified.
 ```ts
 interface Accessor<T> {
   (): T
-  as<R = T>(fn: (value: T) => R): Accessor<R>
   peek(): T
-  subscribe(callback: () => void): () => void
+  as<R = T>(fn: (value: T) => R): Accessor<R>
 }
 ```
 
@@ -19,23 +18,6 @@ There are two ways to read the current value:
   reactive scopes
 - `peek(): T` which returns the current value **without** tracking it as a
   dependency
-
-To subscribe for value changes you can use the `subscribe` method.
-
-```ts
-const accessor: Accessor<any>
-
-const unsubscribe = accessor.subscribe(() => {
-  console.log("value of accessor changed to", accessor.peek())
-})
-
-unsubscribe()
-```
-
-> [!WARNING]
->
-> The subscribe method is not scope aware. Do not forget to clean them up when
-> no longer needed. Alternatively, use an [`effect`](#effect) instead.
 
 `.as()` can be used to simply map the value without doing any memoization or
 validation.
@@ -50,7 +32,22 @@ const s: Accessor<string> = n.as((v) => v.toString())
 > The body of `.as()` is run on each access. If you need memoization use
 > [`computed()`](#computed).
 
-### `createState`
+Gnim's reactive system is synchronous: Setting a state notifies synchronously:
+by the time the setter returns, every [`computed`](#computed) depending on it is
+marked stale and every [`effect`](#effect) and [`subscribe`](#subscribe)
+callback depending on it has already re-run.
+
+```ts
+const [s, setS] = createState(1)
+const a = computed(() => s() * 10)
+const b = computed(() => s() * 100)
+const sum = computed(() => a() + b())
+
+subscribe(sum, () => console.log(sum.peek()))
+setS(2) // logs 220, exactly once
+```
+
+## `createState`
 
 Creates a writable reactive value.
 
@@ -75,6 +72,9 @@ setValue(2)
 setValue((prev) => prev + 1)
 ```
 
+The producer form receives the latest value, including one set earlier in the
+same [`batch`](#batch).
+
 By default, equality between the previous and new value is checked with
 [Object.is](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is)
 and so this would not trigger an update:
@@ -98,12 +98,15 @@ const [value, setValue] = createState("initial value", {
 })
 ```
 
-### `computed`
+## `computed`
 
-Creates a computed value that tracks dependencies and memoizes the value.
+Creates a derived value that tracks its dependencies and memoizes the result.
 
 ```ts
-function computed<T>(compute: () => T, opts?: StateOptions<T>): Accessor<T>
+function computed<T>(
+  compute: (prev?: T) => T,
+  opts?: StateOptions<T>,
+): Accessor<T>
 
 interface StateOptions<T> {
   equals?(prev: T, next: T): boolean
@@ -123,34 +126,14 @@ let b: Accessor<number>
 const c: Accessor<number> = computed(() => a() + b())
 ```
 
-> [!IMPORTANT] It only memoizes while observed
->
-> Creating a `computed` value outside of a `Scope` and reading its value
-> _before_ anything observes it will not memoize the result.
->
-> ```ts
-> const a = computed(() => ({}))
-> console.log(a() === a()) // false
-> a.subscribe(() => {})
-> console.log(a() === a()) // true
-> ```
+The computation is lazy: it runs on the first read, and then at most once per
+dependency change, on the next read. Observers are only notified when the result
+changed according to `equals`, which defaults to `Object.is`.
 
-### `untrack`
-
-Lets you read `Accessor` and [`Store`](#createstore) without tracking them.
-
-```ts
-const value: Accessor<T>
-const store: Store<{ field: string }>
-
-const _ = untrack(() => value())
-const _ = untrack(() => store.field)
-```
-
-### `bind`
+## `bind`
 
 Creates an `Accessor` on a `GObject.Object`'s `property` or a
-[Store](#createstore).
+[Store](#createstore)'s field.
 
 ```ts
 type Bindable = Store | GObject.Object
@@ -174,7 +157,12 @@ const styleManager = Adw.StyleManager.get_default()
 const style = bind(styleManager, "color-scheme")
 ```
 
-It also supports nested bindings.
+For GObject properties the `get_*` getter is preferred over the plain property,
+and the `notify::*` signal is only connected while something tracks the
+accessor.
+
+It also supports nested bindings. The accessor resolves to `null` or `undefined`
+when a link in the chain is.
 
 ```ts
 interface Outer extends GObject.Object {
@@ -188,13 +176,13 @@ interface Inner extends GObject.Object {
 const value: Accessor<string | null> = bind(outer, "nested", "field")
 ```
 
-### `effect`
+## `effect`
 
 Schedule a function to run after the current `Scope` returns, tracking
 dependencies and re-running the function whenever they change.
 
 ```ts
-function effect(fn: () => void): void
+function effect<T>(fn: (prev?: T) => T): () => void
 ```
 
 Example:
@@ -206,9 +194,11 @@ effect(() => {
   console.log(count()) // reruns whenever count changes
 })
 
-effect(() => {
-  console.log(count.peek()) // only runs once
+const dispose = effect(() => {
+  console.log(count.peek()) // only runs once, equivalent to `onMount`
 })
+
+dispose() // can be stopped manually
 ```
 
 > [!CAUTION]
@@ -217,7 +207,85 @@ effect(() => {
 > when not to use them. You can read about
 > [when it is discouraged and their alternatives](/tutorial/gnim#when-not-to-use-an-effect).
 
-### `connectSignal`
+## `subscribe`
+
+Subscribes to value changes.
+
+```ts
+function subscribe<T>(track: () => void, callback: (prev?: T) => T): () => void
+```
+
+`track` is run to collect dependencies: pass an accessor directly, or a function
+that reads several. Whenever one of them changes, dependencies are collected
+again and `callback` runs. Reads inside `callback` are not tracked.
+
+```ts
+const a: Accessor<number>
+const b: Accessor<number>
+
+subscribe(a, () => {
+  console.log("value of a changed to", a.peek())
+})
+
+const unsubscribe = subscribe(
+  () => {
+    a()
+    b()
+  },
+  () => console.log("a or b changed"),
+)
+
+unsubscribe() // can be stopped manually
+```
+
+> [!WARNING]
+>
+> Do not forget to clean them up outside of tracking scopes when no longer
+> needed
+
+## `untrack`
+
+Lets you read `Accessor` and [`Store`](#createstore) without tracking them.
+
+```ts
+const value: Accessor<T>
+const store: Store<{ field: string }>
+
+const _ = untrack(() => value())
+const _ = value.peek() // same as above
+const _ = untrack(() => store.field)
+```
+
+## `batch`
+
+Groups multiple updates so that effects and subscriptions run once after the
+batch completes instead of after each individual update.
+
+```ts
+function batch(fn: () => void): void
+```
+
+Example:
+
+```ts
+const [count, setCount] = createState(0)
+const [total, setTotal] = createState(0)
+
+effect(() => console.log(`${count()} / ${total()}`)) // logs "0 / 0"
+
+setCount(1) // logs "1 / 0"
+setTotal(5) // logs "1 / 5"
+
+batch(() => {
+  setCount(2)
+  setTotal(10)
+}) // logs "2 / 10"
+```
+
+Reads inside the batch see the latest values. Nested batches flush once the
+outermost one completes.
+
+## `connectSignal`
 
 Connecting to GObject signals can be done via a pair of `.connect()` and
 `onCleanup()`. This is a shorter version of exactly that.
@@ -238,9 +306,11 @@ connectSignal(object, "signal", (...args) => {
 })
 ```
 
-### `createStore`
+## `createStore`
 
-Creates an object where each field is replaced with a reactive accessor.
+Creates an object where each field is replaced with a reactive accessor. Plain
+fields become writable states, getters become memoized computed values and
+methods are kept as they are.
 
 ```ts
 const store = createStore({
@@ -323,10 +393,65 @@ To pass them as reactive props you can use [`bind`](#bind).
 > Note that using the spread operator assigns values meaning that derived values
 > defined using the getter syntax will no longer track their dependencies.
 
+## `createAccessor`
+
+Creates an `Accessor` over a getter function.
+
+```ts
+function createAccessor<T>(
+  get: () => T,
+  subscribe: (notify: () => void) => () => void,
+): Accessor<T>
+```
+
+This can be used to integrate other systems that implement the Observable
+pattern <span style="opacity:0.6">(such as GObject)</span> with Gnim's reactive
+system.
+
+```ts
+function bindTitle(window: Gtk.Window): Accessor<string> {
+  return createAccessor(
+    function get() {
+      return window.title
+    },
+    function subscribe(notify) {
+      const id = window.connect("notify::title", notify)
+      return () => window.disconnect(id)
+    },
+  )
+}
+```
+
+`subscribe` is only called the first time the accessor is read in a tracking
+scope, and the disconnect function is called once nothing tracks it anymore.
+While subscribed, the value is cached and only re-read when `notify` is called.
+Observers are notified only when it changed according to `Object.is`.
+
+> [!TIP]
+>
+> For binding GObject properties prefer using [bind](#bind).
+
+## `isAccessor`
+
+Checks whether a value is an `Accessor`. Useful for props that accept either a
+plain value or an accessor, see [`prop`](/reference/jsx#prop).
+
+```ts
+function isAccessor(value: unknown): value is Accessor
+```
+
+```ts
+const [count] = createState(0)
+
+isAccessor(count) // true
+isAccessor(() => count()) // false
+```
+
 ## Scopes and Life cycle
 
-A scope is essentially a global object which holds cleanup functions and context
-values.
+A scope holds cleanup functions, child scopes and context values. `effect` and
+`computed` create scopes of their own, so everything allocated inside them is
+torn down before they re-run.
 
 ```js
 createRoot(() => {
@@ -342,6 +467,9 @@ createRoot(() => {
 })
 ```
 
+Disposing a scope disposes its child scopes first, then runs its own cleanup
+callbacks in reverse registration order.
+
 ### `createRoot`
 
 ```ts
@@ -350,6 +478,9 @@ function createRoot<T>(fn: (dispose: () => void) => T, parent?: Scope | null): T
 
 Creates a root scope. You likely won't need to use it since `render()` will
 create a root scope for you.
+
+`parent` defaults to the current scope, so that disposing the parent also
+disposes the root. Pass `null` for a root that is only disposed explicitly.
 
 Example:
 
@@ -367,8 +498,8 @@ createRoot((dispose) => {
 
 ### `getScope`
 
-Gets the current scope. You might need to reference the scope in cases where
-async functions need to run in the scope.
+Gets the current scope. Throws when there is none. You might need to reference
+the scope in cases where async functions need to run in the scope.
 
 Example:
 
@@ -376,8 +507,8 @@ Example:
 const scope = getScope()
 setTimeout(() => {
   // This callback gets run without an owner scope.
-  // Restore owner via scope.run:
-  scope.run(() => {
+  // Restore owner via runScope:
+  runScope(scope, () => {
     const foo = FooContext.use()
     onCleanup(() => {
       print("some cleanup")
@@ -386,23 +517,57 @@ setTimeout(() => {
 }, 1000)
 ```
 
+### `runScope`
+
+```ts
+function runScope<T>(scope: Scope, fn: () => T): T
+```
+
+Runs `fn` with `scope` as the current scope, so that `onCleanup`, `effect` and
+contexts inside attach to it. Throws when the scope is already disposed.
+
 ### `onCleanup`
 
-Attaches a cleanup function to the current scope.
+Attaches a cleanup function to the current scope. Cleanups run untracked, in
+reverse registration order.
 
 Example:
 
 ```tsx
 function MyComponent() {
-  const dispose = accessor.subscribe(() => {})
+  const interval = setInterval(() => console.log("tick"), 1000)
 
   onCleanup(() => {
-    dispose()
+    clearInterval(interval)
   })
 
   return <></>
 }
 ```
+
+### `onMount`
+
+Schedule a function to run after the current scope returns. Effects use the same
+mechanism for their first run. When the scope is already mounted, or there is no
+scope, the callback runs immediately.
+
+Example:
+
+```tsx
+function MyWindow() {
+  let win: Gtk.Window
+
+  onMount(() => {
+    win.present()
+  })
+
+  return <Gtk.Window ref={(self) => (win = self)} />
+}
+```
+
+> [!NOTE]
+>
+> `onMount` can be thought of as an alias for `fn => effect(() => untrack(fn))`
 
 ### Contexts
 
@@ -428,4 +593,13 @@ function ProviderComponent() {
     </MyContext>
   )
 }
+```
+
+Outside of JSX, `provide` runs a function in a new child scope where `use`
+returns the given value.
+
+```ts
+MyContext.provide("my-value", () => {
+  MyContext.use() // "my-value"
+})
 ```

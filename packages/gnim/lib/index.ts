@@ -12,6 +12,7 @@ export {
     type JSX,
 } from "./jsx/element.js"
 export {
+    batch,
     computed,
     createAccessor,
     createContext,
@@ -21,6 +22,8 @@ export {
     getScope,
     isAccessor,
     onCleanup,
+    onMount,
+    runScope,
     subscribe,
     untrack,
     type Accessed,
@@ -40,5 +43,4 @@ export {
     type Buildable,
     type Renderer,
 } from "./jsx/render.js"
-export { batch, flush, runScope, setContext, getContext } from "./jsx/signal.js"
 export { bind, connectSignal, createStore, prop, type Store } from "./jsx/store.js"

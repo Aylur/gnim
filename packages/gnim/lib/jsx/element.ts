@@ -16,7 +16,6 @@ import {
     getScope,
     onCleanup,
     runScope,
-    Subscription,
     untrack,
     type Scope,
 } from "./signal.js"
@@ -159,28 +158,18 @@ export function newObject<C extends CC>(
     mountChildren(children, obj)
 
     // handle signals
-    const disposeHandlers = signals.map(([sig, handler]) => {
+    for (const [sig, handler] of signals) {
         const id = GObject.signal_connect(obj, signalName(sig), handler)
-        return () => GObject.signal_handler_disconnect(obj, id)
-    })
+        onCleanup(() => GObject.signal_handler_disconnect(obj, id))
+    }
 
-    // handle bindings
-    const disposeBindings = bindings.map(([prop, accessor]) => {
-        const sub = new Subscription(accessor, () => {
-            renderer.setProperty(obj, prop, accessor.peek())
+    // handle bindings, the effects are disposed with the current scope
+    for (const [prop, accessor] of bindings) {
+        const effect = new Effect(() => {
+            const value = accessor()
+            untrack(() => renderer.setProperty(obj, prop, value))
         })
-
-        renderer.setProperty(obj, prop, accessor.peek())
-        sub.track()
-        return sub
-    })
-
-    // cleanup
-    if (disposeBindings.length > 0 || disposeHandlers.length > 0) {
-        onCleanup(() => {
-            disposeHandlers.forEach((cb) => cb())
-            disposeBindings.forEach((sub) => sub.dispose())
-        })
+        effect.run()
     }
 
     return obj as InstanceType<C>

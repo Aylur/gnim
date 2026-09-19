@@ -45,6 +45,13 @@ export interface Renderer {
     disposeObject(object: GObject.Object, parent?: GObject.Object): void
 }
 
+/**
+ * Render an element tree into `root` using the given {@link Renderer}.
+ * The tree lives in a root scope; the returned function disposes it,
+ * running every cleanup and destroying the widgets that were created.
+ *
+ * @returns Dispose function.
+ */
 export function render(renderer: Renderer, element: () => GnimNode, root?: GObject.Object) {
     const scope = createScope()
     runScope(scope, () => {

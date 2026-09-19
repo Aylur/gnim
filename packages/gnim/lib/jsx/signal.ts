@@ -14,6 +14,9 @@ import {
     WATCHING,
 } from "./graph.js"
 
+// Low-level reactive graph nodes and scope bookkeeping. The public API in
+// reactive.ts wraps these; the graph algorithm itself lives in graph.ts.
+
 export type Fn = () => void
 export type Equals<T> = (a: T, b: T) => boolean
 
@@ -58,18 +61,7 @@ function setActiveScope(scope: Scope | null) {
     return prevScope
 }
 
-export function batch(fn: Fn) {
-    ++batchDepth
-    try {
-        fn()
-    } finally {
-        if (--batchDepth === 0) {
-            flush()
-        }
-    }
-}
-
-export function flush() {
+function flush() {
     let threw = false
     let error: unknown
     while (queue.length > 0) {
@@ -83,6 +75,17 @@ export function flush() {
         }
     }
     if (threw) throw error
+}
+
+export function batch(fn: Fn) {
+    ++batchDepth
+    try {
+        fn()
+    } finally {
+        if (--batchDepth === 0) {
+            flush()
+        }
+    }
 }
 
 export function untrack<Args extends Array<any>, T>(fn: (...args: Args) => T, ...args: Args): T {
@@ -512,52 +515,5 @@ export class Effect<T> extends ReactiveNode implements Scope {
             this.unlinkAllDeps()
             this.flags = NONE
         }
-    }
-}
-
-export class Subscription<T> extends ReactiveNode {
-    value?: T
-    tracker: (prev?: T) => void
-    fn: (prev?: T) => T
-
-    constructor(track: (prev?: T) => void, fn: (prev?: T) => T) {
-        super(WATCHING)
-        this.tracker = track
-        this.fn = fn
-    }
-
-    track() {
-        ++cycle
-        this.depsTail = null
-        this.flags = WATCHING | RECURSED_CHECK
-        const prevSub = setActiveSub(this)
-        ++runDepth
-        try {
-            this.tracker(this.value)
-        } finally {
-            --runDepth
-            activeSub = prevSub
-            this.flags &= ~RECURSED_CHECK
-            this.purgeDeps()
-        }
-    }
-
-    notify() {
-        if (!(this.flags & QUEUED)) {
-            this.flags |= QUEUED
-            queue.push(this)
-        }
-    }
-
-    run() {
-        this.flags &= ~QUEUED
-        if (!this.flags || !this.shouldUpdate()) return
-        this.track()
-        this.value = untrack(this.fn, this.value)
-    }
-
-    dispose() {
-        this.unlinkAllDeps()
-        this.flags = NONE
     }
 }

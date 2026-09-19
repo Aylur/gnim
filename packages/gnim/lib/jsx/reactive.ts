@@ -40,10 +40,16 @@ export interface Accessor<T = unknown> {
      */
     peek(): T
 }
+
 /**
  * Subscribe for value changes.
- * This function is **not** {@link Scope} aware; you need to dispose it when it is no longer used.
- * You might want to consider using an {@link effect} instead.
+ *
+ * The subscription is disposed together with the current {@link Scope}, if there
+ * is one. Outside of a scope you need to dispose it yourself when it is no longer used.
+ *
+ * @param track Function reading accessors to track.
+ * @param callback The function to run when a tracked value changes.
+ * @returns Unsubscribe function.
  *
  * @example
  *
@@ -51,22 +57,29 @@ export interface Accessor<T = unknown> {
  * let a: Accessor<number>
  * let b: Accessor<number>
  *
- * subscribe(a, () => print(a()))
+ * const dispose = subscribe(a, () => print(a()))
+ * dispose() // stop subscription manually
+ *
  * subscribe(() => { a(); b() }, () => print(a(), b()))
  * ```
- *
- * @param track Accessors to track.
- * @param callback The function to run when the value changes.
- * @returns Unsubscribe function.
  */
-export function subscribe(track: Signal.Fn, fn: Signal.Fn) {
-    const sub = new Signal.Subscription(track, fn)
-    sub.track()
-    return () => sub.dispose()
+export function subscribe<T>(track: () => void, callback: (prev?: T) => T): Signal.Fn {
+    let first = true
+    const effect = new Signal.Effect<T>((prev) => {
+        track()
+        if (first) {
+            return void (first = false) as T
+        } else {
+            return Signal.untrack(callback, prev)
+        }
+    })
+    effect.run()
+    return () => effect.dispose()
 }
 
 /**
- * Scopes contain context values and cleanup functions.
+ * Scopes own child scopes, cleanup and mount callbacks and context values.
+ * Disposing a scope disposes its children recursively.
  */
 export type Scope = Signal.Scope
 
@@ -74,11 +87,24 @@ export type Scope = Signal.Scope
  * Context lets components pass information deep down
  * without explicitly passing props.
  *
- * @see {createContext}
+ * @see createContext
  */
 export interface Context<T = unknown> extends Signal.Context<T> {
+    /**
+     * Read the value provided by the closest provider
+     * or the default value when there is none.
+     */
     use(): T
+
+    /**
+     * Run a function in a new {@link Scope} that provides `value`.
+     * @returns The value returned by the function.
+     */
     provide<R>(value: T, fn: () => R): R
+
+    /**
+     * Provider component: `children` read `value` through {@link use}.
+     */
     (props: { value: T; children: GnimNode }): GnimNode
 }
 
@@ -145,13 +171,15 @@ export function createContext<T>(defaultValue: T): Context<T> {
 /**
  * Gets the scope that owns the currently running code.
  *
+ * @throws when called outside of a scope.
+ *
  * @example
  *
  * ```ts
  * const scope = getScope()
  * setTimeout(() => {
  *   // This callback gets run without an owner scope.
- *   // Restore owner via scope.run:
+ *   // Restore owner via runScope:
  *   runScope(scope, () => {
  *     const foo = FooContext.use()
  *     onCleanup(() => {
@@ -173,6 +201,10 @@ export function getScope(): Scope {
 
 /**
  * Attach a cleanup callback to the current {@link Scope}.
+ *
+ * Cleanups run in reverse registration order, when the scope is disposed.
+ *
+ * @throws when called outside of a scope.
  */
 export function onCleanup(callback: Signal.Fn) {
     Signal.onCleanup(callback)
@@ -180,6 +212,8 @@ export function onCleanup(callback: Signal.Fn) {
 
 /**
  * Attach a callback to run after the current {@link Scope} returns.
+ * When the scope is already mounted, or there is no scope, the callback runs
+ * immediately. Mount callbacks run untracked.
  */
 export function onMount(fn: Signal.Fn) {
     const scope = Signal.getScope()
@@ -191,8 +225,13 @@ export function onMount(fn: Signal.Fn) {
 }
 
 /**
- * Creates a root {@link Scope} that when disposed will remove
- * any child signal handler or state observer.
+ * Creates a new {@link Scope} and runs `fn` in it.
+ * Disposing the scope disposes every child scope, effect and cleanup created inside.
+ *
+ * @param fn Receives a function that disposes the root.
+ * @param parent The scope to attach to, so that disposing it also disposes this root.
+ * Defaults to the current scope. Pass `null` for a root that is only disposed explicitly.
+ * @returns The value returned by `fn`.
  *
  * @example
  *
@@ -226,9 +265,24 @@ export function isAccessor(instance: unknown): instance is Accessor {
 }
 
 /**
- * Create an Accessor. When a subscription is given the getter is assumed to be
- * non-reactive and the resulting accessor is a wrapper over an `External` node internally.
+ * Create an Accessor. This let's you integrate other systems that implement the
+ * *Observable* pattern into Gnim's reactive system.
+ *
+ * @example
+ * ```ts
+ * let object: GObject.Object
+ *
+ * return createAccessor(
+ *   () => object.property,
+ *   (notify) => {
+ *     const id = object.connect("notify::property", notify)
+ *     return () => object.disconnect(id)
+ *   },
+ * )
+ * ```
+ *
  * When a subscription is not given the getter is simply wrapped as an Accessor.
+ * You should generally not wrap getters for no reason, use {@link computed} instead.
  */
 export function createAccessor<T>(
     get: () => T,
@@ -237,8 +291,8 @@ export function createAccessor<T>(
     let access: () => T
 
     if (subscribe) {
-        const extenal = new Signal.External(get, subscribe)
-        access = () => extenal.get()
+        const external = new Signal.External(get, subscribe)
+        access = () => external.get()
     } else {
         access = () => get()
     }
@@ -286,8 +340,18 @@ export interface StateOptions<T> {
 
 /**
  * Create a writable reactive value.
+ *
  * @param init The initial value.
  * @returns An {@link Accessor} and a setter function.
+ *
+ * @example
+ *
+ * ```ts
+ * const [count, setCount] = createState(0)
+ *
+ * setCount(1)
+ * setCount((prev) => prev + 1)
+ * ```
  */
 export function createState<T>(init: T, options?: StateOptions<NoInfer<T>>): State<T> {
     const signal = new Signal.Signal(init, options?.equals)
@@ -306,25 +370,6 @@ export function createState<T>(init: T, options?: StateOptions<NoInfer<T>>): Sta
     return [createAccessor(get), set]
 }
 
-/**
- * Lets you read values without tracking them.
- *
- * @example
- *
- * ```
- * let a: Accessor<number>
- * let b: Accessor<number>
- *
- * effect(() => {
- *  // will re-run when `a` changes but not when `b` changes
- *   print(a(), untrack(() => b()))
- * })
- * ```
- */
-export function untrack<T>(fn: () => T) {
-    return Signal.untrack(fn)
-}
-
 type EffectOptions = {
     /**
      * Run the effect immediately instead of after the {@link Scope} returns.
@@ -333,16 +378,35 @@ type EffectOptions = {
 }
 
 /**
- * Schedule a function which tracks reactive values accessed within
- * and re-runs whenever they change.
+ * Scedule a function which tracks reactive values accessed within
+ * and re-runs synchronously whenever they change.
+ *
+ * Errors thrown by `fn` propagate to the code that triggered the run.
+ *
+ * @param fn Receives the value returned by the previous run.
+ * @returns A function that disposes the effect.
+ *
+ * @example
+ *
+ * ```ts
+ * let count: Accessor<number>
+ *
+ * const dispose = effect(() => {
+ *   print(`count is ${count()}`)
+ *   onCleanup(() => print("count is about to change"))
+ * })
+ *
+ * dispose() // stop effect manually
+ * ```
  */
-export function effect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions) {
+export function effect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions): Signal.Fn {
     const effect = new Signal.Effect(fn)
     if (opts?.immediate || !effect.parent || effect.parent.mounted) {
         effect.run()
     } else {
         Signal.onMount(() => effect.run())
     }
+    return () => effect.dispose()
 }
 
 /**
@@ -363,4 +427,59 @@ export function effect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions) {
 export function computed<T>(fn: (prev?: T) => T, opts?: StateOptions<NoInfer<T>>): Accessor<T> {
     const computed = new Signal.Computed(fn, opts?.equals)
     return createAccessor(computed.get.bind(computed))
+}
+
+/**
+ * Lets you read values without tracking them.
+ *
+ * @example
+ *
+ * ```
+ * let a: Accessor<number>
+ * let b: Accessor<number>
+ *
+ * effect(() => {
+ *  // will re-run when `a` changes but not when `b` changes
+ *   print(a(), untrack(() => b()))
+ * })
+ * ```
+ */
+export function untrack<Args extends Array<any>, T>(fn: (...args: Args) => T, ...args: Args): T {
+    return Signal.untrack(fn, ...args)
+}
+
+/**
+ * Group multiple updates so downstream computations run once after the batch
+ * completes instead of after each individual update.
+ *
+ * @example
+ *
+ * ```
+ * const [count, setCount] = createState(0);
+ * const [total, setTotal] = createState(0);
+ *
+ * effect(() => console.log(`${count()} / ${total()}`)); // logs "0 / 0"
+ *
+ * setCount(1); // logs "1 / 0"
+ * setTotal(5); // logs "1 / 5"
+ *
+ * batch(() => {
+ *   setCount(2);
+ *   setTotal(10);
+ * }); // logs "2 / 10"
+ * ```
+ */
+export function batch(fn: Signal.Fn): void {
+    return Signal.batch(fn)
+}
+
+/**
+ * Run a function with under the given {@link Scope}.
+ * Use it to re-enter a scope from asynchronous callbacks.
+ *
+ * @throws when the scope is already disposed.
+ * @see getScope
+ */
+export function runScope<T>(scope: Scope, fn: () => T): T {
+    return Signal.runScope(scope, fn)
 }
