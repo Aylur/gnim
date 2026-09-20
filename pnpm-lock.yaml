@@ -59,6 +59,8 @@ importers:
 
   packages/cli: {}
 
+  packages/cli/npm/linux-x64: {}
+
   packages/create:
     dependencies:
       '@clack/prompts':
@@ -110,8 +112,8 @@ importers:
         version: 8.68.0(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)
     optionalDependencies:
       '@gnim-js/linux-x64':
-        specifier: 2.0.0-beta.23
-        version: 2.0.0-beta.23
+        specifier: workspace:*
+        version: link:../cli/npm/linux-x64
 
   packages/gnome-shell:
     dependencies:
@@ -436,11 +438,6 @@ packages:
 
   '@girgen/linux-x64@0.3.20':
     resolution: {integrity: sha512-Nyt++1eLGoPkgftzX/tmQ7/gbxWnx84hGR9nCLiIpUQelTOuKkzkxJPkbbM48HlyHxE4EP9qNeIbjHKNaP4ckg==}
-    cpu: [x64]
-    os: [linux]
-
-  '@gnim-js/linux-x64@2.0.0-beta.23':
-    resolution: {integrity: sha512-l2SGlFrnUXpXJVU0baIwFEQnvlqRuuxdVOgWVDt+Oa6uf/iaGE+kTSBx2FclId6gvBzWeZp9/4yu1V7LdvE/xg==}
     cpu: [x64]
     os: [linux]
 
@@ -1768,9 +1765,6 @@ snapshots:
     optional: true
 
   '@girgen/linux-x64@0.3.20':
-    optional: true
-
-  '@gnim-js/linux-x64@2.0.0-beta.23':
     optional: true
 
   '@humanfs/core@0.19.2':

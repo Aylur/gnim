@@ -1,5 +1,6 @@
 packages:
     - "packages/cli"
+    - "packages/cli/npm/*"
     - "packages/gnim"
     - "packages/gtk4"
     - "packages/gtk3"
@@ -16,6 +17,3 @@ catalog:
 
 allowBuilds:
     esbuild: false
-
-minimumReleaseAgeExclude:
-    - "@gnim-js/linux-x64"

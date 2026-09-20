@@ -1,0 +1,18 @@
+{
+    "name": "@gnim-js/linux-x64",
+    "version": "2.0.0-beta.23",
+    "author": "Aylur",
+    "license": "MIT",
+    "homepage": "https://gnimjs.dev/",
+    "repository": "github:Aylur/gnim",
+    "os": [
+        "linux"
+    ],
+    "cpu": [
+        "x64"
+    ],
+    "exports": "./gnim",
+    "files": [
+        "gnim"
+    ]
+}
