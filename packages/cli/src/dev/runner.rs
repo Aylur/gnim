@@ -16,6 +16,7 @@ pub struct GjsRunnerArgs {
     pub socket_path: PathBuf,
     pub entry_js: String,
     pub dev_entry_js: String,
+    pub gjs_args: Vec<String>,
     pub restart_rx: mpsc::Receiver<()>,
     pub module_tracker: Arc<RwLock<ModuleTracker>>,
 }
@@ -113,6 +114,7 @@ pub async fn gjs_runner(args: GjsRunnerArgs) {
         let mut gjs = Command::new("gjs")
             .arg("-m")
             .arg(&args.dev_entry_js)
+            .args(&args.gjs_args)
             .env("GNIM_DEV", props.to_string())
             .env("GSETTINGS_SCHEMA_DIR", schema_dir.clone())
             .spawn()

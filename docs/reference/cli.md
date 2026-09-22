@@ -63,7 +63,7 @@ gnim schemas ./src -o ./data --compile
 ## `gnim dev`
 
 ```sh
-gnim dev <ENTRY>
+gnim dev <ENTRY> [-- <ARGS>...]
 ```
 
 Starts the development server: bundles the entry file, runs it with `gjs -m` and
@@ -76,6 +76,12 @@ its limitations.
 | `-i, --id <ID>`            | Application ID in reverse DNS format                 |
 | `-d, --define <KEY=VALUE>` | Replace global identifiers with constant expressions |
 | `-v, --verbose`            | Verbose logging                                      |
+
+Everything after `--` is passed to the `gjs` process.
+
+```sh
+gnim dev src/main.tsx --id com.example.MyApp -- --debug some-file.txt
+```
 
 ## `gnim bundle`
 

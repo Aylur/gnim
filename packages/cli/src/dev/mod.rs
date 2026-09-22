@@ -32,6 +32,9 @@ pub struct DevArgs {
     /// Application ID in reverse DNS format
     #[arg(short, long)]
     pub id: Option<String>,
+    /// Arguments passed to the gjs process after `--`
+    #[arg(last = true)]
+    pub args: Vec<String>,
 }
 
 pub async fn dev(args: &DevArgs) -> Result<(), String> {
@@ -97,6 +100,7 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
             socket_path: socket_path.clone(),
             entry_js: entry_js.clone(),
             dev_entry_js: dev_entry_js.clone(),
+            gjs_args: args.args.clone(),
             restart_rx: gjs_restart_rx,
             module_tracker: module_tracker.clone(),
         })
