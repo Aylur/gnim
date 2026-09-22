@@ -118,13 +118,32 @@ function initLibdir() {
     }
 }
 
+function newGtk4Provider() {
+    const Gtk = gi.require("Gtk", "4.0")
+    const provider = Gtk.CssProvider.new()
+
+    if (Gtk.MINOR_VERSION >= 20) {
+        const display = gi.require("Gdk", "4.0").Display.get_default()!
+        const settings = Gtk.Settings.get_for_display(display)
+        for (const [setting, property] of [
+            ["gtk-interface-color-scheme", "prefers-color-scheme"],
+            ["gtk-interface-contrast", "prefers-contrast"],
+            ["gtk-interface-reduced-motion", "prefers-reduced-motion"],
+        ]) {
+            settings.bind_property(setting, provider, property, GObject.BindingFlags.SYNC_CREATE)
+        }
+    }
+
+    return provider
+}
+
 function initCss() {
     if (props.gtk === "4.0") {
         const Gtk = gi.require("Gtk", "4.0")
         const display = gi.require("Gdk", "4.0").Display.get_default()!
         const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
         sourceCss = function (id: string, stylesheet: string) {
-            const provider = providers.get(id) ?? Gtk.CssProvider.new()
+            const provider = providers.get(id) ?? newGtk4Provider()
             provider.load_from_string(stylesheet)
             if (!providers.has(id)) {
                 providers.set(id, provider)

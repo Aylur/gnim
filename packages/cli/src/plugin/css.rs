@@ -21,6 +21,7 @@ Gtk.StyleContext.add_provider_for_screen(
 const GTK4_PROVIDER: &str = r#"
 import Gtk from "gi://Gtk?version=4.0"
 import Gdk from "gi://Gdk?version=4.0"
+import GObject from "gi://GObject?version=2.0"
 
 Gtk.init()
 const provider = Gtk.CssProvider.new()
@@ -30,6 +31,22 @@ Gtk.StyleContext.add_provider_for_display(
     provider,
     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
 )
+
+if (Gtk.check_version(4, 20, 0) === null) {
+    const settings = Gtk.Settings.get_for_display(Gdk.Display.get_default())
+    for (const [setting, property] of [
+        ["gtk-interface-color-scheme", "prefers-color-scheme"],
+        ["gtk-interface-contrast", "prefers-contrast"],
+        ["gtk-interface-reduced-motion", "prefers-reduced-motion"],
+    ]) {
+        settings.bind_property(
+            setting,
+            provider,
+            property,
+            GObject.BindingFlags.SYNC_CREATE,
+        )
+    }
+}
 "#;
 
 #[derive(Debug, Default)]

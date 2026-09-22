@@ -19,7 +19,6 @@
         pkgs.gjs
         pkgs.gtk4
         pkgs.libadwaita
-        pkgs.libadwaita
         pkgs.gtk4-layer-shell # only used by the layer-shell template
       ];
       # build-time dependencies
