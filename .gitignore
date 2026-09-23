@@ -7,3 +7,4 @@ result-dev/
 docs/.vitepress/dist
 docs/.vitepress/cache
 .gnim/
+packages/gnim/llms-full.txt

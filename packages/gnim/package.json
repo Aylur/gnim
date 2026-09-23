@@ -15,6 +15,7 @@
     },
     "scripts": {
         "build": "tsc -p tsconfig.build.json",
+        "prepack": "pnpm -w run docs:build && cp ../../docs/.vitepress/dist/llms-full.txt ./llms-full.txt",
         "lint": "eslint .",
         "fmt": "prettier --write .",
         "fmt:check": "prettier --check .",
@@ -81,7 +82,8 @@
         }
     },
     "files": [
-        "dist"
+        "dist",
+        "llms-full.txt"
     ],
     "engines": {
         "gjs": ">=1.83.0"

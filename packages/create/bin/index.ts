@@ -38,11 +38,12 @@ function parseCliArgs() {
         options: {
             template: { type: "string", short: "t" },
             vala: { type: "boolean" },
+            agents: { type: "boolean" },
         },
         strict: false,
     })
 
-    const { template, vala } = args.values
+    const { template, vala = false, agents = true } = args.values
 
     if (typeof template !== "undefined") {
         const valid: string[] = templateOptions.map((option) => option.value)
@@ -56,7 +57,8 @@ function parseCliArgs() {
 
     return {
         template: (template ?? null) as Template | null,
-        vala: vala === true ? true : null,
+        vala: typeof vala === "boolean" ? vala : false,
+        agents: typeof agents === "boolean" ? agents : false,
     }
 }
 
@@ -242,6 +244,19 @@ async function askGit() {
     return git
 }
 
+async function askAgents() {
+    const agents = await confirm({
+        message: "Will you be using AI agents?",
+        initialValue: true,
+    })
+
+    if (isCancel(agents)) {
+        process.exit(0)
+    }
+
+    return agents
+}
+
 async function askInstall() {
     const install = await confirm({
         message: `Install dependencies via ${detectPackageManager()}?`,
@@ -396,13 +411,27 @@ async function createGitignore(dir: string) {
     return writeFile(`${dir}/.gitignore`, ignore.join("\n"))
 }
 
+async function createAgentsMd(dir: string) {
+    const content = [
+        "# This is NOT the Gnim you know",
+        "",
+        "This version has breaking changes — APIs, conventions, and file structure may",
+        "all differ from your training data. Read the full documentation in",
+        "`node_modules/gnim/llms-full.txt` (resolved from this file's directory; in",
+        "monorepos the `gnim` package may not be visible from the repo root) before",
+        "writing any code. Heed deprecation notices.",
+        "",
+    ]
+
+    return writeFile(`${dir}/AGENTS.md`, content.join("\n"))
+}
+
 async function main() {
     console.log()
     intro(`\x1b[7;34m\x1b[1m${" Gnim "}\x1b[0m`)
 
     const args = parseCliArgs()
-    let template = args.template
-    let vala = args.vala
+    let { template, vala, agents } = args
 
     if (!template) {
         const answer = await select({
@@ -453,6 +482,9 @@ async function main() {
 
     const dir = await askTargetDir()
     const git = await askGit()
+    if (agents === null) {
+        agents = await askAgents()
+    }
     const install = await askInstall()
     const extenstionId = id.split("@")[0]
 
@@ -475,6 +507,9 @@ async function main() {
     }
 
     await createGitignore(dir)
+    if (agents) {
+        await createAgentsMd(dir)
+    }
     if (install) {
         await doInstall(dir)
     }
