@@ -43,7 +43,7 @@ function parseCliArgs() {
         strict: false,
     })
 
-    const { template, vala = false, agents = true } = args.values
+    const { template, vala, agents } = args.values
 
     if (typeof template !== "undefined") {
         const valid: string[] = templateOptions.map((option) => option.value)
@@ -57,8 +57,8 @@ function parseCliArgs() {
 
     return {
         template: (template ?? null) as Template | null,
-        vala: typeof vala === "boolean" ? vala : false,
-        agents: typeof agents === "boolean" ? agents : false,
+        vala: typeof vala === "boolean" ? vala : null,
+        agents: typeof agents === "boolean" ? agents : null,
     }
 }
 
@@ -448,8 +448,8 @@ async function main() {
 
     if (template === "gnome-shell") {
         vala = false
-    } else if (vala === null) {
-        vala = await askVala()
+    } else {
+        vala ??= await askVala()
     }
 
     let id: string
