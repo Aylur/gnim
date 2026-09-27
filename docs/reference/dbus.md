@@ -55,7 +55,7 @@ const service = await MyInterface.serve({
   }),
 })
 
-service.connect("my-signal", (_, str: string) => {
+service.connect("my-signal", (_, str) => {
   console.log(`MySignal emitted with argument: "${str}"`)
 })
 
@@ -89,6 +89,24 @@ console.log(value) // "hello"
 Both services and proxies are `GObject.Object` instances: DBus signals are also
 GObject signals and DBus properties are also GObject properties, using
 kebab-cased names.
+
+> [!TIP]
+>
+> They are also fully annotated for
+> [TypeScript](/reference/typescript#type-annotations) and can be used with Gnim
+> primitives.
+>
+> ```ts
+> connectSignal(service, "my-signal", (str) => {
+>   console.log(`MySignal emitted with argument: "${str}"`)
+> })
+>
+> const myProperty = bind(service, "my-property")
+>
+> effect(() => {
+>   console.log(`value of MyProperty: ${myProperty()}`)
+> })
+> ```
 
 ## Synchronous instantiation
 
@@ -152,7 +170,7 @@ If you only need the proxy part or the service part, you can use the underlying
 primitives instead.
 
 ```ts
-import { createInterfaceInfo } from "gnim/dbus"
+import { createInterfaceInfo, method, signal } from "gnim/dbus"
 
 const ExampleServiceInterface = createInterfaceInfo("example.Service", {
   Method: method(),
