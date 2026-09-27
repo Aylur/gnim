@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "type": "module",
   "dependencies": {
-    "@gnim-js/io": "^2.0.0-beta.24",
-    "@gnim-js/gtk4": "^2.0.0-beta.24",
-    "gnim": "^2.0.0-beta.24"
+    "@gnim-js/io": "^2.0.0-beta.25",
+    "@gnim-js/gtk4": "^2.0.0-beta.25",
+    "gnim": "^2.0.0-beta.25"
   },
   "scripts": {
     "types": "gnim types/*% if vala %*/ -d build/lib/*% endif %*/",
