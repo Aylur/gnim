@@ -1,4 +1,4 @@
-// gnim/gnome-shell does not yet provide gnome shell types
+// gnim/gnome-shell does not provide gnome shell types
 
 declare module "resource:///org/gnome/shell/ui/main.js" {
   import St from "gi://St"

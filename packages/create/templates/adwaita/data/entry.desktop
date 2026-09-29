@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=My Awesome Application
+Name=__app-name__
 Comment=Do awesome stuff
 Icon=@app_id@
 Exec=@exe@
