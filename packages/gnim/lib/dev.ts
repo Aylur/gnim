@@ -363,4 +363,4 @@ initCss()
 initRegistry()
 initSocket()
 
-import(`file://${props.entry}`).catch(console.error)
+await import(`file://${props.entry}`)

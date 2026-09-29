@@ -112,20 +112,21 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
         eprintln!("[dev] dev_entry: {dev_entry_js}");
     }
 
-    tokio::select! {
+    let result = tokio::select! {
         _ = tokio::signal::ctrl_c() => {
             if args.verbose {
                 eprintln!("[dev] received ctrl-c, shutting down");
             }
+            Ok(())
         }
-        _ = &mut gjs_task => (),
-        _ = &mut socket_task => (),
-    }
+        res = &mut gjs_task => res.map_err(|err| err.to_string()).and_then(|res| res),
+        _ = &mut socket_task => Ok(()),
+    };
 
     gjs_task.abort();
     socket_task.abort();
     watcher.close().await.expect("Failed to close watcher");
-    Ok(())
+    result
 }
 
 fn init_translations(app_id: &str) -> Result<(), String> {

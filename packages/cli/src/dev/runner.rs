@@ -81,7 +81,7 @@ fn bundle_dev_icons(rundir: &Path) -> Option<PathBuf> {
     }
 }
 
-pub async fn gjs_runner(args: GjsRunnerArgs) {
+pub async fn gjs_runner(args: GjsRunnerArgs) -> Result<(), String> {
     let mut restart_rx = args.restart_rx;
     let rundir = dev_rundir();
 
@@ -118,22 +118,18 @@ pub async fn gjs_runner(args: GjsRunnerArgs) {
             .env("GNIM_DEV", props.to_string())
             .env("GSETTINGS_SCHEMA_DIR", schema_dir.clone())
             .spawn()
-            .expect("failed to spawn gjs");
+            .map_err(|err| format!("Failed to spawn gjs: {err}"))?;
 
         tokio::select! {
             status = gjs.wait() => {
-                match status {
-                    Ok(s)  => {
-                        if args.verbose {
-                            eprintln!("[dev] gjs exited with code {}", s.code().unwrap_or(0));
-                        }
-                        break;
-                    }
-                    Err(e) => {
-                        eprintln!("[dev] gjs wait error: {}", e);
-                        break;
-                    }
+                let status = status.map_err(|err| format!("gjs wait error: {err}"))?;
+                if args.verbose {
+                    eprintln!("[dev] gjs exited with {status}");
                 }
+                return match status.success() {
+                    true => Ok(()),
+                    false => Err(format!("gjs exited with {status}")),
+                };
             }
             _ = restart_rx.recv() => {
                 eprintln!("[dev] restarting gjs");
