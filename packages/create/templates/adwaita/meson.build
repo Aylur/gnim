@@ -30,6 +30,7 @@ custom_target(
     'bundle',
     '--id', app_id,
     root / 'src' / 'main.ts',
+    '-o', '@OUTPUT@',
   ],
   install: true,
   install_dir: pkgdatadir,
@@ -42,7 +43,7 @@ custom_target(
     gnim,
     'exe',
     pkgdatadir / 'gresource',
-    '-o', name,
+    '-o', '@OUTPUT@',
     '--id', app_id,
     '--prefix', prefix,
     '--datadir', datadir,
@@ -55,7 +56,7 @@ custom_target(
 
 # schemas
 custom_target(
-  command: [gnim, 'schemas', root / 'src', '-o', 'schemas'],
+  command: [gnim, 'schemas', root / 'src', '-o', '@OUTPUT@'],
   output: 'schemas',
   install: true,
   install_dir: prefix / datadir / 'glib-2.0',

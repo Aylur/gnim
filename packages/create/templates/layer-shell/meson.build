@@ -30,6 +30,7 @@ custom_target(
     'bundle',
     '--id', app_id,
     root / 'src' / 'main.tsx',
+    '-o', '@OUTPUT@',
   ],
   install: true,
   install_dir: pkgdatadir,
@@ -42,7 +43,7 @@ custom_target(
     gnim,
     'exe',
     pkgdatadir / 'gresource',
-    '-o', name + '.js',
+    '-o', '@OUTPUT@',
     '--id', app_id,
     '--prefix', prefix,
     '--datadir', datadir,
@@ -57,7 +58,7 @@ custom_target(
 custom_target(
   command: [
     find_program('echo'),
-    '#!@0@\nLD_PRELOAD="@1@/libgtk4-layer-shell.so" @2@ $@'.format(
+    '#!@0@\nLD_PRELOAD="@1@/libgtk4-layer-shell.so" exec "@2@" "$@"'.format(
       find_program('bash').full_path(),
       dependency('gtk4-layer-shell-0').get_variable('libdir'),
       pkgdatadir / name + '.js',
