@@ -12,8 +12,8 @@
     },
     "scripts": {
         "build": "tsc",
-        "fmt": "prettier --write .",
-        "fmt:check": "prettier --check .",
+        "fmt": "prettier --write . --ignore-path ../../.gitignore",
+        "fmt:check": "prettier --check . --ignore-path ../../.gitignore",
         "typecheck": "tsc --noEmit"
     },
     "devDependencies": {
