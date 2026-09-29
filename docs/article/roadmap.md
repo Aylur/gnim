@@ -22,8 +22,8 @@ Errors simply propagate to the code that triggered them which makes it
 essentially impossible to track down since it is usually Gnim internals and user
 code is nowhere to be seen on the stack.
 
-Planned: an `ErrorBoundary` component that exposes mechanism to catch errors and
-recover from them.
+Planned: an `ErrorBoundary` component that exposes a mechanism to catch errors
+and recover from them.
 
 ## Suspense boundaries
 
@@ -37,6 +37,6 @@ doing async work.
 The CLI is written in Rust and uses Rolldown's Rust API. Since it is not a
 Rolldown plugin it is impossible to use it with other plugins. This decision was
 mostly because I wanted to fit it into a single binary so that there is no
-dependency on Node and npm packages to make it is easier to distribute.
+dependency on Node and npm packages to make it easier to distribute.
 
 Planned: rewrite it in TypeScript as a Rolldown plugin.

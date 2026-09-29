@@ -74,7 +74,7 @@ function onEvent() {
 </script>
 
 <template>
-  <Component>{{ count }}</Component>
+  <Component>{{ doubleCount }}</Component>
 </template>
 ```
 

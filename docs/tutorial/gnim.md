@@ -79,10 +79,10 @@ To instantiate JSX, you have to render it into a parent object using the
 `render()` function. The render function returns a cleanup function which, when
 invoked, will detach widgets from the parent and dispose of them.
 
-```jsx
+```tsx
 import { render } from "@gnim-js/gtk4"
 
-const app: Gtk.Application
+let app: Gtk.Application
 
 const dispose = render(() => <Gtk.Window />, app)
 
@@ -410,7 +410,7 @@ Each time the array changes, it is compared with its previous state. Widgets for
 new items are inserted while widgets associated with removed items are disposed.
 
 ```tsx
-import { For, Accessor } from "gnim"
+import { For, type Accessor } from "gnim"
 
 let list: Accessor<Array<T>>
 

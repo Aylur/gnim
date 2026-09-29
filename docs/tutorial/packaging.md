@@ -205,10 +205,17 @@ finish-args:
 
 build-options:
   append-path: /usr/lib/sdk/node22/bin
+  env:
+    npm_config_cache: /run/build/example-myapp/flatpak-node/npm-cache
+    npm_config_offline: "true"
 
 modules:
   - name: example-myapp
-    buildsystem: meson
+    buildsystem: simple
+    build-commands:
+      - npm ci --offline
+      - meson setup _build --prefix=/app
+      - meson install -C _build
     sources:
       - type: dir
         path: .
@@ -217,8 +224,10 @@ modules:
 
 :::
 
-The `npm-sources.json` file contains the npm dependencies for offline builds.
-You can generate it using
+Flatpak builds have no network access, so `node_modules`, which provides the
+`gnim` CLI used by `meson.build`, has to be installed from an offline cache
+before running Meson. The `npm-sources.json` file contains the npm dependencies
+for offline builds. You can generate it using
 [flatpak-builder-tools](https://github.com/flatpak/flatpak-builder-tools/blob/master/node):
 
 ::: code-group
@@ -232,6 +241,11 @@ flatpak-node-generator pnpm pnpm-lock.yaml -o npm-sources.json
 ```
 
 :::
+
+> [!NOTE]
+>
+> The `gnim` CLI is currently only published for x86_64, so the Flatpak can only
+> be built on x86_64 hosts.
 
 To build and install the Flatpak locally:
 

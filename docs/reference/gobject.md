@@ -139,7 +139,7 @@ class MyObject {
 
 ### Initial values
 
-A field initializers take precedence over props passed to `super()`.
+Field initializers take precedence over props passed to `super()`.
 
 ```ts
 @register

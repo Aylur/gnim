@@ -158,8 +158,8 @@ function MyWidget() {
 ### Bindings
 
 Properties can be set as a static value. Alternatively, they can be passed an
-[Accessor](#state-management), in which case whenever its value changes, it will
-be reflected on the widget.
+[Accessor](/tutorial/gnim#state-management), in which case whenever its value
+changes, it will be reflected on the widget.
 
 ```tsx
 const [revealed, setRevealed] = createState(false)
@@ -191,7 +191,7 @@ handled in user code.
 > instantiation.
 
 ```tsx
-import { prop, MaybeAccessor } from "gnim"
+import { prop, type MaybeAccessor } from "gnim"
 
 function Counter(props: {
   count?: MaybeAccessor<number>
@@ -270,7 +270,7 @@ return (
 Or, to keep it inline, specify the expected generic type:
 
 ```tsx
-<For each={bind<ExpectedType>(obj, "field")}>
+<For<ExpectedType> each={bind(obj, "field")}>
   {(field) => <>{field}</> /* field is correctly inferred */}
 </For>
 ```

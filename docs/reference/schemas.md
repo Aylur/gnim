@@ -119,14 +119,14 @@ const settings = createSettings(gioSettings, {
 
 GSettings uses gettext to look up translations for summaries and descriptions.
 To mark them translatable for
-[`xgettext`](/tutorial/intl.md#extract-translatable-strings), `gnim/schema`
-exports its own `gettext` function. Default values can also be marked
-translatable using an optional context with `pgettext`.
+[`xgettext`](/tutorial/intl#extract-translatable-strings), `gnim/schema` exports
+its own `gettext` function. Default values can also be marked translatable using
+an optional context with `pgettext`.
 
 ```ts
 import { gettext as t, pgettext as p, Schema } from "gnim/schema"
 
-new Schema()
+new Schema("com.example.MyApp")
   .key("title", "s", {
     default: t("'Hello'"),
     summary: t("Window title"),

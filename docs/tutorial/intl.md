@@ -445,8 +445,8 @@ The other types are `region`, `currency`, `script` and `calendar`, which is what
 you want for a language picker or a locale label in preferences.
 
 ```ts
-new Intl.DisplayNames(locale, { type: "region" }).of("GB") // "United Kingdom"
-new Intl.DisplayNames(locale, { type: "currency" }).of("EUR") // "Euro"
+new Intl.DisplayNames(getPreferredLocale(), { type: "region" }).of("GB") // "United Kingdom"
+new Intl.DisplayNames(getPreferredLocale(), { type: "currency" }).of("EUR") // "Euro"
 ```
 
 ## Extract translatable strings
@@ -474,7 +474,7 @@ This produces a `.pot` template file which can be used to write translations.
 > ignored.
 >
 > ```ts
-> const t = createDomain()
+> const t = createDomain("com.example.MyApp")
 > const wrapper = t
 > wrapper("This will be ignored by xgettext")
 >
@@ -499,5 +499,5 @@ application ID and chosen locale.
 ```sh
 LOCALE="locale" # example: `de`, `es`, `it`, `fr`
 COUNTRY="country" # example: `DE`, `ES`, `IT`, `FR`
-LANG="${LOCALE}_${COUNTRY}.UTF8" gnim dev src/main.tsx --id com.example.MyApp
+LANG="${LOCALE}_${COUNTRY}.UTF-8" gnim dev src/main.tsx --id com.example.MyApp
 ```

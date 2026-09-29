@@ -98,7 +98,7 @@ return (
 Reads back the `slot` attribute that was set on an object in JSX.
 
 ```ts
-function getSlot(object: GObject.Object): string | undefined
+function getSlot(object: GObject.Object): string | null
 ```
 
 ### `createListItemFactory`

@@ -1,9 +1,9 @@
 # Writing an Application
 
-So far this tutorial used a simple `GLib.MainLoop` to display Gtk Widgets which
-works, but it does not let you integrate your app into the desktop. There is no
-way to name your app, and launching the script will simply open a new window.
-This is where `Gtk.Application` comes in, which does most of the heavy lifting.
+A simple `GLib.MainLoop` is enough to display Gtk Widgets, but it does not let
+you integrate your app into the desktop. There is no way to name your app, and
+launching the script will simply open a new window. This is where
+`Gtk.Application` comes in, which does most of the heavy lifting.
 
 > [!TIP]
 >
@@ -89,6 +89,7 @@ clicks on the app icon in a status panel/dock you want your window to reappear
 on screen instead of launching another instance.
 
 ```tsx
+@register
 class MyApp extends Gtk.Application {
   declare window?: Gtk.Window
 
@@ -99,7 +100,7 @@ class MyApp extends Gtk.Application {
 
     const dispose = render(() => {
       effect(() => {
-        this.window.present()
+        this.window?.present()
       })
 
       return (
@@ -117,7 +118,7 @@ If you want to persist some data, for example some setting values, Gtk provides
 you the [Gio.Settings](https://docs.gtk.org/gio/class.Settings.html) API which
 is a way to store key-value pairs in a predefined schema. Gnim provides a
 type-safe wrapper over this API which during development will automatically
-compile the store and provide it to GJS.
+compile the schema and provide it to GJS.
 
 First, define a schema in `<app-id>.gschema.ts`, for example
 `com.example.MyApp.gschema.ts`.
@@ -249,7 +250,7 @@ gdbus call \
 Or even from another Gnim application reusing the same interface declaration.
 
 ```ts
-const proxy = new MyInterface.Proxy({
+const proxy = await MyInterface.proxy({
   name: "com.example.MyApp",
   objectPath: "/com/example/MyApp",
 })

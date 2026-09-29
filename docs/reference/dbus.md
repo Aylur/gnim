@@ -77,7 +77,7 @@ proxy.connect("my-signal", (_, str: string) => {
 })
 
 proxy.connect("notify::my-property", () => {
-  console.log(`MyProperty set to ${service.MyProperty}`)
+  console.log(`MyProperty set to ${proxy.MyProperty}`)
 })
 
 proxy.MyProperty = "new value"
@@ -387,6 +387,7 @@ It is an instance of `GObject.Object` exposing the interface.
 ```ts
 class ServiceInstance extends GObject.Object {
   implementation: ServiceImplementation<T>
+  export(connection: Gio.DBusConnection, objectPath?: string): boolean
   unexport(): void
 }
 ```
