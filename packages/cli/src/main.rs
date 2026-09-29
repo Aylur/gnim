@@ -47,6 +47,7 @@ async fn main() -> std::process::ExitCode {
     let cli = Cli::parse();
 
     gnim::init(gnim::GlobalOptions {
+        alias: None,
         define: match &cli.command {
             Command::Types(_) => None,
             Command::Schemas(args) => Some(map(&args.define)),
@@ -54,33 +55,6 @@ async fn main() -> std::process::ExitCode {
             Command::Bundle(args) => Some(map(&args.define)),
             Command::Exe(_) => None,
         },
-        alias: option_env!("GNIM_DATADIR").map(|dir| {
-            rolldown::PathsOutputOption::Fn(std::sync::Arc::new(move |id| {
-                if let Ok(path) = fs::canonicalize("node_modules/gnim")
-                    && path.exists()
-                {
-                    let res = id.to_string();
-                    return Box::pin(async move { Ok(res) });
-                }
-
-                // synced with package.json exports
-                let gnim = format!("file://{dir}/gnim/dist/lib");
-
-                let alias = match id {
-                    "gnim" => format!("{gnim}/index.js"),
-                    "gnim/dbus" => format!("{gnim}/decorators/dbus.js"),
-                    "gnim/gobject" => format!("{gnim}/decorators/gobject.js"),
-                    "gnim/intl" => format!("{gnim}/intl/index.js"),
-                    "gnim/schema" => format!("{gnim}/schema/index.js"),
-                    "gnim/fetch" => format!("{gnim}/polyfill/fetch.js"),
-                    "gnim/jsx-runtime" => format!("{gnim}/jsx-runtime.js"),
-                    "gnim/jsx-dev-runtime" => format!("{gnim}/jsx-dev-runtime.js"),
-                    _ => id.to_string(),
-                };
-
-                Box::pin(async move { Ok(alias) })
-            }))
-        }),
     });
 
     let result = match cli.command {
