@@ -4,13 +4,12 @@ version = "2.0.0-beta.25"
 edition = "2024"
 license = "MIT"
 description = "Gnim CLI"
-homepage = "https://gnim.aylur.dev/"
+homepage = "https://gnimjs.dev/"
 repository = "https://github.com/aylur/gnim"
 include = ["/bin/gnim.rs", "/bin/command"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-# girgen declares `quick-xml = "0"` but does not compile against 0.42
 quick-xml = "0.41"
 colored = "3"
 girgen = "0.3.21"
