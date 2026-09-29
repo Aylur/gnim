@@ -73,7 +73,7 @@ its limitations.
 
 | Flag                       | Description                                          |
 | -------------------------- | ---------------------------------------------------- |
-| `-i, --id <ID>`            | Application ID in reverse DNS format                 |
+| `--id <ID>`                | Application ID in reverse DNS format                 |
 | `-d, --define <KEY=VALUE>` | Replace global identifiers with constant expressions |
 | `-v, --verbose`            | Verbose logging                                      |
 
@@ -122,10 +122,10 @@ bundled entry point. It is meant to be installed into `bindir`; see the
 | Flag                   | Description                                 |
 | ---------------------- | ------------------------------------------- |
 | `-o, --outfile <PATH>` | Output target, if omitted stdout is used    |
-| `-i, --id <ID>`        | Application ID in reverse DNS format        |
-| `-p, --prefix <PATH>`  | Installation prefix (default: `/usr/local`) |
-| `-d, --datadir <PATH>` | Data directory (default: `share`)           |
-| `-l, --libdir <PATH>`  | Library directory (default: `lib`)          |
+| `--id <ID>`            | Application ID in reverse DNS format        |
+| `--prefix <PATH>`      | Installation prefix (default: `/usr/local`) |
+| `--datadir <PATH>`     | Data directory (default: `share`)           |
+| `--libdir <PATH>`      | Library directory (default: `lib`)          |
 
 ```sh
 gnim bundle --id com.example.MyApp -o build/gresource src/main.tsx

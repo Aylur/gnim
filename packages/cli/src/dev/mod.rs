@@ -30,7 +30,7 @@ pub struct DevArgs {
     #[arg(short, long, value_parser = crate::parse_key_val)]
     pub define: Vec<(String, String)>,
     /// Application ID in reverse DNS format
-    #[arg(short, long)]
+    #[arg(long)]
     pub id: Option<String>,
     /// Arguments passed to the gjs process after `--`
     #[arg(last = true)]

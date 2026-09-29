@@ -12,16 +12,16 @@ pub struct ExeArgs {
     #[arg(short, long)]
     pub outfile: Option<String>,
     /// Application ID in reverse DNS format
-    #[arg(short, long)]
+    #[arg(long)]
     pub id: Option<String>,
     /// Installation prefix
-    #[arg(short, long, default_value_t = String::from("/usr/local"))]
+    #[arg(long, default_value_t = String::from("/usr/local"))]
     pub prefix: String,
     /// Data directory
-    #[arg(short, long, default_value_t = String::from("share"))]
+    #[arg(long, default_value_t = String::from("share"))]
     pub datadir: String,
     /// Library directory
-    #[arg(short, long, default_value_t = String::from("lib"))]
+    #[arg(long, default_value_t = String::from("lib"))]
     pub libdir: String,
 }
 
