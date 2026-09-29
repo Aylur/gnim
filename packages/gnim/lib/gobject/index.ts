@@ -1,7 +1,7 @@
 import GObject from "gi://GObject?version=2.0"
 
-export { type Annotations, gtype } from "./gtype"
-export * from "./decorators"
+export { type Annotations, gtype } from "./gtype.js"
+export * from "./decorators.js"
 
 export const { Object } = GObject
 export type Object = GObject.Object

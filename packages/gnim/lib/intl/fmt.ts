@@ -1,7 +1,7 @@
 import { IntlMessageFormat, type PrimitiveType } from "intl-messageformat"
-import type { GnimNode, JSX } from "../jsx/element"
-import type { Text, args, tags } from "./gettext"
-import { getPreferredLocale } from "./locale"
+import type { GnimNode, JSX } from "../jsx/element.js"
+import type { Text, args, tags } from "./gettext.js"
+import { getPreferredLocale } from "./locale.js"
 
 type Prettify<T> = { [K in keyof T]: T[K] }
 

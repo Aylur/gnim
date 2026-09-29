@@ -1,5 +1,5 @@
 import GObject from "gi://GObject?version=2.0"
-import type { Keyof } from "../../util"
+import type { Keyof } from "../../util.js"
 
 let passed = 0
 const failures: string[] = []

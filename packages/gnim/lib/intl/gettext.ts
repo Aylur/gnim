@@ -1,5 +1,5 @@
 import Gettext from "gettext"
-import type { GetArgs, GetTags } from "./icu"
+import type { GetArgs, GetTags } from "./icu.js"
 
 export declare const args: unique symbol
 export declare const tags: unique symbol

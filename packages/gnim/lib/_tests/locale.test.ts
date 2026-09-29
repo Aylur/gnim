@@ -8,7 +8,7 @@ async function importLocale(env: Record<string, string>) {
     for (const [name, value] of Object.entries(env)) vi.stubEnv(name, value)
 
     vi.resetModules()
-    return import("../intl/locale")
+    return import("../intl/locale.js")
 }
 
 beforeEach(() => {

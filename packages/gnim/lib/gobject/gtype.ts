@@ -1,6 +1,6 @@
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import type { KebabCase } from "../util"
+import type { KebabCase } from "../util.js"
 // @ts-expect-error missing union type
 import GIRepository from "gi://GIRepository"
 
