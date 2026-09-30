@@ -2,7 +2,10 @@ import GLib from "gi://GLib?version=2.0"
 import Gio from "gi://Gio?version=2.0"
 import Soup from "gi://Soup?version=3.0"
 
+const URI_FLAGS = GLib.UriFlags.HAS_PASSWORD | GLib.UriFlags.ENCODED
+
 type ResponseType = "basic" | "cors" | "default" | "error" | "opaque" | "opaqueredirect"
+
 export type HeadersInit = Headers | Record<string, string> | [string, string][]
 export type ResponseInit = {
     headers?: HeadersInit
@@ -24,7 +27,9 @@ export class Headers {
                 this.append(name, value)
             }
         } else if (init instanceof Headers) {
-            init.forEach((value, name) => this.set(name, value))
+            for (const [name, value] of init) {
+                this.set(name, value)
+            }
         } else if (typeof init === "object") {
             for (const name in init) {
                 this.set(name, init[name])
@@ -104,7 +109,11 @@ export class URLSearchParams {
                 this.append(key, value)
             }
         } else if (init instanceof URLSearchParams) {
-            init.forEach((value, key) => this.append(key, value))
+            for (const [key, values] of init.params.entries()) {
+                for (const value of values) {
+                    this.append(key, value)
+                }
+            }
         } else if (typeof init === "object") {
             for (const key in init) {
                 this.set(key, init[key])
@@ -113,14 +122,13 @@ export class URLSearchParams {
     }
 
     private parseString(query: string) {
-        query
-            .replace(/^\?/, "")
-            .split("&")
-            .forEach((pair) => {
-                if (!pair) return
-                const [key, value] = pair.split("=").map(decodeURIComponent)
-                this.append(key, value ?? "")
-            })
+        for (const pair of query.replace(/^\?/, "").split("&")) {
+            if (!pair) continue
+            const i = pair.indexOf("=")
+            const key = i === -1 ? pair : pair.slice(0, i)
+            const value = i === -1 ? "" : pair.slice(i + 1)
+            this.append(decodeQueryComponent(key), decodeQueryComponent(value))
+        }
     }
 
     get size() {
@@ -196,6 +204,15 @@ export class URLSearchParams {
     }
 }
 
+function decodeQueryComponent(str: string): string {
+    str = str.replaceAll("+", " ")
+    try {
+        return decodeURIComponent(str)
+    } catch {
+        return str
+    }
+}
+
 // TODO: impl setters
 export class URL {
     readonly uri: GLib.Uri
@@ -207,19 +224,16 @@ export class URL {
             url = GLib.Uri.resolve_relative(
                 base instanceof URL ? base.toString() : base,
                 url instanceof URL ? url.toString() : url,
-                GLib.UriFlags.HAS_PASSWORD,
+                URI_FLAGS,
             )
         }
-        this.uri = GLib.Uri.parse(
-            url instanceof URL ? url.toString() : url,
-            GLib.UriFlags.HAS_PASSWORD,
-        )
+        this.uri = GLib.Uri.parse(url instanceof URL ? url.toString() : url, URI_FLAGS)
         this.searchParams = new URLSearchParams(this.uri.get_query() ?? "")
     }
 
     get href(): string {
         const uri = GLib.Uri.build_with_user(
-            GLib.UriFlags.HAS_PASSWORD,
+            URI_FLAGS,
             this.uri.get_scheme(),
             this.uri.get_user(),
             this.uri.get_password(),
@@ -227,7 +241,7 @@ export class URL {
             this.uri.get_host(),
             this.uri.get_port(),
             this.uri.get_path(),
-            this.searchParams.toString(),
+            this.searchParams.toString() || null,
             this.uri.get_fragment(),
         )
 
@@ -380,7 +394,7 @@ export async function fetch(url: string | URL, { method, headers, body }: Reques
 
     const message = new Soup.Message({
         method: method || "GET",
-        uri: GLib.Uri.parse(url instanceof URL ? url.href : url, GLib.UriFlags.NONE),
+        uri: GLib.Uri.parse(url instanceof URL ? url.href : url, URI_FLAGS),
     })
 
     if (headers) {
