@@ -406,13 +406,27 @@ export async function serve<T extends InterfaceDeclaration, S extends ServiceImp
             },
         })
 
+        let exported = false
+        let settled = false
+
         function resolveService() {
+            if (settled) return
+            settled = true
             try {
                 cancellable?.set_error_if_cancelled()
                 resolve(service as any)
             } catch (error) {
                 reject(error)
             }
+        }
+
+        function rejectService(error: unknown) {
+            if (settled) return
+            settled = true
+            if (cancelId) cancellable!.disconnect(cancelId)
+            if (exported) unexport()
+            Gio.bus_unown_name(busId)
+            reject(error)
         }
 
         const busId = Gio.bus_own_name(
@@ -422,19 +436,28 @@ export async function serve<T extends InterfaceDeclaration, S extends ServiceImp
             (conn) => {
                 try {
                     cancellable?.set_error_if_cancelled()
-                    service.export(conn, objectPath)
+                    exported = service.export(conn, objectPath)
                 } catch (error) {
                     reject(error)
                 }
             },
             resolveService,
             (conn) => {
+                if (settled) return
+
                 if (!conn) {
-                    unexport()
-                    return reject(Error("could not connect to the bus"))
+                    return rejectService(Error("could not connect to the bus"))
                 }
 
-                isNameOwned(conn, name).then(resolveService).catch(reject)
+                isNameOwned(conn, name)
+                    .then((owned) => {
+                        if (owned) {
+                            resolveService()
+                        } else {
+                            rejectService(Error(`name "${name}" is owned by another process`))
+                        }
+                    })
+                    .catch(rejectService)
             },
         )
 
