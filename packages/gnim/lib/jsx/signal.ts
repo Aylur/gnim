@@ -126,12 +126,13 @@ export function runScope<T>(scope: Scope, fn: () => T): T {
     let result: T
     try {
         result = fn()
-        flushMounts(scope)
+        if (!scope.disposed) flushMounts(scope)
     } catch (e) {
         scope.mounts = []
         throw e
     } finally {
         activeScope = prevScope
+        if (scope.disposed) resetScope(scope)
     }
     return result
 }
@@ -428,6 +429,11 @@ export class Computed<T> extends ReactiveNode implements Scope {
             activeSub = prevSub
             this.flags &= ~RECURSED_CHECK
             this.purgeDeps()
+            if (this.disposed) {
+                // disposed by its own getter: drop deps read after the dispose
+                this.unlinkAllDeps()
+                this.flags = MUTABLE | (this.flags & ERROR)
+            }
         }
     }
 
@@ -506,6 +512,11 @@ export class Effect<T> extends ReactiveNode implements Scope {
             activeSub = prevSub
             this.flags &= ~RECURSED_CHECK
             this.purgeDeps()
+            if (this.disposed) {
+                // disposed by its own fn: drop deps read after the dispose
+                this.unlinkAllDeps()
+                this.flags = NONE
+            }
         }
     }
 

@@ -1881,6 +1881,168 @@ describe("edge cases", () => {
         expect(spy.mock.calls).toEqual([[0], [1], [2]])
     })
 
+    describe("disposing a scope while it is running", () => {
+        function external() {
+            const unsubscribe = vi.fn()
+            const subscribe = vi.fn(() => unsubscribe)
+            return { accessor: createAccessor(() => 1, subscribe), subscribe, unsubscribe }
+        }
+
+        it("releases dependencies an effect reads after disposing itself", () => {
+            const spy = vi.fn()
+            const { accessor, subscribe, unsubscribe } = external()
+            const [stop, setStop] = createState(false)
+            const [n, setN] = createState(0)
+
+            const dispose = effect(() => {
+                if (!stop()) return
+                dispose()
+                spy(n(), accessor())
+            })
+
+            setStop(true)
+            expect(spy).toHaveBeenCalledTimes(1)
+            expect(subscribe).toHaveBeenCalledTimes(1)
+            expect(unsubscribe).toHaveBeenCalledTimes(1)
+
+            setN(1)
+            expect(spy).toHaveBeenCalledTimes(1)
+        })
+
+        it("runs cleanups an effect registers after disposing itself", () => {
+            const before = vi.fn()
+            const after = vi.fn()
+            const [stop, setStop] = createState(false)
+
+            const dispose = effect(() => {
+                if (!stop()) return
+                onCleanup(before)
+                dispose()
+                expect(before).toHaveBeenCalledTimes(1)
+                onCleanup(after)
+                expect(after).not.toHaveBeenCalled()
+            })
+
+            setStop(true)
+            expect(before).toHaveBeenCalledTimes(1)
+            expect(after).toHaveBeenCalledTimes(1)
+
+            dispose()
+            expect(after).toHaveBeenCalledTimes(1)
+        })
+
+        it("runs those cleanups when the effect throws after disposing itself", () => {
+            const after = vi.fn()
+            const [stop, setStop] = createState(false)
+
+            const dispose = effect(() => {
+                if (!stop()) return
+                dispose()
+                onCleanup(after)
+                throw new Error("boom")
+            })
+
+            expect(() => setStop(true)).toThrow("boom")
+            expect(after).toHaveBeenCalledTimes(1)
+        })
+
+        it("disposes effects an effect creates after disposing itself", () => {
+            const spy = vi.fn()
+            const cleanup = vi.fn()
+            const [stop, setStop] = createState(false)
+            const [n, setN] = createState(0)
+
+            const dispose = effect(() => {
+                if (!stop()) return
+                dispose()
+                effect(
+                    () => {
+                        spy(n())
+                        onCleanup(cleanup)
+                    },
+                    { immediate: true },
+                )
+                effect(() => spy(n()))
+            })
+
+            setStop(true)
+            // only the immediate one ran, and it was disposed with its parent
+            expect(spy).toHaveBeenCalledTimes(1)
+            expect(cleanup).toHaveBeenCalledTimes(1)
+
+            setN(1)
+            expect(spy).toHaveBeenCalledTimes(1)
+        })
+
+        it("does the same for an effect that disposes its own root", () => {
+            const spy = vi.fn()
+            const cleanup = vi.fn()
+            const { accessor, unsubscribe } = external()
+            const [n, setN] = createState(0)
+
+            createRoot((dispose) => {
+                effect(() => {
+                    dispose()
+                    accessor()
+                    onCleanup(cleanup)
+                    effect(() => spy(n()), { immediate: true })
+                })
+            })
+
+            expect(unsubscribe).toHaveBeenCalledTimes(1)
+            expect(cleanup).toHaveBeenCalledTimes(1)
+            expect(spy).toHaveBeenCalledTimes(1)
+
+            setN(1)
+            expect(spy).toHaveBeenCalledTimes(1)
+        })
+
+        it("does the same for a computed whose root is disposed while it computes", () => {
+            const spy = vi.fn()
+            const cleanup = vi.fn()
+            const { accessor, unsubscribe } = external()
+            const [n, setN] = createState(0)
+
+            createRoot((dispose) => {
+                const value = computed(() => {
+                    dispose()
+                    onCleanup(cleanup)
+                    effect(() => spy(n()), { immediate: true })
+                    return accessor()
+                })
+                effect(() => void value(), { immediate: true })
+            })
+
+            expect(unsubscribe).toHaveBeenCalledTimes(1)
+            expect(cleanup).toHaveBeenCalledTimes(1)
+            expect(spy).toHaveBeenCalledTimes(1)
+
+            setN(1)
+            expect(spy).toHaveBeenCalledTimes(1)
+        })
+
+        it("does the same for a root that disposes itself in its callback", () => {
+            const spy = vi.fn()
+            const cleanup = vi.fn()
+            const mount = vi.fn()
+            const [n, setN] = createState(0)
+
+            createRoot((dispose) => {
+                dispose()
+                onCleanup(cleanup)
+                onMount(mount)
+                effect(() => spy(n()), { immediate: true })
+            })
+
+            expect(cleanup).toHaveBeenCalledTimes(1)
+            expect(mount).not.toHaveBeenCalled()
+            expect(spy).toHaveBeenCalledTimes(1)
+
+            setN(1)
+            expect(spy).toHaveBeenCalledTimes(1)
+        })
+    })
+
     it("does not run an effect whose scope was disposed earlier in the same flush", () => {
         const spy = vi.fn()
 
