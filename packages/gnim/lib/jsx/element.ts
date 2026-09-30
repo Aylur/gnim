@@ -385,7 +385,7 @@ export interface WithProps<T> {
  */
 export function With<T>(props: WithProps<T>): GnimNode {
     const { value, children: mkChild } = props
-    return computed(() => resolveNode(mkChild(value())))
+    return computed(() => untrack((v) => resolveNode(mkChild(v)), value()))
 }
 
 export interface PortalProps {
