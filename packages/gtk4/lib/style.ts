@@ -18,27 +18,24 @@ function fnv1aHash(str: string) {
     return hash
 }
 
+function declarations(props: CssProperties): string {
+    return Object.entries(props)
+        .map(([name, value]) =>
+            typeof value === "string" || typeof value === "number" ? `${name}: ${value};` : "",
+        )
+        .join("")
+}
+
 function styleSheet(selector: string, style: Style): string[] {
     const nestedStyles: Array<[selector: string, Style]> = []
-    const attributes: string[] = []
+    const mediaRules: string[] = []
 
     for (const [key, value] of Object.entries(style)) {
         if (key.startsWith("&") && value) {
             nestedStyles.push([key.slice(1), value as Style])
         } else if (key.startsWith("@media") && value) {
-            const attrs = Object.entries(value as CssProperties)
-                .map(([name, value]) =>
-                    typeof value === "string" || typeof value === "number"
-                        ? `${name}: ${value};`
-                        : "",
-                )
-                .join("")
-
-            attributes.push(`${key} { ${attrs} }`)
-        } else {
-            if (typeof value === "string" || typeof value === "number") {
-                attributes.push(`${key}: ${value};`)
-            }
+            // gtk does not support nesting, so media rules wrap the selector at the top level
+            mediaRules.push(`${key} { ${selector} { ${declarations(value as CssProperties)} } }`)
         }
     }
 
@@ -46,7 +43,7 @@ function styleSheet(selector: string, style: Style): string[] {
         .map(([pseudo, style]) => styleSheet(selector + pseudo, style))
         .flat()
 
-    return [`${selector} { ${attributes.join("")} }`, ...nested]
+    return [`${selector} { ${declarations(style as CssProperties)} }`, ...mediaRules, ...nested]
 }
 
 function injectCss(stylesheet: string): () => void {
