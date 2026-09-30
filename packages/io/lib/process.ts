@@ -49,9 +49,9 @@ export class Process extends GObject.Object {
                 const [output] = stream.read_line_finish_utf8(res)
                 if (output !== null) {
                     if (stream === this.#errStream) {
-                        this.stderr(output.trim())
+                        this.stderr(output)
                     } else {
-                        this.stdout(output.trim())
+                        this.stdout(output)
                     }
                     this.#readStream(stream)
                 }
