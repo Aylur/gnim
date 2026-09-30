@@ -68,7 +68,7 @@ export class Headers {
 
     forEach(
         callbackfn: (value: string, name: string, parent: Headers) => void,
-        thisArg?: any,
+        thisArg?: unknown,
     ): void {
         for (const [name, values] of this.headers.entries()) {
             callbackfn.call(thisArg, values.join(", "), name, this)
@@ -190,7 +190,7 @@ export class URLSearchParams {
 
     forEach(
         callbackfn: (value: string, key: string, parent: URLSearchParams) => void,
-        thisArg?: any,
+        thisArg?: unknown,
     ): void {
         for (const [key, values] of this.params.entries()) {
             for (const value of values) {
@@ -318,10 +318,12 @@ export class Response {
         throw Error("Not yet implemented")
     }
 
-    static json(_data: any, _init?: ResponseInit): Response {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    static json(_data: unknown, _init?: ResponseInit): Response {
         throw Error("Not yet implemented")
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     static redirect(_url: string | URL, _status?: number): Response {
         throw Error("Not yet implemented")
     }

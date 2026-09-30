@@ -35,7 +35,6 @@ export default defineConfig({
                     { text: "GObject", link: "/reference/gobject" },
                     { text: "DBus", link: "/reference/dbus" },
                     { text: "Schemas", link: "/reference/schemas" },
-                    { text: "Polyfills", link: "/reference/polyfills" },
                     { text: "Packages", link: "/reference/packages" },
                     { text: "CLI", link: "/reference/cli" },
                 ],

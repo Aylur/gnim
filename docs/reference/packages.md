@@ -11,7 +11,7 @@ package for common IO operations.
 | `@gnim-js/gtk4`        | Gtk4 renderer                                  |
 | `@gnim-js/gtk3`        | Gtk3 renderer                                  |
 | `@gnim-js/gnome-shell` | Clutter/St renderer for GNOME Shell extensions |
-| `@gnim-js/io`          | Timers, file system and subprocess utilities   |
+| `@gnim-js/io`          | Timers, file system, subprocess and web APIs   |
 
 ## `@gnim-js/gtk4`
 
@@ -265,8 +265,8 @@ gnim types -d node_modules/@gnim-js/gnome-shell/gir-1.0/gnome50 --alias
 
 ## `@gnim-js/io`
 
-Utilities for timers, files and subprocesses. The package has three subpath
-exports and no root export.
+Utilities for timers, files, subprocesses and web APIs. The package has four
+subpath exports and no root export.
 
 ### `@gnim-js/io/timer`
 
@@ -454,7 +454,7 @@ try {
 > [!IMPORTANT]
 >
 > Commands are not run in a shell: expansions like `$VAR`, `~` or pipes will not
-> work. To use shell features spawn one explicitly, e.g.
+> work. To use shell features spawn one explicitly:
 >
 > ```ts
 > execAsync(["bash", "-c", "command | other"])
@@ -489,4 +489,35 @@ const line = createSubprocess("", ["journalctl", "-f"])
 effect(() => {
   console.log(line())
 })
+```
+
+### `@gnim-js/io/web`
+
+GJS does not implement some common web APIs that you would expect from a
+JavaScript runtime. See this
+[gjs issue](https://gitlab.gnome.org/GNOME/gjs/-/issues/265) for context.
+
+#### `fetch`
+
+A basic implementation of the `fetch` API using
+[Soup](https://libsoup.gnome.org/libsoup-3.0/index.html), along with `Headers`,
+`Response`, `URL` and `URLSearchParams`.
+
+Example:
+
+```ts
+import { fetch, URL } from "@gnim-js/io/web"
+
+const url = new URL("https://some-site.com/api")
+url.searchParams.set("hello", "world")
+
+const res = await fetch(url, {
+  method: "POST",
+  body: JSON.stringify({ hello: "world" }),
+  headers: {
+    "Content-Type": "application/json",
+  },
+})
+
+const json = await res.json()
 ```

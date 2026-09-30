@@ -29,7 +29,8 @@
     "exports": {
         "./timer": "./lib/timer.ts",
         "./fs": "./lib/fs.ts",
-        "./process": "./lib/process.ts"
+        "./process": "./lib/process.ts",
+        "./web": "./lib/web.ts"
     },
     "publishConfig": {
         "exports": {
@@ -44,6 +45,10 @@
             "./process": {
                 "import": "./dist/process.js",
                 "types": "./dist/process.d.ts"
+            },
+            "./web": {
+                "import": "./dist/web.js",
+                "types": "./dist/web.d.ts"
             }
         }
     },
