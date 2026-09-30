@@ -76,7 +76,9 @@ export class GtkRenderer implements Renderer {
     constructObject(element: CC, props: Record<string, unknown>): GObject.Object {
         const { slot, ...rest } = props
 
-        rest.visible ??= true
+        if (element.prototype instanceof Gtk.Widget) {
+            rest.visible ??= true
+        }
 
         const object = newObject(element, rest as Partial<CCProps<GObject.Object>>)
 
