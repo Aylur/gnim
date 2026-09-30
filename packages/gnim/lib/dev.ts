@@ -4,9 +4,8 @@ import Gio from "gi://Gio?version=2.0"
 import GIRepository from "gi://GIRepository?version=3.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import { jsx, resolveNode, type FC } from "./jsx/element.js"
-import { computed, createState, devHooks, type State } from "./jsx/reactive.js"
-import { getContext, setContext, untrack, type Context } from "./jsx/signal.js"
+import { type FC } from "./jsx/element.js"
+import { createComponentRegistry } from "./jsx/hmr.js"
 
 const props = JSON.parse(GLib.getenv("GNIM_DEV")!) as {
     applicationId?: string
@@ -41,17 +40,6 @@ function exists(file: string) {
 
 function isCss(id: string) {
     return id.endsWith(".css") || id.endsWith(".scss") || id.endsWith(".sass")
-}
-
-function isContext(instance: unknown): instance is Context<any> {
-    return (
-        typeof instance === "function" &&
-        "defaultValue" in instance &&
-        "use" in instance &&
-        typeof instance.use === "function" &&
-        "provide" in instance &&
-        typeof instance.provide === "function"
-    )
 }
 
 function initGtk() {
@@ -267,88 +255,11 @@ function overrideGObjectRegistration() {
 }
 
 function initRegistry() {
-    class StateCtx {
-        private dirty = false
-        private current: null | Array<{ init: unknown; current(): unknown }> = null
-        private buffer = new Array<{ init: unknown; current(): unknown }>()
-
-        push<T>(init: T, get: () => T): T {
-            if (this.dirty) return init
-
-            if (!this.current) {
-                this.buffer.push({ init, current: get })
-                return init
-            }
-
-            const state = this.current.shift()
-
-            if (state && state.init === init) {
-                this.buffer.push({ init, current: get })
-                return state.current() as T
-            }
-
-            this.dirty = true
-            return init
-        }
-
-        flush() {
-            this.current = this.dirty ? null : this.buffer
-            this.buffer = []
-            this.dirty = false
-        }
-    }
-
-    type DevComponent = { impl: State<FC>; state: StateCtx }
-
-    const registry = new Map<string, DevComponent>()
-    const stateCtx: Context<StateCtx | null> = { defaultValue: null }
-
-    devHooks.createState = function (init, get) {
-        try {
-            return getContext(stateCtx)?.push(init, get) ?? init
-        } catch {
-            return init
-        }
-    }
+    const registerComponent = createComponentRegistry()
 
     function $$registerComponent(mod: string, name: string, impl: FC) {
-        if (typeof impl !== "function") return impl
-
         const path = GLib.uri_parse(mod, GLib.UriFlags.NONE).get_path()
-        const id = path + ":" + name
-
-        let entry = registry.get(id)
-
-        if (!entry) {
-            entry = { impl: createState(impl), state: new StateCtx() }
-            registry.set(id, entry)
-        }
-
-        const [get, set] = entry.impl
-        const prevImpl = get.peek()
-
-        if (isContext(impl) && isContext(prevImpl)) {
-            const prevDefaultValue = prevImpl.defaultValue
-            const nextDefaultValue = impl.defaultValue
-            if (!Object.is(prevDefaultValue, nextDefaultValue)) {
-                set(() => impl)
-            }
-            return get.peek()
-        }
-
-        set(() => impl)
-        return function (props: any) {
-            const node = computed(() => {
-                setContext(stateCtx, entry.state)
-                const node = resolveNode(jsx(get(), props))
-                entry.state.flush()
-                return node
-            })
-
-            // `Computed` is lazy: resolving eagerly to mimic prod builds
-            untrack(node)
-            return node
-        }
+        return registerComponent(path + ":" + name, impl)
     }
 
     Object.assign(globalThis, { $$registerComponent })

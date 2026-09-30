@@ -1,14 +1,7 @@
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { isGObjectCtor, kebabcase, type CamelCase, type Keyof, type PascalCase } from "../util.js"
-import {
-    computed,
-    createAccessor,
-    createState,
-    isAccessor,
-    type Accessor,
-    type State,
-} from "./reactive.js"
+import { computed, createAccessor, isAccessor, type Accessor } from "./reactive.js"
 import { getRenderer } from "./render.js"
 import {
     createScope,
@@ -16,6 +9,7 @@ import {
     getScope,
     onCleanup,
     runScope,
+    Signal,
     untrack,
     type Scope,
 } from "./signal.js"
@@ -306,8 +300,13 @@ export interface ForProps<Item, Key = Item> {
 export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
     const { each, children: mkChild, id = (item: Item) => item } = props
 
-    type Child = ReturnType<typeof resolveNode>
-    type MapItem = { item: Item; child: Child; index: State<number>; scope: Scope }
+    type MapItem = {
+        item: Item
+        child: ReturnType<typeof resolveNode>
+        index: Signal<number>
+        indexAccessor: Accessor<number>
+        scope: Scope
+    }
 
     const currentScope = getScope()
     const map = new Map<Item | Key, MapItem>()
@@ -343,21 +342,22 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
                 const key = ids[i]
                 const mapItem = map.get(key)
                 if (mapItem) {
-                    mapItem.index[1](i)
+                    mapItem.index.set(i)
                     if (!Object.is(mapItem.item, item)) {
                         mapItem.scope.dispose()
                         mapItem.item = item
                         mapItem.scope = createScope(currentScope)
                         mapItem.child = runScope(mapItem.scope, () =>
-                            resolveNode(mkChild(item, mapItem.index[0])),
+                            resolveNode(mkChild(item, mapItem.indexAccessor)),
                         )
                     }
                     return mapItem.child
                 } else {
-                    const [index, setIndex] = createState(i)
+                    const index = new Signal(i)
+                    const indexAccessor = createAccessor(index.get.bind(index))
                     const scope = createScope(currentScope)
-                    const child = runScope(scope, () => resolveNode(mkChild(item, index)))
-                    map.set(key, { item, child, index: [index, setIndex], scope })
+                    const child = runScope(scope, () => resolveNode(mkChild(item, indexAccessor)))
+                    map.set(key, { item, child, index, indexAccessor, scope })
                     return child
                 }
             })
