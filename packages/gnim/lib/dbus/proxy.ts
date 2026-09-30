@@ -172,22 +172,27 @@ export function createProxyClass(info: Gio.DBusInterfaceInfo, gtypeName?: string
                 return this.#propertyCache.get(name)
             }
 
-            let value = this.#proxy.get_cached_property(name)
+            const value = this.#proxy.get_cached_property(name)
 
-            if (!value) {
-                console.debug(`property "${name} is not in cache, fetching with a blocking call"`)
-
-                value = this.#proxy.call_sync(
-                    "org.freedesktop.DBus.Properties.Get",
-                    new GLib.Variant("(ss)", [this.#proxy.gInterfaceName, name]),
-                    Gio.DBusCallFlags.NONE,
-                    -1,
-                    null,
-                )
+            if (value) {
+                const result = value.deepUnpack()
+                this.#propertyCache.set(name, result)
+                return result
             }
 
-            const result = value.deepUnpack()
+            console.debug(`property "${name}" is not in cache, fetching with a blocking call`)
+
+            const property: GLib.Variant<"(v)"> = this.#proxy.call_sync(
+                "org.freedesktop.DBus.Properties.Get",
+                new GLib.Variant("(ss)", [this.#proxy.gInterfaceName, name]),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                null,
+            )
+
+            const [result] = property.deepUnpack()
             this.#propertyCache.set(name, result)
+
             return result
         }
 
