@@ -49,8 +49,8 @@ naturally using JSX syntax. For example, this applies to types like
 >
 > Due to how instantiation order works you should only pass primitive types as
 > children using Accessors. If you capture a JSX expression in an Accessor and
-> try to pass it as children it will break the scoping mechanism and contexts
-> are lost.
+> try to pass it as children it will break the scoping mechanism, contexts will
+> be lost, and they will be re-evaluated everytime a sibling rerenders.
 >
 > ```tsx
 > let str: Accessor<string>
