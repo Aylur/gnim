@@ -303,5 +303,5 @@ function pspec(
         return declaration(name, flags)
     }
 
-    throw Error("invalid PropertyTypeDeclaration")
+    return pspecFromGType(declaration, name, flags)
 }
