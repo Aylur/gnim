@@ -218,10 +218,10 @@ export interface DBusGObject<T extends InterfaceDeclaration> extends GObject.Obj
         [K in keyof Signals<T> as KebabCase<K>]: (...params: Signals<T>[K]) => void
     }
     readonly $readableProperties: {
-        [K in keyof ReadableProperties<T> as KebabCase<K>]: T[K]
+        [K in keyof ReadableProperties<T> as KebabCase<K>]: ReadableProperties<T>[K]
     }
     readonly $writableProperties: {
-        [K in keyof WritableProperties<T> as KebabCase<K>]: T[K]
+        [K in keyof WritableProperties<T> as KebabCase<K>]: WritableProperties<T>[K]
     }
 }
 
