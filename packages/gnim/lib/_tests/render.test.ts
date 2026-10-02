@@ -1,9 +1,9 @@
 import GObject from "gi://GObject?version=2.0"
 import { describe, expect, it, vi } from "vitest"
 import type { CC, CCProps, GnimNode } from "../jsx/element.js"
-import { For, With, jsx, newObject } from "../jsx/element.js"
+import { For, jsx, With } from "../jsx/element.js"
 import { createState, type Accessor } from "../jsx/reactive.js"
-import { getRenderer, render, type Renderer } from "../jsx/render.js"
+import { BaseRenderer, getRenderer, render, type Renderer } from "../jsx/render.js"
 
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve))
 
@@ -20,35 +20,41 @@ class Widget extends GObject.Object {
 
 class Box extends Widget {}
 
-function createRenderer() {
-    const appendChild = vi.fn((parent: Widget, child: Widget) => {
+class TestRenderer extends BaseRenderer {
+    resolveTag(tag: string): CC {
+        if (tag === "box") return Box
+        return super.resolveTag(tag) as CC
+    }
+    constructObject(klass: CC, props: Record<string, unknown>) {
+        return this.newObject(klass, props as CCProps<GObject.Object>)
+    }
+    createText(text: string) {
+        return new Widget({ label: text })
+    }
+    appendChild(parent: Widget, child: Widget) {
         parent.children.push(child)
-    })
-    const removeChild = vi.fn((parent: Widget, child: Widget) => {
+    }
+    removeChild(parent: Widget, child: Widget) {
         parent.children = parent.children.filter((ch) => ch !== child)
-    })
+    }
+    disposeObject(object: Widget) {
+        object.destroyed = true
+    }
+}
 
-    return {
-        resolveTag: vi.fn((tag: string) => {
-            if (tag === "box") return Box
-            throw Error(`unresolved JSX tag: "${tag}"`)
-        }),
-        constructObject: vi.fn((klass: CC, props: Record<string, unknown>) =>
-            newObject(klass, props as CCProps<GObject.Object>),
-        ),
-        createText: vi.fn((text: string) => new Widget({ label: text })),
-        prepareProps: vi.fn((_klass: CC, props: Record<string, unknown>) => props),
-        setProperty: vi.fn((object: GObject.Object, key: string, value: unknown) => {
-            Object.assign(object, { [key]: value })
-        }),
-        setChildren: vi.fn((parent: Widget, children: Widget[], prev: Widget[]) => {
-            for (const child of prev) removeChild(parent, child)
-            for (const child of children) appendChild(parent, child)
-        }),
-        disposeObject: vi.fn((object: Widget) => {
-            object.destroyed = true
-        }),
-    } satisfies Renderer
+function createRenderer() {
+    const renderer = new TestRenderer()
+    return Object.assign(renderer, {
+        resolveTag: vi.spyOn(renderer, "resolveTag"),
+        constructObject: vi.spyOn(renderer, "constructObject"),
+        createText: vi.spyOn(renderer, "createText"),
+        prepareProps: vi.spyOn(renderer, "prepareProps"),
+        setProperty: vi.spyOn(renderer, "setProperty"),
+        setChildren: vi.spyOn(renderer, "setChildren"),
+        appendChild: vi.spyOn(renderer, "appendChild"),
+        removeChild: vi.spyOn(renderer, "removeChild"),
+        disposeObject: vi.spyOn(renderer, "disposeObject"),
+    })
 }
 
 function setup() {

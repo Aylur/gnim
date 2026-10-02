@@ -1,10 +1,10 @@
 import GObject from "gi://GObject?version=2.0"
 import { describe, expect, it } from "vitest"
-import type { CCProps, FC, GnimNode } from "../jsx/element.js"
-import { For, With, jsx, newObject } from "../jsx/element.js"
+import type { CC, CCProps, FC, GnimNode } from "../jsx/element.js"
+import { For, With, jsx } from "../jsx/element.js"
 import { createComponentRegistry } from "../jsx/hmr.js"
 import { createState, type Accessor, type Setter } from "../jsx/reactive.js"
-import { render, type Renderer } from "../jsx/render.js"
+import { BaseRenderer, render } from "../jsx/render.js"
 
 class Widget extends GObject.Object {
     label = ""
@@ -16,28 +16,25 @@ class Widget extends GObject.Object {
     }
 }
 
-const renderer: Renderer = {
-    resolveTag() {
+class TestRenderer extends BaseRenderer {
+    resolveTag(): CC {
         return Widget
-    },
-    constructObject(klass, props) {
-        return newObject(klass, props as CCProps<GObject.Object>)
-    },
-    createText(text) {
+    }
+    constructObject(klass: CC, props: Record<string, unknown>) {
+        return this.newObject(klass, props as CCProps<GObject.Object>)
+    }
+    createText(text: string) {
         return new Widget({ label: text })
-    },
-    prepareProps(_, props) {
-        return props
-    },
-    setProperty(object, key, value) {
-        Object.assign(object, { [key]: value })
-    },
-    setChildren(parent: Widget, children: Widget[], prev: Widget[]) {
-        parent.children = parent.children.filter((child) => !prev.includes(child))
-        parent.children.push(...children)
-    },
-    disposeObject() {},
+    }
+    appendChild(parent: Widget, child: Widget) {
+        parent.children.push(child)
+    }
+    removeChild(parent: Widget, child: Widget) {
+        parent.children = parent.children.filter((ch) => ch !== child)
+    }
 }
+
+const renderer = new TestRenderer()
 
 const register = createComponentRegistry()
 

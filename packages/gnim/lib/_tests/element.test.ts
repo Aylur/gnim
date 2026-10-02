@@ -1,10 +1,10 @@
 import GObject from "gi://GObject?version=2.0"
 import Gio from "gi://Gio?version=2.0"
 import { describe, expect, it, vi } from "vitest"
-import type { CCProps, GnimNode } from "../jsx/element.js"
-import { For, Fragment, Portal, With, jsx, newObject } from "../jsx/element.js"
+import type { CC, CCProps, GnimNode } from "../jsx/element.js"
+import { For, Fragment, Portal, With, jsx } from "../jsx/element.js"
 import { createState, onCleanup, subscribe, type Accessor } from "../jsx/reactive.js"
-import { render, type Renderer } from "../jsx/render.js"
+import { BaseRenderer, render } from "../jsx/render.js"
 
 const emit = GObject.signal_emit_by_name
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve))
@@ -22,35 +22,29 @@ class Widget extends GObject.Object {
 
 class Box extends Widget {}
 
-const renderer: Renderer = {
-    resolveTag(tag) {
+class TestRenderer extends BaseRenderer {
+    resolveTag(tag: string): CC {
         if (tag === "box") return Box
-        throw Error(`unresolved JSX tag: "${tag}"`)
-    },
-    constructObject(klass, props) {
-        return newObject(klass, props as CCProps<GObject.Object>)
-    },
-    createText(text) {
+        return super.resolveTag(tag) as CC
+    }
+    constructObject(klass: CC, props: Record<string, unknown>) {
+        return this.newObject(klass, props as CCProps<GObject.Object>)
+    }
+    createText(text: string) {
         return new Widget({ label: text })
-    },
-    prepareProps(_, props) {
-        return props
-    },
-    setProperty(object, key, value) {
-        Object.assign(object, { [key]: value })
-    },
-    setChildren(parent: Widget, children: Widget[], prev: Widget[]) {
-        for (const child of prev) {
-            parent.children = parent.children.filter((ch) => ch !== child)
-        }
-        for (const child of children) {
-            parent.children.push(child)
-        }
-    },
+    }
+    appendChild(parent: Widget, child: Widget) {
+        parent.children.push(child)
+    }
+    removeChild(parent: Widget, child: Widget) {
+        parent.children = parent.children.filter((ch) => ch !== child)
+    }
     disposeObject(object: Widget) {
         object.destroyed = true
-    },
+    }
 }
+
+const renderer = new TestRenderer()
 
 const renderTree = (element: () => GnimNode, root?: GObject.Object) =>
     render(renderer, element, root)

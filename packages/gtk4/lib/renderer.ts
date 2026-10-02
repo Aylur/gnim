@@ -2,21 +2,16 @@ import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
 import {
-    appendChild,
+    BaseRenderer,
     computed,
     isAccessor,
     MissingMethodError,
-    newObject,
     prop,
-    removeChild,
     render as renderGnim,
-    setChildren,
     type CC,
     type CCProps,
-    type FC,
     type GnimNode,
     type MaybeAccessor,
-    type Renderer,
 } from "gnim"
 
 // optional
@@ -26,15 +21,9 @@ const dummyBuilder = new Gtk.Builder()
 const slotType = Symbol("gnim.gtk4.slot")
 const cssprovider = Symbol("gnim.gtk4.cssprovider")
 
-function snakecase(str: string) {
-    return str
-        .replace(/([a-z])([A-Z])/g, "$1-$2")
-        .replaceAll("-", "_")
-        .toLowerCase()
-}
-
 function setCss(widget: Gtk.Widget, css: string) {
     if (!css.includes("{") || !css.includes("}")) {
+        if (!css.trim().endsWith(";")) css += ";"
         css = `* { ${css} }`
     }
 
@@ -74,14 +63,11 @@ export function getSlot(object: GObject.Object) {
     return slotType in object ? (object[slotType] as string) : null
 }
 
-export class GtkRenderer implements Renderer {
-    resolveTag(tag: string): CC | FC {
-        throw Error(`unresolved JSX tag: "${tag}"`)
-    }
+export class GtkRenderer extends BaseRenderer {
     constructObject(element: CC, props: Record<string, unknown>): GObject.Object {
         const { slot, ...rest } = props
 
-        const object = newObject(element, rest as Partial<CCProps<GObject.Object>>)
+        const object = this.newObject(element, rest as Partial<CCProps<GObject.Object>>)
 
         if (typeof slot === "string") {
             Object.assign(object, { [slotType]: slot })
@@ -89,9 +75,11 @@ export class GtkRenderer implements Renderer {
 
         return object
     }
+
     createText(string: string): GObject.Object {
         return Gtk.Label.new(string)
     }
+
     prepareProps(klass: CC, props: Record<string, unknown>): Record<string, unknown> {
         if (klass.prototype instanceof Gtk.Widget && "class" in props) {
             const cn = props.class
@@ -103,6 +91,7 @@ export class GtkRenderer implements Renderer {
         }
         return props
     }
+
     setProperty(object: GObject.Object, key: string, value: unknown): void {
         if (object instanceof Gtk.Widget && key === "css" && typeof value === "string") {
             return setCss(object, value)
@@ -112,44 +101,10 @@ export class GtkRenderer implements Renderer {
             return object.set_css_classes(value.split(/\s+/).filter((n) => n !== ""))
         }
 
-        const getter = `get_${snakecase(key)}` as keyof typeof object
-
-        let current: unknown
-
-        if (
-            getter in object &&
-            typeof object[getter] === "function" &&
-            object[getter].length === 0
-        ) {
-            current = (object[getter] as () => unknown)()
-        } else {
-            current = object[key as keyof typeof object]
-        }
-
-        if (!Object.is(current, value)) {
-            Object.assign(object, { [key]: value })
-        }
+        super.setProperty(object, key, value)
     }
-    setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]): void {
-        if (
-            setChildren in parent &&
-            typeof parent[setChildren] === "function" &&
-            parent[setChildren](children, prev)
-        ) {
-            return
-        }
-        for (const child of prev) {
-            this.removeChild(parent, child)
-        }
-        for (const child of children) {
-            this.appendChild(parent, child)
-        }
-    }
+
     appendChild(parent: GObject.Object, child: GObject.Object): void {
-        if (appendChild in parent && typeof parent[appendChild] === "function") {
-            if (parent[appendChild](child)) return
-        }
-
         if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
             return void (parent.adjustment = child)
         }
@@ -209,11 +164,8 @@ export class GtkRenderer implements Renderer {
 
         throw new MissingMethodError("appendChild", parent, child)
     }
-    removeChild(parent: GObject.Object, child: GObject.Object): void {
-        if (removeChild in parent && typeof parent[removeChild] === "function") {
-            if (parent[removeChild](child)) return
-        }
 
+    removeChild(parent: GObject.Object, child: GObject.Object): void {
         if (Adw) {
             if (parent instanceof Adw.BreakpointBin && child instanceof Adw.Breakpoint) {
                 return parent.remove_breakpoint(child)
@@ -331,6 +283,7 @@ export class GtkRenderer implements Renderer {
 
         throw new MissingMethodError("removeChild", parent, child)
     }
+
     disposeObject(object: GObject.Object): void {
         if (object instanceof Gtk.Window) {
             object.destroy()

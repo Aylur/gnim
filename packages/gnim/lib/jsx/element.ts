@@ -1,6 +1,6 @@
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import { isGObjectCtor, kebabcase, type CamelCase, type Keyof, type PascalCase } from "../util.js"
+import { isGObjectCtor, type CamelCase, type Keyof, type PascalCase } from "../util.js"
 import { computed, createAccessor, isAccessor, type Accessor } from "./reactive.js"
 import { getRenderer } from "./render.js"
 import {
@@ -94,79 +94,6 @@ export function jsx(
 ): JSX.Element {
     if (type === Fragment) return Fragment(props as { children: GnimNode })
     return { type, props: key !== undefined ? { key, ...props } : props }
-}
-
-// onNotifyPropName -> notify::prop-name
-// onPascalName:detailName -> pascal-name::detail-name
-function signalName(key: string): string {
-    const [sig, detail] = kebabcase(key.slice(2)).split(":")
-
-    if (sig.startsWith("notify-")) {
-        return `notify::${sig.slice(7)}`
-    }
-
-    return detail ? `${sig}::${detail}` : sig
-}
-
-export function newObject<C extends CC>(
-    constructor: C,
-    ccProps: CCProps<InstanceType<C>>,
-): InstanceType<C> {
-    const { children, ref, construct, ...rest } = ccProps as Partial<CCProps<GObject.Object>>
-    const renderer = getRenderer()
-    const props = renderer.prepareProps(constructor, rest)
-
-    const signals: Array<[string, (...props: unknown[]) => unknown]> = []
-    const bindings: Array<[string, Accessor<unknown>]> = []
-
-    for (const [key, value] of Object.entries(props)) {
-        if (value === undefined) delete props[key]
-    }
-
-    // collect signals and bindings
-    for (const [key, value] of Object.entries(props)) {
-        if (/^on[A-Z]/.test(key) && typeof value === "function") {
-            signals.push([key, value as () => unknown])
-            delete props[key]
-        } else if (isAccessor(value)) {
-            bindings.push([key, value])
-            delete props[key]
-        }
-    }
-
-    const obj =
-        construct instanceof GObject.Object
-            ? construct
-            : typeof construct === "function"
-              ? construct()
-              : new constructor(props)
-
-    ref?.(obj)
-
-    if (construct instanceof GObject.Object || typeof construct === "function") {
-        for (const [key, value] of Object.entries(props)) {
-            renderer.setProperty(obj, key, value)
-        }
-    }
-
-    mountChildren(children, obj)
-
-    // handle signals
-    for (const [sig, handler] of signals) {
-        const id = GObject.signal_connect(obj, signalName(sig), handler)
-        onCleanup(() => GObject.signal_handler_disconnect(obj, id))
-    }
-
-    // handle bindings, the effects are disposed with the current scope
-    for (const [prop, accessor] of bindings) {
-        const effect = new Effect(() => {
-            const value = accessor()
-            untrack(() => renderer.setProperty(obj, prop, value))
-        })
-        effect.run()
-    }
-
-    return obj as InstanceType<C>
 }
 
 function unpackSlot(node: GObject.Object | Accessor<GnimNode>): GObject.Object[] {
@@ -431,7 +358,7 @@ type GObjectProps<T> = T extends {
 }
     ? {
           children: GnimNode
-          ref(self: T): void
+          ref: ((self: T) => void) | Array<(self: T) => void>
       } & {
           // writable reactive properties
           [K in Keyof<T["$writableProperties"]> as CamelCase<K>]: Accessor<

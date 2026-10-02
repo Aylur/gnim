@@ -1,7 +1,6 @@
 export {
     For,
     Fragment,
-    newObject,
     Portal,
     With,
     type CC,
@@ -36,7 +35,9 @@ export {
 } from "./jsx/reactive.js"
 export {
     appendChild,
+    BaseRenderer,
     MissingMethodError,
+    newObject,
     removeChild,
     render,
     setChildren,
