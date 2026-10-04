@@ -1,4 +1,4 @@
-import { INTERNAL_resolveNode, type GnimNode } from "./element.js"
+import { resolveNode, type GnimNode } from "./element.js"
 import * as Signal from "./signal.js"
 
 interface DevHooks {
@@ -158,7 +158,7 @@ export function createContext<T>(defaultValue: T): Context<T> {
 
     function Context(props: { value: T; children: GnimNode }) {
         const { value, children } = props
-        return withContext(value, () => INTERNAL_resolveNode(children))
+        return withContext(value, () => resolveNode(children))
     }
 
     return (ctx = Object.assign(Context, {

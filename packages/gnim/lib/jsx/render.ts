@@ -1,6 +1,13 @@
 import GObject from "gi://GObject?version=2.0"
 import { kebabcase, snakecase } from "../util.js"
-import { mountChildren, type CC, type CCProps, type FC, type GnimNode } from "./element.js"
+import {
+    resolveNode,
+    mountChildren,
+    type CC,
+    type CCProps,
+    type FC,
+    type GnimNode,
+} from "./element.js"
 import { createContext, isAccessor, untrack, type Accessor } from "./reactive.js"
 import { createScope, Effect, onCleanup, runScope, setContext } from "./signal.js"
 
@@ -49,7 +56,31 @@ export interface Renderer {
 type SignalArray = Array<[string, (...props: unknown[]) => unknown]>
 type AccessorArray = Array<[string, Accessor<unknown>]>
 
+function isSignalHander(key: string, value: unknown): value is (...props: unknown[]) => unknown {
+    return /^on[A-Z]/.test(key) && typeof value === "function"
+}
+
+function isObjectPropertyNode(constructor: CC, key: string, value: unknown): value is GnimNode {
+    if (value instanceof GObject.Object) return false // no-op: no need to resolve the node
+
+    const name = kebabcase(key)
+    const pspec: GObject.ParamSpec | null = GObject.Object.find_property.call(constructor, name)
+    return pspec !== null && GObject.type_is_a(pspec.value_type, GObject.TYPE_OBJECT)
+}
+
 export abstract class BaseRenderer implements Renderer {
+    protected objectProperties = new Map<CC, Set<string>>()
+
+    protected resolveChild(node: GnimNode, slot: string) {
+        const [child, ...siblings] = resolveNode(node)
+
+        if (siblings.length > 0 || !(child instanceof GObject.Object)) {
+            throw Error(`invalid slot value: "${slot}" requires static JSX`)
+        }
+
+        return child
+    }
+
     protected collectProps(constructor: CC, ccProps: CCProps<GObject.Object>) {
         const { children, ref, construct, ...rest } = ccProps
         const props = this.prepareProps(constructor, rest)
@@ -63,12 +94,21 @@ export abstract class BaseRenderer implements Renderer {
         }
 
         for (const [key, value] of entries) {
-            if (/^on[A-Z]/.test(key) && typeof value === "function") {
-                signals.push([key, value as () => unknown])
+            if (isSignalHander(key, value)) {
+                signals.push([key, value])
                 delete props[key]
-            } else if (isAccessor(value)) {
+                continue
+            }
+
+            if (isAccessor(value)) {
                 accessors.push([key, value])
                 delete props[key]
+                continue
+            }
+
+            if (isObjectPropertyNode(constructor, key, value)) {
+                props[key] = this.resolveChild(value, `${constructor.name}:${kebabcase(key)}`)
+                continue
             }
         }
 

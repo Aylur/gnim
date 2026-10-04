@@ -93,12 +93,13 @@ export function jsx(
     key?: string | number,
 ): JSX.Element {
     if (type === Fragment) return Fragment(props as { children: GnimNode })
+    // "key" prop is special in React and is passed as third param by the transpiler
     return { type, props: key !== undefined ? { key, ...props } : props }
 }
 
 function unpackSlot(node: GObject.Object | Accessor<GnimNode>): GObject.Object[] {
     if (node instanceof GObject.Object) return [node]
-    return INTERNAL_resolveNode(node()).map(unpackSlot).flat()
+    return resolveNode(node()).map(unpackSlot).flat()
 }
 
 function isStaticChildren(
@@ -125,7 +126,7 @@ export function mountChildren(children: GnimNode, mount?: GObject.Object) {
         if (currentChildren.length > 0) setChildren([], currentChildren)
     })
 
-    const nodes = INTERNAL_resolveNode(children)
+    const nodes = resolveNode(children)
 
     if (nodes.length === 0) return
 
@@ -146,7 +147,7 @@ export function mountChildren(children: GnimNode, mount?: GObject.Object) {
 /**
  * @internal Do not use this in user code.
  */
-export function INTERNAL_resolveNode(node: GnimNode): Array<GObject.Object | Accessor<GnimNode>> {
+export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<GnimNode>> {
     const renderer = getRenderer()
 
     if (node === undefined || node === null || node === false || node === "") {
@@ -177,7 +178,7 @@ export function INTERNAL_resolveNode(node: GnimNode): Array<GObject.Object | Acc
     if (Symbol.iterator in node) {
         const results = new Array<GObject.Object | Accessor<GnimNode>>()
         for (const child of node) {
-            results.push(...INTERNAL_resolveNode(child))
+            results.push(...resolveNode(child))
         }
         return results
     }
@@ -185,9 +186,9 @@ export function INTERNAL_resolveNode(node: GnimNode): Array<GObject.Object | Acc
     const type = typeof node.type === "string" ? renderer.resolveTag(node.type) : node.type
 
     if (isGObjectCtor(type)) {
-        return INTERNAL_resolveNode(renderer.constructObject(type, node.props))
+        return resolveNode(renderer.constructObject(type, node.props))
     } else {
-        return INTERNAL_resolveNode(untrack(() => type(node.props)))
+        return resolveNode(untrack(() => type(node.props)))
     }
 }
 
@@ -232,7 +233,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
 
     type MapItem = {
         item: Item
-        child: ReturnType<typeof INTERNAL_resolveNode>
+        child: ReturnType<typeof resolveNode>
         index: Signal<number>
         indexAccessor: Accessor<number>
         scope: Scope
@@ -278,7 +279,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
                         mapItem.item = item
                         mapItem.scope = createScope(currentScope)
                         mapItem.child = runScope(mapItem.scope, () =>
-                            INTERNAL_resolveNode(mkChild(item, mapItem.indexAccessor)),
+                            resolveNode(mkChild(item, mapItem.indexAccessor)),
                         )
                     }
                     return mapItem.child
@@ -286,9 +287,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
                     const index = new Signal(i)
                     const indexAccessor = createAccessor(index.get.bind(index))
                     const scope = createScope(currentScope)
-                    const child = runScope(scope, () =>
-                        INTERNAL_resolveNode(mkChild(item, indexAccessor)),
-                    )
+                    const child = runScope(scope, () => resolveNode(mkChild(item, indexAccessor)))
                     map.set(key, { item, child, index, indexAccessor, scope })
                     return child
                 }
@@ -317,7 +316,7 @@ export interface WithProps<T> {
  */
 export function With<T>(props: WithProps<T>): GnimNode {
     const { value, children: mkChild } = props
-    return computed(() => untrack((v) => INTERNAL_resolveNode(mkChild(v)), value()))
+    return computed(() => untrack((v) => resolveNode(mkChild(v)), value()))
 }
 
 export interface PortalProps {
@@ -356,6 +355,9 @@ type MergeProps<A, B> =
     & Pick<A, Exclude<keyof A, keyof B>>
     & Pick<B, Exclude<keyof B, keyof A>>
 
+type AccessorOrJSX<T> =
+    Accessor<T> | ([Extract<T, GObject.Object>] extends [never] ? never : JSX.Element)
+
 type GObjectProps<T> = T extends {
     $signals: unknown
     $readableProperties: unknown
@@ -366,7 +368,7 @@ type GObjectProps<T> = T extends {
           ref: ((self: T) => void) | Array<(self: T) => void>
       } & {
           // writable reactive properties
-          [K in Keyof<T["$writableProperties"]> as CamelCase<K>]: Accessor<
+          [K in Keyof<T["$writableProperties"]> as CamelCase<K>]: AccessorOrJSX<
               T["$writableProperties"][K]
           >
       } & {

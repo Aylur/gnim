@@ -4,7 +4,6 @@ import {
     appendChild,
     BaseRenderer,
     computed,
-    INTERNAL_resolveNode,
     isAccessor,
     MissingMethodError,
     prop,
@@ -59,12 +58,7 @@ export class GtkRenderer extends BaseRenderer {
             !rest.construct &&
             constructOnlyChild.some((k) => element === k || element.prototype instanceof k)
         ) {
-            const [child, ...siblings] = INTERNAL_resolveNode(rest.children as GnimNode)
-
-            if (siblings.length > 0 || !(child instanceof GObject.Object)) {
-                throw Error(`${element.name} requires a single static child`)
-            }
-
+            const child = this.resolveChild(rest.children as GnimNode, `${element.name}:child`)
             delete rest.children
             rest.child = child
         }
