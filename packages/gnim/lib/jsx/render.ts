@@ -75,7 +75,7 @@ export abstract class BaseRenderer implements Renderer {
         const [child, ...siblings] = resolveNode(node)
 
         if (siblings.length > 0 || !(child instanceof GObject.Object)) {
-            throw Error(`invalid slot value: "${slot}" requires static JSX`)
+            throw Error(`invalid slot value: "${slot}" requires static single child JSX`)
         }
 
         return child
@@ -106,6 +106,7 @@ export abstract class BaseRenderer implements Renderer {
                 continue
             }
 
+            // TODO: support dynamic single child expressions
             if (isObjectPropertyNode(constructor, key, value)) {
                 props[key] = this.resolveChild(value, `${constructor.name}:${kebabcase(key)}`)
                 continue
