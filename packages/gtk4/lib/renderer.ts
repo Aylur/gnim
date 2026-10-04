@@ -1,42 +1,40 @@
-import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
 import {
+    appendChild,
     BaseRenderer,
     computed,
+    INTERNAL_resolveNode,
     isAccessor,
     MissingMethodError,
     prop,
+    removeChild,
     render as renderGnim,
+    setChildren,
     type CC,
     type CCProps,
     type GnimNode,
     type MaybeAccessor,
 } from "gnim"
-
-// optional
-const Adw = await import("gi://Adw?version=1").then((mod) => mod.default).catch(() => null)
+import { applyChildrenRules, applyRules, constructOnlyChild, getSlot, setSlot } from "./rules.js"
 
 const dummyBuilder = new Gtk.Builder()
-const slotType = Symbol("gnim.gtk4.slot")
-const cssprovider = Symbol("gnim.gtk4.cssprovider")
+const cssProviders = new WeakMap<Gtk.Widget, Gtk.CssProvider>()
 
 function setCss(widget: Gtk.Widget, css: string) {
     if (!css.includes("{") || !css.includes("}")) {
-        if (!css.trim().endsWith(";")) css += ";"
-        css = `* { ${css} }`
+        css = css.trim().endsWith(";") ? `* { ${css} }` : `* { ${css}; }`
     }
 
     const ctx = widget.get_style_context()
 
-    if (cssprovider in widget) {
-        ctx.remove_provider(widget[cssprovider] as Gtk.CssProvider)
-    }
+    const prev = cssProviders.get(widget)
+    if (prev) ctx.remove_provider(prev)
 
     const provider = new Gtk.CssProvider()
     provider.load_from_string(css)
     ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-    Object.assign(widget, { [cssprovider]: provider })
+    cssProviders.set(widget, provider)
 }
 
 function flattenClassList(classList: unknown): MaybeAccessor<string> {
@@ -46,31 +44,35 @@ function flattenClassList(classList: unknown): MaybeAccessor<string> {
     return ""
 }
 
-function isAdjustable<T extends GObject.Object>(
-    object: T,
-): object is T & { adjustment: Gtk.Adjustment } {
-    const property = GObject.Object.list_properties
-        .call(object)
-        .find((prop) => prop.name === "adjustment")
-
-    return !!property && GObject.type_is_a(property.value_type, Gtk.Adjustment)
-}
-
-/**
- * @returns The slot that was set in JSX on `object`.
- */
-export function getSlot(object: GObject.Object) {
-    return slotType in object ? (object[slotType] as string) : null
-}
-
 export class GtkRenderer extends BaseRenderer {
+    static instance: GtkRenderer | null = null
+
+    static get() {
+        if (!this.instance) this.instance = new GtkRenderer()
+        return this.instance
+    }
+
     constructObject(element: CC, props: Record<string, unknown>): GObject.Object {
         const { slot, ...rest } = props
+
+        if (
+            !rest.construct &&
+            constructOnlyChild.some((k) => element === k || element.prototype instanceof k)
+        ) {
+            const [child, ...siblings] = INTERNAL_resolveNode(rest.children as GnimNode)
+
+            if (siblings.length > 0 || !(child instanceof GObject.Object)) {
+                throw Error(`${element.name} requires a single static child`)
+            }
+
+            delete rest.children
+            rest.child = child
+        }
 
         const object = this.newObject(element, rest as Partial<CCProps<GObject.Object>>)
 
         if (typeof slot === "string") {
-            Object.assign(object, { [slotType]: slot })
+            setSlot(object, slot)
         }
 
         return object
@@ -104,59 +106,24 @@ export class GtkRenderer extends BaseRenderer {
         super.setProperty(object, key, value)
     }
 
+    setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]): void {
+        const buildable = setChildren in parent || appendChild in parent || removeChild in parent
+
+        if (
+            !buildable &&
+            applyChildrenRules(parent, children, prev, {
+                append: (child) => this.appendChild(parent, child),
+                remove: (child) => this.removeChild(parent, child),
+            })
+        ) {
+            return
+        }
+
+        super.setChildren(parent, children, prev)
+    }
+
     appendChild(parent: GObject.Object, child: GObject.Object): void {
-        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
-            return void (parent.adjustment = child)
-        }
-
-        if (
-            child instanceof Gtk.Widget &&
-            (parent instanceof Gtk.Stack || (Adw && parent instanceof Adw.ViewStack)) &&
-            child.name !== "" &&
-            child.name !== null &&
-            getSlot(child) === "named"
-        ) {
-            return void parent.add_named(child, child.name)
-        }
-
-        if (
-            child instanceof Gtk.Popover &&
-            (parent instanceof Gtk.MenuButton ||
-                (Gtk.PopoverBin && parent instanceof Gtk.PopoverBin))
-        ) {
-            return parent.set_popover(child)
-        }
-
-        if (
-            child instanceof Gio.MenuModel &&
-            (parent instanceof Gtk.MenuButton ||
-                parent instanceof Gtk.PopoverMenu ||
-                (Adw && parent instanceof Adw.SplitButton))
-        ) {
-            return parent.set_menu_model(child)
-        }
-
-        if (child instanceof Gtk.Window && parent instanceof Gtk.Application) {
-            return parent.add_window(child)
-        }
-
-        if (child instanceof Gtk.TextBuffer && parent instanceof Gtk.TextView) {
-            return parent.set_buffer(child)
-        }
-
-        if (parent instanceof Gtk.CenterBox && child instanceof Gtk.Widget) {
-            const slot = getSlot(child)
-            if (!slot) {
-                console.warn("Trying to append child to Gtk.CenterBox without a specified slot")
-                return
-            }
-            if (slot !== "center" && slot !== "start" && slot !== "end") {
-                console.warn(
-                    `Invalid Gtk.CenterBox child slot: has to be one of "start", "center", "end"`,
-                )
-                return
-            }
-        }
+        if (applyRules("append", parent, child)) return
 
         if (parent instanceof Gtk.Buildable) {
             return parent.vfunc_add_child(dummyBuilder, child, getSlot(child))
@@ -166,106 +133,10 @@ export class GtkRenderer extends BaseRenderer {
     }
 
     removeChild(parent: GObject.Object, child: GObject.Object): void {
-        if (Adw) {
-            if (parent instanceof Adw.BreakpointBin && child instanceof Adw.Breakpoint) {
-                return parent.remove_breakpoint(child)
-            }
+        if (applyRules("remove", parent, child)) return
 
-            if (parent instanceof Adw.SplitButton) {
-                if (child instanceof Gtk.Popover && parent.popover === child) {
-                    return parent.set_popover(null)
-                }
-                if (child instanceof Gio.MenuModel && parent.menuModel === child) {
-                    return parent.set_menu_model(null)
-                }
-            }
-
-            if (
-                (parent instanceof Adw.Window || parent instanceof Adw.ApplicationWindow) &&
-                parent.content === child
-            ) {
-                return parent.set_content(null)
-            }
-
-            if (
-                parent instanceof Adw.NavigationSplitView ||
-                parent instanceof Adw.OverlaySplitView
-            ) {
-                if (parent.sidebar === child) return parent.set_sidebar(null)
-                if (parent.content === child) return parent.set_content(null)
-            }
-        }
-
-        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
-            return // no-op
-        }
-
-        if (child instanceof Gtk.EventController && parent instanceof Gtk.Widget) {
-            return parent.remove_controller(child)
-        }
-
-        if (
-            child instanceof Gio.MenuModel &&
-            (parent instanceof Gtk.MenuButton || parent instanceof Gtk.PopoverMenu)
-        ) {
-            return parent.set_menu_model(null)
-        }
-
-        if (
-            child instanceof Gtk.TextBuffer &&
-            parent instanceof Gtk.TextView &&
-            parent.buffer === child
-        ) {
-            return parent.set_buffer(null)
-        }
-
-        if (
-            child instanceof Gtk.Popover &&
-            parent instanceof Gtk.MenuButton &&
-            parent.popover === child
-        ) {
-            return parent.set_popover(null)
-        }
-
+        // TODO: register every known .remove and .set_child as rules
         if (child instanceof Gtk.Widget) {
-            if (parent instanceof Gtk.CenterBox) {
-                switch (getSlot(child)) {
-                    case "start":
-                        return parent.set_start_widget(null)
-                    case "center":
-                        return parent.set_center_widget(null)
-                    case "end":
-                        return parent.set_end_widget(null)
-                }
-            }
-
-            if (parent instanceof Gtk.Paned) {
-                switch (getSlot(child)) {
-                    case "start":
-                        return parent.set_start_child(null)
-                    case "end":
-                        return parent.set_end_child(null)
-                }
-            }
-
-            if (parent instanceof Gtk.Overlay) {
-                if (getSlot(child) === "overlay") {
-                    return parent.remove_overlay(child)
-                }
-                return parent.set_child(null)
-            }
-
-            if (parent instanceof Gtk.Notebook) {
-                const pageNum = parent.page_num(child)
-                if (pageNum !== -1) {
-                    return parent.remove_page(pageNum)
-                }
-            }
-
-            if (Gtk.PopoverBin && parent instanceof Gtk.PopoverBin && parent.popover === child) {
-                return parent.set_popover(null)
-            }
-
             // Most containers have a .remove()
             if ("remove" in parent && typeof parent.remove == "function") {
                 return parent.remove(child)
@@ -275,10 +146,6 @@ export class GtkRenderer extends BaseRenderer {
             if ("set_child" in parent && typeof parent.set_child == "function") {
                 return parent.set_child(null)
             }
-        }
-
-        if (parent instanceof Gtk.Application && child instanceof Gtk.Window) {
-            return parent.remove_window(child)
         }
 
         throw new MissingMethodError("removeChild", parent, child)
@@ -292,7 +159,7 @@ export class GtkRenderer extends BaseRenderer {
 }
 
 export function render(element: () => GnimNode, root?: GObject.Object) {
-    return renderGnim(new GtkRenderer(), element, root)
+    return renderGnim(GtkRenderer.get(), element, root)
 }
 
 export type ClassValue = string | number | null | boolean | undefined | ClassValue[]

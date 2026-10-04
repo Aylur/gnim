@@ -1,4 +1,4 @@
-import { jsx, resolveNode, type FC } from "./element.js"
+import { INTERNAL_resolveNode, jsx, type FC } from "./element.js"
 import { computed, devHooks } from "./reactive.js"
 import { getContext, setContext, Signal, untrack, type Context } from "./signal.js"
 
@@ -120,7 +120,7 @@ export function createComponentRegistry() {
                 setContext(stateCtx, state)
                 state.begin()
                 try {
-                    return resolveNode(jsx(entry.get(), props))
+                    return INTERNAL_resolveNode(jsx(entry.get(), props))
                 } finally {
                     state.flush()
                 }

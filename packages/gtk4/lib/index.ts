@@ -1,4 +1,5 @@
-export { getSlot, GtkRenderer, render, type ClassList, type ClassValue } from "./renderer.js"
+export { GtkRenderer, render, type ClassList, type ClassValue } from "./renderer.js"
+export { getSlot } from "./rules.js"
 export {
     keyframes,
     style,

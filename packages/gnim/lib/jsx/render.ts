@@ -1,8 +1,8 @@
 import GObject from "gi://GObject?version=2.0"
+import { kebabcase, snakecase } from "../util.js"
 import { mountChildren, type CC, type CCProps, type FC, type GnimNode } from "./element.js"
 import { createContext, isAccessor, untrack, type Accessor } from "./reactive.js"
 import { createScope, Effect, onCleanup, runScope, setContext } from "./signal.js"
-import { kebabcase, snakecase } from "../util.js"
 
 const RendererContext = createContext<Renderer | null>(null)
 
@@ -22,12 +22,12 @@ export class MissingMethodError extends Error {
 
 /**
  * Gtk independent `Gtk.Buildable` alternative.
- * Each method returns whether the operation succeeded. If `false` it will fall back to the default behavior.
+ * Return `false` to fallback to the default behavior.
  */
 export interface Buildable {
-    [setChildren]?(children: GObject.Object[], prev: GObject.Object[]): boolean
-    [appendChild]?(child: GObject.Object): boolean
-    [removeChild]?(child: GObject.Object): boolean
+    [setChildren]?(children: GObject.Object[], prev: GObject.Object[]): void | boolean
+    [appendChild]?(child: GObject.Object): void | boolean
+    [removeChild]?(child: GObject.Object): void | boolean
 }
 
 export function getRenderer(): Renderer {
@@ -163,22 +163,19 @@ export abstract class BaseRenderer implements Renderer {
     abstract removeChild(parent: GObject.Object, child: GObject.Object): void
 
     setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]): void {
-        if (
-            setChildren in parent &&
-            typeof parent[setChildren] === "function" &&
-            parent[setChildren](children, prev)
-        ) {
-            return
+        if (setChildren in parent && typeof parent[setChildren] === "function") {
+            if (parent[setChildren](children, prev) !== false) return
         }
+
         for (const child of prev) {
             if (removeChild in parent && typeof parent[removeChild] === "function") {
-                if (parent[removeChild](child)) continue
+                if (parent[removeChild](child) !== false) continue
             }
             this.removeChild(parent, child)
         }
         for (const child of children) {
             if (appendChild in parent && typeof parent[appendChild] === "function") {
-                if (parent[appendChild](child)) continue
+                if (parent[appendChild](child) !== false) continue
             }
             this.appendChild(parent, child)
         }

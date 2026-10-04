@@ -1,4 +1,5 @@
 export {
+    INTERNAL_resolveNode,
     For,
     Fragment,
     Portal,
