@@ -14,8 +14,7 @@
         "girs": "./scripts.nu girs",
         "build": "./scripts.nu girs && tsc",
         "lint": "eslint .",
-        "fmt": "prettier --write . --ignore-path ../../.gitignore",
-        "fmt:check": "prettier --check . --ignore-path ../../.gitignore",
+        "fmt": "prettier --check . --ignore-path ../../.gitignore",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {

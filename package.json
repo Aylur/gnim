@@ -11,12 +11,11 @@
     "scripts": {
         "clean": "git clean -Xdf",
         "types": "./scripts.nu types",
-        "ci": "./scripts.nu ci",
+        "check": "./scripts.nu check",
         "build": "pnpm -r run --parallel build",
         "test": "vitest run",
         "lint": "pnpm -r run --parallel lint",
         "fmt": "pnpm -r run --parallel fmt",
-        "fmt:check": "pnpm -r run --parallel fmt:check",
         "typecheck": "pnpm -r run --parallel typecheck",
         "docs:dev": "vitepress dev docs",
         "docs:build": "vitepress build docs"

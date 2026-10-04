@@ -14,7 +14,7 @@ def "main types" [] {
     girgen -d packages/gnome-shell/gir-1.0/gnome50 -d .gnim/girs -i Gee-0.8 gjs -o .gnim/types/gi
 }
 
-def "main ci" [] {
+def "main check" [] {
     mkdir .gnim/types/gi
 
     if (ls .gnim/types/gi | length) == 0 {
@@ -22,7 +22,7 @@ def "main ci" [] {
     }
 
     $env.ESLINT_FLAGS = "unstable_native_nodejs_ts_config"
-    pnpm run --parallel '/(typecheck|fmt:check|lint|test)/'
+    pnpm run --parallel '/(typecheck|fmt|lint|test)/'
 }
 
 def main [] {

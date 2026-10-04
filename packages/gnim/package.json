@@ -17,8 +17,7 @@
         "build": "tsc -p tsconfig.build.json",
         "prepack": "pnpm -w run docs:build && cp ../../docs/.vitepress/dist/llms-full.txt ./llms-full.txt",
         "lint": "eslint .",
-        "fmt": "prettier --write . --ignore-path ../../.gitignore",
-        "fmt:check": "prettier --check . --ignore-path ../../.gitignore",
+        "fmt": "prettier --check . --ignore-path ../../.gitignore",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
