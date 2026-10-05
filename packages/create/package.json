@@ -13,6 +13,7 @@
     "scripts": {
         "build": "tsc",
         "fmt": "prettier --check . --ignore-path ../../.gitignore",
+        "lint": "eslint .",
         "typecheck": "tsc --noEmit"
     },
     "devDependencies": {

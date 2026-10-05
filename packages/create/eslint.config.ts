@@ -6,6 +6,6 @@ export default defineConfig(
     eslint.configs.recommended,
     ...tseslint.configs.recommended,
     {
-        ignores: ["dist/"],
+        ignores: ["dist/", "./templates/"],
     },
 )
