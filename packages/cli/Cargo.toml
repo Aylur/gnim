@@ -6,7 +6,7 @@ license = "MIT"
 description = "Gnim CLI"
 homepage = "https://gnimjs.dev/"
 repository = "https://github.com/aylur/gnim"
-include = ["/bin/gnim.rs", "/bin/command"]
+include = ["/src"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

@@ -2,7 +2,8 @@
 
 import { arch, platform, argv, exit, kill, pid } from "node:process"
 import { spawnSync } from "node:child_process"
-import { chmod } from "node:fs/promises"
+import { constants } from "node:fs"
+import { access, chmod } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 
 const supportedPlatforms = ["linux-x64"]
@@ -13,7 +14,17 @@ if (!supportedPlatforms.includes(target)) {
 }
 
 const cli = fileURLToPath(import.meta.resolve(`@gnim-js/${target}`))
-await chmod(cli, 0o755)
+
+try {
+    await access(cli, constants.X_OK)
+} catch {
+    try {
+        await chmod(cli, 0o755)
+    } catch (error) {
+        console.error(`${cli} is not executable and could not be made executable: ${error}`)
+        exit(1)
+    }
+}
 
 const processResult = spawnSync(cli, argv.slice(2), {
     stdio: "inherit",

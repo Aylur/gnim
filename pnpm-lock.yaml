@@ -37,7 +37,7 @@ importers:
         version: 0.3.20
       nushell:
         specifier: latest
-        version: 0.115.1
+        version: 0.116.0
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
@@ -116,10 +116,6 @@ importers:
         version: link:../cli/npm/linux-x64
 
   packages/gnome-shell:
-    dependencies:
-      gnim:
-        specifier: workspace:^
-        version: link:../gnim
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -127,6 +123,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.9.1(jiti@2.7.0)
+      gnim:
+        specifier: workspace:^
+        version: link:../gnim
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -135,10 +134,6 @@ importers:
         version: 8.68.0(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)
 
   packages/gtk3:
-    dependencies:
-      gnim:
-        specifier: workspace:^
-        version: link:../gnim
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -146,6 +141,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.9.1(jiti@2.7.0)
+      gnim:
+        specifier: workspace:^
+        version: link:../gnim
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -154,10 +152,6 @@ importers:
         version: 8.68.0(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)
 
   packages/gtk4:
-    dependencies:
-      gnim:
-        specifier: workspace:^
-        version: link:../gnim
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -165,6 +159,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.9.1(jiti@2.7.0)
+      gnim:
+        specifier: workspace:^
+        version: link:../gnim
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -173,10 +170,6 @@ importers:
         version: 8.68.0(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)
 
   packages/io:
-    dependencies:
-      gnim:
-        specifier: workspace:^
-        version: link:../gnim
     devDependencies:
       '@eslint/js':
         specifier: 'catalog:'
@@ -184,6 +177,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.9.1(jiti@2.7.0)
+      gnim:
+        specifier: workspace:^
+        version: link:../gnim
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -477,43 +473,43 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@nushell/darwin-arm64@0.115.1':
-    resolution: {integrity: sha512-5ggio8bL4eZgyv3N5XeiSoW9PRUYd7sgzf1pk5SrTpn08nd2ZC7cqKBqSTu8gdvc5dJaYw6XFIRJBTjp6KXyPw==}
+  '@nushell/darwin-arm64@0.116.0':
+    resolution: {integrity: sha512-+gREwjPS1Q9bqzHGJUUMCUcnnh8Km36BezzIsxRiKkcGweAmllISljo2i4FqE2fH4Akonty+oRLxb/+RsXdXMg==}
     cpu: [arm64]
     os: [darwin]
 
-  '@nushell/darwin-x64@0.115.1':
-    resolution: {integrity: sha512-/yOzNaGIn4IResiGyNBKRV/7a4WtIL093YNsVCgL4fT6mWD/L+dtJttz1iSMDpPX0DmfE+l7avLTxmr/su1isQ==}
+  '@nushell/darwin-x64@0.116.0':
+    resolution: {integrity: sha512-9AKP44TThNvG5DSwuzSPG0Gno2uBHwxNjsFIzIEPsE1/1iezzOkcQviYALfqSW6FHnGk1Io0ReL50FViKh+ZKQ==}
     cpu: [x64]
     os: [darwin]
 
-  '@nushell/linux-arm64@0.115.1':
-    resolution: {integrity: sha512-2fDvYiQEUt92S12n5Z+2p5qdwJl2v2zrU3ognj3+J0dUuLvRCEqae8/dSrXqktlGPNBpzsqd5bytkZxtdmxPDw==}
+  '@nushell/linux-arm64@0.116.0':
+    resolution: {integrity: sha512-9oXMmveT1fLkf5xB500DkfMoM0w/bybMhOfVu87Cvh6SW2G3sYmuBakWGRqo5G+4eoGMwQk73pHWT2amGxENfg==}
     cpu: [arm64]
     os: [linux]
 
-  '@nushell/linux-arm@0.115.1':
-    resolution: {integrity: sha512-3W/c0ZQUCuyC172auQP3mtoBiO29QQwkq1RdNlR/jjBCjhffu4LV/Q+e0/j5X7OOV9D5LZH558kjkeqLx7kFbA==}
+  '@nushell/linux-arm@0.116.0':
+    resolution: {integrity: sha512-lBN6+iNN0UiWKsqjXWmTkq9LTiGMXXap4J5MNFPHxsKlRzRpgND6lxG406w/pEmY+L0gaO6G/nqby2GjGRdD+g==}
     cpu: [arm]
     os: [linux]
 
-  '@nushell/linux-riscv64@0.115.1':
-    resolution: {integrity: sha512-yVx9h4/Z5HLSFaqk1iYPZTX2G9uxYnygMjWmnVI1xZ+vEX2cIjJpo6ygUMyd5veidSCx63BrSnRhsc38vedDbA==}
+  '@nushell/linux-riscv64@0.116.0':
+    resolution: {integrity: sha512-NwVWo5aUUON8hPfSqZC5lozcu9kWEjyRftmKfquMX59nGBAR7PP5fivp+npoOLiyiRyriph1o0iY2lfyXBU4ig==}
     cpu: [riscv64]
     os: [linux]
 
-  '@nushell/linux-x64@0.115.1':
-    resolution: {integrity: sha512-w6eMwPZJ/JqIEq2BgUif71fzBuNFxA1xvrIshC+bQYq44x2PgOE+x1IX+URNUBQSkCLAY9ze2Egec00RMyDtMA==}
+  '@nushell/linux-x64@0.116.0':
+    resolution: {integrity: sha512-w3Ps9ruyYDIo13T+lwYEsjByLQu+QIcuSh+fVlg3/wc8b8hzoYlpAaaxefiJSKxBuXzoQ3ciRXH3ZQkVy26nNg==}
     cpu: [x64]
     os: [linux]
 
-  '@nushell/windows-arm64@0.115.1':
-    resolution: {integrity: sha512-UQXLyHV5/c+cZ30Zoz75dvNYusvSGj2H7i/0y0jkgUxxZJoZxWWuSW6AsEArxfaaTof/BBfWZ4wEjgLOr34xzA==}
+  '@nushell/windows-arm64@0.116.0':
+    resolution: {integrity: sha512-ZwPTILJ9jJw0/ITTDU1IH76ebiKaSnwPzeNVZlH6lwlcsD9bXCmbv3kXtDWD91LqIlhs0j/Lv3OxjWdsHAMCHA==}
     cpu: [arm64]
     os: [win32]
 
-  '@nushell/windows-x64@0.115.1':
-    resolution: {integrity: sha512-61fr4+lRz0cIrjJhlCtBtsHaJwCNoS2BMX9hYYEA4IKy2ZKQGg5xFl7QUOBBa1r45rcW+u9lnPesw9AkdwD2lA==}
+  '@nushell/windows-x64@0.116.0':
+    resolution: {integrity: sha512-LbKVHfcqK44LOPq3VYuThZ7Rl1jOh7pTOIjw8CMYkfa6q5/CnfpJhfjNLmv/NIjRxZ2LGt4Y9L4bgRbi/VKdVA==}
     cpu: [x64]
     os: [win32]
 
@@ -1276,8 +1272,8 @@ packages:
       chokidar:
         optional: true
 
-  nushell@0.115.1:
-    resolution: {integrity: sha512-L7nnD7ERLxwKCvFdKf4nneheT1wIW3wIVpigabg55VD/iAXbmgw7JlPaG2DVmdJQOMxTH4C/pjI4uHHWuBxK7A==}
+  nushell@0.116.0:
+    resolution: {integrity: sha512-19qVf9EzY0vOl2TLcKe6KwH1gEj/nH2SFVTsTgL6rovHLqlqASOvHbBVSXl2NoHiTeETF22igz2Fg87KJr9CAw==}
     engines: {node: '>=22.0.0', pnpm: '>=10'}
     hasBin: true
 
@@ -1794,28 +1790,28 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
-  '@nushell/darwin-arm64@0.115.1':
+  '@nushell/darwin-arm64@0.116.0':
     optional: true
 
-  '@nushell/darwin-x64@0.115.1':
+  '@nushell/darwin-x64@0.116.0':
     optional: true
 
-  '@nushell/linux-arm64@0.115.1':
+  '@nushell/linux-arm64@0.116.0':
     optional: true
 
-  '@nushell/linux-arm@0.115.1':
+  '@nushell/linux-arm@0.116.0':
     optional: true
 
-  '@nushell/linux-riscv64@0.115.1':
+  '@nushell/linux-riscv64@0.116.0':
     optional: true
 
-  '@nushell/linux-x64@0.115.1':
+  '@nushell/linux-x64@0.116.0':
     optional: true
 
-  '@nushell/windows-arm64@0.115.1':
+  '@nushell/windows-arm64@0.116.0':
     optional: true
 
-  '@nushell/windows-x64@0.115.1':
+  '@nushell/windows-x64@0.116.0':
     optional: true
 
   '@rolldown/pluginutils@1.0.1': {}
@@ -2549,16 +2545,16 @@ snapshots:
       asap: 2.0.6
       commander: 5.1.0
 
-  nushell@0.115.1:
+  nushell@0.116.0:
     optionalDependencies:
-      '@nushell/darwin-arm64': 0.115.1
-      '@nushell/darwin-x64': 0.115.1
-      '@nushell/linux-arm': 0.115.1
-      '@nushell/linux-arm64': 0.115.1
-      '@nushell/linux-riscv64': 0.115.1
-      '@nushell/linux-x64': 0.115.1
-      '@nushell/windows-arm64': 0.115.1
-      '@nushell/windows-x64': 0.115.1
+      '@nushell/darwin-arm64': 0.116.0
+      '@nushell/darwin-x64': 0.116.0
+      '@nushell/linux-arm': 0.116.0
+      '@nushell/linux-arm64': 0.116.0
+      '@nushell/linux-riscv64': 0.116.0
+      '@nushell/linux-x64': 0.116.0
+      '@nushell/windows-arm64': 0.116.0
+      '@nushell/windows-x64': 0.116.0
 
   obug@2.1.4: {}
 

@@ -17,10 +17,11 @@
         "fmt": "prettier --check . --ignore-path ../../.gitignore",
         "typecheck": "tsc --noEmit"
     },
-    "dependencies": {
+    "peerDependencies": {
         "gnim": "workspace:^"
     },
     "devDependencies": {
+        "gnim": "workspace:^",
         "@eslint/js": "catalog:",
         "eslint": "catalog:",
         "typescript": "catalog:",
