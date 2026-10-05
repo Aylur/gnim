@@ -31,6 +31,7 @@ const UNSET = 128
 const ERROR = 256
 
 const queue: Array<{ run: Fn }> = []
+const annotatedErrors = new WeakSet<Error>()
 
 function runAll<T>(items: T[], fn: (item: T) => void, reverse: boolean): void {
     let threw = false
@@ -99,6 +100,8 @@ export function untrack<Args extends Array<any>, T>(fn: (...args: Args) => T, ..
 
 export interface Scope {
     parent: Scope | null
+    name?: string
+    mountWithParent?: boolean
     children?: Scope[]
     cleanups?: Fn[]
     mounts?: Fn[]
@@ -122,13 +125,20 @@ function attachScope(scope: Scope): void {
 
 export function runScope<T>(scope: Scope, fn: () => T): T {
     if (scope.disposed) throw new Error("scope is disposed")
+    const parent = scope.parent
+    const mountWithParent = scope.mountWithParent && parent !== null && !parent.mounted
+    if (mountWithParent) {
+        parent.mounts ??= []
+        parent.mounts.push(() => flushMounts(scope))
+    }
     const prevScope = setActiveScope(scope)
     let result: T
     try {
         result = fn()
-        if (!scope.disposed) flushMounts(scope)
+        if (!mountWithParent && !scope.disposed) flushMounts(scope)
     } catch (e) {
         scope.mounts = []
+        annotateError(e, scope)
         throw e
     } finally {
         activeScope = prevScope
@@ -137,13 +147,27 @@ export function runScope<T>(scope: Scope, fn: () => T): T {
     return result
 }
 
+function runAllInScope<T>(scope: Scope, items: T[], fn: (item: T) => void, reverse: boolean) {
+    try {
+        runAll(items, fn, reverse)
+    } catch (e) {
+        annotateError(e, scope)
+        throw e
+    }
+}
+
 function flushMounts(scope: Scope): void {
-    if (scope.mounted) return
+    if (scope.mounted || scope.disposed) return
     scope.mounted = true
     const mounts = scope.mounts
     scope.mounts = []
     if (mounts) {
-        runAll(mounts, untrack, false)
+        const prevScope = setActiveScope(scope)
+        try {
+            runAllInScope(scope, mounts, untrack, false)
+        } finally {
+            activeScope = prevScope
+        }
     }
 }
 
@@ -157,7 +181,7 @@ function resetScope(scope: Scope): void {
     try {
         if (children) runAll(children, disposeChildScope, true)
     } finally {
-        if (cleanups) runAll(cleanups, untrack, true)
+        if (cleanups) runAllInScope(scope, cleanups, untrack, true)
     }
 }
 
@@ -180,9 +204,15 @@ function disposeScope(scope: Scope): boolean {
     return true
 }
 
-export function createScope(parent = activeScope): Scope {
+export function createScope(props?: {
+    parent?: Scope | null
+    name?: string
+    mountWithParent?: boolean
+}): Scope {
     const scope: Scope = {
-        parent,
+        parent: typeof props?.parent === "undefined" ? activeScope : props.parent,
+        name: props?.name,
+        mountWithParent: props?.mountWithParent,
         dispose: () => disposeScope(scope),
     }
 
@@ -192,6 +222,39 @@ export function createScope(parent = activeScope): Scope {
 
 export function getScope(): Scope | null {
     return activeScope
+}
+
+function annotateError(error: unknown, scope: Scope | null): void {
+    if (!(error instanceof Error) || annotatedErrors.has(error)) return
+
+    const stack = new Array<string>()
+    for (let s = scope; s; s = s.parent) {
+        if (s.name) stack.push(`    in ${s.name}`)
+    }
+    if (stack.length === 0) return
+
+    annotatedErrors.add(error)
+    try {
+        Object.assign(error, { scopeStack: stack.join("\n") })
+        error.message += `\n${stack.join("\n")}`
+    } catch {
+        // frozen or otherwise non writable error
+    }
+}
+
+export function withScopeStack<Args extends Array<any>, R>(
+    fn: (...args: Args) => R,
+): (...args: Args) => R {
+    const scope = activeScope
+    if (!scope) return fn
+    return (...args) => {
+        try {
+            return fn(...args)
+        } catch (e) {
+            annotateError(e, scope)
+            throw e
+        }
+    }
 }
 
 export function onCleanup(fn: Fn): void {

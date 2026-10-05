@@ -185,10 +185,15 @@ export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<Gni
 
     const type = typeof node.type === "string" ? renderer.resolveTag(node.type) : node.type
 
+    const scope = createScope({
+        name: `<${type.name || "Anonymous"}>`,
+        mountWithParent: true,
+    })
+
     if (isGObjectCtor(type)) {
-        return resolveNode(renderer.constructObject(type, node.props))
+        return runScope(scope, () => resolveNode(renderer.constructObject(type, node.props)))
     } else {
-        return resolveNode(untrack(() => type(node.props)))
+        return runScope(scope, () => resolveNode(untrack(() => type(node.props))))
     }
 }
 
@@ -277,7 +282,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
                     if (!Object.is(mapItem.item, item)) {
                         mapItem.scope.dispose()
                         mapItem.item = item
-                        mapItem.scope = createScope(currentScope)
+                        mapItem.scope = createScope({ parent: currentScope })
                         mapItem.child = runScope(mapItem.scope, () =>
                             resolveNode(mkChild(item, mapItem.indexAccessor)),
                         )
@@ -286,7 +291,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
                 } else {
                     const index = new Signal(i)
                     const indexAccessor = createAccessor(index.get.bind(index))
-                    const scope = createScope(currentScope)
+                    const scope = createScope({ parent: currentScope })
                     const child = runScope(scope, () => resolveNode(mkChild(item, indexAccessor)))
                     map.set(key, { item, child, index, indexAccessor, scope })
                     return child

@@ -141,7 +141,7 @@ export function createContext<T>(defaultValue: T): Context<T> {
     let ctx: Context<T>
 
     function withContext<R>(value: T, fn: () => R) {
-        const scope = Signal.createScope()
+        const scope = Signal.createScope({ mountWithParent: true })
         return Signal.runScope(scope, () => {
             Signal.setContext(ctx, value)
             return fn()
@@ -249,7 +249,7 @@ export function onMount(fn: Signal.Fn) {
  * ```
  */
 export function createRoot<T>(fn: (dispose: Signal.Fn) => T, parent?: Scope | null) {
-    const scope = Signal.createScope(parent)
+    const scope = Signal.createScope({ parent })
     return Signal.runScope(scope, () => fn(() => scope.dispose()))
 }
 

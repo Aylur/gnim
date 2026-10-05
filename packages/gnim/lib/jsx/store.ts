@@ -7,7 +7,7 @@ import {
     type Accessor,
     type MaybeAccessor,
 } from "./reactive.js"
-import { Computed, onCleanup, Signal, type Fn } from "./signal.js"
+import { Computed, onCleanup, Signal, withScopeStack, type Fn } from "./signal.js"
 
 export type Store<S = Record<string | symbol, unknown>> = S & {
     $readableProperties: S
@@ -218,7 +218,8 @@ export function connectSignal<O extends GObject.Object, S extends Keyof<SignalsO
     signal: S,
     handler: ConnectionCallback<O, S>,
 ): void {
-    const id = GObject.signal_connect(object, signal, (_, ...args) => handler(...args))
+    const callback = withScopeStack(handler)
+    const id = GObject.signal_connect(object, signal, (_, ...args) => callback(...args))
     onCleanup(() => GObject.signal_handler_disconnect(object, id))
 }
 

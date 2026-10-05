@@ -3,8 +3,19 @@ import Gio from "gi://Gio?version=2.0"
 import { describe, expect, it, vi } from "vitest"
 import type { CC, CCProps, GnimNode } from "../jsx/element.js"
 import { For, Fragment, Portal, With, jsx } from "../jsx/element.js"
-import { createState, onCleanup, subscribe, type Accessor } from "../jsx/reactive.js"
+import {
+    computed,
+    createContext,
+    createState,
+    effect,
+    getScope,
+    onCleanup,
+    onMount,
+    subscribe,
+    type Accessor,
+} from "../jsx/reactive.js"
 import { BaseRenderer, render } from "../jsx/render.js"
+import { connectSignal } from "../jsx/store.js"
 
 const emit = GObject.signal_emit_by_name
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve))
@@ -1069,5 +1080,287 @@ describe("<Portal />", () => {
         expect(root.children).toHaveLength(0)
 
         dispose()
+    })
+})
+
+describe("component scopes", () => {
+    it("mounts components after their objects are attached, parents first", () => {
+        const root = new Box()
+        const calls: string[] = []
+
+        function Child() {
+            onMount(() => calls.push(`child:${root.children.length}`))
+            return jsx(Widget, { label: "child" })
+        }
+
+        function App() {
+            onMount(() => calls.push(`app:${root.children.length}`))
+            return jsx(Child, {})
+        }
+
+        renderTree(() => jsx(App, {}), root)
+
+        expect(calls).toEqual(["app:1", "child:1"])
+    })
+
+    it("runs deferred onMount callbacks with the component scope active", () => {
+        let bodyScope: unknown
+        let mountScope: unknown
+
+        function Child() {
+            bodyScope = getScope()
+            onMount(() => (mountScope = getScope()))
+            return jsx(Widget, {})
+        }
+
+        renderTree(() => jsx(Child, {}), new Box())
+
+        expect(mountScope).toBe(bodyScope)
+    })
+
+    it("mounts context provider children after their objects are attached", () => {
+        const root = new Box()
+        const Ctx = createContext("default")
+        const calls: string[] = []
+
+        function Consumer() {
+            onMount(() => calls.push(`${Ctx.use()}:${root.children.length}`))
+            return jsx(Widget, {})
+        }
+
+        renderTree(() => jsx(Ctx, { value: "provided", children: jsx(Consumer, {}) }), root)
+
+        expect(calls).toEqual(["provided:1"])
+    })
+
+    it("mounts provide() callbacks with the enclosing scope", () => {
+        const root = new Box()
+        const Ctx = createContext("default")
+        const calls: string[] = []
+
+        function App() {
+            return Ctx.provide("provided", () => {
+                onMount(() => calls.push(`${Ctx.use()}:${root.children.length}`))
+                return jsx(Widget, {})
+            })
+        }
+
+        renderTree(() => jsx(App, {}), root)
+
+        expect(calls).toEqual(["provided:1"])
+    })
+
+    it("runs onMount right away in components rendered after mount", () => {
+        const [show, setShow] = createState(false)
+        const calls: string[] = []
+
+        function Late() {
+            onMount(() => calls.push("late"))
+            return jsx(Widget, {})
+        }
+
+        renderTree(
+            () => jsx("box", { children: show.as((v) => (v ? jsx(Late, {}) : null)) }),
+            new Box(),
+        )
+        expect(calls).toEqual([])
+
+        setShow(true)
+        expect(calls).toEqual(["late"])
+    })
+})
+
+describe("component errors", () => {
+    function catchError(fn: () => void): Error & { scopeStack?: string } {
+        try {
+            fn()
+        } catch (error) {
+            return error as Error
+        }
+        throw Error("expected an error to be thrown")
+    }
+
+    it("annotates errors with the component stack, innermost first", () => {
+        const original = Error("boom")
+
+        function Broken(): GnimNode {
+            throw original
+        }
+
+        function App() {
+            return jsx("box", { children: jsx(Broken, {}) })
+        }
+
+        const error = catchError(() => renderTree(() => jsx(App, {}), new Box()))
+
+        expect(error).toBe(original)
+        expect(error.scopeStack).toBe("    in <Broken>\n    in <Box>\n    in <App>")
+        expect(error.message).toBe(`boom\n${error.scopeStack}`)
+    })
+
+    it("annotates only once when the error passes through outer components", () => {
+        function Broken(): GnimNode {
+            throw Error("boom")
+        }
+
+        const Outer = () => jsx(Broken, {})
+
+        const error = catchError(() => renderTree(() => jsx(Outer, {}), new Box()))
+
+        expect(error.message.match(/in <Broken>/g)).toHaveLength(1)
+    })
+
+    it("leaves non Error throwables untouched", () => {
+        function Broken(): GnimNode {
+            throw "boom"
+        }
+
+        expect(() => renderTree(() => jsx(Broken, {}), new Box())).toThrow("boom")
+    })
+
+    it("does not leak stack entries after an error", () => {
+        function Broken(): GnimNode {
+            throw Error("first")
+        }
+
+        catchError(() => renderTree(() => jsx(Broken, {}), new Box()))
+
+        function AlsoBroken(): GnimNode {
+            throw Error("second")
+        }
+
+        const error = catchError(() => renderTree(() => jsx(AlsoBroken, {}), new Box()))
+        expect(error.scopeStack).toBe("    in <AlsoBroken>")
+    })
+
+    it("annotates errors thrown by effects after mount with their component stack", () => {
+        const [count, setCount] = createState(0)
+
+        function Counter() {
+            effect(() => {
+                if (count() > 0) throw Error("effect failed")
+            })
+            return jsx("box", {})
+        }
+
+        const App = () => jsx(Counter, {})
+
+        renderTree(() => jsx(App, {}), new Box())
+        const error = catchError(() => setCount(1))
+
+        expect(error.scopeStack).toBe("    in <Counter>\n    in <App>")
+    })
+
+    it("annotates errors thrown by computeds with their component stack", () => {
+        const [count, setCount] = createState(0)
+        let doubled!: Accessor<number>
+
+        function Counter() {
+            doubled = computed(() => {
+                if (count() > 0) throw Error("computed failed")
+                return count() * 2
+            })
+            return jsx("box", {})
+        }
+
+        renderTree(() => jsx(Counter, {}), new Box())
+        setCount(1)
+        const error = catchError(() => doubled())
+
+        expect(error.scopeStack).toBe("    in <Counter>")
+    })
+
+    it("keeps ancestors when a dynamic child throws on update", () => {
+        const [show, setShow] = createState(false)
+
+        function Broken(): GnimNode {
+            throw Error("boom")
+        }
+
+        function App() {
+            return jsx("box", { children: show.as((v) => (v ? jsx(Broken, {}) : null)) })
+        }
+
+        renderTree(() => jsx(App, {}), new Box())
+        const error = catchError(() => setShow(true))
+
+        expect(error.scopeStack).toBe("    in <Broken>\n    in <Box>\n    in <App>")
+    })
+
+    it("annotates errors thrown by JSX signal handlers", () => {
+        function Clicker() {
+            return jsx(Widget, {
+                onClicked: () => {
+                    throw Error("handler failed")
+                },
+            })
+        }
+
+        const root = new Box()
+        renderTree(() => jsx(Clicker, {}), root)
+        const error = catchError(() => emit(root.children[0], "clicked", 0, 0))
+
+        expect(error.scopeStack).toBe("    in <Widget>\n    in <Clicker>")
+    })
+
+    it("annotates errors thrown by connectSignal handlers", () => {
+        const widget = new Widget()
+
+        function Listener() {
+            connectSignal(widget as any, "clicked", () => {
+                throw Error("handler failed")
+            })
+            return jsx("box", {})
+        }
+
+        renderTree(() => jsx(Listener, {}), new Box())
+        const error = catchError(() => emit(widget, "clicked", 0, 0))
+
+        expect(error.scopeStack).toBe("    in <Listener>")
+    })
+
+    it("annotates errors thrown by onMount callbacks", () => {
+        function Mounted() {
+            onMount(() => {
+                throw Error("mount failed")
+            })
+            return jsx("box", {})
+        }
+
+        const App = () => jsx(Mounted, {})
+
+        const error = catchError(() => renderTree(() => jsx(App, {}), new Box()))
+
+        expect(error.scopeStack).toBe("    in <Mounted>\n    in <App>")
+    })
+
+    it("annotates errors thrown by onCleanup callbacks", () => {
+        function Cleaned() {
+            onCleanup(() => {
+                throw Error("cleanup failed")
+            })
+            return jsx("box", {})
+        }
+
+        const dispose = renderTree(() => jsx(Cleaned, {}), new Box())
+        const error = catchError(() => dispose())
+
+        expect(error.scopeStack).toBe("    in <Cleaned>")
+    })
+
+    it("does not annotate effects created outside of components", () => {
+        const [count, setCount] = createState(0)
+
+        renderTree(() => {
+            effect(() => {
+                if (count() > 0) throw Error("effect failed")
+            })
+            return jsx("box", {})
+        }, new Box())
+
+        const error = catchError(() => setCount(1))
+
+        expect(error.message).toBe("effect failed")
+        expect(error.scopeStack).toBeUndefined()
     })
 })

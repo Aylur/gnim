@@ -9,7 +9,7 @@ import {
     type GnimNode,
 } from "./element.js"
 import { createContext, isAccessor, untrack, type Accessor } from "./reactive.js"
-import { createScope, Effect, onCleanup, runScope, setContext } from "./signal.js"
+import { createScope, Effect, onCleanup, runScope, setContext, withScopeStack } from "./signal.js"
 
 const RendererContext = createContext<Renderer | null>(null)
 
@@ -84,16 +84,15 @@ export abstract class BaseRenderer implements Renderer {
     protected collectProps(constructor: CC, ccProps: CCProps<GObject.Object>) {
         const { children, ref, construct, ...rest } = ccProps
         const props = this.prepareProps(constructor, rest)
-        const entries = Object.entries(props)
 
         const signals: SignalArray = []
         const accessors: AccessorArray = []
 
-        for (const [key, value] of entries) {
+        for (const [key, value] of Object.entries(props)) {
             if (value === undefined) delete props[key]
         }
 
-        for (const [key, value] of entries) {
+        for (const [key, value] of Object.entries(props)) {
             if (isSignalHander(key, value)) {
                 signals.push([key, value])
                 delete props[key]
@@ -126,7 +125,7 @@ export abstract class BaseRenderer implements Renderer {
                   ? `${signal}::${detail}`
                   : signal
 
-            const id = GObject.signal_connect(object, s, handler)
+            const id = GObject.signal_connect(object, s, withScopeStack(handler))
             onCleanup(() => GObject.signal_handler_disconnect(object, id))
         }
 
