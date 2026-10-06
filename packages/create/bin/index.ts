@@ -4,6 +4,7 @@ import {
     confirm,
     intro,
     isCancel,
+    log,
     outro,
     select,
     spinner,
@@ -13,7 +14,7 @@ import { execFile } from "node:child_process"
 import { statSync } from "node:fs"
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises"
 import { parseArgs, promisify } from "node:util"
-import { existsSync } from "node:fs"
+import { existsSync, readdirSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import nunjucks from "nunjucks"
@@ -200,7 +201,7 @@ async function askDescription(placeholder: string) {
         process.exit(0)
     }
 
-    return id
+    return (id ?? "").trim()
 }
 
 async function askAppName(placeholder: string) {
@@ -209,6 +210,10 @@ async function askAppName(placeholder: string) {
         placeholder,
         validate(name) {
             if (!name) return "A name is required"
+
+            if (!/^[a-z0-9][a-z0-9._-]*$/.test(name)) {
+                return "The name may only contain lowercase letters, digits, periods, underscores, or hyphens, and must start with a letter or digit."
+            }
         },
     })
 
@@ -217,6 +222,22 @@ async function askAppName(placeholder: string) {
     }
 
     return name
+}
+
+async function askExtensionName(placeholder: string) {
+    const name = await text({
+        message: "Pick an extension name",
+        placeholder,
+        validate(name) {
+            if (!name?.trim()) return "A name is required"
+        },
+    })
+
+    if (isCancel(name)) {
+        process.exit(0)
+    }
+
+    return name.trim()
 }
 
 async function askVala() {
@@ -347,10 +368,10 @@ async function renderTemplate(
 ) {
     const root = fileURLToPath(import.meta.resolve(`../templates/${template}`))
 
-    function substitute(input: string) {
+    function substitute(input: string, escape = (value: string) => value) {
         let output = input
         for (const [variable, value] of Object.entries(variables)) {
-            output = output.replaceAll(variable, () => value)
+            output = output.replaceAll(variable, () => escape(value))
         }
         return output
     }
@@ -367,7 +388,10 @@ async function renderTemplate(
         const path = relative(root, src)
         const env = entry.name === "meson.build" ? hashEnv : slashEnv
         const source = await readFile(src, "utf8")
-        const content = substitute(env.renderString(source, context))
+        const rendered = env.renderString(source, context)
+        const content = entry.name.endsWith(".json")
+            ? substitute(rendered, (v) => JSON.stringify(v).slice(1, -1))
+            : substitute(rendered)
 
         const dest = join(dir, substitute(path))
         await mkdir(dirname(dest), { recursive: true })
@@ -474,13 +498,16 @@ async function main() {
         }
         case "gnome-shell": {
             id = await askGnomeUuid()
-            name = await askAppName("My Extension")
+            name = await askExtensionName("My Extension")
             description = await askDescription("Extension that lets you do xyz")
             break
         }
     }
 
     const dir = await askTargetDir()
+    if (existsSync(dir) && readdirSync(dir).length > 0) {
+        log.warn(`${dir} is not empty`)
+    }
     const git = await askGit()
     if (agents === null) {
         agents = await askAgents()
@@ -530,7 +557,7 @@ async function main() {
 }
 
 try {
-    main()
+    await main()
 } catch (err) {
     console.error(err)
 }

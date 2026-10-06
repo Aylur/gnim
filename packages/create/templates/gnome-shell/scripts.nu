@@ -17,8 +17,12 @@ def "main build" [] {
     gnim schemas src -o dist/schemas --compile
     cp metadata.json dist
 
-    if ("po" | path exists) {
-        cp -r po/*.po dist/po
+    # gnome-shell binds the extension's gettext domain (its uuid) to locale/
+    for po in (glob po/*.po) {
+        let lang = $po | path parse | get stem
+        let dir = $"dist/locale/($lang)/LC_MESSAGES"
+        mkdir $dir
+        msgfmt $po -o $"($dir)/($UUID).mo"
     }
 
     prettier --write dist --ignore-path /dev/null
