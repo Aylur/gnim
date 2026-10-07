@@ -8,7 +8,6 @@
         "type": "kofi",
         "url": "https://ko-fi.com/aylur"
     },
-    "packageManager": "pnpm@11.9.0",
     "scripts": {
         "clean": "git clean -Xdf",
         "types": "./scripts.nu types",
