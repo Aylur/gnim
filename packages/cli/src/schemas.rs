@@ -189,7 +189,8 @@ pub async fn schemas(args: &SchemasArgs) -> Result<(), String> {
             }),
     };
 
-    fs::create_dir_all(&outdir).expect("Failed to create directory");
+    fs::create_dir_all(&outdir)
+        .map_err(|e| format!("Failed to create {}: {e}", outdir.display()))?;
 
     for schema in schemas {
         let path = schema.path();
@@ -221,11 +222,15 @@ pub async fn schemas(args: &SchemasArgs) -> Result<(), String> {
 
         let mut outfile = path::PathBuf::from(&outdir);
         outfile.push(format!("{stem}.xml"));
-        fs::write(outfile, formatted).expect("failed to write file");
+        fs::write(&outfile, formatted)
+            .map_err(|e| format!("Failed to write {}: {e}", outfile.display()))?;
     }
 
     if args.compile {
-        compile(outdir.as_os_str().to_str().expect("valid outdir"))?;
+        let outdir = outdir
+            .to_str()
+            .ok_or_else(|| format!("Output path is not valid UTF-8: {}", outdir.display()))?;
+        compile(outdir)?;
     }
 
     Ok(())

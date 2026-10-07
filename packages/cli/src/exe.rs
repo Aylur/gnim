@@ -102,16 +102,18 @@ pub async fn exe(args: &ExeArgs) -> Result<(), String> {
 
         let outdir = outfile
             .parent()
-            .expect("Target must have a parent directory");
+            .ok_or_else(|| format!("Invalid output path: {out}"))?;
 
-        fs::create_dir_all(outdir).expect("Failed to create directories");
-        fs::write(outfile, content).expect("Failed to write file");
+        fs::create_dir_all(outdir)
+            .map_err(|e| format!("Failed to create {}: {e}", outdir.display()))?;
+        fs::write(outfile, content).map_err(|e| format!("Failed to write {out}: {e}"))?;
 
         let mut perms = fs::metadata(outfile)
-            .expect("Failed to get metadata for outfile")
+            .map_err(|e| format!("Failed to read metadata of {out}: {e}"))?
             .permissions();
         perms.set_mode(perms.mode() | 0o111);
-        fs::set_permissions(outfile, perms).expect("Failed to set file permissions");
+        fs::set_permissions(outfile, perms)
+            .map_err(|e| format!("Failed to make {out} executable: {e}"))?;
     } else {
         println!("{content}");
     }

@@ -57,17 +57,25 @@ async fn main() -> std::process::ExitCode {
         },
     });
 
-    let result = match cli.command {
-        Command::Types(args) => types(&args).await,
-        Command::Schemas(args) => schemas(&args).await,
-        Command::Dev(args) => dev(&args).await,
-        Command::Bundle(args) => bundle(&args).await,
-        Command::Exe(args) => exe(&args).await,
-    };
+    let result = tokio::spawn(async move {
+        match cli.command {
+            Command::Types(args) => types(&args).await,
+            Command::Schemas(args) => schemas(&args).await,
+            Command::Dev(args) => dev(&args).await,
+            Command::Bundle(args) => bundle(&args).await,
+            Command::Exe(args) => exe(&args).await,
+        }
+    })
+    .await;
 
     if !cli.keep_tmp {
         fs::remove_dir_all(dev_rundir()).ok();
     }
+
+    let result = match result {
+        Ok(result) => result,
+        Err(err) => std::panic::resume_unwind(err.into_panic()),
+    };
 
     match result {
         Ok(_) => process::ExitCode::SUCCESS,
