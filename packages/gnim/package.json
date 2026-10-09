@@ -15,9 +15,11 @@
     },
     "scripts": {
         "build": "tsc -p tsconfig.build.json",
+        "prepublishOnly": "pnpm run build",
         "prepack": "pnpm -w run docs:build && cp ../../docs/.vitepress/dist/llms-full.txt ./llms-full.txt",
         "lint": "eslint .",
         "fmt": "prettier --check . --ignore-path ../../.gitignore",
+        "test": "vitest run",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
@@ -30,8 +32,10 @@
         "@eslint/js": "catalog:",
         "@types/node": "catalog:",
         "eslint": "catalog:",
+        "reactive-framework-test-suite": "0.0.2",
         "typescript": "catalog:",
-        "typescript-eslint": "catalog:"
+        "typescript-eslint": "catalog:",
+        "vitest": "^4.1.10"
     },
     "exports": {
         ".": "./lib/index.ts",

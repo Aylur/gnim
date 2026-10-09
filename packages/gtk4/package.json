@@ -12,6 +12,7 @@
     },
     "scripts": {
         "build": "tsc",
+        "prepublishOnly": "pnpm run build",
         "lint": "eslint .",
         "fmt": "prettier --check . --ignore-path ../../.gitignore",
         "typecheck": "tsc --noEmit"

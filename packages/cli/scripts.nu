@@ -1,8 +1,9 @@
 #!/usr/bin/env nu
 
 def build_cli [--os: string, --cpu: string, --target: string] {
+    let root = ($env.CURRENT_FILE | path dirname)
     cargo build --release --target $target
-    cp $"($env.INIT_CWD)/target/($target)/release/gnim" $"npm/($os)-($cpu)/gnim"
+    cp $"($root)/../../target/($target)/release/gnim" $"($root)/npm/($os)-($cpu)/gnim"
 }
 
 def "main build" [] {

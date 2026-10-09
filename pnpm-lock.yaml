@@ -37,22 +37,16 @@ importers:
         version: 0.3.20
       nushell:
         specifier: latest
-        version: 0.116.0
+        version: 0.116.1
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
-      reactive-framework-test-suite:
-        specifier: 0.0.2
-        version: 0.0.2
       vitepress:
         specifier: 2.0.0-alpha.16
         version: 2.0.0-alpha.16(@types/node@26.4.0)(jiti@2.7.0)(postcss@8.5.28)(typescript@6.0.3)
       vitepress-plugin-llmstxt:
         specifier: ^0.5.2
         version: 0.5.2(vitepress@2.0.0-alpha.16(@types/node@26.4.0)(jiti@2.7.0)(postcss@8.5.28)(typescript@6.0.3))
-      vitest:
-        specifier: ^4.1.10
-        version: 4.1.10(@types/node@26.4.0)(vite@7.3.6(@types/node@26.4.0)(jiti@2.7.0))
       vue:
         specifier: ^3.5.40
         version: 3.5.40(typescript@6.0.3)
@@ -104,12 +98,18 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 10.9.1(jiti@2.7.0)
+      reactive-framework-test-suite:
+        specifier: 0.0.2
+        version: 0.0.2
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
       typescript-eslint:
         specifier: 'catalog:'
         version: 8.68.0(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.4.0)(vite@7.3.6(@types/node@26.4.0)(jiti@2.7.0))
     optionalDependencies:
       '@gnim-js/linux-x64':
         specifier: workspace:*
@@ -473,43 +473,43 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@nushell/darwin-arm64@0.116.0':
-    resolution: {integrity: sha512-+gREwjPS1Q9bqzHGJUUMCUcnnh8Km36BezzIsxRiKkcGweAmllISljo2i4FqE2fH4Akonty+oRLxb/+RsXdXMg==}
+  '@nushell/darwin-arm64@0.116.1':
+    resolution: {integrity: sha512-VgoifHcSfLgExbNpk9QIPNO+w5b8yLHAqBecVZ6VIPVpTBgeFRJ3OjI3ZuHJRBmXL04B60d1jalfIygZpqW1VA==}
     cpu: [arm64]
     os: [darwin]
 
-  '@nushell/darwin-x64@0.116.0':
-    resolution: {integrity: sha512-9AKP44TThNvG5DSwuzSPG0Gno2uBHwxNjsFIzIEPsE1/1iezzOkcQviYALfqSW6FHnGk1Io0ReL50FViKh+ZKQ==}
+  '@nushell/darwin-x64@0.116.1':
+    resolution: {integrity: sha512-uD34VjnE81mh3eAZVdWXtNdBkraDWQUwam3QnPainiiFwCs1h3Arya/n3ZtIFlppNFHIGwESKTg7MqNPyT5vnQ==}
     cpu: [x64]
     os: [darwin]
 
-  '@nushell/linux-arm64@0.116.0':
-    resolution: {integrity: sha512-9oXMmveT1fLkf5xB500DkfMoM0w/bybMhOfVu87Cvh6SW2G3sYmuBakWGRqo5G+4eoGMwQk73pHWT2amGxENfg==}
+  '@nushell/linux-arm64@0.116.1':
+    resolution: {integrity: sha512-rbSV+vIO6E8AJF9rS4kAsxyRmowYbivcFvp2MX2p4pQCXpr7x0a2OQ6WWjGivxLvozPbVdj03egAvnKNBkQDyg==}
     cpu: [arm64]
     os: [linux]
 
-  '@nushell/linux-arm@0.116.0':
-    resolution: {integrity: sha512-lBN6+iNN0UiWKsqjXWmTkq9LTiGMXXap4J5MNFPHxsKlRzRpgND6lxG406w/pEmY+L0gaO6G/nqby2GjGRdD+g==}
+  '@nushell/linux-arm@0.116.1':
+    resolution: {integrity: sha512-grCC0eZIPPgM8qa43FntGIfgt65gDp7y1ng1xv6SfafR9L1xi5U4j0U63UeMHLsRR0dCuv/gWc8e5MXJgbpcgQ==}
     cpu: [arm]
     os: [linux]
 
-  '@nushell/linux-riscv64@0.116.0':
-    resolution: {integrity: sha512-NwVWo5aUUON8hPfSqZC5lozcu9kWEjyRftmKfquMX59nGBAR7PP5fivp+npoOLiyiRyriph1o0iY2lfyXBU4ig==}
+  '@nushell/linux-riscv64@0.116.1':
+    resolution: {integrity: sha512-9Y/V9r3L0CI6cDElscVMVUuVd5wKBalK/VmcBjjxYn9BMLZqceRqpZvOTO6AoxhRw8yjeG+hvdXZt6bs98glaQ==}
     cpu: [riscv64]
     os: [linux]
 
-  '@nushell/linux-x64@0.116.0':
-    resolution: {integrity: sha512-w3Ps9ruyYDIo13T+lwYEsjByLQu+QIcuSh+fVlg3/wc8b8hzoYlpAaaxefiJSKxBuXzoQ3ciRXH3ZQkVy26nNg==}
+  '@nushell/linux-x64@0.116.1':
+    resolution: {integrity: sha512-AFC2fu+/Ij7jro40ezFLV6NDu4/oNiPStv05c3Zfn2LgoQ1XnSMs5boke1bS/YT8ltrfbvXe9Aaev9BaAmA4UQ==}
     cpu: [x64]
     os: [linux]
 
-  '@nushell/windows-arm64@0.116.0':
-    resolution: {integrity: sha512-ZwPTILJ9jJw0/ITTDU1IH76ebiKaSnwPzeNVZlH6lwlcsD9bXCmbv3kXtDWD91LqIlhs0j/Lv3OxjWdsHAMCHA==}
+  '@nushell/windows-arm64@0.116.1':
+    resolution: {integrity: sha512-BXAC/ofLpQDoud1bOFY23Ywt8MTPH1ZIpvQ01sOWXBIlN6DvLbIRL70sgzypWkMgRR4eRNKVGEjdZsyz6vRUjQ==}
     cpu: [arm64]
     os: [win32]
 
-  '@nushell/windows-x64@0.116.0':
-    resolution: {integrity: sha512-LbKVHfcqK44LOPq3VYuThZ7Rl1jOh7pTOIjw8CMYkfa6q5/CnfpJhfjNLmv/NIjRxZ2LGt4Y9L4bgRbi/VKdVA==}
+  '@nushell/windows-x64@0.116.1':
+    resolution: {integrity: sha512-XCYBPjgmnaF2zYyUPL/h9yyQN8qNul9D3DC32tnK0CnpP9zbR/7yMAmTX/uc5TLHY96/0m1L5A6jdDxkW4i5NA==}
     cpu: [x64]
     os: [win32]
 
@@ -1272,8 +1272,8 @@ packages:
       chokidar:
         optional: true
 
-  nushell@0.116.0:
-    resolution: {integrity: sha512-19qVf9EzY0vOl2TLcKe6KwH1gEj/nH2SFVTsTgL6rovHLqlqASOvHbBVSXl2NoHiTeETF22igz2Fg87KJr9CAw==}
+  nushell@0.116.1:
+    resolution: {integrity: sha512-9gqtz874yk0VF2CVfku+F5W23jshigoFRxaWZu+Dou1N5FUcBmDpVjXS+he53yXxtMvAiJr7BWK8ONOWVwtB5w==}
     engines: {node: '>=22.0.0', pnpm: '>=10'}
     hasBin: true
 
@@ -1315,10 +1315,6 @@ packages:
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
-
-  picomatch@4.0.5:
-    resolution: {integrity: sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A==}
-    engines: {node: '>=12'}
 
   picomatch@4.0.7:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
@@ -1790,28 +1786,28 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
-  '@nushell/darwin-arm64@0.116.0':
+  '@nushell/darwin-arm64@0.116.1':
     optional: true
 
-  '@nushell/darwin-x64@0.116.0':
+  '@nushell/darwin-x64@0.116.1':
     optional: true
 
-  '@nushell/linux-arm64@0.116.0':
+  '@nushell/linux-arm64@0.116.1':
     optional: true
 
-  '@nushell/linux-arm@0.116.0':
+  '@nushell/linux-arm@0.116.1':
     optional: true
 
-  '@nushell/linux-riscv64@0.116.0':
+  '@nushell/linux-riscv64@0.116.1':
     optional: true
 
-  '@nushell/linux-x64@0.116.0':
+  '@nushell/linux-x64@0.116.1':
     optional: true
 
-  '@nushell/windows-arm64@0.116.0':
+  '@nushell/windows-arm64@0.116.1':
     optional: true
 
-  '@nushell/windows-x64@0.116.0':
+  '@nushell/windows-x64@0.116.1':
     optional: true
 
   '@rolldown/pluginutils@1.0.1': {}
@@ -2545,16 +2541,16 @@ snapshots:
       asap: 2.0.6
       commander: 5.1.0
 
-  nushell@0.116.0:
+  nushell@0.116.1:
     optionalDependencies:
-      '@nushell/darwin-arm64': 0.116.0
-      '@nushell/darwin-x64': 0.116.0
-      '@nushell/linux-arm': 0.116.0
-      '@nushell/linux-arm64': 0.116.0
-      '@nushell/linux-riscv64': 0.116.0
-      '@nushell/linux-x64': 0.116.0
-      '@nushell/windows-arm64': 0.116.0
-      '@nushell/windows-x64': 0.116.0
+      '@nushell/darwin-arm64': 0.116.1
+      '@nushell/darwin-x64': 0.116.1
+      '@nushell/linux-arm': 0.116.1
+      '@nushell/linux-arm64': 0.116.1
+      '@nushell/linux-riscv64': 0.116.1
+      '@nushell/linux-x64': 0.116.1
+      '@nushell/windows-arm64': 0.116.1
+      '@nushell/windows-x64': 0.116.1
 
   obug@2.1.4: {}
 
@@ -2592,8 +2588,6 @@ snapshots:
   perfect-debounce@2.1.0: {}
 
   picocolors@1.1.1: {}
-
-  picomatch@4.0.5: {}
 
   picomatch@4.0.7: {}
 
@@ -2851,7 +2845,7 @@ snapshots:
       magic-string: 0.30.21
       obug: 2.1.4
       pathe: 2.0.3
-      picomatch: 4.0.5
+      picomatch: 4.0.7
       std-env: 4.2.0
       tinybench: 2.9.0
       tinyexec: 1.3.0

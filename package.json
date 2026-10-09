@@ -13,7 +13,7 @@
         "types": "./scripts.nu types",
         "check": "./scripts.nu check",
         "build": "pnpm -r run --parallel build",
-        "test": "vitest run",
+        "test": "pnpm -r run --parallel test",
         "lint": "pnpm -r run --parallel lint",
         "fmt": "pnpm -r run --parallel fmt",
         "typecheck": "pnpm -r run --parallel typecheck",
@@ -26,10 +26,8 @@
         "girgen": "^0.3.20",
         "nushell": "latest",
         "prettier": "^3.9.6",
-        "reactive-framework-test-suite": "0.0.2",
         "vitepress": "2.0.0-alpha.16",
         "vitepress-plugin-llmstxt": "^0.5.2",
-        "vitest": "^4.1.10",
         "vue": "^3.5.40"
     },
     "prettier": {

@@ -11,6 +11,9 @@
     "cpu": [
         "x64"
     ],
+    "scripts": {
+        "prepublishOnly": "pnpm --filter @gnim-js/cli run build"
+    },
     "exports": "./gnim",
     "files": [
         "gnim"
