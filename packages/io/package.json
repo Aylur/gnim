@@ -1,0 +1,69 @@
+{
+    "name": "@gnim-js/io",
+    "version": "2.0.0-beta.26",
+    "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "homepage": "https://gnimjs.dev/",
+    "repository": "github:Aylur/gnim",
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "scripts": {
+        "build": "tsc",
+        "prepublishOnly": "pnpm run build",
+        "lint": "eslint .",
+        "fmt": "prettier --check . --ignore-path ../../.gitignore",
+        "typecheck": "tsc --noEmit"
+    },
+    "peerDependencies": {
+        "gnim": "workspace:^"
+    },
+    "devDependencies": {
+        "gnim": "workspace:^",
+        "@eslint/js": "catalog:",
+        "eslint": "catalog:",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:"
+    },
+    "exports": {
+        "./timer": "./lib/timer.ts",
+        "./fs": "./lib/fs.ts",
+        "./process": "./lib/process.ts",
+        "./web": "./lib/web.ts"
+    },
+    "publishConfig": {
+        "exports": {
+            "./timer": {
+                "import": "./dist/timer.js",
+                "types": "./dist/timer.d.ts"
+            },
+            "./fs": {
+                "import": "./dist/fs.js",
+                "types": "./dist/fs.d.ts"
+            },
+            "./process": {
+                "import": "./dist/process.js",
+                "types": "./dist/process.d.ts"
+            },
+            "./web": {
+                "import": "./dist/web.js",
+                "types": "./dist/web.d.ts"
+            }
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "engines": {
+        "gjs": ">=1.83.0"
+    },
+    "keywords": [
+        "GJS",
+        "Gnim",
+        "Gnome",
+        "GTK",
+        "JSX"
+    ]
+}

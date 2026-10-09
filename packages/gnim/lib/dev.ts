@@ -1,0 +1,277 @@
+import Gettext from "gettext"
+import gi from "gi"
+import Gio from "gi://Gio?version=2.0"
+import GIRepository from "gi://GIRepository?version=3.0"
+import GLib from "gi://GLib?version=2.0"
+import GObject from "gi://GObject?version=2.0"
+import { type FC } from "./jsx/element.js"
+import { createComponentRegistry } from "./jsx/hmr.js"
+
+const props = JSON.parse(GLib.getenv("GNIM_DEV")!) as {
+    applicationId?: string
+    verbose: boolean
+    gtk?: "3.0" | "4.0"
+    socket: string
+    entry: string
+    modules: Record<string, string>
+    rundir: string
+    iconResource?: string
+}
+
+type SocketMsg = {
+    source: string
+    module: string
+    version: number
+}
+
+let sourceCss: null | ((id: string, stylesheet: string) => void) = null
+
+function path([root, ...segments]: [root: string | Gio.File, ...segments: string[]]) {
+    const file = Gio.file_new_build_filenamev([
+        typeof root === "string" ? root : root.get_path()!,
+        ...segments,
+    ])
+    return file.get_path()!
+}
+
+function exists(file: string) {
+    return Gio.File.new_for_path(file).query_exists(null)
+}
+
+function isCss(id: string) {
+    return id.endsWith(".css") || id.endsWith(".scss") || id.endsWith(".sass")
+}
+
+function initGtk() {
+    if (props.gtk === "4.0") {
+        gi.require("Gtk", "4.0").init()
+    }
+    if (props.gtk === "3.0") {
+        gi.require("Gtk", "3.0").init(null)
+    }
+}
+
+function initGettext() {
+    if (props.applicationId) {
+        Gettext.bindtextdomain(props.applicationId, path([props.rundir, "locale"]))
+    }
+}
+
+function initIcons() {
+    const cwd = GLib.get_current_dir()
+    const icondir = path([cwd, "data", "icons"])
+
+    if (props.iconResource) {
+        Gio.Resource.load(props.iconResource)._register()
+    }
+
+    if (props.gtk === "4.0") {
+        const display = gi.require("Gdk", "4.0").Display.get_default()!
+        const iconTheme = gi.require("Gtk", "4.0").IconTheme.get_for_display(display)
+        iconTheme.add_search_path(icondir)
+    }
+
+    if (props.gtk === "3.0") {
+        const iconTheme = gi.require("Gtk", "3.0").IconTheme.get_default()
+        iconTheme.append_search_path(icondir)
+    }
+}
+
+function initLibdir() {
+    const cwd = GLib.get_current_dir()
+    const gir = GIRepository.Repository.dup_default()
+    const id = props.applicationId
+
+    const dist = path([cwd, "dist"])
+    if (exists(dist)) {
+        gir.prepend_search_path(path([dist, "lib", "girepository-1.0"]))
+        gir.prepend_search_path(path([dist, "lib"]))
+        gir.prepend_library_path(path([dist, "lib"]))
+
+        if (id) {
+            gir.prepend_search_path(path([dist, "lib", id, "girepository-1.0"]))
+            gir.prepend_search_path(path([dist, "lib", id]))
+            gir.prepend_library_path(path([dist, "lib", id]))
+        }
+
+        return
+    }
+
+    const build = path([cwd, "build"])
+    if (exists(build)) {
+        gir.prepend_search_path(build)
+        gir.prepend_search_path(path([build, "lib"]))
+        gir.prepend_library_path(build)
+        gir.prepend_library_path(path([build, "lib"]))
+    }
+}
+
+function newGtk4Provider() {
+    const Gtk = gi.require("Gtk", "4.0")
+    const provider = Gtk.CssProvider.new()
+
+    if (Gtk.MINOR_VERSION >= 20) {
+        const display = gi.require("Gdk", "4.0").Display.get_default()!
+        const settings = Gtk.Settings.get_for_display(display)
+        for (const [setting, property] of [
+            ["gtk-interface-color-scheme", "prefers-color-scheme"],
+            ["gtk-interface-contrast", "prefers-contrast"],
+            ["gtk-interface-reduced-motion", "prefers-reduced-motion"],
+        ]) {
+            settings.bind_property(setting, provider, property, GObject.BindingFlags.SYNC_CREATE)
+        }
+    }
+
+    return provider
+}
+
+function initCss() {
+    if (props.gtk === "4.0") {
+        const Gtk = gi.require("Gtk", "4.0")
+        const display = gi.require("Gdk", "4.0").Display.get_default()!
+        const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
+        sourceCss = function (id: string, stylesheet: string) {
+            const provider = providers.get(id) ?? newGtk4Provider()
+            provider.load_from_string(stylesheet)
+            if (!providers.has(id)) {
+                providers.set(id, provider)
+                Gtk.StyleContext.add_provider_for_display(
+                    display,
+                    provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+                )
+            }
+        }
+    }
+
+    if (props.gtk === "3.0") {
+        const Gtk = gi.require("Gtk", "3.0")
+        const screen = gi.require("Gdk", "3.0").Screen.get_default()!
+        const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
+        sourceCss = function (id: string, stylesheet: string) {
+            const encoder = new TextEncoder()
+            const provider = providers.get(id) ?? Gtk.CssProvider.new()
+            provider.load_from_data(encoder.encode(stylesheet))
+            if (!providers.has(id)) {
+                providers.set(id, provider)
+                Gtk.StyleContext.add_provider_for_screen(
+                    screen,
+                    provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+                )
+            }
+        }
+    }
+
+    if (sourceCss) {
+        for (const [id, file] of Object.entries(props.modules)) {
+            if (isCss(id)) {
+                import(`file://${file}`)
+                    .then((m) => {
+                        if (typeof m.default === "string") {
+                            sourceCss!(id, m.default)
+                        }
+                    })
+                    .catch(console.error)
+            }
+        }
+    }
+}
+
+function initSocket() {
+    const client = new Gio.SocketClient()
+    const connection = client.connect(new Gio.UnixSocketAddress({ path: props.socket }), null)
+    const input = new Gio.DataInputStream({ baseStream: connection.inputStream })
+
+    function readLoop() {
+        input.read_line_async(GLib.PRIORITY_DEFAULT, null, (_, res) => {
+            const msg = input.read_line_finish_utf8(res)[0]
+            if (!msg) throw Error("DEV internal server error")
+            const { version, source, module: mod } = JSON.parse(msg) as SocketMsg
+
+            if (props.entry !== mod && version > 0) {
+                const file = `${mod}?v=${version}`
+                if (props.verbose) printerr(`[dev] source ${file}`)
+                import(`file://${file}`)
+                    .then((m) => {
+                        if (isCss(source)) {
+                            sourceCss?.(source, m.default)
+                        }
+                    })
+                    .catch(console.error)
+            }
+
+            readLoop()
+        })
+    }
+
+    readLoop()
+    // return () => {
+    //     input.close(null)
+    //     connection.close(null)
+    // }
+}
+
+function overrideGObjectRegistration() {
+    type Class = { [GObject.GTypeName]?: string; new (): GObject.Object }
+
+    const register = GObject.registerClass
+    const registry = new Map<string, number>()
+
+    function getName(klass: Class) {
+        const name =
+            (GObject.GTypeName in klass && typeof klass[GObject.GTypeName] === "string"
+                ? klass[GObject.GTypeName]
+                : klass.name) || `anonymous_${GLib.uuid_string_random()}`
+
+        return `Gjs_${name}`
+    }
+
+    function versionSuffix(name: string) {
+        const v = (registry.get(name) ?? 0) + 1
+        registry.set(name, v)
+        return v > 1 ? `_HMR_${v}` : ""
+    }
+
+    function registerClass(...args: [Class] | [{ GTypeName?: string }, Class]) {
+        if (args.length === 2) {
+            const [meta, klass] = args
+            if ("GTypeName" in meta && typeof meta.GTypeName === "string") {
+                meta.GTypeName = meta.GTypeName + versionSuffix(meta.GTypeName)
+            } else {
+                const name = getName(klass)
+                meta.GTypeName = name + versionSuffix(name)
+            }
+
+            return register(meta, klass)
+        }
+
+        const [klass] = args
+        const name = getName(klass)
+        return register({ GTypeName: name + versionSuffix(name) }, klass)
+    }
+
+    GObject.registerClass = registerClass
+}
+
+function initRegistry() {
+    const registerComponent = createComponentRegistry()
+
+    function $$registerComponent(mod: string, name: string, impl: FC) {
+        const path = GLib.uri_parse(mod, GLib.UriFlags.NONE).get_path()
+        return registerComponent(path + ":" + name, impl)
+    }
+
+    Object.assign(globalThis, { $$registerComponent })
+}
+
+overrideGObjectRegistration()
+initGtk()
+initGettext()
+initIcons()
+initLibdir()
+initCss()
+initRegistry()
+initSocket()
+
+await import(`file://${props.entry}`)

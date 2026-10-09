@@ -1,0 +1,95 @@
+{
+    "name": "gnim",
+    "version": "2.0.0-beta.26",
+    "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "homepage": "https://gnimjs.dev/",
+    "repository": "github:Aylur/gnim",
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "bin": {
+        "gnim": "bin/gnim.ts"
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json",
+        "prepublishOnly": "pnpm run build",
+        "prepack": "pnpm -w run docs:build && cp ../../docs/.vitepress/dist/llms-full.txt ./llms-full.txt",
+        "lint": "eslint .",
+        "fmt": "prettier --check . --ignore-path ../../.gitignore",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "intl-messageformat": "^11.2.13"
+    },
+    "optionalDependencies": {
+        "@gnim-js/linux-x64": "workspace:*"
+    },
+    "devDependencies": {
+        "@eslint/js": "catalog:",
+        "@types/node": "catalog:",
+        "eslint": "catalog:",
+        "reactive-framework-test-suite": "0.0.2",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:",
+        "vitest": "^4.1.10"
+    },
+    "exports": {
+        ".": "./lib/index.ts",
+        "./dbus": "./lib/dbus/index.ts",
+        "./gobject": "./lib/gobject/index.ts",
+        "./intl": "./lib/intl/index.ts",
+        "./schema": "./lib/schema/index.ts",
+        "./jsx-runtime": "./lib/jsx-runtime.ts",
+        "./jsx-dev-runtime": "./lib/jsx-dev-runtime.ts"
+    },
+    "publishConfig": {
+        "bin": "dist/bin/gnim.js",
+        "exports": {
+            ".": {
+                "import": "./dist/lib/index.js",
+                "types": "./dist/lib/index.d.ts"
+            },
+            "./dbus": {
+                "import": "./dist/lib/dbus/index.js",
+                "types": "./dist/lib/dbus/index.d.ts"
+            },
+            "./gobject": {
+                "import": "./dist/lib/gobject/index.js",
+                "types": "./dist/lib/gobject/index.d.ts"
+            },
+            "./intl": {
+                "import": "./dist/lib/intl/index.js",
+                "types": "./dist/lib/intl/index.d.ts"
+            },
+            "./schema": {
+                "import": "./dist/lib/schema/index.js",
+                "types": "./dist/lib/schema/index.d.ts"
+            },
+            "./jsx-runtime": {
+                "import": "./dist/lib/jsx-runtime.js",
+                "types": "./dist/lib/jsx-runtime.d.ts"
+            },
+            "./jsx-dev-runtime": {
+                "import": "./dist/lib/jsx-dev-runtime.js",
+                "types": "./dist/lib/jsx-dev-runtime.d.ts"
+            }
+        }
+    },
+    "files": [
+        "dist",
+        "llms-full.txt"
+    ],
+    "engines": {
+        "gjs": ">=1.83.0"
+    },
+    "keywords": [
+        "GJS",
+        "Gnome",
+        "GTK",
+        "JSX"
+    ]
+}

@@ -1,0 +1,57 @@
+{
+    "name": "@gnim-js/gnome-shell",
+    "version": "2.0.0-beta.26",
+    "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "homepage": "https://gnimjs.dev/",
+    "repository": "github:Aylur/gnim",
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "scripts": {
+        "girs": "./scripts.nu girs",
+        "build": "./scripts.nu girs && tsc",
+        "prepublishOnly": "pnpm run build",
+        "lint": "eslint .",
+        "fmt": "prettier --check . --ignore-path ../../.gitignore",
+        "typecheck": "tsc --noEmit"
+    },
+    "peerDependencies": {
+        "gnim": "workspace:^"
+    },
+    "devDependencies": {
+        "gnim": "workspace:^",
+        "@eslint/js": "catalog:",
+        "eslint": "catalog:",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:"
+    },
+    "exports": {
+        ".": "./lib/index.ts"
+    },
+    "publishConfig": {
+        "exports": {
+            ".": {
+                "import": "./dist/index.js",
+                "types": "./dist/index.d.ts"
+            }
+        }
+    },
+    "files": [
+        "dist",
+        "gir-1.0/gnome49",
+        "gir-1.0/gnome50"
+    ],
+    "engines": {
+        "gjs": ">=1.83.0"
+    },
+    "keywords": [
+        "GJS",
+        "Gnim",
+        "Gnome",
+        "GTK",
+        "JSX"
+    ]
+}

@@ -1,15 +1,17 @@
 # Gtk
 
-This page is merely an intro to Gtk and not a comprehensive guide. For more
-in-depth concepts you can read the [Gtk docs](https://docs.gtk.org/gtk4/#extra).
+This page is merely an introduction to Gtk and not a comprehensive guide. For
+more in-depth concepts you can read the
+[Gtk docs](https://docs.gtk.org/gtk4/#extra).
 
 ## Running Gtk
 
-To run Gtk you will have to initialize it, create widgets and run a GLib main
-loop.
+To run Gtk, you will have to initialize it, create widgets, and run a GLib main
+loop. Alternatively you can use `Gio.Application` and its various subclasses
+such as `Gtk.Application`.
 
-```ts
-import GLib from "gi://GLib"
+```ts [GLib MainLoop]
+import GLib from "gi://GLib?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
 
 Gtk.init()
@@ -17,6 +19,7 @@ Gtk.init()
 const loop = GLib.MainLoop.new(null, false)
 
 // create widgets here
+// loop.quit() to exit
 
 loop.runAsync()
 ```
@@ -25,8 +28,8 @@ loop.runAsync()
 
 For a list of available widgets you can refer to the
 [Gtk docs](https://docs.gtk.org/gtk4/visual_index.html). If you are planning to
-write an app for the Gnome platform you might be interested in using
-[Adwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/).
+write an app for the GNOME platform, you might be interested in using
+[Adwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/).
 
 The top level widget that makes it possible to display something on the screen
 is `Gtk.Window` and its various subclasses such as `Gtk.ApplicationWindow` and
@@ -53,6 +56,23 @@ win.connect("close-request", () => loop.quit())
 win.present()
 ```
 
+> [!TIP]
+>
+> It's best practice to mark translatable text as translatable from the
+> beginning.
+>
+> ```ts
+> import { gettext as t } from "gettext"
+>
+> const win = new Gtk.Window({
+>   title: t("My App"),
+> })
+>
+> const label = new Gtk.Label({
+>   label: t("Hello World"),
+> })
+> ```
+
 ## Layout system
 
 Gtk uses [LayoutManagers](https://docs.gtk.org/gtk4/class.LayoutManager.html) to
@@ -66,6 +86,7 @@ implement some common layouts:
   ```ts
   const box = new Gtk.Box({
     orientation: Gtk.Orientation.HORIZONTAL,
+    spacing: 8,
   })
 
   box.append(Gtk.Label.new("1"))
@@ -73,7 +94,7 @@ implement some common layouts:
   ```
 
 - [`CenterBox`](https://docs.gtk.org/gtk4/class.CenterBox.html) which positions
-  its children in three separate sections similar to `Box`
+  its children in three separate sections similar to `Box`.
 
   ```ts
   const centerBox = new Gtk.CenterBox({
@@ -86,7 +107,7 @@ implement some common layouts:
   ```
 
 - [`Overlay`](https://docs.gtk.org/gtk4/class.Overlay.html) which has a single
-  child that dictates the size of the widget and positions each children on top.
+  child that dictates the size of the widget and positions each child on top.
 
   ```ts
   const overlay = new Gtk.Overlay()
@@ -135,7 +156,7 @@ Some common controllers:
 - [EventControllerScroll](https://docs.gtk.org/gtk4/class.EventControllerScroll.html)
 - [GestureClick](https://docs.gtk.org/gtk4/class.GestureClick.html)
 - [GestureDrag](https://docs.gtk.org/gtk4/class.GestureDrag.html)
-- [GestureSwipe](https://docs.gtk.org/gtk4/class.GestureDrag.html)
+- [GestureSwipe](https://docs.gtk.org/gtk4/class.GestureSwipe.html)
 
 ```ts
 let widget: Gtk.Widget
@@ -145,7 +166,7 @@ const gestureClick = new Gtk.GestureClick({
 })
 
 gestureClick.connect("pressed", () => {
-  console.log("clicked")
+  console.log("pressed")
   return true
 })
 
@@ -156,6 +177,9 @@ Gtk provides widgets for various forms of user input so you might not need an
 event controller.
 
 - [`Button`](https://docs.gtk.org/gtk4/class.Button.html)
+- [`ToggleButton`](https://docs.gtk.org/gtk4/class.ToggleButton.html)
+- [`CheckButton`](https://docs.gtk.org/gtk4/class.CheckButton.html)
 - [`Switch`](https://docs.gtk.org/gtk4/class.Switch.html)
 - [`Scale`](https://docs.gtk.org/gtk4/class.Scale.html)
+- [`Text`](https://docs.gtk.org/gtk4/class.Text.html)
 - [`Entry`](https://docs.gtk.org/gtk4/class.Entry.html)

@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "experimentalDecorators": true,
+        "verbatimModuleSyntax": true,
+        "erasableSyntaxOnly": true,
+
+        "module": "ES2022",
+        "target": "ES2024",
+        "lib": ["ESNext"],
+
+        "declaration": true,
+        "inlineSourceMap": true,
+        "outDir": "dist",
+        "skipLibCheck": true,
+
+        "strict": true,
+        "moduleResolution": "Bundler",
+        "types": ["node", "gi"],
+        "typeRoots": ["./node_modules/@types", "../../.gnim/types"]
+    },
+    "include": ["./lib/**/*", "./bin/**/*"],
+    // reactive-framework-test-suite ships TypeScript sources that use
+    // parameter properties, which `erasableSyntaxOnly` rejects.
+    "exclude": ["./lib/_tests/conformance.test.ts"]
+}
