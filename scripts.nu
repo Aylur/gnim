@@ -7,10 +7,7 @@ def "main types" [] {
     flatpak run --command=cp --filesystem=home $"org.gnome.Sdk//($runtime)" -r /usr/share/gir-1.0 ./.gnim/girs
 
     if (which nix | length) > 0 {
-        do {
-            cd packages/gnome-shell/gir-1.0/
-            nix build $".#gnome($runtime)"
-        }
+        pnpm --filter @gnim-js/gnome-shell run girs
     }
 
     girgen -d $"packages/gnome-shell/gir-1.0/gnome($runtime)" -d .gnim/girs -i Gee-0.8 gjs -o .gnim/types/gi
