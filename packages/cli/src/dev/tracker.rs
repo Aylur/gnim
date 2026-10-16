@@ -1,6 +1,7 @@
 use crate::plugin::css::GnimCssPlugin;
 use crate::plugin::resource::GnimResourcePlugin;
-use crate::{dev_rundir, rolldown_config};
+use crate::plugin::sourcemap::GnimSourceMapPlugin;
+use crate::{dev_rundir, rolldown_dev_config};
 use std::{collections::HashMap, fs, sync::Arc};
 
 fn get_dev_entry() -> Option<String> {
@@ -67,11 +68,12 @@ impl ModuleTracker {
                 input: Some(inputs),
                 dir: Some(dir.to_string_lossy().to_string()),
                 preserve_modules: Some(true),
-                ..rolldown_config()
+                ..rolldown_dev_config()
             },
             vec![
                 Arc::new(GnimCssPlugin::default()),
                 Arc::new(GnimResourcePlugin::default()),
+                Arc::new(GnimSourceMapPlugin),
             ],
         )
         .expect("failed to create bundler");

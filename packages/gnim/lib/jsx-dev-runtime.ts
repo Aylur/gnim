@@ -1,4 +1,5 @@
-import { type JSX, jsx, Fragment } from "./jsx/element.js"
+import { type JSX, Fragment } from "./jsx/element.js"
+import { jsxDEV } from "./jsx/dev.js"
 
-export { Fragment, jsx as jsxDEV }
+export { Fragment, jsxDEV }
 export type { JSX }

@@ -1,6 +1,30 @@
-import { resolveNode, jsx, type FC } from "./element.js"
-import { computed, devHooks } from "./reactive.js"
-import { getContext, setContext, Signal, untrack, type Context } from "./signal.js"
+import { jsx, resolveNode, type FC } from "./element.js"
+import { devHooks, sources } from "./dev.js"
+import { computed } from "./reactive.js"
+import {
+    getContext,
+    getScope,
+    setContext,
+    Signal,
+    untrack,
+    type Context,
+    type Scope,
+} from "./signal.js"
+
+const proxies = new WeakSet<object>()
+const proxySources = new WeakMap<Scope, string>()
+
+devHooks.createElementScope = function (node, scope) {
+    const source = sources.get(node)
+    if (typeof node.type === "function" && proxies.has(node.type)) {
+        // proxies are left out of the component stack,
+        // the component they render gets the source instead
+        delete scope.name
+        if (source) proxySources.set(scope, source)
+    } else if (source) {
+        scope.source = source
+    }
+}
 
 type StateRecord<T = unknown> = { init: T; current(): T }
 
@@ -113,14 +137,18 @@ export function createComponentRegistry() {
 
         entry.set(impl)
 
-        return function (props: any) {
+        const proxy = function (props: any) {
             const state = getStateCtx()?.get(id) ?? new StateCtx()
+            const scope = getScope()
+            const source = scope && proxySources.get(scope)
 
             const node = computed(() => {
                 setContext(stateCtx, state)
                 state.begin()
                 try {
-                    return resolveNode(jsx(entry.get(), props))
+                    const element = jsx(entry.get(), props)
+                    if (source) sources.set(element, source)
+                    return resolveNode(element)
                 } finally {
                     state.flush()
                 }
@@ -130,5 +158,8 @@ export function createComponentRegistry() {
             untrack(node)
             return node
         }
+
+        proxies.add(proxy)
+        return proxy
     }
 }

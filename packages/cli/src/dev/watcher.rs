@@ -1,6 +1,6 @@
 use super::socket::SocketMsg;
 use super::tracker::ModuleTracker;
-use super::{builder, rolldown_config, schemas::compile_schemas};
+use super::{builder, rolldown_dev_config, schemas::compile_schemas};
 use rolldown::{BundlerConfig, BundlerOptions};
 use rolldown_common::WatcherChangeKind;
 use rolldown_watcher::{WatchEvent, Watcher, WatcherConfig, WatcherEventHandler};
@@ -106,7 +106,7 @@ fn create_watcher(args: DevWatcherArgs, watcher_restart_tx: mpsc::UnboundedSende
         BundlerOptions {
             input: Some(vec![args.canonical_entry.clone().into()]),
             dir: Some("/dev/null".into()),
-            ..rolldown_config()
+            ..rolldown_dev_config()
         },
         vec![],
     );

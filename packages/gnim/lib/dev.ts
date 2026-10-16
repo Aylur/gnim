@@ -42,6 +42,15 @@ function isCss(id: string) {
     return id.endsWith(".css") || id.endsWith(".scss") || id.endsWith(".sass")
 }
 
+// unlike console.error, logError prints source mapped stack traces
+function logImportError(error: unknown, source: string) {
+    if (error instanceof Error || error instanceof GLib.Error) {
+        logError(error, `[dev] failed to import ${source}`)
+    } else {
+        console.error(`[dev] failed to import ${source}:`, error)
+    }
+}
+
 function initGtk() {
     if (props.gtk === "4.0") {
         gi.require("Gtk", "4.0").init()
@@ -172,7 +181,7 @@ function initCss() {
                             sourceCss!(id, m.default)
                         }
                     })
-                    .catch(console.error)
+                    .catch((error) => logImportError(error, id))
             }
         }
     }
@@ -198,7 +207,7 @@ function initSocket() {
                             sourceCss?.(source, m.default)
                         }
                     })
-                    .catch(console.error)
+                    .catch((error) => logImportError(error, source))
             }
 
             readLoop()

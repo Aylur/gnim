@@ -32,7 +32,23 @@ pub fn dev_rundir() -> PathBuf {
 }
 
 pub fn rolldown_config() -> rolldown::BundlerOptions {
-    let define = GLOBAL_OPTIONS.get().and_then(|o| o.define.clone());
+    bundler_options(false)
+}
+
+pub fn rolldown_dev_config() -> rolldown::BundlerOptions {
+    bundler_options(true)
+}
+
+fn bundler_options(development: bool) -> rolldown::BundlerOptions {
+    let mut define = GLOBAL_OPTIONS
+        .get()
+        .and_then(|o| o.define.clone())
+        .unwrap_or_default();
+
+    define
+        .entry("import.meta.GNIM_DEV".to_owned())
+        .or_insert_with(|| development.to_string());
+
     let alias = GLOBAL_OPTIONS.get().and_then(|o| o.alias.clone());
 
     let import_source = match PathBuf::from("./tsconfig.json").exists() {
@@ -61,13 +77,15 @@ pub fn rolldown_config() -> rolldown::BundlerOptions {
             }),
             jsx: Some(rolldown::Either::Right(rolldown::JsxOptions {
                 import_source,
+                development: Some(development),
                 ..Default::default()
             })),
             ..Default::default()
         }),
         sourcemap: Some(rolldown::SourceMapType::Inline),
+        sourcemap_path_transform: Some(plugin::sourcemap::source_path_transform()),
         format: Some(rolldown::OutputFormat::Esm),
-        define,
+        define: Some(define),
         paths: alias,
         ..Default::default()
     }

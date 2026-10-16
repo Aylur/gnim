@@ -5,6 +5,9 @@ const giMock = (name: string) =>
     fileURLToPath(new URL(`./lib/_tests/${name}.mock.ts`, import.meta.url))
 
 export default defineConfig({
+    define: {
+        "import.meta.GNIM_DEV": "true",
+    },
     test: {
         include: ["lib/_tests/**/*.test.ts"],
     },

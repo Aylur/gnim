@@ -1,6 +1,7 @@
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { isGObjectCtor, type CamelCase, type Keyof, type PascalCase } from "../util.js"
+import { devHooks } from "./dev.js"
 import { computed, createAccessor, isAccessor, type Accessor } from "./reactive.js"
 import { getRenderer } from "./render.js"
 import {
@@ -189,6 +190,8 @@ export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<Gni
         name: `<${type.name || "Anonymous"}>`,
         mountWithParent: true,
     })
+
+    if (import.meta.GNIM_DEV) devHooks.createElementScope(node, scope)
 
     if (isGObjectCtor(type)) {
         return runScope(scope, () => resolveNode(renderer.constructObject(type, node.props)))

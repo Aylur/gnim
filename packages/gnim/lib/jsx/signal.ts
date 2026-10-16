@@ -101,6 +101,7 @@ export function untrack<Args extends Array<any>, T>(fn: (...args: Args) => T, ..
 export interface Scope {
     parent: Scope | null
     name?: string
+    source?: string
     mountWithParent?: boolean
     children?: Scope[]
     cleanups?: Fn[]
@@ -224,13 +225,17 @@ export function getScope(): Scope | null {
     return activeScope
 }
 
+function* ancestors(scope: Scope | null) {
+    for (let s = scope; s; s = s.parent) yield s
+}
+
 function annotateError(error: unknown, scope: Scope | null): void {
     if (!(error instanceof Error) || annotatedErrors.has(error)) return
 
-    const stack = new Array<string>()
-    for (let s = scope; s; s = s.parent) {
-        if (s.name) stack.push(`    in ${s.name}`)
-    }
+    const stack = Array.from(ancestors(scope))
+        .filter((s) => s.name)
+        .map((s) => `    in ${s.name}${s.source ? ` (at ${s.source})` : ""}`)
+
     if (stack.length === 0) return
 
     annotatedErrors.add(error)

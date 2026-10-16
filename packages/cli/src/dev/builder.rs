@@ -1,15 +1,17 @@
-use super::rolldown_config;
+use super::rolldown_dev_config;
 use super::socket::SocketMsg;
 use super::tracker::ModuleTracker;
 use super::transform::{transform_code, transform_imports};
 use crate::plugin::css::GnimCssPlugin;
 use crate::plugin::resource::GnimResourcePlugin;
+use crate::plugin::sourcemap::GnimSourceMapPlugin;
 use rolldown::ModuleType;
 use std::borrow::Cow;
 use std::fs;
 use std::future::Future;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
+use string_wizard::{Hires, SourceMapOptions};
 use tokio::sync::broadcast;
 
 pub async fn build_modules(plugin: GnimDevPlugin) -> Result<rolldown::BundleOutput, String> {
@@ -35,12 +37,13 @@ pub async fn build_modules(plugin: GnimDevPlugin) -> Result<rolldown::BundleOutp
             dir: Some(plugin.dir.clone().to_string_lossy().to_string()),
             preserve_modules: Some(true),
             treeshake: rolldown::TreeshakeOptions::Boolean(false),
-            ..rolldown_config()
+            ..rolldown_dev_config()
         },
         vec![
             Arc::new(plugin),
             Arc::new(GnimCssPlugin::default()),
             Arc::new(GnimResourcePlugin::default()),
+            Arc::new(GnimSourceMapPlugin),
         ],
     )
     .expect("Failed to create bundler");
@@ -84,8 +87,19 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
         async move {
             if matches!(args.module_type, ModuleType::Jsx | ModuleType::Tsx) {
                 return match transform_code(&code, &id) {
-                    Ok(code) => Ok(Some(rolldown_plugin::HookTransformOutput {
-                        code: Some(code),
+                    Ok(Some(transformed)) => Ok(Some(rolldown_plugin::HookTransformOutput {
+                        code: Some(transformed.to_string()),
+                        map: transformed
+                            .source_map(SourceMapOptions {
+                                hires: Hires::Boundary,
+                                source: id.as_str().into(),
+                                include_content: true,
+                            })
+                            .into(),
+                        side_effects: Some(rolldown_common::side_effects::HookSideEffects::True),
+                        ..Default::default()
+                    })),
+                    Ok(None) => Ok(Some(rolldown_plugin::HookTransformOutput {
                         side_effects: Some(rolldown_common::side_effects::HookSideEffects::True),
                         ..Default::default()
                     })),
@@ -112,10 +126,17 @@ impl rolldown_plugin::Plugin for GnimDevPlugin {
         async move {
             let versions = module_tracker.read().unwrap();
             match transform_imports(&code, &chunk_filename, &versions) {
-                Ok(transformed) => Ok(Some(rolldown_plugin::HookRenderChunkOutput {
-                    code: transformed,
-                    map: rolldown_plugin::HookTransformOutputMap::Omitted,
+                Ok(Some(transformed)) => Ok(Some(rolldown_plugin::HookRenderChunkOutput {
+                    code: transformed.to_string(),
+                    map: transformed
+                        .source_map(SourceMapOptions {
+                            hires: Hires::Boundary,
+                            source: chunk_filename.as_str().into(),
+                            include_content: false,
+                        })
+                        .into(),
                 })),
+                Ok(None) => Ok(None),
                 Err(err) => {
                     eprintln!("[dev] {}", err);
                     Ok(None)

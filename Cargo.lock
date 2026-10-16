@@ -850,6 +850,7 @@ dependencies = [
  "rolldown_watcher",
  "serde",
  "serde_json",
+ "string_wizard",
  "tokio",
 ]
 

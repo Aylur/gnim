@@ -1,6 +1,7 @@
 use crate::dev::ModuleTracker;
 use crate::plugin::css::GnimCssPlugin;
 use crate::plugin::resource::{GResource, GnimResourcePlugin, ResourceFile, generate_resource};
+use crate::plugin::sourcemap::GnimSourceMapPlugin;
 use crate::{dev_rundir, rolldown_config};
 use clap::Args;
 use rolldown_utils::replace_all_placeholder::ReplaceAllPlaceholder;
@@ -66,6 +67,7 @@ pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
         vec![
             Arc::new(GnimCssPlugin::new(tracker.gtk_version)),
             resources.clone(),
+            Arc::new(GnimSourceMapPlugin),
         ],
     )
     .expect("Failed to create bundler");

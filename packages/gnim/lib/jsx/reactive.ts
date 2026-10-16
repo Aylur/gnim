@@ -1,14 +1,6 @@
+import { devHooks } from "./dev.js"
 import { resolveNode, type GnimNode } from "./element.js"
 import * as Signal from "./signal.js"
-
-interface DevHooks {
-    createState<T>(init: T, get: () => T): T
-}
-
-/** @internal */
-export const devHooks: DevHooks = {
-    createState: (init) => init,
-}
 
 const accessorType = Symbol("gnim.type.accessor")
 
@@ -356,7 +348,9 @@ export interface StateOptions<T> {
 export function createState<T>(init: T, options?: StateOptions<NoInfer<T>>): State<T> {
     const signal = new Signal.Signal(init, options?.equals)
 
-    signal.set(devHooks.createState(init, get))
+    if (import.meta.GNIM_DEV) {
+        signal.set(devHooks.createState(init, get))
+    }
 
     function get(): T {
         return signal.get()

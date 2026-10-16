@@ -1,12 +1,10 @@
 use super::ModuleTracker;
-use oxc::allocator::{Allocator, ArenaVec, TakeIn};
+use oxc::allocator::Allocator;
 use oxc::ast::ast::*;
-use oxc::ast::builder::AstBuilder;
-use oxc::codegen::{Codegen, CodegenOptions};
 use oxc::parser::Parser;
-use oxc::span::{SPAN, SourceType};
-use oxc::str::Ident;
+use oxc::span::{GetSpan, SourceType, Span};
 use std::path::Path;
+use string_wizard::MagicString;
 
 fn is_component_name(name: &str) -> bool {
     name.chars().next().is_some_and(|c| c.is_ascii_uppercase())
@@ -53,44 +51,12 @@ fn add_version_query(source: &str, version: u64) -> String {
     }
 }
 
-/// Creates `$$register(import.meta.url, "name", expr)`
-fn wrap_with_register<'a>(
-    ast: &AstBuilder<'a>,
-    name: Ident<'a>,
-    expr: Expression<'a>,
-) -> Expression<'a> {
-    // $$register
-    let callee = Expression::new_identifier(SPAN, "$$registerComponent", ast);
-
-    // import.meta
-    let import_meta = Expression::new_import_meta(SPAN, ast);
-
-    // import.meta.url
-    let import_meta_url = Expression::new_static_member_expression(
-        SPAN,
-        import_meta,
-        IdentifierName::new(SPAN, "url", ast),
-        false,
-        ast,
-    );
-
-    // "name"
-    let name_str = Expression::new_string_literal(SPAN, name, None, ast);
-
-    // arguments: [import.meta.url, "name", expr]
-    let args = ArenaVec::from_array_in(
-        [
-            Argument::from(import_meta_url),
-            Argument::from(name_str),
-            Argument::from(expr),
-        ],
-        ast,
-    );
-
-    Expression::new_call_expression(SPAN, callee, None, args, false, ast)
-}
-
-pub fn transform_code(source: &str, id: &str) -> Result<String, String> {
+/// Wraps exported components with `$$registerComponent(import.meta.url, "Name", ...)`.
+///
+/// The wrappers are inserted into the original source instead of reprinting the AST,
+/// so that positions stay intact and a source map can be generated for the edits.
+/// Returns `None` when there is nothing to wrap.
+pub fn transform_code<'a>(source: &'a str, id: &str) -> Result<Option<MagicString<'a>>, String> {
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(id).map_err(|err| err.to_string())?;
 
@@ -100,76 +66,54 @@ pub fn transform_code(source: &str, id: &str) -> Result<String, String> {
         return Err(format!("parse errors: {}", ret.diagnostics.len()));
     }
 
-    let mut program = ret.program;
-    let ast = AstBuilder::new(&allocator);
+    let mut code = MagicString::new(source);
+    let mut wrap = |name: &str, span: Span, prefix: String| -> Result<(), String> {
+        code.prepend_right(
+            span.start,
+            format!("{prefix}$$registerComponent(import.meta.url, \"{name}\", "),
+        )?;
+        code.append_left(span.end, ")")?;
+        Ok(())
+    };
 
-    for statement in program.body.iter_mut() {
+    for statement in ret.program.body.iter() {
         match statement {
-            Statement::ExportDeclaration(export_decl) => {
+            Statement::ExportDeclaration(export_decl) => match &export_decl.declaration {
                 // `export const Name = () => {}` -> `export const Name = $$register(...)`
-                if let Declaration::VariableDeclaration(var_decl) = &mut export_decl.declaration {
-                    for declarator in var_decl.declarations.iter_mut() {
+                Declaration::VariableDeclaration(var_decl) => {
+                    for declarator in var_decl.declarations.iter() {
                         if let BindingPattern::BindingIdentifier(ident) = &declarator.id
                             && is_component_name(ident.name.as_str())
-                            && let name = ident.name
-                            && let Some(init) = declarator.init.take()
+                            && let Some(init) = &declarator.init
                         {
-                            declarator.init = Some(wrap_with_register(&ast, name, init));
+                            wrap(ident.name.as_str(), init.span(), String::new())?;
                         }
                     }
                 }
 
                 // `export function Name() {}` -> `export const Name = $$register(...)`
-                if let Declaration::FunctionDeclaration(func) = &export_decl.declaration
-                    && let Some(id) = &func.id
-                {
-                    let name = id.name;
-                    if is_component_name(name.as_str()) {
-                        let func = match export_decl.declaration.take_in(&ast) {
-                            Declaration::FunctionDeclaration(f) => f,
-                            _ => unreachable!(),
-                        };
-
-                        let func_expr = Expression::FunctionExpression(func);
-                        let wrapped = wrap_with_register(&ast, name, func_expr);
-
-                        let binding = BindingPattern::new_binding_identifier(SPAN, name, &ast);
-
-                        let declarator =
-                            VariableDeclarator::new(SPAN, binding, None, Some(wrapped), false, &ast);
-
-                        export_decl.declaration = Declaration::new_variable_declaration(
-                            SPAN,
-                            VariableDeclarationKind::Const,
-                            ArenaVec::from_array_in([declarator], &ast),
-                            false,
-                            &ast,
-                        );
+                Declaration::FunctionDeclaration(func) => {
+                    if let Some(id) = &func.id
+                        && is_component_name(id.name.as_str())
+                    {
+                        let name = id.name.as_str();
+                        wrap(name, func.span, format!("const {name} = "))?;
                     }
                 }
-            }
+
+                _ => (),
+            },
 
             // `export default function Name() {}` -> `export default $$register(...)`
             Statement::ExportDefaultDeclaration(export_default) => {
                 if let ExportDefaultDeclarationKind::FunctionDeclaration(func) =
                     &export_default.declaration
-                {
-                    let has_component_name = func
+                    && func
                         .id
                         .as_ref()
-                        .is_some_and(|id| is_component_name(id.name.as_str()));
-
-                    if has_component_name {
-                        let func = export_default.declaration.take_in(&ast);
-
-                        if let ExportDefaultDeclarationKind::FunctionDeclaration(func) = func {
-                            let func_expr = Expression::FunctionExpression(func);
-                            let wrapped =
-                                wrap_with_register(&ast, Ident::from("default"), func_expr);
-                            export_default.declaration =
-                                ExportDefaultDeclarationKind::from(wrapped);
-                        }
-                    }
+                        .is_some_and(|id| is_component_name(id.name.as_str()))
+                {
+                    wrap("default", func.span, String::new())?;
                 }
             }
 
@@ -177,21 +121,18 @@ pub fn transform_code(source: &str, id: &str) -> Result<String, String> {
         }
     }
 
-    let printed = Codegen::new()
-        .with_options(CodegenOptions::default())
-        .build(&program);
-
-    Ok(printed.code)
+    Ok(code.has_changed().then_some(code))
 }
 
 /// Transform import statements in bundled JS to include version query parameters.
 /// This runs on the final JS output after rolldown has resolved all modules.
 /// `chunk_filename` is the output path of the current chunk (e.g., "test/Comp/index.js")
-pub fn transform_imports(
-    source: &str,
+/// Returns `None` when no import has to change.
+pub fn transform_imports<'a>(
+    source: &'a str,
     chunk_filename: &str,
     tracker: &ModuleTracker,
-) -> Result<String, String> {
+) -> Result<Option<MagicString<'a>>, String> {
     let allocator = Allocator::default();
     let source_type = SourceType::mjs();
 
@@ -201,75 +142,73 @@ pub fn transform_imports(
         return Err(format!("parse errors: {}", ret.diagnostics.len()));
     }
 
-    let mut program = ret.program;
-    let ast = AstBuilder::new(&allocator);
+    let mut code = MagicString::new(source);
 
-    // Collect transforms first to handle lifetime issues
-    let mut transforms: Vec<(usize, String)> = Vec::new();
+    for statement in ret.program.body.iter() {
+        let literal = match statement {
+            Statement::ImportDeclaration(import_decl) => &import_decl.source,
+            Statement::ExportFromDeclaration(export_decl) => &export_decl.source,
+            Statement::ExportAllDeclaration(export_all) => &export_all.source,
+            _ => continue,
+        };
 
-    for (idx, statement) in program.body.iter().enumerate() {
-        match statement {
-            Statement::ImportDeclaration(import_decl) => {
-                let import_source = import_decl.source.value.as_str();
-                if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
-                    transforms.push((
-                        idx,
-                        add_version_query(import_source, tracker.get_version(&resolved)),
-                    ));
-                }
+        let import_source = literal.value.as_str();
+        if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
+            let versioned = add_version_query(import_source, tracker.get_version(&resolved));
+            if versioned != import_source {
+                // keep the quotes of the string literal
+                code.update(literal.span.start + 1, literal.span.end - 1, versioned)?;
             }
-            Statement::ExportFromDeclaration(export_decl) => {
-                let import_source = export_decl.source.value.as_str();
-                if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
-                    transforms.push((
-                        idx,
-                        add_version_query(import_source, tracker.get_version(&resolved)),
-                    ));
-                }
-            }
-            Statement::ExportAllDeclaration(export_all) => {
-                let import_source = export_all.source.value.as_str();
-                if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
-                    transforms.push((
-                        idx,
-                        add_version_query(import_source, tracker.get_version(&resolved)),
-                    ));
-                }
-            }
-            _ => {}
         }
     }
 
-    if transforms.is_empty() {
-        return Ok(source.to_string());
+    Ok(code.has_changed().then_some(code))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::transform_code;
+
+    #[test]
+    fn wraps_exported_components() {
+        let source = "export const App = () => <box />\n\
+            export function Counter() {\n    return <box />\n}\n\
+            export default function Main() {}\n\
+            export const helper = () => 1\n";
+
+        let code = transform_code(source, "app.tsx")
+            .unwrap()
+            .unwrap()
+            .to_string();
+
+        assert_eq!(
+            code,
+            "export const App = $$registerComponent(import.meta.url, \"App\", () => <box />)\n\
+            export const Counter = $$registerComponent(import.meta.url, \"Counter\", function Counter() {\n    return <box />\n})\n\
+            export default $$registerComponent(import.meta.url, \"default\", function Main() {})\n\
+            export const helper = () => 1\n"
+        );
     }
 
-    // Allocate versioned strings in arena
-    let versioned_strings: Vec<&str> = transforms
-        .iter()
-        .map(|(_, s)| allocator.alloc_str(s) as &str)
-        .collect();
+    #[test]
+    fn keeps_line_numbers() {
+        let source = "import { x } from \"./x\"\n\n\
+            // comment\n\
+            export function App(): JSX.Element {\n\n    return (\n        <box>\n            <Broken />\n        </box>\n    )\n}\n";
 
-    // Apply transforms
-    for (i, (idx, _)) in transforms.iter().enumerate() {
-        let versioned = versioned_strings[i];
-        match &mut program.body[*idx] {
-            Statement::ImportDeclaration(import_decl) => {
-                import_decl.source = StringLiteral::new(SPAN, versioned, None, &ast);
-            }
-            Statement::ExportFromDeclaration(export_decl) => {
-                export_decl.source = StringLiteral::new(SPAN, versioned, None, &ast);
-            }
-            Statement::ExportAllDeclaration(export_all) => {
-                export_all.source = StringLiteral::new(SPAN, versioned, None, &ast);
-            }
-            _ => {}
-        }
+        let code = transform_code(source, "app.tsx")
+            .unwrap()
+            .unwrap()
+            .to_string();
+        let line_of = |code: &str, needle: &str| code.lines().position(|l| l.contains(needle));
+
+        assert_eq!(code.lines().count(), source.lines().count());
+        assert_eq!(line_of(&code, "<Broken />"), line_of(source, "<Broken />"));
     }
 
-    let printed = Codegen::new()
-        .with_options(CodegenOptions::default())
-        .build(&program);
-
-    Ok(printed.code)
+    #[test]
+    fn skips_modules_without_components() {
+        let source = "export const helper = () => 1\n";
+        assert!(transform_code(source, "util.ts").unwrap().is_none());
+    }
 }

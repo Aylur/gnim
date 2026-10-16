@@ -1,4 +1,5 @@
 use crate::dev_rundir;
+use crate::plugin::sourcemap::GnimSourceMapPlugin;
 
 use super::{is_in_path, rolldown_config};
 use clap::Args;
@@ -7,6 +8,7 @@ use quick_xml::events::{BytesStart, BytesText, Event};
 use quick_xml::reader::Reader;
 use quick_xml::writer::Writer;
 use std::io::Cursor;
+use std::sync::Arc;
 use std::{fs, path, process};
 
 const PRINTER: &str = r#"
@@ -37,14 +39,17 @@ async fn transpile_typescript(
     target: &str,
     outfile: &str,
 ) -> Result<rolldown::BundleOutput, String> {
-    let mut bundler = rolldown::Bundler::new(rolldown::BundlerOptions {
-        input: Some(vec![target.to_owned().into()]),
-        file: Some(outfile.into()),
-        footer: Some(rolldown::AddonOutputOption::String(Some(
-            PRINTER.to_owned(),
-        ))),
-        ..rolldown_config()
-    })
+    let mut bundler = rolldown::Bundler::with_plugins(
+        rolldown::BundlerOptions {
+            input: Some(vec![target.to_owned().into()]),
+            file: Some(outfile.into()),
+            footer: Some(rolldown::AddonOutputOption::String(Some(
+                PRINTER.to_owned(),
+            ))),
+            ..rolldown_config()
+        },
+        vec![Arc::new(GnimSourceMapPlugin)],
+    )
     .expect("Failed to create bundler");
 
     bundler.write().await.map_err(|err| {

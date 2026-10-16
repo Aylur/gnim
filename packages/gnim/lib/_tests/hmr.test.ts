@@ -2,6 +2,7 @@ import GObject from "gi://GObject?version=2.0"
 import { describe, expect, it } from "vitest"
 import type { CC, CCProps, FC, GnimNode } from "../jsx/element.js"
 import { For, With, jsx } from "../jsx/element.js"
+import { jsxDEV } from "../jsx/dev.js"
 import { createComponentRegistry } from "../jsx/hmr.js"
 import { createState, type Accessor, type Setter } from "../jsx/reactive.js"
 import { BaseRenderer, render } from "../jsx/render.js"
@@ -240,5 +241,26 @@ describe("hot reload", () => {
 
             dispose()
         })
+    })
+})
+
+describe("component stack", () => {
+    it("shows registered components at their element's source", () => {
+        const Broken = register("stack:Broken", function Thrower(): GnimNode {
+            throw Error("boom")
+        })
+        const App = register("stack:App", function Root() {
+            return jsx(Broken, {})
+        })
+        const source = { fileName: "app.tsx", lineNumber: 4, columnNumber: 2 }
+
+        let error!: Error & { scopeStack?: string }
+        try {
+            renderTree(() => jsxDEV(App, {}, void 0, false, source))
+        } catch (e) {
+            error = e as Error
+        }
+
+        expect(error.scopeStack).toBe("    in <Thrower>\n    in <Root> (at app.tsx:4:2)")
     })
 })

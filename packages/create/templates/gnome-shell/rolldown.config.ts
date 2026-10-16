@@ -58,6 +58,8 @@ export default defineConfig({
     define: {
       // disable global overrides such as the `Reflect` polyfill and `Array.$gtype`
       "import.meta.GNIM_DISABLE_GLOBAL_OVERRIDES": JSON.stringify(true),
+      // leave out dev only code paths
+      "import.meta.GNIM_DEV": JSON.stringify(false),
     },
   },
 })

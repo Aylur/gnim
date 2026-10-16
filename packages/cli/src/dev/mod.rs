@@ -8,7 +8,7 @@ mod watcher;
 
 pub use tracker::ModuleTracker;
 
-use super::{dev_rundir, rolldown_config};
+use super::{dev_rundir, rolldown_dev_config};
 use crate::is_in_path;
 use clap::Args;
 use runner::{GjsRunnerArgs, gjs_runner};
