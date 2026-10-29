@@ -1,4 +1,5 @@
 import System from "system"
+import { bind } from "../../jsx/store.js"
 import type { InferEmitter, InferImplementation } from "../index.js"
 import { assert, assertEq, assertThrows, report, sleep } from "./assert.js"
 import { ComExampleInterface, INITIAL, loop, UPDATED } from "./interface.js"
@@ -143,6 +144,12 @@ assertEq(autoNotifies, 1, "server: setting the same value does not notify")
 service.PropertyAuto = INITIAL.PropertyAuto
 assertEq(autoNotifies, 2, "server: resetting to a different value notifies again")
 service.disconnect(autoId)
+
+const boundAuto = bind(service, "property-auto")
+assertEq(boundAuto(), INITIAL.PropertyAuto, "server: bind with a kebab-case name reads the value")
+service.PropertyAuto = "bound-change"
+assertEq(boundAuto(), "bound-change", "server: bind reflects the updated value")
+service.PropertyAuto = INITIAL.PropertyAuto
 
 // getter/setter properties notify through the emitter called in the setter
 let propNotifies = 0

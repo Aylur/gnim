@@ -87,7 +87,7 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
                 const gtype = inferGType(prop.signature)
                 const name = kebabcase(prop.name)
 
-                Object.defineProperty(this.prototype, prop.name, {
+                const descriptor: PropertyDescriptor = {
                     configurable: true,
                     get: function get(this: DBusService) {
                         if ((prop.flags & READABLE) !== READABLE) {
@@ -101,7 +101,10 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
                         }
                         this.#setProperty(prop.name, value)
                     },
-                })
+                }
+
+                Object.defineProperty(this.prototype, prop.name, descriptor)
+                Object.defineProperty(this.prototype, name, descriptor)
 
                 return [name, pspecFromGType(gtype, name, prop.flags)] as const
             })

@@ -79,7 +79,7 @@ export function createProxyClass(info: Gio.DBusInterfaceInfo, gtypeName?: string
                 const gtype = inferGType(prop.signature)
                 const name = kebabcase(prop.name)
 
-                Object.defineProperty(this.prototype, prop.name, {
+                const descriptor: PropertyDescriptor = {
                     configurable: true,
                     get: function get(this: DBusProxy) {
                         if ((prop.flags & READABLE) !== READABLE) {
@@ -93,7 +93,10 @@ export function createProxyClass(info: Gio.DBusInterfaceInfo, gtypeName?: string
                         }
                         this.#setProperty(prop.name, v).catch(console.error)
                     },
-                })
+                }
+
+                Object.defineProperty(this.prototype, prop.name, descriptor)
+                Object.defineProperty(this.prototype, name, descriptor)
 
                 return [name, pspecFromGType(gtype, name, prop.flags)] as const
             })

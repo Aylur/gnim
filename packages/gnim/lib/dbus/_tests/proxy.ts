@@ -10,7 +10,8 @@ import {
     report,
     sleep,
 } from "./assert.js"
-import { ComExampleInterface, UPDATED } from "./interface.js"
+import { bind } from "../../jsx/store.js"
+import { ComExampleInterface, INITIAL, UPDATED } from "./interface.js"
 
 const proxy = await ComExampleInterface.proxy()
 
@@ -93,6 +94,12 @@ try {
     assertEq(proxy.Property, UPDATED.Property, "accessor property round trip")
 
     print("\n-- read-only property --")
+    const boundReadOnly = bind(proxy, "read-only-property")
+    assertEq(
+        boundReadOnly(),
+        INITIAL.ReadOnlyProperty,
+        "bind with a kebab-case name reads the value",
+    )
     const readOnlyNotify = expectSignal(proxy, "notify::read-only-property")
     await proxy.SetReadOnly(UPDATED.ReadOnlyProperty)
     await readOnlyNotify
@@ -101,6 +108,7 @@ try {
         UPDATED.ReadOnlyProperty,
         "server-side update through the emitter is propagated",
     )
+    assertEq(boundReadOnly(), UPDATED.ReadOnlyProperty, "bind reflects the updated value")
 
     print("\n-- write-only property --")
     proxy.WriteOnlyProperty = UPDATED.WriteOnlyProperty
