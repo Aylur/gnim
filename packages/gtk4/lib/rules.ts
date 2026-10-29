@@ -111,6 +111,7 @@ export const childrenRules: ChildrenRule[] = [
               childrenRule(Adw.ViewStack, keepChildren),
               childrenRule(Adw.Leaflet, keepChildren),
               childrenRule(Adw.Squeezer, keepChildren),
+              childrenRule(Adw.TabView, keepChildren),
           ]
         : []),
 ]
@@ -119,7 +120,7 @@ export const constructOnlyChild: ReadonlyArray<Ctor<GObject.Object>> = [
     Gtk.StackPage,
     Gtk.NotebookPage,
     Gtk.AssistantPage,
-    ...(Adw ? ([Adw.ViewStackPage, Adw.LeafletPage, Adw.SqueezerPage] as const) : []),
+    ...(Adw ? ([Adw.ViewStackPage, Adw.LeafletPage, Adw.SqueezerPage, Adw.TabPage] as const) : []),
 ]
 
 const centerBoxSlots = ["start", "center", "end"]
@@ -136,6 +137,14 @@ function positionOf(model: Gio.ListModel, item: GObject.Object) {
         if (model.get_item(i) === item) return i
     }
     return -1
+}
+
+function tabPageOf(pages: Gio.ListModel, child: Gtk.Widget) {
+    for (let i = 0; i < pages.get_n_items(); i++) {
+        const page = pages.get_item(i) as (GObject.Object & { child: Gtk.Widget }) | null
+        if (page?.child === child) return page
+    }
+    return null
 }
 
 function emptyWidget() {
@@ -191,12 +200,17 @@ export const rules: ChildRule[] = [
                       return false
                   },
               }),
-              rule(Adw.TabView, Gtk.Widget, {
-                  append: (p, c) => void p.append(c),
+              rule(Adw.TabView, Adw.TabPage, {
                   remove(p, c) {
-                      const page = p.get_page(c)
-                      if (!page) return false
-                      p.close_page(page)
+                      if (positionOf(p.pages, c) === -1) return
+                      p.set_page_pinned(c, false)
+                      p.close_page(c)
+                  },
+              }),
+              rule(Adw.TabView, Gtk.Widget, {
+                  remove(p, c) {
+                      const page = tabPageOf(p.pages, c)
+                      if (page) applyRules("remove", p, page)
                   },
               }),
               rule(Adw.Sidebar, Adw.SidebarSection, {
