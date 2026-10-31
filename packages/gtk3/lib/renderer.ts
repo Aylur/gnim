@@ -1,33 +1,53 @@
 import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=3.0"
 import {
-    appendChild,
+    BaseRenderer,
     computed,
     isAccessor,
     MissingMethodError,
-    newObject,
     prop,
-    removeChild,
     render as renderGnim,
-    setChildren,
     type CC,
     type CCProps,
-    type FC,
     type GnimNode,
     type MaybeAccessor,
-    type Renderer,
 } from "gnim"
+
+const slots = new WeakMap<GObject.Object, string>()
+const FALLTHROUGH = false
+const noop = () => {}
 
 const dummyBuilder = new Gtk.Builder()
 const encoder = new TextEncoder()
-const slotType = Symbol("gnim.gtk3.slot")
-const cssprovider = Symbol("gnim.gtk3.cssprovider")
+const cssProviders = new WeakMap<Gtk.Widget, Gtk.CssProvider>()
 
-function snakecase(str: string) {
-    return str
-        .replace(/([a-z])([A-Z])/g, "$1-$2")
-        .replaceAll("-", "_")
-        .toLowerCase()
+/**
+ * @returns The `slot` that was set in JSX on `object`.
+ */
+export function getSlot(object: GObject.Object) {
+    return slots.get(object) ?? null
+}
+
+export function setSlot(object: GObject.Object, slot: string) {
+    slots.set(object, slot)
+}
+
+type Ctor<T> = abstract new (...args: never[]) => T
+
+interface Rule<P = GObject.Object, C = GObject.Object> {
+    parent: Ctor<P>
+    child: Ctor<C>
+    when?(parent: P, child: C): boolean
+    append?(parent: P, child: C): void | typeof FALLTHROUGH
+    remove?(parent: P, child: C): void | typeof FALLTHROUGH
+}
+
+function rule<P extends GObject.Object, C extends GObject.Object>(
+    parent: Ctor<P>,
+    child: Ctor<C>,
+    impl: Omit<Rule<P, C>, "parent" | "child">,
+): Rule {
+    return { parent, child, ...impl }
 }
 
 function setCss(widget: Gtk.Widget, css: string) {
@@ -37,14 +57,13 @@ function setCss(widget: Gtk.Widget, css: string) {
 
     const ctx = widget.get_style_context()
 
-    if (cssprovider in widget) {
-        ctx.remove_provider(widget[cssprovider] as Gtk.CssProvider)
-    }
+    const prev = cssProviders.get(widget)
+    if (prev) ctx.remove_provider(prev)
 
     const provider = new Gtk.CssProvider()
     provider.load_from_data(encoder.encode(css))
     ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-    Object.assign(widget, { [cssprovider]: provider })
+    cssProviders.set(widget, provider)
 }
 
 function flattenClassList(classList: unknown): MaybeAccessor<string> {
@@ -54,25 +73,57 @@ function flattenClassList(classList: unknown): MaybeAccessor<string> {
     return ""
 }
 
-function isAdjustable<T extends GObject.Object>(
-    object: T,
-): object is T & { adjustment: Gtk.Adjustment } {
+function isAdjustable(object: GObject.Object) {
     return GObject.Object.list_properties
         .call(object)
         .some((prop) => GObject.type_is_a(prop.value_type, Gtk.Adjustment))
 }
 
-/**
- * @returns The slot that was set in JSX on `object`.
- */
-export function getSlot(object: GObject.Object) {
-    return slotType in object ? (object[slotType] as string) : null
-}
+export class GtkRenderer extends BaseRenderer {
+    static instance: GtkRenderer | null = null
 
-export class GtkRenderer implements Renderer {
-    resolveTag(tag: string): CC | FC {
-        throw Error(`unresolved JSX tag: "${tag}"`)
+    static get() {
+        if (!this.instance) this.instance = new GtkRenderer()
+        return this.instance
     }
+
+    private rules: readonly Rule[] = [
+        rule(GObject.Object, Gtk.Adjustment, {
+            when: (p) => isAdjustable(p),
+            append: (p, c) => void Object.assign(p, { adjustment: c }),
+            remove: noop,
+        }),
+        rule(Gtk.Stack, Gtk.Widget, {
+            when: (_, c) => getSlot(c) === "named" && !!c.name,
+            append: (p, c) => p.add_named(c, c.name),
+        }),
+        rule(Gtk.Application, Gtk.Window, {
+            append: (p, c) => p.add_window(c),
+            remove: (p, c) => p.remove_window(c),
+        }),
+        rule(Gtk.TextView, Gtk.TextBuffer, {
+            append: (p, c) => p.set_buffer(c),
+            remove: (p) => p.set_buffer(null),
+        }),
+        rule(Gtk.Container, Gtk.Widget, {
+            remove: (p, c) => p.remove(c),
+        }),
+    ]
+
+    private applyRules(
+        op: "append" | "remove",
+        parent: GObject.Object,
+        child: GObject.Object,
+    ): boolean {
+        for (const r of this.rules) {
+            const fn = r[op]
+            if (!fn || !(parent instanceof r.parent) || !(child instanceof r.child)) continue
+            if (r.when && !r.when(parent, child)) continue
+            if (fn(parent, child) !== FALLTHROUGH) return true
+        }
+        return FALLTHROUGH
+    }
+
     constructObject(element: CC, props: Record<string, unknown>): GObject.Object {
         const { slot, ...rest } = props
 
@@ -80,17 +131,19 @@ export class GtkRenderer implements Renderer {
             rest.visible ??= true
         }
 
-        const object = newObject(element, rest as Partial<CCProps<GObject.Object>>)
+        const object = this.newObject(element, rest as Partial<CCProps<GObject.Object>>)
 
         if (typeof slot === "string") {
-            Object.assign(object, { [slotType]: slot })
+            setSlot(object, slot)
         }
 
         return object
     }
+
     createText(label: string): GObject.Object {
         return new Gtk.Label({ label, visible: true })
     }
+
     prepareProps(klass: CC, props: Record<string, unknown>): Record<string, unknown> {
         if (klass.prototype instanceof Gtk.Widget && "class" in props) {
             const cn = props.class
@@ -102,6 +155,7 @@ export class GtkRenderer implements Renderer {
         }
         return props
     }
+
     setProperty(object: GObject.Object, key: string, value: unknown): void {
         if (object instanceof Gtk.Widget && key === "css" && typeof value === "string") {
             return setCss(object, value)
@@ -109,77 +163,22 @@ export class GtkRenderer implements Renderer {
 
         if (object instanceof Gtk.Widget && key === "class" && typeof value === "string") {
             const ctx = object.get_style_context()
-            const names = value.split(/\s+/)
 
             for (const name of ctx.list_classes()) {
                 ctx.remove_class(name)
             }
 
-            for (const name of names) {
+            for (const name of value.split(/\s+/).filter((n) => n !== "")) {
                 ctx.add_class(name)
             }
             return
         }
 
-        const getter = `get_${snakecase(key)}` as keyof typeof object
-
-        let current: unknown
-
-        if (
-            getter in object &&
-            typeof object[getter] === "function" &&
-            object[getter].length === 0
-        ) {
-            current = (object[getter] as () => unknown)()
-        } else {
-            current = object[key as keyof typeof object]
-        }
-
-        if (!Object.is(current, value)) {
-            Object.assign(object, { [key]: value })
-        }
+        super.setProperty(object, key, value)
     }
-    setChildren(parent: GObject.Object, children: GObject.Object[], prev: GObject.Object[]): void {
-        if (
-            setChildren in parent &&
-            typeof parent[setChildren] === "function" &&
-            parent[setChildren](children, prev)
-        ) {
-            return
-        }
-        for (const child of prev) {
-            this.removeChild(parent, child)
-        }
-        for (const child of children) {
-            this.appendChild(parent, child)
-        }
-    }
+
     appendChild(parent: GObject.Object, child: GObject.Object): void {
-        if (appendChild in parent && typeof parent[appendChild] === "function") {
-            if (parent[appendChild](child)) return
-        }
-
-        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
-            return void (parent.adjustment = child)
-        }
-
-        if (
-            child instanceof Gtk.Widget &&
-            parent instanceof Gtk.Stack &&
-            child.name !== "" &&
-            child.name !== null &&
-            getSlot(child) === "named"
-        ) {
-            return parent.add_named(child, child.name)
-        }
-
-        if (child instanceof Gtk.Window && parent instanceof Gtk.Application) {
-            return parent.add_window(child)
-        }
-
-        if (child instanceof Gtk.TextBuffer && parent instanceof Gtk.TextView) {
-            return parent.set_buffer(child)
-        }
+        if (this.applyRules("append", parent, child)) return
 
         if (parent instanceof Gtk.Buildable) {
             return parent.vfunc_add_child(dummyBuilder, child, getSlot(child))
@@ -187,29 +186,13 @@ export class GtkRenderer implements Renderer {
 
         throw new MissingMethodError("appendChild", parent, child)
     }
+
     removeChild(parent: GObject.Object, child: GObject.Object): void {
-        if (removeChild in parent && typeof parent[removeChild] === "function") {
-            if (parent[removeChild](child)) return
-        }
-
-        if (child instanceof Gtk.Adjustment && isAdjustable(parent)) {
-            return // no-op
-        }
-
-        if (child instanceof Gtk.TextBuffer && parent instanceof Gtk.TextView) {
-            return parent.set_buffer(null)
-        }
-
-        if (parent instanceof Gtk.Container && child instanceof Gtk.Widget) {
-            return parent.remove(child)
-        }
-
-        if (parent instanceof Gtk.Application && child instanceof Gtk.Window) {
-            return parent.remove_window(child)
-        }
+        if (this.applyRules("remove", parent, child)) return
 
         throw new MissingMethodError("removeChild", parent, child)
     }
+
     disposeObject(object: GObject.Object): void {
         if (object instanceof Gtk.Window) {
             object.destroy()
@@ -218,7 +201,7 @@ export class GtkRenderer implements Renderer {
 }
 
 export function render(element: () => GnimNode, root?: GObject.Object) {
-    return renderGnim(new GtkRenderer(), element, root)
+    return renderGnim(GtkRenderer.get(), element, root)
 }
 
 export type ClassValue = string | number | null | boolean | undefined | ClassValue[]
