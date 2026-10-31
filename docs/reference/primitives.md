@@ -509,7 +509,7 @@ setTimeout(() => {
   // This callback gets run without an owner scope.
   // Restore owner via runScope:
   runScope(scope, () => {
-    const foo = FooContext.use()
+    const foo = getContext(FooContext)
     onCleanup(() => {
       print("some cleanup")
     })
@@ -581,7 +581,7 @@ Example:
 const MyContext = createContext("fallback-value")
 
 function ConsumerComponent() {
-  const value = MyContext.use()
+  const value = getContext(MyContext)
 
   return <Gtk.Label label={value} />
 }
@@ -593,13 +593,4 @@ function ProviderComponent() {
     </MyContext>
   )
 }
-```
-
-Outside of JSX, `provide` runs a function in a new child scope where `use`
-returns the given value.
-
-```ts
-MyContext.provide("my-value", () => {
-  MyContext.use() // "my-value"
-})
 ```

@@ -2,7 +2,7 @@ import { render } from "@gnim-js/gnome-shell"
 import type { Console } from "console"
 import type { GettextDomain } from "gnim/intl"
 import type { CreateSettings } from "gnim/schema"
-import { createContext } from "gnim"
+import { createContext, getContext } from "gnim"
 import { createDomain } from "gnim/intl"
 import { createSettings } from "gnim/schema"
 import { schema } from "../org.gnome.shell.extensions.__extension-id__.gschema"
@@ -19,7 +19,7 @@ interface ExtensionContext {
 const ExtensionContext = createContext<ExtensionContext | null>(null)
 
 export function useExtension() {
-  const ctx = ExtensionContext.use()
+  const ctx = getContext(ExtensionContext)
   if (!ctx) throw Error("missing ExtensionContext")
   return ctx
 }

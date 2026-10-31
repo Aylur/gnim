@@ -6,15 +6,17 @@ import {
     createRoot,
     createState,
     effect,
+    getContext,
     getScope,
     isAccessor,
     onCleanup,
     onMount,
+    setContext,
     subscribe,
     untrack,
     type Accessor,
 } from "../jsx/reactive.js"
-import { batch, getScope as getActiveScope, runScope } from "../jsx/signal.js"
+import { batch, createScope, getScope as getActiveScope, runScope } from "../jsx/signal.js"
 
 describe("createRoot", () => {
     it("returns the value produced by its callback", () => {
@@ -2158,35 +2160,42 @@ describe("createContext", () => {
         const Ctx = createContext("fallback")
 
         createRoot(() => {
-            expect(Ctx.use()).toBe("fallback")
+            expect(getContext(Ctx)).toBe("fallback")
         })
     })
 
     it("throws when used outside of a scope", () => {
         const Ctx = createContext("fallback")
-        expect(() => Ctx.use()).toThrow()
+        expect(() => getContext(Ctx)).toThrow()
     })
 
     it("returns the value produced by the provider callback", () => {
         const Ctx = createContext(0)
-        expect(Ctx.provide(1, () => Ctx.use() + 1)).toBe(2)
+        const result = runScope(createScope(), () => {
+            setContext(Ctx, 1)
+            return getContext(Ctx) + 1
+        })
+        expect(result).toBe(2)
     })
 
     it("resolves the provided value through nested scopes", () => {
         const Ctx = createContext("fallback")
 
         createRoot(() => {
-            Ctx.provide("outer", () => {
+            runScope(createScope(), () => {
+                setContext(Ctx, "outer")
+
                 createRoot((dispose) => {
-                    expect(Ctx.use()).toBe("outer")
+                    expect(getContext(Ctx)).toBe("outer")
                     dispose()
                 }, getScope())
 
-                Ctx.provide("inner", () => {
-                    expect(Ctx.use()).toBe("inner")
+                runScope(createScope(), () => {
+                    setContext(Ctx, "inner")
+                    expect(getContext(Ctx)).toBe("inner")
                 })
 
-                expect(Ctx.use()).toBe("outer")
+                expect(getContext(Ctx)).toBe("outer")
             })
         })
     })
@@ -2195,8 +2204,9 @@ describe("createContext", () => {
         const Ctx = createContext<string | undefined>("fallback")
 
         createRoot(() => {
-            Ctx.provide(undefined, () => {
-                expect(Ctx.use()).toBeUndefined()
+            runScope(createScope(), () => {
+                setContext(Ctx, undefined)
+                expect(getContext(Ctx)).toBeUndefined()
             })
         })
     })
@@ -2206,8 +2216,9 @@ describe("createContext", () => {
         const spy = vi.fn()
 
         const dispose = createRoot((dispose) => {
-            Ctx.provide("provided", () => {
-                effect(() => spy(Ctx.use()))
+            runScope(createScope(), () => {
+                setContext(Ctx, "provided")
+                effect(() => spy(getContext(Ctx)))
             })
             return dispose
         })
@@ -2221,7 +2232,10 @@ describe("createContext", () => {
         const cleanup = vi.fn()
 
         const dispose = createRoot((dispose) => {
-            Ctx.provide(1, () => onCleanup(cleanup))
+            runScope(createScope(), () => {
+                setContext(Ctx, 1)
+                onCleanup(cleanup)
+            })
             return dispose
         })
 
@@ -2664,10 +2678,11 @@ describe("mount timing", () => {
 
         createRoot(() => {
             const scope = getScope()
-            Ctx.provide("provided", () => {
+            runScope(createScope({ mountWithParent: true }), () => {
+                setContext(Ctx, "provided")
                 const provider = getScope()
                 onMount(() => {
-                    seen = Ctx.use()
+                    seen = getContext(Ctx)
                     scopeInMount = getScope()
                 })
                 expect(provider).not.toBe(scope)

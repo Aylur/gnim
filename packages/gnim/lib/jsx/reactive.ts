@@ -83,19 +83,7 @@ export type Scope = Signal.Scope
  */
 export interface Context<T = unknown> extends Signal.Context<T> {
     /**
-     * Read the value provided by the closest provider
-     * or the default value when there is none.
-     */
-    use(): T
-
-    /**
-     * Run a function in a new {@link Scope} that provides `value`.
-     * @returns The value returned by the function.
-     */
-    provide<R>(value: T, fn: () => R): R
-
-    /**
-     * Provider component: `children` read `value` through {@link use}.
+     * Provider component: `children` read `value` using {@link getContext}.
      */
     (props: { value: T; children: GnimNode }): GnimNode
 }
@@ -113,18 +101,16 @@ export interface Context<T = unknown> extends Signal.Context<T> {
  * const MyContext = createContext("fallback-value")
  *
  * function ConsumerComponent() {
- *   const value = MyContext.use()
+ *   const value = getContext(MyContext)
  *
- *   return <Gtk.Label label={value} />
+ *   return <>{value}</>
  * }
  *
  * function ProviderComponent() {
  *   return (
- *     <Gtk.Box>
- *       <MyContext value="my-value">
- *         <ConsumerComponent />
- *       </MyContext>
- *     </Gtk.Box>
+ *     <MyContext value="my-value">
+ *       <ConsumerComponent />
+ *     </MyContext>
  *   )
  * }
  * ```
@@ -132,32 +118,69 @@ export interface Context<T = unknown> extends Signal.Context<T> {
 export function createContext<T>(defaultValue: T): Context<T> {
     let ctx: Context<T>
 
-    function withContext<R>(value: T, fn: () => R) {
+    function Context(props: { value: T; children: GnimNode }) {
+        const { value, children } = props
         const scope = Signal.createScope({ mountWithParent: true })
         return Signal.runScope(scope, () => {
             Signal.setContext(ctx, value)
-            return fn()
+            return resolveNode(children)
         })
     }
 
-    function use(): T {
-        return Signal.getContext(ctx)
-    }
+    return (ctx = Object.assign(Context, { defaultValue }))
+}
 
-    function provide<R>(value: T, fn: () => R): R {
-        return withContext(value, fn)
-    }
+/**
+ * Provides `value` for `ctx` in the current {@link Scope}.
+ * Code running in this scope or any of its child scopes
+ * reads it through {@link getContext}.
+ *
+ * @throws when called outside of a scope.
+ *
+ * @example
+ *
+ * ```tsx
+ * function ProviderComponent() {
+ *   setContext(MyContext, "my-value")
+ *
+ *   return <ConsumerComponent />
+ * }
+ * ```
+ *
+ * Note: Contexts created with {@link createContext} should prefer
+ * providing their value through the provider component instead:
+ *
+ * ```tsx
+ * return (
+ *   <MyContext value="my-value">
+ *     <ConsumerComponent />
+ *   </MyContext>
+ * )
+ * ```
+ */
+export function setContext<T>(ctx: Signal.Context<T>, value: T): void {
+    return Signal.setContext(ctx, value)
+}
 
-    function Context(props: { value: T; children: GnimNode }) {
-        const { value, children } = props
-        return withContext(value, () => resolveNode(children))
-    }
-
-    return (ctx = Object.assign(Context, {
-        defaultValue,
-        use,
-        provide,
-    }))
+/**
+ * Reads the value of `ctx` provided by the closest {@link Scope}
+ * walking up from the current one, or its default value when
+ * there is no provider.
+ *
+ * @throws when called outside of a scope.
+ *
+ * @example
+ *
+ * ```tsx
+ * function ConsumerComponent() {
+ *   const value = getContext(MyContext)
+ *
+ *   return <Gtk.Label label={value} />
+ * }
+ * ```
+ */
+export function getContext<T>(ctx: Signal.Context<T>): T {
+    return Signal.getContext(ctx)
 }
 
 /**
@@ -173,7 +196,7 @@ export function createContext<T>(defaultValue: T): Context<T> {
  *   // This callback gets run without an owner scope.
  *   // Restore owner via runScope:
  *   runScope(scope, () => {
- *     const foo = FooContext.use()
+ *     const foo = getContext(FooContext)
  *     onCleanup(() => {
  *       print("some cleanup")
  *     })

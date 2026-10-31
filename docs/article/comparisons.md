@@ -855,7 +855,7 @@ import MyButton from "./MyButton.vue"
 ::: code-group
 
 ```tsx [Gnim]
-import { createContext } from "gnim"
+import { createContext, getContext } from "gnim"
 
 const ThemeContext = createContext("light")
 
@@ -868,7 +868,7 @@ function Page() {
 }
 
 function ThemedButton() {
-  const theme = ThemeContext.use()
+  const theme = getContext(ThemeContext)
   return <Button>{theme}</Button>
 }
 ```

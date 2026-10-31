@@ -1,15 +1,23 @@
 import GObject from "gi://GObject?version=2.0"
 import { kebabcase, snakecase } from "../util.js"
 import {
-    resolveNode,
     mountChildren,
+    resolveNode,
     type CC,
     type CCProps,
     type FC,
     type GnimNode,
 } from "./element.js"
 import { createContext, isAccessor, untrack, type Accessor } from "./reactive.js"
-import { createScope, Effect, onCleanup, runScope, setContext, withScopeStack } from "./signal.js"
+import {
+    createScope,
+    Effect,
+    getContext,
+    onCleanup,
+    runScope,
+    setContext,
+    withScopeStack,
+} from "./signal.js"
 
 const RendererContext = createContext<Renderer | null>(null)
 
@@ -38,7 +46,7 @@ export interface Buildable {
 }
 
 export function getRenderer(): Renderer {
-    const renderer = RendererContext.use()
+    const renderer = getContext(RendererContext)
     if (!renderer) throw Error("cannot get renderer: out of tracking context")
     return renderer
 }

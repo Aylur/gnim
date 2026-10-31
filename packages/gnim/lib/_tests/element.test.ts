@@ -8,9 +8,11 @@ import {
     createContext,
     createState,
     effect,
+    getContext,
     getScope,
     onCleanup,
     onMount,
+    setContext,
     subscribe,
     type Accessor,
 } from "../jsx/reactive.js"
@@ -1124,7 +1126,7 @@ describe("component scopes", () => {
         const calls: string[] = []
 
         function Consumer() {
-            onMount(() => calls.push(`${Ctx.use()}:${root.children.length}`))
+            onMount(() => calls.push(`${getContext(Ctx)}:${root.children.length}`))
             return jsx(Widget, {})
         }
 
@@ -1133,16 +1135,15 @@ describe("component scopes", () => {
         expect(calls).toEqual(["provided:1"])
     })
 
-    it("mounts provide() callbacks with the enclosing scope", () => {
+    it("mounts context scopes with the enclosing scope", () => {
         const root = new Box()
         const Ctx = createContext("default")
         const calls: string[] = []
 
         function App() {
-            return Ctx.provide("provided", () => {
-                onMount(() => calls.push(`${Ctx.use()}:${root.children.length}`))
-                return jsx(Widget, {})
-            })
+            setContext(Ctx, "provided")
+            onMount(() => calls.push(`${getContext(Ctx)}:${root.children.length}`))
+            return jsx(Widget, {})
         }
 
         renderTree(() => jsx(App, {}), root)

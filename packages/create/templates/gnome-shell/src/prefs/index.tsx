@@ -1,7 +1,7 @@
 import { render } from "@gnim-js/gtk4"
 import type { Console } from "console"
 import Adw from "gi://Adw"
-import { createContext } from "gnim"
+import { createContext, getContext } from "gnim"
 import { createDomain, type GettextDomain } from "gnim/intl"
 import { createSettings, type CreateSettings } from "gnim/schema"
 import { schema } from "../org.gnome.shell.extensions.__extension-id__.gschema"
@@ -18,7 +18,7 @@ interface PrefsContext {
 const PrefsContext = createContext<PrefsContext | null>(null)
 
 export function usePrefs() {
-  const ctx = PrefsContext.use()
+  const ctx = getContext(PrefsContext)
   if (!ctx) throw Error("missing PrefsContext")
   return ctx
 }

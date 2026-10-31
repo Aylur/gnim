@@ -93,14 +93,7 @@ function getStateCtx(): StateCtx | null {
 }
 
 function isContext(instance: unknown): instance is Context<any> {
-    return (
-        typeof instance === "function" &&
-        "defaultValue" in instance &&
-        "use" in instance &&
-        typeof instance.use === "function" &&
-        "provide" in instance &&
-        typeof instance.provide === "function"
-    )
+    return typeof instance === "function" && "defaultValue" in instance
 }
 
 /**
