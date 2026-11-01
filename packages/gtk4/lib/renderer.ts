@@ -114,11 +114,11 @@ function notebookPageOfTab(notebook: Gtk.Notebook, tab: Gtk.Widget) {
 }
 
 export class GtkRenderer extends BaseRenderer {
-    static instance: GtkRenderer | null = null
+    static #instance: GtkRenderer | null = null
 
     static get() {
-        if (!this.instance) this.instance = new GtkRenderer()
-        return this.instance
+        if (!this.#instance) this.#instance = new GtkRenderer()
+        return this.#instance
     }
 
     private preconstructChild: ReadonlyArray<Ctor<GObject.Object>> = [

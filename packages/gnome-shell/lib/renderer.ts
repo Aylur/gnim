@@ -17,6 +17,13 @@ const _St = St as typeof import("gi://St?version=18").GI.St
 const _Clutter = Clutter as typeof import("gi://Clutter?version=18").GI.Clutter
 
 export class GnomeRenderer extends BaseRenderer {
+    static #instance: GnomeRenderer | null = null
+
+    static get() {
+        if (!this.#instance) this.#instance = new GnomeRenderer()
+        return this.#instance
+    }
+
     constructObject(element: CC, props: Record<string, unknown>): GObject.Object {
         return this.newObject(element, props as CCProps<GObject.Object>)
     }
@@ -83,5 +90,5 @@ export class GnomeRenderer extends BaseRenderer {
 }
 
 export function render(element: () => GnimNode, root?: GObject.Object) {
-    return renderGnim(new GnomeRenderer(), element, root)
+    return renderGnim(GnomeRenderer.get(), element, root)
 }
