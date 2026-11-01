@@ -20,6 +20,7 @@ import {
 } from "./service.js"
 
 export interface DBusInterface<T extends InterfaceDeclaration> {
+    $declarations: T
     Proxy: ProxyClass<T>
     Service: ServiceClass<T>
     proxy(props?: ProxyProps): Promise<ProxyInstance<T>>
@@ -56,5 +57,5 @@ export function createDBusInterface<T extends InterfaceDeclaration>(
         Service: DBusService,
         proxy: (props) => proxy(DBusProxy, props),
         serve: (props) => serve(DBusService, props),
-    }
+    } as DBusInterface<T>
 }

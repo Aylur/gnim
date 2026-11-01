@@ -57,6 +57,7 @@ export interface ProxyProps {
 
 export interface ProxyClass<T extends InterfaceDeclaration> {
     readonly $gtype: GObject.GType<ProxyInstance<T>>
+    readonly $declarations: T
     readonly info: InterfaceInfo<T>
 
     new (props?: ProxyProps): ProxyInstance<T>

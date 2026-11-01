@@ -56,6 +56,7 @@ export type ServiceInstance<
 
 export interface ServiceClass<T extends InterfaceDeclaration> {
     readonly $gtype: GObject.GType<ServiceInstance<T, ServiceImplementation<any>>>
+    readonly $declarations: T
     readonly info: InterfaceInfo<T>
 
     new <S extends ServiceImplementation<T>>(
