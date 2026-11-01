@@ -1,9 +1,5 @@
 # Roadmap
 
-The reactive system was rewritten for 2.0 on top of the propagation algorithm of
-[alien-signals](https://github.com/stackblitz/alien-signals). Updates are
-synchronous, propagate in topological order and can be grouped with `batch()`.
-
 ## Reactive text children are recreated on every change
 
 A text child from an accessor destroys the previous text node and constructs a
