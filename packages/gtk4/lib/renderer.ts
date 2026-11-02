@@ -575,8 +575,8 @@ declare module "gnim" {
     namespace JSX {
         interface IntrinsicClassAttributes<T> {
             slot?: string
-            css?: T extends Gtk.Widget ? MaybeAccessor<string> : never
-            class?: T extends Gtk.Widget ? ClassList : never
+            css?: T extends Pick<Gtk.Widget, "get_style_context"> ? MaybeAccessor<string> : never
+            class?: T extends Pick<Gtk.Widget, "get_style_context"> ? ClassList : never
         }
     }
 }
