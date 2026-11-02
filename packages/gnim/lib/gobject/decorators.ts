@@ -223,11 +223,14 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
             })
         }
 
-        defineProperty(proto, `get_${snakecase(key)}`, {
-            value: function () {
-                return this[key]
-            },
-        })
+        const getter = `get_${snakecase(key)}`
+        if (readable && !(getter in proto)) {
+            defineProperty(proto, `get_${snakecase(key)}`, {
+                value: function () {
+                    return this[key]
+                },
+            })
+        }
 
         return [name, spec] as const
     })
@@ -249,7 +252,8 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
             },
         })
 
-        if (options?.default !== false) {
+        const handler = `on_${snakecase(key)}`
+        if (options?.default !== false && !(handler in proto)) {
             defineProperty(proto, `on_${snakecase(key)}`, {
                 value: descriptor.value,
             })
