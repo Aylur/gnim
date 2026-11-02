@@ -13,6 +13,7 @@ static GLOBAL_OPTIONS: OnceLock<GlobalOptions> = OnceLock::new();
 pub struct GlobalOptions {
     pub alias: Option<rolldown::PathsOutputOption>,
     pub define: Option<rolldown_utils::indexmap::FxIndexMap<String, String>>,
+    pub resolve: Option<rolldown::ResolveOptions>,
 }
 
 pub fn init(opts: GlobalOptions) {
@@ -50,6 +51,7 @@ fn bundler_options(development: bool) -> rolldown::BundlerOptions {
         .or_insert_with(|| development.to_string());
 
     let alias = GLOBAL_OPTIONS.get().and_then(|o| o.alias.clone());
+    let resolve = GLOBAL_OPTIONS.get().and_then(|o| o.resolve.clone());
 
     let import_source = match PathBuf::from("./tsconfig.json").exists() {
         true => None,
@@ -87,6 +89,7 @@ fn bundler_options(development: bool) -> rolldown::BundlerOptions {
         format: Some(rolldown::OutputFormat::Esm),
         define: Some(define),
         paths: alias,
+        resolve,
         ..Default::default()
     }
 }

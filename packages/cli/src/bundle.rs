@@ -54,7 +54,7 @@ pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
     };
 
     let outfile = Path::new(args.outfile.as_deref().unwrap_or("gresource"));
-    let tracker = ModuleTracker::new(&args.entry).await?;
+    let tracker = ModuleTracker::new(&args.entry, false).await?;
     let resources = Arc::new(GnimResourcePlugin::new(Some(resource_prefix.clone())));
     let js_bundle_target = dev_rundir().join(mainjs).to_string_lossy().to_string();
 

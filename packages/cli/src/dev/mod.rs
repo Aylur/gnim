@@ -41,7 +41,7 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
     let dir = dev_rundir();
     let (socket_tx, _) = broadcast::channel::<SocketMsg>(16);
     let (gjs_restart_tx, gjs_restart_rx) = mpsc::channel::<()>(1);
-    let module_tracker = ModuleTracker::new(&args.entry).await?;
+    let module_tracker = ModuleTracker::new(&args.entry, true).await?;
 
     let entry_js = module_tracker.entry_js.clone();
     let gtk_version = module_tracker.gtk_version.clone();

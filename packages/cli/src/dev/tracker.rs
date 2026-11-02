@@ -2,24 +2,49 @@ use crate::plugin::css::GnimCssPlugin;
 use crate::plugin::resource::GnimResourcePlugin;
 use crate::plugin::sourcemap::GnimSourceMapPlugin;
 use crate::{dev_rundir, rolldown_dev_config};
-use std::{collections::HashMap, fs, sync::Arc};
+use std::borrow::Cow;
+use std::path::Path;
+use std::{collections::HashMap, fs, io, sync::Arc};
 
-fn get_dev_entry() -> Option<String> {
-    let candidates = [
-        Some("./node_modules/gnim/lib/dev.ts".to_string()),
-        Some("./node_modules/gnim/dist/lib/dev.js".to_string()),
-        option_env!("GNIM_DATADIR").map(|dir| format!("{dir}/gnim/dist/lib/dev.js")),
-    ];
+const DEV_ENTRY: &str = "gnim:dev";
 
-    for candidate in candidates.into_iter().flatten() {
-        if let Ok(path) = fs::canonicalize(candidate)
-            && path.exists()
-        {
-            return Some(path.to_string_lossy().to_string());
-        }
+#[derive(Debug)]
+struct GnimDevEntryPlugin(/*importer*/ String);
+
+impl rolldown_plugin::Plugin for GnimDevEntryPlugin {
+    fn name(&self) -> Cow<'static, str> {
+        Cow::from("gnim:dev-entry")
     }
 
-    None
+    fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
+        rolldown_plugin::HookUsage::ResolveId
+    }
+
+    async fn resolve_id(
+        &self,
+        ctx: &rolldown_plugin::PluginContext,
+        args: &rolldown_plugin::HookResolveIdArgs<'_>,
+    ) -> rolldown_plugin::HookResolveIdReturn {
+        if args.specifier != DEV_ENTRY {
+            return Ok(None);
+        }
+
+        let gnim = ctx.resolve("gnim", Some(&self.0), None).await??;
+        let index = Path::new(gnim.id.as_str());
+        let ext = index.extension().unwrap_or_default();
+        let dev = index.with_file_name("dev").with_extension(ext);
+
+        if !dev.exists() {
+            Err(io::Error::other(format!(
+                "gnim dev runtime not found at {}",
+                dev.display()
+            )))?;
+        }
+
+        Ok(Some(rolldown_plugin::HookResolveIdOutput::from_id(
+            dev.to_string_lossy().into_owned(),
+        )))
+    }
 }
 
 #[derive(Debug)]
@@ -49,9 +74,8 @@ impl ModuleTracker {
         self.versions.get(js_module).copied().unwrap_or(0)
     }
 
-    pub async fn new(entry: &str) -> Result<Self, String> {
+    pub async fn new(entry: &str, dev: bool) -> Result<Self, String> {
         let dir = dev_rundir();
-        let dev_entry = get_dev_entry();
 
         let prog_entry = fs::canonicalize(entry)
             .map(|path| path.to_string_lossy().to_string())
@@ -59,8 +83,8 @@ impl ModuleTracker {
 
         let mut inputs: Vec<rolldown::InputItem> = vec![prog_entry.clone().into()];
 
-        if let Some(dev_entry) = &dev_entry {
-            inputs.push(dev_entry.clone().into());
+        if dev {
+            inputs.push(DEV_ENTRY.to_owned().into());
         }
 
         let mut bundler = rolldown::Bundler::with_plugins(
@@ -71,6 +95,7 @@ impl ModuleTracker {
                 ..rolldown_dev_config()
             },
             vec![
+                Arc::new(GnimDevEntryPlugin(prog_entry.clone())),
                 Arc::new(GnimCssPlugin::default()),
                 Arc::new(GnimResourcePlugin::default()),
                 Arc::new(GnimSourceMapPlugin),
@@ -116,14 +141,11 @@ impl ModuleTracker {
                 if chunk.is_entry
                     && let Some(id) = chunk.facade_module_id.as_deref()
                 {
-                    if let Some(dev_entry) = &dev_entry
-                        && id == dev_entry
-                    {
-                        dev_entry_js =
-                            Some(dir.join(asset.filename()).to_string_lossy().to_string());
-                    }
+                    let js = Some(dir.join(asset.filename()).to_string_lossy().to_string());
                     if id == prog_entry {
-                        entry_js = Some(dir.join(asset.filename()).to_string_lossy().to_string());
+                        entry_js = js;
+                    } else if dev {
+                        dev_entry_js = js;
                     }
                 }
 

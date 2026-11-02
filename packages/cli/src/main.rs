@@ -48,6 +48,7 @@ async fn main() -> std::process::ExitCode {
 
     gnim::init(gnim::GlobalOptions {
         alias: None,
+        resolve: None,
         define: match &cli.command {
             Command::Types(_) => None,
             Command::Schemas(args) => Some(map(&args.define)),
