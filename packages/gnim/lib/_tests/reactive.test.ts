@@ -1941,7 +1941,7 @@ describe("edge cases", () => {
                 if (!stop()) return
                 dispose()
                 onCleanup(after)
-                throw new Error("boom")
+                throw Error("boom")
             })
 
             expect(() => setStop(true)).toThrow("boom")
@@ -2450,13 +2450,12 @@ describe("createAccessor", () => {
     })
 
     it("warns when implicitly converted to a primitive", () => {
-        const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+        const logError = vi.fn()
+        vi.stubGlobal("logError", logError)
         const accessor = createAccessor(() => 1)
 
         expect(`${accessor}`).toBe("Accessor { 1 }")
-        expect(warn).toHaveBeenCalledTimes(1)
-
-        warn.mockRestore()
+        expect(logError).toHaveBeenCalledTimes(1)
     })
 })
 

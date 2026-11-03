@@ -39,14 +39,14 @@ describe("getLocale", () => {
     })
 
     it.each(["C", "POSIX", "not a locale"])("falls back to en-US on %s", async (lang) => {
-        vi.spyOn(console, "error").mockImplementation(() => {})
+        vi.stubGlobal("logError", vi.fn())
         const { getLocale } = await importLocale({ LANG: lang })
 
         expect(getLocale().toString()).toBe("en-US")
     })
 
     it("falls back to en-US when the variable is unset", async () => {
-        vi.spyOn(console, "error").mockImplementation(() => {})
+        vi.stubGlobal("logError", vi.fn())
         const { getLocale } = await importLocale({})
 
         expect(getLocale().toString()).toBe("en-US")
@@ -67,7 +67,7 @@ describe("getPreferredLocale", () => {
     })
 
     it("falls through to the next variable when LANGUAGE has no usable entry", async () => {
-        vi.spyOn(console, "error").mockImplementation(() => {})
+        vi.stubGlobal("logError", vi.fn())
         const { getPreferredLocale } = await importLocale({
             LANGUAGE: "C",
             LC_MESSAGES: "hu_HU.UTF-8",

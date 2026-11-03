@@ -35,7 +35,7 @@ function getLocaleFromEnv(env: LocaleEnvVar): Intl.Locale {
 
     if (locale) return locale
 
-    console.error("Falling back to en-US", new Error(`Variable ${env} does not specify a locale`))
+    logError(Error(`Variable ${env} does not specify a locale, falling back to en-US`))
     return new Intl.Locale("en-US")
 }
 
@@ -67,10 +67,7 @@ export function getPreferredLocale(): string | string[] {
 
         if (locales.length > 0) return locales
 
-        console.error(
-            "Ignoring LANGUAGE",
-            new Error(`Variable LANGUAGE does not specify any locale: ${language}`),
-        )
+        logError(Error(`Variable LANGUAGE does not specify any locale: ${language}`))
     }
 
     if (GLib.getenv("LC_ALL")) {

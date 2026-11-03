@@ -83,7 +83,7 @@ function defaultContent(type: string, value: unknown) {
         try {
             GLib.Variant.parse(new GLib.VariantType(type), text, null, null)
         } catch (cause) {
-            throw new Error(`content "${text}" is not valid for type "${type}"`, { cause })
+            throw Error(`content "${text}" is not valid for type "${type}"`, { cause })
         }
 
         return { children: text, localized: true, context }

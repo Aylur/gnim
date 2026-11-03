@@ -124,7 +124,7 @@ const monitorFiles = new Set<Gio.FileMonitor>()
  * @example
  * ```ts
  * const monitor = monitorFile("/path/to/file", (filePath, event) => {
- *   console.log(filePath, event)
+ *   print(filePath, event)
  * })
  *
  * monitor.cancel()

@@ -325,10 +325,14 @@ export class GtkRenderer extends BaseRenderer {
             when: (_, c) => !["start", "center", "end"].includes(getSlot(c) ?? ""),
             append(_, c) {
                 if (!getSlot(c)) {
-                    console.warn("Trying to append child to Gtk.CenterBox without a specified slot")
+                    logError(
+                        Error("Trying to append child to Gtk.CenterBox without a specified slot"),
+                    )
                 } else {
-                    console.warn(
-                        `Invalid Gtk.CenterBox child slot: has to be one of "start", "center", "end"`,
+                    logError(
+                        Error(
+                            `Invalid Gtk.CenterBox child slot: has to be one of "start", "center", "end"`,
+                        ),
                     )
                 }
             },

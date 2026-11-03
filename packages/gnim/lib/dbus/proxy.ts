@@ -92,7 +92,9 @@ export function createProxyClass(info: Gio.DBusInterfaceInfo, gtypeName?: string
                         if ((prop.flags & WRITABLE) !== WRITABLE) {
                             throw Error(`property "${prop.name}" is not writable`)
                         }
-                        this.#setProperty(prop.name, v).catch(console.error)
+                        this.#setProperty(prop.name, v).catch((error) =>
+                            logError(Error.isError(error) ? error : Error(String(error))),
+                        )
                     },
                 }
 

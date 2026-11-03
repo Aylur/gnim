@@ -52,7 +52,7 @@ function injectCss(stylesheet: string): () => void {
     const provider = new Gtk.CssProvider()
 
     let id = provider.connect("parsing-error", (_, _section, error) => {
-        console.error(`css error: ${error.message}`)
+        logError(Error(`css error: ${error.message}`))
     })
 
     provider.load_from_string(stylesheet)

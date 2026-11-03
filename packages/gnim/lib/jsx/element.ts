@@ -156,7 +156,7 @@ export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<Gni
     }
 
     if (node === true) {
-        console.warn("trying to render a true literal")
+        logError(Error("trying to render a true literal"))
         return []
     }
 
@@ -266,7 +266,7 @@ export function For<Item, Key = Item>(props: ForProps<Item, Key>): GnimNode {
 
         if (idSet.size !== ids.length) {
             const dupes = new Set(ids.filter((id, i) => ids.indexOf(id) !== i))
-            console.error(Error(`duplicate keys in <For>: ${[...dupes].join(", ")}.`))
+            logError(Error(`duplicate keys in <For>: ${[...dupes].join(", ")}.`))
         }
 
         for (const [key, value] of map.entries()) {

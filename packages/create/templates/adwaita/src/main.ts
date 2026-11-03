@@ -53,5 +53,5 @@ export default class App extends Adw.Application {
   App.instance = new App()
   App.instance
     .runAsync([programInvocationName, ...programArgs])
-    .catch(console.error)
+    .catch((e) => logError(Error.isError(e) ? e : Error(String(e))))
 }

@@ -95,15 +95,15 @@ describe("render", () => {
     })
 
     it("warns and renders nothing for a true literal", () => {
-        const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+        const logError = vi.fn()
+        vi.stubGlobal("logError", logError)
 
         const root = new Box()
         const dispose = renderTree(() => true, root)
 
         expect(root.children).toHaveLength(0)
-        expect(warn).toHaveBeenCalled()
+        expect(logError).toHaveBeenCalled()
 
-        warn.mockRestore()
         dispose()
     })
 
@@ -842,7 +842,8 @@ describe("<For />", () => {
     })
 
     it("logs an error for duplicate keys", async () => {
-        const error = vi.spyOn(console, "error").mockImplementation(() => {})
+        const error = vi.fn()
+        vi.stubGlobal("logError", error)
         const [items, setItems] = createState(["a", "a", "b"])
 
         const root = new Box()
@@ -864,7 +865,6 @@ describe("<For />", () => {
 
         expect(error).toHaveBeenCalledTimes(1)
 
-        error.mockRestore()
         dispose()
     })
 

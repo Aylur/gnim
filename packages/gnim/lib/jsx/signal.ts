@@ -125,7 +125,7 @@ function attachScope(scope: Scope): void {
 }
 
 export function runScope<T>(scope: Scope, fn: () => T): T {
-    if (scope.disposed) throw new Error("scope is disposed")
+    if (scope.disposed) throw Error("scope is disposed")
     const parent = scope.parent
     const mountWithParent = scope.mountWithParent && parent !== null && !parent.mounted
     if (mountWithParent) {
@@ -263,13 +263,13 @@ export function withScopeStack<Args extends Array<any>, R>(
 }
 
 export function onCleanup(fn: Fn): void {
-    if (!activeScope) throw new Error("onCleanup called outside of a scope")
+    if (!activeScope) throw Error("onCleanup called outside of a scope")
     activeScope.cleanups ??= []
     activeScope.cleanups.push(fn)
 }
 
 export function onMount(fn: Fn): void {
-    if (!activeScope) throw new Error("onMount called outside of a scope")
+    if (!activeScope) throw Error("onMount called outside of a scope")
     if (!activeScope.mounted) {
         activeScope.mounts ??= []
         activeScope.mounts.push(fn)

@@ -195,12 +195,12 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
         #setProperty(propertyName: string, value: unknown) {
             const prop = this.#dbusObject.get_info().lookup_property(propertyName)
             if (!prop) {
-                console.warn(Error(`cannot find property info "${propertyName}"`))
+                logError(Error(`cannot find property info "${propertyName}"`))
                 return
             }
 
             if ((prop.flags & WRITABLE) !== WRITABLE) {
-                console.warn(Error(`cannot set property "${propertyName}": not writable`))
+                logError(Error(`cannot set property "${propertyName}": not writable`))
                 return
             }
 
@@ -208,7 +208,7 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
                 try {
                     return (this.implementation[propertyName] = value)
                 } catch (err) {
-                    console.error(err)
+                    logError(Error.isError(err) ? err : Error(String(err)))
                 }
             }
 
@@ -233,7 +233,7 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
         #handlePropertyGet(_: Gio.DBusExportedObject, propertyName: string) {
             const prop = this.#dbusObject.get_info().lookup_property(propertyName)
             if (!prop) {
-                console.warn(Error(`cannot find property info "${propertyName}"`))
+                logError(Error(`cannot find property info "${propertyName}"`))
                 return null
             }
 
@@ -243,7 +243,7 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
                     return new GLib.Variant(prop.signature, value)
                 }
             } catch (err) {
-                console.error(err)
+                logError(Error.isError(err) ? err : Error(String(err)))
             }
             return null
         }
@@ -251,12 +251,12 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
         #handlePropertySet(_: Gio.DBusExportedObject, propertyName: string, value: GLib.Variant) {
             const prop = this.#dbusObject.get_info().lookup_property(propertyName)
             if (!prop) {
-                console.warn(Error(`cannot find property info "${propertyName}"`))
+                logError(Error(`cannot find property info "${propertyName}"`))
                 return
             }
 
             if (prop.signature !== value.get_type_string()) {
-                console.warn(
+                logError(
                     Error(
                         `cannot set property "${propertyName}": invalid variant ${value.get_type_string()}, expected ${prop.signature}`,
                     ),
@@ -267,7 +267,7 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
             try {
                 this.#setProperty(propertyName, value.deepUnpack())
             } catch (err) {
-                console.error(err)
+                logError(Error.isError(err) ? err : Error(String(err)))
             }
         }
 

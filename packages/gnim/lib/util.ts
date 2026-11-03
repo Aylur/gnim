@@ -29,7 +29,7 @@ export function snakecase(str: string) {
 function callerBasename(...skipUrls: string[]): string | null {
     const scriptRegex = /^(.+:\/\/)?(.*\/)?(.+)\.js$/
     const stackLineRegex = /@(.+:\/\/)?(.*\/)?(.+)\.js:\d+(:[\d]+)?$/
-    const stackLines = new Error().stack?.trim().split("\n") ?? []
+    const stackLines = Error().stack?.trim().split("\n") ?? []
 
     const skip = skipUrls.map((url) => {
         const match = url.match(scriptRegex)

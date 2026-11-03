@@ -42,9 +42,8 @@ function isCss(id: string) {
     return id.endsWith(".css") || id.endsWith(".scss") || id.endsWith(".sass")
 }
 
-// unlike console.error, logError prints source mapped stack traces
 function logImportError(error: unknown, source: string) {
-    if (error instanceof Error || error instanceof GLib.Error) {
+    if (Error.isError(error)) {
         logError(error, `[dev] failed to import ${source}`)
     } else {
         console.error(`[dev] failed to import ${source}:`, error)

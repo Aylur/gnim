@@ -4,6 +4,18 @@ import GObject from "gi://GObject?version=2.0"
 import { createAccessor, type Accessor } from "gnim"
 import { register, signal, VoidType, type ConstructorProps } from "gnim/gobject"
 
+class ProcessError extends Error {
+    override name = "ProcessError"
+
+    constructor(error: unknown) {
+        super(String(error))
+    }
+}
+
+function handleError(error: unknown) {
+    logError(Error.isError(error) ? error : new ProcessError(error))
+}
+
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Process {
     export interface SignalSignatures extends GObject.Object.SignalSignatures {
@@ -56,7 +68,7 @@ export class Process extends GObject.Object {
                     this.#readStream(stream)
                 }
             } catch (error) {
-                console.error(error)
+                handleError(error)
             }
         })
     }
@@ -191,7 +203,7 @@ export class Process extends GObject.Object {
         if (process.get_successful()) {
             return out?.trim() ?? ""
         } else {
-            throw new Error(err?.trim() ?? "Unknown error")
+            throw Error(err?.trim() ?? "Unknown error")
         }
     }
 
@@ -228,7 +240,7 @@ export class Process extends GObject.Object {
                     if (process.get_successful()) {
                         return resolve(out?.trim() ?? "")
                     } else {
-                        reject(new Error(err?.trim() ?? "Unknown error"))
+                        reject(Error(err?.trim() ?? "Unknown error"))
                     }
                 } catch (error) {
                     reject(error)
@@ -263,8 +275,8 @@ type SubprocessArgs = {
  * ```ts
  * subprocess({
  *   cmd: "command",
- *   out: (stdout) => console.log(stdout),
- *   err: (stderr) => console.error(stderr),
+ *   out: (stdout) => print(stdout),
+ *   err: (stderr) => printerr(stderr),
  * })
  * ```
  */
@@ -277,8 +289,8 @@ export function subprocess(args: SubprocessArgs): Process
  * ```ts
  * subprocess(
  *   "command",
- *   (stdout) => console.log(stdout),
- *   (stderr) => console.error(stderr),
+ *   (stdout) => print(stdout),
+ *   (stderr) => printerr(stderr),
  * )
  * ```
  */
@@ -291,7 +303,7 @@ export function subprocess(
 export function subprocess(
     argsOrCmd: SubprocessArgs | string | string[],
     onOut: (stdout: string) => void = print,
-    onErr: (stderr: string) => void = printerr,
+    onErr: (stderr: string) => void = handleError,
 ) {
     const args = Array.isArray(argsOrCmd) || typeof argsOrCmd === "string"
     const { cmd, err, out } = {
@@ -315,9 +327,9 @@ export function subprocess(
  * ```ts
  * try {
  *   const stdout = exec("command")
- *   console.log(stdout)
+ *   print(stdout)
  * } catch (stderr) {
- *   console.error(stderr)
+ *   printerr(stderr)
  * }
  * ```
  */
@@ -334,9 +346,9 @@ export function exec(cmd: string | string[]) {
  * ```ts
  * try {
  *   const stdout = await execAsync("command")
- *   console.log(stdout)
+ *   print(stdout)
  * } catch (stderr) {
- *   console.error(stderr)
+ *   printerr(stderr)
  * }
  * ```
  */
@@ -361,7 +373,7 @@ export function execAsync(cmd: string | string[]): Promise<string> {
  * const stdout = createSubprocess("placeholder", ["command"])
  *
  * effect(() => {
- *   console.log("command printed a new line", stdout())
+ *   print("command printed a new line", stdout())
  * })
  * ```
  */
@@ -384,7 +396,7 @@ export function createSubprocess(init: string, exec: string | string[]): Accesso
  * })
  *
  * effect(() => {
- *   console.log(JSON.stringify(value()))
+ *   print(JSON.stringify(value()))
  * })
  * ```
  */
@@ -415,17 +427,7 @@ export function createSubprocess<T>(
         if (subscribers.size === 0) {
             proc = subprocess(exec, (stdout) => {
                 const value = transform ? transform(stdout, currentValue) : (stdout as T)
-                if (value instanceof Promise) {
-                    value.then(set).catch((err) => {
-                        if (err instanceof Error || err instanceof GLib.Error) {
-                            console.error(err)
-                        } else {
-                            console.error(new Error(err))
-                        }
-                    })
-                } else {
-                    set(value)
-                }
+                Promise.resolve(value).then(set).catch(handleError)
             })
         }
 

@@ -331,7 +331,7 @@ export function createAccessor<T>(
             return `Accessor { ${peek()} }`
         },
         [Symbol.toPrimitive]() {
-            console.warn("Accessor implicitly converted to a primitive value.")
+            logError(Error("Accessor implicitly converted to a primitive value."))
             return `Accessor { ${peek()} }`
         },
     })

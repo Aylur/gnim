@@ -10,6 +10,7 @@ export default defineConfig({
     },
     test: {
         include: ["lib/_tests/**/*.test.ts"],
+        unstubGlobals: true,
     },
     resolve: {
         alias: [

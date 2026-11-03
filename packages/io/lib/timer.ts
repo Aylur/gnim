@@ -34,7 +34,7 @@ export class Timer extends GObject.Object {
      * @example
      * ```ts
      * const timer = Timer.interval(1000, () => {
-     *   console.log("tick")
+     *   print("tick")
      * })
      *
      * timer.cancel()
@@ -59,7 +59,7 @@ export class Timer extends GObject.Object {
      * @example
      * ```ts
      * const timer = Timer.timeout(1000, () => {
-     *   console.log("done")
+     *   print("done")
      * })
      *
      * timer.cancel()
@@ -81,7 +81,7 @@ export class Timer extends GObject.Object {
      * @example
      * ```ts
      * const timer = Timer.idle(() => {
-     *   console.log("idle")
+     *   print("idle")
      * })
      *
      * timer.cancel()
@@ -132,7 +132,7 @@ export const { interval, timeout, idle } = Timer
  * const date = createPoll("", 1000, "date")
  *
  * effect(() => {
- *   console.log(date())
+ *   print(date())
  * })
  * ```
  */
@@ -162,7 +162,7 @@ export function createPoll(
  * })
  *
  * effect(() => {
- *   console.log("uptime:", uptime())
+ *   print("uptime:", uptime())
  * })
  * ```
  */
@@ -187,7 +187,7 @@ export function createPoll<T>(
  * const time = createPoll(Date.now(), 1000, () => Date.now())
  *
  * effect(() => {
- *   console.log(new Date(time()).toLocaleTimeString())
+ *   print(new Date(time()).toLocaleTimeString())
  * })
  * ```
  */
@@ -215,31 +215,16 @@ export function createPoll<T>(
     }
 
     function compute() {
-        if (typeof execOrFn === "function") {
-            const value = execOrFn(currentValue)
-            if (value instanceof Promise) {
-                value.then(set).catch(console.error)
-            } else {
-                set(value)
-            }
-        } else {
-            execAsync(execOrFn)
-                .then((stdout) => {
-                    const value = transform ? transform(stdout, currentValue) : (stdout as T)
-                    if (value instanceof Promise) {
-                        value.then(set).catch((err) => {
-                            if (err instanceof Error || err instanceof GLib.Error) {
-                                console.error(err)
-                            } else {
-                                console.error(new Error(err))
-                            }
-                        })
-                    } else {
-                        set(value)
-                    }
-                })
-                .catch((err: string) => console.error(new Error(err)))
-        }
+        const value =
+            typeof execOrFn === "function"
+                ? execOrFn(currentValue)
+                : execAsync(execOrFn).then((stdout) =>
+                      transform ? transform(stdout, currentValue) : (stdout as T),
+                  )
+
+        Promise.resolve(value)
+            .then(set)
+            .catch((error) => logError(Error.isError(error) ? error : Error(error)))
     }
 
     function subscribe(callback: () => void): () => void {
