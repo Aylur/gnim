@@ -6,12 +6,13 @@ mod tracker;
 mod transform;
 mod watcher;
 
+pub use runner::{GjsEnv, GjsRunnerArgs};
 pub use tracker::ModuleTracker;
 
 use super::{dev_rundir, rolldown_dev_config};
 use crate::is_in_path;
 use clap::Args;
-use runner::{GjsRunnerArgs, gjs_runner};
+use runner::gjs_runner;
 use schemas::compile_schemas;
 use socket::{DevSocketArgs, SocketMsg, dev_socket};
 use std::sync::{Arc, RwLock};
@@ -35,6 +36,9 @@ pub struct DevArgs {
     /// Arguments passed to the gjs process after `--`
     #[arg(last = true)]
     pub args: Vec<String>,
+    /// Extra environment for the gjs process
+    #[arg(skip)]
+    pub gjs_env: Option<GjsEnv>,
 }
 
 pub async fn dev(args: &DevArgs) -> Result<(), String> {
@@ -51,7 +55,7 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
         .clone()
         .ok_or("Could not find dev entry file. Is Gnim installed?".to_string())?;
 
-    for (file, _) in module_tracker.modules.iter() {
+    for file in module_tracker.modules.keys() {
         if file.ends_with(".gschema.ts") || file.ends_with(".gschema.js") {
             compile_schemas(file).await?;
         }
@@ -103,6 +107,7 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
             gjs_args: args.args.clone(),
             restart_rx: gjs_restart_rx,
             module_tracker: module_tracker.clone(),
+            gjs_env: args.gjs_env,
         })
     });
 

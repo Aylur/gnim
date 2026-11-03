@@ -1,13 +1,16 @@
 use super::tracker::ModuleTracker;
 use crate::dev_rundir;
-use crate::plugin::resource::{GResource, ResourceFile, generate_resource};
 use crate::gsettings_schema_dir;
+use crate::plugin::resource::{GResource, ResourceFile, generate_resource};
 use serde_json::json;
+use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use tokio::process::Command;
 use tokio::sync::mpsc;
+
+pub type GjsEnv = fn(&GjsRunnerArgs) -> Vec<(OsString, OsString)>;
 
 pub struct GjsRunnerArgs {
     pub application_id: Option<String>,
@@ -19,6 +22,7 @@ pub struct GjsRunnerArgs {
     pub gjs_args: Vec<String>,
     pub restart_rx: mpsc::Receiver<()>,
     pub module_tracker: Arc<RwLock<ModuleTracker>>,
+    pub gjs_env: Option<GjsEnv>,
 }
 
 fn collect_icon_files(root: &Path, dir: &Path, files: &mut Vec<ResourceFile>) {
@@ -82,6 +86,7 @@ fn bundle_dev_icons(rundir: &Path) -> Option<PathBuf> {
 }
 
 pub async fn gjs_runner(args: GjsRunnerArgs) -> Result<(), String> {
+    let env = args.gjs_env.map(|env| env(&args)).unwrap_or_default();
     let mut restart_rx = args.restart_rx;
     let rundir = dev_rundir();
 
@@ -117,6 +122,7 @@ pub async fn gjs_runner(args: GjsRunnerArgs) -> Result<(), String> {
             .args(&args.gjs_args)
             .env("GNIM_DEV", props.to_string())
             .env("GSETTINGS_SCHEMA_DIR", schema_dir.clone())
+            .envs(env.iter().map(|(key, value)| (key, value)))
             .spawn()
             .map_err(|err| format!("Failed to spawn gjs: {err}"))?;
 

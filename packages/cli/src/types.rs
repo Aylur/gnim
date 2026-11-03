@@ -171,7 +171,7 @@ pub async fn types(args: &TypeArgs) -> Result<(), String> {
         on_event,
         generator: gjs::TypeScript {
             alias: args.alias,
-            outdir: format!("{}/gi", &args.outdir),
+            outdir: format!("{}/gi", args.outdir),
         },
     };
 
@@ -180,12 +180,12 @@ pub async fn types(args: &TypeArgs) -> Result<(), String> {
         Error::FsError(error) => error.to_string(),
     })?;
 
-    fs::create_dir_all(format!("{}/gnim", &args.outdir)).unwrap();
+    fs::create_dir_all(format!("{}/gnim", args.outdir)).unwrap();
 
-    fs::write(format!("{}/gnim/env.d.ts", &args.outdir), GNIM_ENV)
+    fs::write(format!("{}/gnim/env.d.ts", args.outdir), GNIM_ENV)
         .expect("Failed to write gnim/env.d.ts");
 
-    fs::write(format!("{}/gnim/package.json", &args.outdir), GNIM_PACKAGE)
+    fs::write(format!("{}/gnim/package.json", args.outdir), GNIM_PACKAGE)
         .expect("Failed to write gnim/package.json");
 
     Ok(())
