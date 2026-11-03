@@ -90,34 +90,11 @@ export class Process extends GObject.Object {
     }
 
     /**
-     * Write to the subprocess' stdin asynchronously.
-     * See {@link Gio.DataOutputStream.prototype.write_bytes_async}
+     * Write to the subprocess' stdin.
      *
      * @param str String to be written to stdin
      */
-    write(str: string): Promise<number> {
-        return new Promise((resolve, reject) => {
-            this.#inStream.write_bytes_async(
-                this.#encoder.encode(str),
-                GLib.PRIORITY_DEFAULT,
-                null,
-                (_, res) => {
-                    try {
-                        resolve(this.#inStream.write_bytes_finish(res))
-                    } catch (error) {
-                        reject(error)
-                    }
-                },
-            )
-        })
-    }
-
-    /**
-     * Write a line to stdin asynchronously.
-     *
-     * @param str String to be written to stdin
-     */
-    async writeAsync(str: string): Promise<void> {
+    write(str: string): Promise<void> {
         return new Promise((resolve, reject) => {
             this.#inStream.write_all_async(
                 this.#encoder.encode(str),
@@ -201,9 +178,9 @@ export class Process extends GObject.Object {
 
         const [, out, err] = process.communicate_utf8(null, null)
         if (process.get_successful()) {
-            return out?.trim() ?? ""
+            return out ?? ""
         } else {
-            throw Error(err?.trim() ?? "Unknown error")
+            throw new ProcessError(err ?? "Unknown error")
         }
     }
 
@@ -238,9 +215,9 @@ export class Process extends GObject.Object {
                 try {
                     const [, out, err] = process.communicate_utf8_finish(res)
                     if (process.get_successful()) {
-                        return resolve(out?.trim() ?? "")
+                        return resolve(out ?? "")
                     } else {
-                        reject(Error(err?.trim() ?? "Unknown error"))
+                        reject(new ProcessError(err ?? "Unknown error"))
                     }
                 } catch (error) {
                     reject(error)
