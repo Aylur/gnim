@@ -1,8 +1,7 @@
 # CLI
 
 The `gnim` command line tool ships with the `gnim` npm package as a prebuilt
-binary, so it is available as `npx gnim` or through `node_modules/.bin` in
-package.json scripts.
+binary.
 
 > [!NOTE]
 >
@@ -13,8 +12,6 @@ Global flags:
 | Flag             | Description                              |
 | ---------------- | ---------------------------------------- |
 | `-k, --keep-tmp` | Keep temporary and runtime files on exit |
-
-<!-- TODO: add note about system installation -->
 
 ## `gnim types`
 

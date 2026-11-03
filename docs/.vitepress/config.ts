@@ -37,6 +37,7 @@ export default defineConfig({
                     { text: "Schemas", link: "/reference/schemas" },
                     { text: "Packages", link: "/reference/packages" },
                     { text: "CLI", link: "/reference/cli" },
+                    { text: "Runtime", link: "/reference/runtime" },
                 ],
             },
             {
@@ -44,6 +45,7 @@ export default defineConfig({
                 items: [
                     { text: "Dev server", link: "/article/devserver" },
                     { text: "Assets", link: "/article/assets" },
+                    { text: "Tips", link: "/article/tips" },
                     { text: "Buildable", link: "/article/buildable" },
                     { text: "Web framework comparisons", link: "/article/comparisons" },
                     { text: "GLib.Variant", link: "/article/gvariant" },

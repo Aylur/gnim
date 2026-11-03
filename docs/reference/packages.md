@@ -3,8 +3,6 @@
 The core `gnim` package is renderer agnostic: it implements JSX, reactivity and
 the GObject utilities, but it does not know how to attach objects to each other.
 That job is done by a renderer package, which provides the `render` function.
-There is a renderer for Gtk4, Gtk3 and GNOME Shell, and an additional utility
-package for common IO operations.
 
 | Package                | Purpose                                        |
 | ---------------------- | ---------------------------------------------- |
@@ -17,7 +15,7 @@ package for common IO operations.
 
 ### `render`
 
-Mounts a JSX tree and returns a dispose function that tears down its scope.
+Mounts a JSX tree and returns a dispose function that tears it down.
 
 ```ts
 function render(element: () => GnimNode, root?: GObject.Object): () => void
@@ -29,18 +27,23 @@ Example:
 import Gtk from "gi://Gtk?version=4.0"
 import { render } from "@gnim-js/gtk4"
 
-const dispose = render(() => (
-  <Gtk.Window visible>
-    <Gtk.Label label="Hello" />
-  </Gtk.Window>
-))
+let app: Gtk.Application
+
+const dispose = render(
+  () => (
+    <Gtk.Window visible>
+      <Gtk.Label label="Hello" />
+    </Gtk.Window>
+  ),
+  app,
+)
 ```
 
 The renderer also defines the `slot`, `css` and `class` JSX attributes.
 
-### `slot`
+#### `slot`
 
-Under the hood, to build the widget tree the renderer uses the
+Under the hood, to build the widget tree the renderer mostly uses the
 [Gtk.Buildable](https://docs.gtk.org/gtk4/iface.Buildable.html) interface. The
 `slot` attribute specifies the type the `child` is meant to be.
 
@@ -52,21 +55,36 @@ Under the hood, to build the widget tree the renderer uses the
 </Gtk.CenterBox>
 ```
 
-### `css`
+> [!NOTE]
+>
+> When a widget has a property for said slot, its possible to pass JSX as that
+> property
+> <!-- prettier-ignore -->
+> ```tsx
+> <Gtk.CenterBox
+>   start={<Gtk.Box />}
+>   center={<Gtk.Box />}
+>   end={<Gtk.Box />}
+> />
+> ```
 
-An additional `css` attribute is available on class components that inherit from
-`Gtk.Widget`. It is mostly meant to be used as a debugging tool, e.g. with
-`css="border: 1px solid red;"`.
+#### `css`
+
+Inline styling on class components that inherit from `Gtk.Widget`.
 
 ```tsx
 <Gtk.Button css="border: 1px solid red;" />
 ```
 
-### `class`
+> [!NOTE]
+>
+> The mechanism used under the hood is deprecated in Gtk. It also does not
+> cascade.
 
-The `class` attribute is available on class components that inherit from
-`Gtk.Widget`. It is an alternative to the Gtk4 `cssClasses` property which can
-take class names in various forms.
+#### `class`
+
+Alternative to the Gtk4 `cssClasses` property which can take class names in
+various forms.
 
 ```tsx
 const name: string | Accessor<string> | string[] | Accessor<string[]>
@@ -128,11 +146,14 @@ import { createListItemFactory } from "@gnim-js/gtk4/listItemFactory"
 function StringList() {
   const model = Gtk.StringList.new(["one", "two", "three"])
 
-  const factory = createListItemFactory<Gtk.StringObject>((listItem) => (
-    <Gtk.Label label={listItem.as((li) => li?.item?.string ?? "")} />
-  ))
-
-  return <Gtk.ListView model={Gtk.NoSelection.new(model)} factory={factory} />
+  return (
+    <Gtk.ListView
+      model={Gtk.NoSelection.new(model)}
+      factory={createListItemFactory<Gtk.StringObject>((listItem) => (
+        <Gtk.Label label={listItem.as((li) => li?.item?.string ?? "")} />
+      ))}
+    />
+  )
 }
 ```
 
@@ -141,7 +162,7 @@ function StringList() {
 > `createListItemFactory` captures the current reactive scope, so it has to be
 > called from inside one, for example in the body of a function component.
 
-### `style`
+### `style` and `keyframes`
 
 > [!WARNING]
 >
@@ -156,32 +177,6 @@ media queries with `@media` keys.
 function style(props: Style): string
 function style(producer: () => Style): Accessor<string>
 ```
-
-Example:
-
-```tsx
-import { style } from "@gnim-js/gtk4"
-
-const className = style({
-  "color": "red",
-  "&:hover": {
-    color: "blue",
-  },
-})
-
-return <Gtk.Label class={className} label="styled" />
-```
-
-Identical style objects are deduplicated into a single stylesheet, and
-stylesheets are removed from the display when every scope using them is
-disposed. The producer form returns an `Accessor` that recomputes the stylesheet
-when its dependencies change.
-
-### `keyframes`
-
-> [!WARNING]
->
-> `style` and `keyframes` are experimental.
 
 Defines a CSS `@keyframes` animation and returns its generated name. Keys are
 either `from`/`to` or percentages.
@@ -208,6 +203,8 @@ const spin = keyframes({
 const className = style({
   animation: `${spin} 1s linear infinite`,
 })
+
+return <Gtk.Label class={className} label="styled" />
 ```
 
 ## `@gnim-js/gtk3`
@@ -231,8 +228,7 @@ Differences from Gtk4:
 Renderer for GNOME Shell extensions. Instead of Gtk widgets it renders
 Clutter/St actors: text nodes become `St.Label`, `Clutter.Actor` children are
 added with `add_child`, and `Clutter.Action`, `Clutter.Constraint` and
-`Clutter.LayoutManager` children are attached through their respective APIs. The
-Gtk-specific `css`, `class` and `slot` JSX attributes are not available.
+`Clutter.LayoutManager` children are attached through their respective APIs.
 
 ```tsx
 import { render } from "@gnim-js/gnome-shell"
@@ -265,14 +261,14 @@ gnim types -d node_modules/@gnim-js/gnome-shell/gir-1.0/gnome50 --alias
 
 ## `@gnim-js/io`
 
-Utilities for timers, files, subprocesses and web APIs. The package has four
-subpath exports and no root export.
+Utilities for timers, files, subprocesses and web APIs.
 
 ### `@gnim-js/io/timer`
 
 > [!IMPORTANT]
+> <!--  FIXME: link to ../reference/gjs.md -->
 >
-> `Timer` exists mostly for legacy reasons, newly written code might prefer
+> Timers exists mostly for legacy reasons, newly written code might prefer
 > `setTimeout` and `setInterval`.
 
 #### `Timer`
@@ -281,25 +277,55 @@ A GObject wrapping GLib timeout sources. It emits a `now` signal on each tick
 and a `cancelled` signal when cancelled with `cancel()`.
 
 ```ts
-const timer = Timer.interval(1000, () => console.log("every second"))
-const once = Timer.timeout(1000, () => console.log("after a second"))
-const idle = Timer.idle(() => console.log("when the loop is idle"))
+class Timer extends GObject.Object {
+  readonly $signal: {
+    now(): void
+    cancelled(): void
+  }
+
+  /** Cancel the timer emitting `cancelled`. */
+  cancel(): void
+}
+```
+
+#### `interval`
+
+Create a `Timer` that ticks immediately and then repeatedly at a fixed interval.
+
+```ts
+function interval(interval: number, callback?: () => void): Timer
+```
+
+Example:
+
+```ts
+import { interval } from "@gnim-js/io/timer"
+
+const timer = interval(1000, () => console.log("every second"))
 
 timer.cancel()
 ```
 
-`interval`, `timeout` and `idle` are also exported as standalone functions.
+#### `timeout`
 
-- `interval(interval, callback?)` runs the callback immediately, then repeatedly
-  at a fixed interval in milliseconds.
-- `timeout(interval, callback?)` runs the callback once after a delay.
-- `idle(callback?)` runs the callback once when there is nothing else to do on
-  the event loop.
+Create a timer that executes once after a delay.
+
+```ts
+function timeout(interval: number, callback?: () => void): Timer
+```
+
+#### `idle`
+
+Create a timer that executes once when the event loop is idle.
+
+```ts
+function idle(callback?: () => void): Timer
+```
 
 #### `createPoll`
 
 Creates an `Accessor` that polls at a fixed interval, either by running a
-function or by executing a command.
+function or by executing a command using [`execAsync`](#execasync).
 
 ```ts
 function createPoll(
@@ -338,7 +364,7 @@ effect(() => {
 >
 > Polling is lazy: it starts when the first subscriber appears and stops when
 > the number of subscribers drops to zero. Until then the accessor holds the
-> `init` placeholder value.
+> `init` placeholder value or the latest result.
 
 ### `@gnim-js/io/fs`
 
@@ -393,25 +419,32 @@ monitor.cancel()
 
 #### `Process`
 
-A GObject abstraction over `Gio.Subprocess` with piped stdin, stdout and stderr.
-It emits `stdout(line)` and `stderr(line)` signals for each line of output and
-an `exit(code, signaled)` signal when the process ends.
+Abstraction over `Gio.Subprocess` with piped stdin, stdout and stderr. It emits
+`stdout(line)` and `stderr(line)` signals for each line of output and an
+`exit(code, signaled)` signal when the process ends.
 
 ```ts
-const proc = new Process({ argv: ["command", "arg"] })
+class Process extends GObject.Object {
+  readonly $signals: {
+    stdout(out: string): void
+    stderr(err: string): void
+    exit(code: number, signaled: boolean): void
+  }
 
-proc.connect("stdout", (_, line) => console.log(line))
-proc.connect("exit", (_, code) => console.log("exited with", code))
+  /** Force quit the subprocess. */
+  kill(): void
 
-await proc.write("input\n")
-proc.signal(15)
-proc.kill()
+  /** Send a UNIX signal to the subprocess. */
+  signal(signal: number): void
+
+  /** Write to the subprocess' stdin. */
+  write(str: string): Promise<void>
+}
 ```
 
 #### `subprocess`
 
-Starts a long-running child process and wires up the output callbacks, which
-default to `print` and `printerr`.
+Starts a long-running child process and wires up the output callbacks.
 
 ```ts
 function subprocess(args: {
@@ -425,6 +458,18 @@ function subprocess(
   onOut?: (stdout: string) => void,
   onErr?: (stderr: string) => void,
 ): Process
+```
+
+Example:
+
+```ts
+const proc = subprocess(["command", "--flag", "arg"])
+
+proc.connect("exit", (_, code) => console.log("exited with", code))
+
+await proc.write("input\n")
+proc.signal(15)
+proc.kill()
 ```
 
 #### `exec`, `execAsync`
@@ -462,9 +507,9 @@ try {
 
 #### `createSubprocess`
 
-Creates an `Accessor` fed by the stdout of a long-running subprocess. Like
-[`createPoll`](#createpoll), it is lazy: the process is spawned when the first
-subscriber appears and killed when the number of subscribers drops to zero.
+Creates an `Accessor` fed by the stdout of a long-running subprocess. It is
+lazy: the process is spawned when the first subscriber appears and killed when
+the number of subscribers drops to zero.
 
 ```ts
 function createSubprocess(

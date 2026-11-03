@@ -9,7 +9,7 @@ have to do is mark text in code as translatable.
 It requires zero setup to start using gettext functions.
 
 ```tsx
-import { createDomain, fmt } from "gnim/intl"
+import { createDomain } from "gnim/intl"
 
 const { gettext: t } = createDomain("com.example.MyApp")
 
