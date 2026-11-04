@@ -88,13 +88,7 @@ impl GnimResourcePlugin {
         Self {
             prefix,
             imports: Arc::default(),
-            root_dir: match std::env::current_dir() {
-                Ok(path) => path.to_string_lossy().to_string(),
-                Err(err) => {
-                    eprintln!("warning: failed to get current dir: {}", err);
-                    std::process::exit(1);
-                }
-            },
+            root_dir: crate::root().to_string_lossy().to_string(),
         }
     }
 

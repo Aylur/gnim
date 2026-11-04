@@ -2,6 +2,7 @@ use super::tracker::ModuleTracker;
 use crate::dev_rundir;
 use crate::gsettings_schema_dir;
 use crate::plugin::resource::{GResource, ResourceFile, generate_resource};
+use crate::root;
 use serde_json::json;
 use std::ffi::OsString;
 use std::fs;
@@ -23,6 +24,7 @@ pub struct GjsRunnerArgs {
     pub restart_rx: mpsc::Receiver<()>,
     pub module_tracker: Arc<RwLock<ModuleTracker>>,
     pub gjs_env: Option<GjsEnv>,
+    pub schemas_dir: PathBuf,
 }
 
 fn collect_icon_files(root: &Path, dir: &Path, files: &mut Vec<ResourceFile>) {
@@ -50,7 +52,7 @@ fn collect_icon_files(root: &Path, dir: &Path, files: &mut Vec<ResourceFile>) {
 }
 
 fn bundle_dev_icons(rundir: &Path) -> Option<PathBuf> {
-    let icon_dir = Path::new("data").join("icons");
+    let icon_dir = root().join("data").join("icons");
 
     if !icon_dir.is_dir() {
         if icon_dir.exists() {
@@ -90,7 +92,7 @@ pub async fn gjs_runner(args: GjsRunnerArgs) -> Result<(), String> {
     let mut restart_rx = args.restart_rx;
     let rundir = dev_rundir();
 
-    let schema_dir = gsettings_schema_dir();
+    let schema_dir = gsettings_schema_dir(&args.schemas_dir);
     let icon_resource = bundle_dev_icons(&rundir).map(|p| p.to_string_lossy().to_string());
 
     loop {
@@ -113,6 +115,7 @@ pub async fn gjs_runner(args: GjsRunnerArgs) -> Result<(), String> {
             "entry": args.entry_js,
             "modules": modules,
             "rundir": rundir.to_string_lossy(),
+            "root": root().to_string_lossy(),
             "iconResource": icon_resource,
         });
 

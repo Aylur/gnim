@@ -18,6 +18,7 @@ pub struct DevWatcherArgs {
     pub canonical_entry: String,
     pub module_tracker: Arc<RwLock<ModuleTracker>>,
     pub dir: PathBuf,
+    pub schemas_dir: PathBuf,
 }
 
 pub struct DevWatcher {
@@ -60,7 +61,7 @@ impl WatcherEventHandler for DevWatcherEventHandler {
         }
 
         if path.ends_with(".gschema.ts") || path.ends_with(".gschema.js") {
-            compile_schemas(path).await.ok();
+            compile_schemas(path, &self.args.schemas_dir).await.ok();
             self.args.gjs_restart_tx.send(()).await.ok();
             self.restart_watcher();
             return;

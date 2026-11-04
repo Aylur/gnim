@@ -10,7 +10,7 @@ pub use runner::{GjsEnv, GjsRunnerArgs};
 pub use tracker::ModuleTracker;
 
 use super::{dev_rundir, rolldown_dev_config};
-use crate::is_in_path;
+use crate::{is_in_path, root};
 use clap::Args;
 use runner::gjs_runner;
 use schemas::compile_schemas;
@@ -39,10 +39,18 @@ pub struct DevArgs {
     /// Extra environment for the gjs process
     #[arg(skip)]
     pub gjs_env: Option<GjsEnv>,
+    /// Where to store state such as compiled schemas, defaults to ./.gnim
+    #[arg(skip)]
+    pub state_dir: Option<path::PathBuf>,
 }
 
 pub async fn dev(args: &DevArgs) -> Result<(), String> {
     let dir = dev_rundir();
+    let schemas_dir = args
+        .state_dir
+        .clone()
+        .unwrap_or_else(|| path::PathBuf::from("./.gnim"))
+        .join("schemas");
     let (socket_tx, _) = broadcast::channel::<SocketMsg>(16);
     let (gjs_restart_tx, gjs_restart_rx) = mpsc::channel::<()>(1);
     let module_tracker = ModuleTracker::new(&args.entry, true).await?;
@@ -57,7 +65,7 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
 
     for file in module_tracker.modules.keys() {
         if file.ends_with(".gschema.ts") || file.ends_with(".gschema.js") {
-            compile_schemas(file).await?;
+            compile_schemas(file, &schemas_dir).await?;
         }
     }
 
@@ -78,6 +86,7 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
         canonical_entry,
         module_tracker: module_tracker.clone(),
         dir: dir.clone(),
+        schemas_dir: schemas_dir.clone(),
     });
 
     let socket_path = dir.clone().join("dev.sock");
@@ -108,6 +117,7 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
             restart_rx: gjs_restart_rx,
             module_tracker: module_tracker.clone(),
             gjs_env: args.gjs_env,
+            schemas_dir: schemas_dir.clone(),
         })
     });
 
@@ -135,7 +145,7 @@ pub async fn dev(args: &DevArgs) -> Result<(), String> {
 }
 
 fn init_translations(app_id: &str) -> Result<(), String> {
-    let Ok(podir) = fs::canonicalize("po") else {
+    let Ok(podir) = fs::canonicalize(root().join("po")) else {
         return Ok(());
     };
 

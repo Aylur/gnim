@@ -15,6 +15,7 @@ const props = JSON.parse(GLib.getenv("GNIM_DEV")!) as {
     entry: string
     modules: Record<string, string>
     rundir: string
+    root?: string
     iconResource?: string
 }
 
@@ -66,8 +67,8 @@ function initGettext() {
 }
 
 function initIcons() {
-    const cwd = GLib.get_current_dir()
-    const icondir = path([cwd, "data", "icons"])
+    const root = props.root ?? GLib.get_current_dir()
+    const icondir = path([root, "data", "icons"])
 
     if (props.iconResource) {
         Gio.Resource.load(props.iconResource)._register()
@@ -86,11 +87,11 @@ function initIcons() {
 }
 
 function initLibdir() {
-    const cwd = GLib.get_current_dir()
+    const root = props.root ?? GLib.get_current_dir()
     const gir = GIRepository.Repository.dup_default()
     const id = props.applicationId
 
-    const dist = path([cwd, "dist"])
+    const dist = path([root, "dist"])
     if (exists(dist)) {
         gir.prepend_search_path(path([dist, "lib", "girepository-1.0"]))
         gir.prepend_search_path(path([dist, "lib"]))
@@ -105,7 +106,7 @@ function initLibdir() {
         return
     }
 
-    const build = path([cwd, "build"])
+    const build = path([root, "build"])
     if (exists(build)) {
         gir.prepend_search_path(build)
         gir.prepend_search_path(path([build, "lib"]))

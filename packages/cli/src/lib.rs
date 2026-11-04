@@ -14,12 +14,21 @@ pub struct GlobalOptions {
     pub alias: Option<rolldown::PathsOutputOption>,
     pub define: Option<rolldown_utils::indexmap::FxIndexMap<String, String>>,
     pub resolve: Option<rolldown::ResolveOptions>,
+    pub root: Option<PathBuf>,
 }
 
 pub fn init(opts: GlobalOptions) {
     if GLOBAL_OPTIONS.set(opts).is_err() {
         eprintln!("failed to init global options");
     }
+}
+
+pub fn root() -> PathBuf {
+    GLOBAL_OPTIONS
+        .get()
+        .and_then(|o| o.root.clone())
+        .or_else(|| std::env::current_dir().ok())
+        .unwrap_or_else(|| PathBuf::from("."))
 }
 
 pub fn dev_rundir() -> PathBuf {
@@ -53,7 +62,7 @@ fn bundler_options(development: bool) -> rolldown::BundlerOptions {
     let alias = GLOBAL_OPTIONS.get().and_then(|o| o.alias.clone());
     let resolve = GLOBAL_OPTIONS.get().and_then(|o| o.resolve.clone());
 
-    let import_source = match PathBuf::from("./tsconfig.json").exists() {
+    let import_source = match root().join("tsconfig.json").exists() {
         true => None,
         false => Some("gnim".to_owned()),
     };
@@ -106,7 +115,7 @@ pub fn is_in_path(program: &str) -> bool {
         .is_some()
 }
 
-pub fn gsettings_schema_dir() -> std::ffi::OsString {
+pub fn gsettings_schema_dir(gnim_schemas: &std::path::Path) -> std::ffi::OsString {
     use std::env::{join_paths, split_paths, var_os};
 
     // nix uses GSETTINGS_SCHEMAS_PATH
@@ -122,7 +131,5 @@ pub fn gsettings_schema_dir() -> std::ffi::OsString {
         .map(|dirs| split_paths(&dirs).collect::<Vec<PathBuf>>())
         .unwrap_or_default();
 
-    let gnim_schemas = vec![PathBuf::from("./.gnim/schemas")];
-
-    join_paths([gnim_schemas, schema_paths, schema_dirs].concat()).unwrap()
+    join_paths([vec![gnim_schemas.to_owned()], schema_paths, schema_dirs].concat()).unwrap()
 }

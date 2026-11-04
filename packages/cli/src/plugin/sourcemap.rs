@@ -63,9 +63,7 @@ fn display_path(source: &str, map_path: &str) -> String {
         return source.to_owned();
     }
 
-    let relative = std::env::current_dir()
-        .ok()
-        .and_then(|cwd| path.strip_prefix(cwd).ok().map(Path::to_path_buf));
+    let relative = path.strip_prefix(crate::root()).ok().map(Path::to_path_buf);
 
     relative.unwrap_or(path).to_string_lossy().into_owned()
 }

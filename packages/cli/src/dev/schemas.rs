@@ -1,7 +1,7 @@
 use crate::schemas;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-pub async fn compile_schemas(gschema_path: &str) -> Result<(), String> {
+pub async fn compile_schemas(gschema_path: &str, outdir: &Path) -> Result<(), String> {
     let dir = PathBuf::from(gschema_path)
         .parent()
         .expect("Failed to get parent dir of gschema file")
@@ -11,7 +11,7 @@ pub async fn compile_schemas(gschema_path: &str) -> Result<(), String> {
         define: Vec::default(),
         directory: dir.to_string_lossy().to_string(),
         compile: true,
-        outdir: Some(PathBuf::from("./.gnim/schemas")),
+        outdir: Some(outdir.to_owned()),
     };
 
     schemas::schemas(&args).await
