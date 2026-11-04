@@ -7,11 +7,11 @@ If you are not already familiar with GJS and GObject, you should read
 
 This library provides:
 
-- [JSX and reactivity](https://aylur.github.io/gnim/jsx) for both Gtk
+- [JSX and reactivity](https://v1.gnimjs.dev/jsx) for both Gtk
   Applications and Gnome extensions
-- [GObject decorators](https://aylur.github.io/gnim/gobject) for a convenient
+- [GObject decorators](https://v1.gnimjs.dev/gobject) for a convenient
   and type safe way for subclassing GObjects
-- [DBus decorators](https://aylur.github.io/gnim/dbus) for a convenient and type
+- [DBus decorators](https://v1.gnimjs.dev/dbus) for a convenient and type
   safe way for implementing DBus services and proxies.
 
 ## Obligatory Counter Example

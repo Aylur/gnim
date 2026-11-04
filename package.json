@@ -30,6 +30,7 @@
         "@girs/st-16": "latest",
         "@girs/gnome-shell": "latest",
         "@girs/gjs": "latest",
+        "@vercel/analytics": "^2.0.1",
         "esbuild": "latest",
         "eslint": "latest",
         "typescript": "latest",

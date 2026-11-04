@@ -2,12 +2,12 @@ import { defineConfig } from "vitepress"
 
 export default defineConfig({
     title: "Gnim",
-    base: "/gnim/",
+    base: process.env.VERCEL ? "" : "/gnim/",
     description: "Library which brings JSX and reactivity to GNOME JavaScript.",
     cleanUrls: true,
 
     sitemap: {
-        hostname: "https://github.com/aylur/gnim",
+        hostname: "https://v1.gnimjs.dev",
     },
 
     vite: {
@@ -18,6 +18,8 @@ export default defineConfig({
 
     themeConfig: {
         outline: "deep",
+
+        nav: [{ text: "v2", link: "https://gnimjs.dev" }],
 
         sidebar: [
             {
