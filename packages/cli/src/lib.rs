@@ -1,0 +1,135 @@
+pub mod bundle;
+pub mod dev;
+pub mod exe;
+pub mod plugin;
+pub mod schemas;
+pub mod types;
+
+use std::{path::PathBuf, sync::OnceLock};
+
+static GLOBAL_OPTIONS: OnceLock<GlobalOptions> = OnceLock::new();
+
+#[derive(Default)]
+pub struct GlobalOptions {
+    pub alias: Option<rolldown::PathsOutputOption>,
+    pub define: Option<rolldown_utils::indexmap::FxIndexMap<String, String>>,
+    pub resolve: Option<rolldown::ResolveOptions>,
+    pub root: Option<PathBuf>,
+}
+
+pub fn init(opts: GlobalOptions) {
+    if GLOBAL_OPTIONS.set(opts).is_err() {
+        eprintln!("failed to init global options");
+    }
+}
+
+pub fn root() -> PathBuf {
+    GLOBAL_OPTIONS
+        .get()
+        .and_then(|o| o.root.clone())
+        .or_else(|| std::env::current_dir().ok())
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+pub fn dev_rundir() -> PathBuf {
+    let dir = std::env::var("XDG_RUNTIME_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("/tmp"))
+        .join(format!("gnim_{}", std::process::id()));
+
+    std::fs::create_dir_all(&dir).ok();
+    dir
+}
+
+pub fn rolldown_config() -> rolldown::BundlerOptions {
+    bundler_options(false)
+}
+
+pub fn rolldown_dev_config() -> rolldown::BundlerOptions {
+    bundler_options(true)
+}
+
+fn bundler_options(development: bool) -> rolldown::BundlerOptions {
+    let mut define = GLOBAL_OPTIONS
+        .get()
+        .and_then(|o| o.define.clone())
+        .unwrap_or_default();
+
+    define
+        .entry("import.meta.GNIM_DEV".to_owned())
+        .or_insert_with(|| development.to_string());
+
+    let alias = GLOBAL_OPTIONS.get().and_then(|o| o.alias.clone());
+    let resolve = GLOBAL_OPTIONS.get().and_then(|o| o.resolve.clone());
+
+    let import_source = match root().join("tsconfig.json").exists() {
+        true => None,
+        false => Some("gnim".to_owned()),
+    };
+
+    rolldown::BundlerOptions {
+        external: Some(
+            vec![
+                "gi://*".to_owned(),
+                "resource://*".to_owned(),
+                "file://*".to_owned(),
+                "system".to_owned(),
+                "gettext".to_owned(),
+                "console".to_owned(),
+                "cairo".to_owned(),
+            ]
+            .into(),
+        ),
+        transform: Some(rolldown::BundlerTransformOptions {
+            decorator: Some(rolldown::DecoratorOptions {
+                legacy: Some(true),
+                strict_null_checks: Some(true),
+                emit_decorator_metadata: Some(true),
+            }),
+            jsx: Some(rolldown::Either::Right(rolldown::JsxOptions {
+                import_source,
+                development: Some(development),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        sourcemap: Some(rolldown::SourceMapType::Inline),
+        sourcemap_path_transform: Some(plugin::sourcemap::source_path_transform()),
+        format: Some(rolldown::OutputFormat::Esm),
+        define: Some(define),
+        paths: alias,
+        resolve,
+        ..Default::default()
+    }
+}
+
+pub fn parse_key_val(s: &str) -> Result<(String, String), String> {
+    s.split_once('=')
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .ok_or_else(|| format!("invalid KEY=VALUE: {s}"))
+}
+
+pub fn is_in_path(program: &str) -> bool {
+    std::env::var_os("PATH")
+        .and_then(|paths| std::env::split_paths(&paths).find(|dir| dir.join(program).is_file()))
+        .is_some()
+}
+
+pub fn gsettings_schema_dir(gnim_schemas: &std::path::Path) -> std::ffi::OsString {
+    use std::env::{join_paths, split_paths, var_os};
+
+    // nix uses GSETTINGS_SCHEMAS_PATH
+    let schema_paths = var_os("GSETTINGS_SCHEMAS_PATH")
+        .map(|paths| {
+            split_paths(&paths)
+                .map(|p| p.join("glib-2.0").join("schemas"))
+                .collect::<Vec<PathBuf>>()
+        })
+        .unwrap_or_default();
+
+    let schema_dirs = var_os("GSETTINGS_SCHEMA_DIR")
+        .map(|dirs| split_paths(&dirs).collect::<Vec<PathBuf>>())
+        .unwrap_or_default();
+
+    join_paths([vec![gnim_schemas.to_owned()], schema_paths, schema_dirs].concat()).unwrap()
+}

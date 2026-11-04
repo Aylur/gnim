@@ -1,0 +1,23 @@
+import { defineConfig } from "vitest/config"
+import { fileURLToPath } from "node:url"
+
+const giMock = (name: string) =>
+    fileURLToPath(new URL(`./lib/_tests/${name}.mock.ts`, import.meta.url))
+
+export default defineConfig({
+    define: {
+        "import.meta.GNIM_DEV": "true",
+    },
+    test: {
+        include: ["lib/_tests/**/*.test.ts"],
+        unstubGlobals: true,
+    },
+    resolve: {
+        alias: [
+            { find: "gi://GObject?version=2.0", replacement: giMock("GObject") },
+            { find: "gi://GLib?version=2.0", replacement: giMock("GLib") },
+            { find: "gi://Gio?version=2.0", replacement: giMock("Gio") },
+            { find: "gettext", replacement: giMock("Gettext") },
+        ],
+    },
+})

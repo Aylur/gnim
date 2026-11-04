@@ -1,0 +1,7 @@
+{
+    "name": "@gnim-js/cli",
+    "private": true,
+    "scripts": {
+        "build": "./scripts.nu build"
+    }
+}

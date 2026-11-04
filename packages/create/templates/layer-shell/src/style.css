@@ -1,0 +1,18 @@
+/* https://github.com/GNOME/gtk/blob/main/gtk/theme/Default/_colors-public.scss */
+
+window.Bar {
+  box {
+    background-color: var(--window-bg-color);
+
+    button {
+      color: var(--accent-color);
+      padding: 4px 12px;
+      min-height: 0;
+    }
+
+    label.clock {
+      font-weight: bold;
+      color: var(--accent-color);
+    }
+  }
+}

@@ -1,0 +1,367 @@
+# GObject decorators
+
+Decorators that wrap
+[`GObject.registerClass`](https://gitlab.gnome.org/GNOME/gjs/-/blob/master/doc/Overrides.md?ref_type=heads#gobjectregisterclassmetainfo-klass).
+
+Read more about GObjects in GJS on
+[gjs.guide](https://gjs.guide/guides/gobject/basics.html).
+
+> [!INFO] Required TypeScript settings
+>
+> Make sure to enable `experimentalDecorators` and `emitDecoratorMetadata`, and
+> to disable `useDefineForClassFields`.
+>
+> ```json
+> {
+>   "compilerOptions": {
+>     "experimentalDecorators": true,
+>     "emitDecoratorMetadata": true,
+>     "useDefineForClassFields": false
+>   }
+> }
+> ```
+>
+> With `target` set to ES2022 or later, `useDefineForClassFields` defaults to
+> `true` which shadows the getters and setters that `@property` installs on the
+> prototype and field initializers bypass GObject entirely.
+
+## Example Usage
+
+```ts
+import GObject from "gi://GObject?version=2.0"
+import { register, property, signal, type Annotations } from "gnim/gobject"
+
+@register
+class MyObj extends GObject.Object {
+  declare readonly $writableProperties: GObject.Object.WritableProperties &
+    Annotations<MyObj, "myProp">
+
+  declare readonly $readableProperties: GObject.Object.ReadableProperties &
+    Annotations<MyObj, "myProp">
+
+  @property myProp: string
+
+  constructor(props: Partial<GObject.ConstructorProps<MyObj>> = {}) {
+    const { myProp = "", ...rest } = props
+    super(rest)
+    this.myProp = myProp
+  }
+
+  @signal
+  mySignal(a: string, b: number): void {
+    // default handler
+  }
+}
+```
+
+::: details What it (roughly) transpiles to
+
+```js
+const priv = Symbol("private props")
+
+class MyObj extends GObject.Object {
+  [priv] = {}
+
+  constructor(props = {}) {
+    const { myProp = "", ...rest } = props
+    super(rest)
+    this.myProp = myProp
+  }
+
+  get myProp() {
+    return this[priv]["my-prop"]
+  }
+
+  set myProp(value) {
+    if (this[priv]["my-prop"] !== value) {
+      this[priv]["my-prop"] = value
+      this.notify("my-prop")
+    }
+  }
+
+  mySignal(a, b) {
+    return this.emit("my-signal", a, b)
+  }
+
+  on_my_signal(a, b) {
+    // default handler
+  }
+}
+
+GObject.registerClass(
+  {
+    Properties: {
+      "my-prop": GObject.ParamSpec.string(
+        "my-prop",
+        "",
+        "",
+        GObject.ParamFlags.READWRITE,
+        "",
+      ),
+    },
+    Signals: {
+      "my-signal": {
+        param_types: [String.$gtype, Number.$gtype],
+        return_type: GObject.VoidType.$gtype,
+      },
+    },
+  },
+  MyObj,
+)
+```
+
+:::
+
+## Property decorator
+
+Property declarations can be used on fields and accessors:
+
+```ts
+class MyObject {
+  @property
+  field: number = 1
+
+  @property
+  get readonly(): number {}
+
+  @property
+  set writeonly(v: number) {}
+
+  @property
+  get readwrite(): number {}
+  set readwrite(v: number) {}
+}
+```
+
+> [!IMPORTANT]
+>
+> When defining a setter you will have to explicitly emit the `notify` signal.
+
+### Initial values
+
+Field initializers take precedence over props passed to `super()`.
+
+```ts
+@register
+class MyObject extends GObject.Object {
+  declare readonly $writableProperties: Annotations<MyObject, "field">
+
+  @property field: string = "default"
+
+  constructor(props?: Partial<GObject.ConstructorProps<MyObject>>) {
+    super(props)
+  }
+}
+
+new MyObject({ field: "given" }).field // "default"
+```
+
+You should generally not rely on `GObject.Object` constructor to initialize the
+properties of the subclass because it does not typecheck. Instead, explicitly
+assign the value in the constructor.
+
+```ts
+@register
+class MyObject extends GObject.Object {
+  @property field: string
+
+  constructor(props: Partial<GObject.ConstructorProps<MyObject>> = {}) {
+    const { field = "default", ...rest } = props
+    super(rest)
+    this.field = field
+  }
+}
+```
+
+> [!TIP]
+>
+> `GObject.ConstructorProps` infers the accepted props from the
+> `$writableProperties` and `$constructOnlyProperties`
+> [type annotations](/reference/typescript#type-annotations), so make sure the
+> property is declared there.
+
+You can also use the `declare` keyword to initialize the field to the default
+value of its type.
+
+```ts
+@register
+class MyObject extends GObject.Object {
+  @property declare field: string
+
+  constructor(props?: Partial<GObject.ConstructorProps<MyObject>>) {
+    super(props)
+  }
+}
+
+new MyObject().field // ""
+new MyObject({ field: "hello" }).field // "hello"
+```
+
+### Property type declaration
+
+The runtime type of the property will be inferred from TypeScript annotations.
+Optionally, it can be explicitly declared by passing an argument to the
+decorator.
+
+```ts
+type PropertyTypeDeclaration<T = unknown> =
+  | ((name: string, flags: ParamFlags) => ParamSpec<T>)
+  | ParamSpec<T>
+  | GType<T>
+  | { $gtype: GType<T> }
+```
+
+The declaration can be
+
+- any class that has a registered `GType`. This includes the globally available
+  `String`, `Number`, `Boolean` and `Object` JavaScript constructors and any
+  class that inherits from `GObject.Object`.
+
+- a function that produces a `ParamSpec` where the passed name is a kebab cased
+  version of the name of the property (for example `myProp` -> `my-prop`), and
+  flags is one of: `ParamFlags.READABLE`, `ParamFlags.WRITABLE`,
+  `ParamFlags.READWRITE`.
+
+```ts
+class MyObject {
+  @property(GObject.UInt)
+  guint = 0
+
+  @property((name, flags) =>
+    GObject.ParamSpec.enum(
+      name,
+      null,
+      null,
+      flags,
+      Gtk.Orientation,
+      Gtk.Orientation.VERTICAL,
+    ),
+  )
+  myOrientation = Gtk.Orientation.VERTICAL
+}
+```
+
+Omitting the explicit property declaration will use a default type guessed from
+the TypeScript annotation. Omitting both will result in a runtime error.
+
+### Property accessors
+
+When implementing property setters you will also need to explicitly emit notify
+signals.
+
+```ts
+class MyObject {
+  #prop: number = 1
+
+  @property
+  set myProp(v: number) {
+    if (this.#prop !== v) {
+      this.#prop = v
+      this.notify("my-prop")
+    }
+  }
+}
+```
+
+## Signal decorator
+
+Signal decorator can be used on methods which will emit the signal:
+
+```ts
+class {
+  @signal
+  mySignal(arg: number): void {
+    // default handler
+  }
+}
+```
+
+### Signal type declaration
+
+The runtime type of the parameters and return type will be inferred from
+TypeScript annotations. Optionally they can be explicitly declared similarly to
+the `property` decorator.
+
+```ts
+class MyObject {
+  @signal([GObject.UInt], GObject.VoidType)
+  mySignal(arg: number): void {
+    // default handler
+  }
+}
+```
+
+### SignalOptions
+
+```ts
+type SignalOptions = {
+  default?: boolean
+  flags?: SignalFlags
+  accumulator?: AccumulatorType
+}
+```
+
+Passing `default: false` to the signal will skip registering the method as a
+default handler.
+
+```ts
+class MyObject {
+  @signal({ default: false })
+  s() {
+    throw "this is never called"
+  }
+
+  @signal([], GObject.VoidType, {
+    default: false,
+  })
+  s() {
+    throw "this is never called"
+  }
+}
+```
+
+## Register decorator
+
+```ts
+@register
+class MyObj extends GObject.Object {}
+```
+
+You can optionally pass the same options to this decorator as you would to
+`GObject.registerClass`.
+
+```ts
+@register({ GTypeName: "MyObj" })
+class MyObj extends GObject.Object {}
+```
+
+> [!TIP]
+>
+> This decorator registers properties and signals defined with decorators, so
+> make sure to use this and **not** `GObject.registerClass`.
+
+## Annotations
+
+Signals and properties defined with decorators can be declared on the special
+`$`-prefixed type fields with the `Annotations` type helper, which makes them
+inferable by methods such as `connect()` and `notify()`.
+
+```ts
+import { register, property, signal, type Annotations } from "gnim/gobject"
+
+@register
+class MyObj extends GObject.Object {
+  declare readonly $signals: GObject.Object.SignalSignatures &
+    Annotations<MyObj, "mySignal">
+
+  declare readonly $readableProperties: GObject.Object.ReadableProperties &
+    Annotations<MyObj, "myProp">
+
+  @property myProp: string = ""
+
+  @signal
+  mySignal(arg: string): void {}
+}
+```
+
+See [Type annotations](/reference/typescript#type-annotations) for details.
