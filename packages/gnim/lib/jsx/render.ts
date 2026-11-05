@@ -114,7 +114,7 @@ export abstract class BaseRenderer implements Renderer {
             }
 
             // TODO: support dynamic single child expressions
-            if (isObjectPropertyNode(constructor, key, value)) {
+            if (isObjectPropertyNode(constructor, key, value) && value !== null) {
                 props[key] = this.resolveChild(value, `${constructor.name}:${kebabcase(key)}`)
                 continue
             }
