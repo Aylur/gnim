@@ -9,9 +9,11 @@ export default defineConfig({
 
     cleanUrls: true,
     sitemap: { hostname },
+    head: [["link", { rel: "icon", href: "/favicon.svg" }]],
 
     themeConfig: {
         outline: "deep",
+        logo: "/favicon.svg",
 
         sidebar: [
             {
