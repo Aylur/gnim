@@ -145,9 +145,6 @@ export function mountChildren(children: GnimNode, mount?: GObject.Object) {
     mountEffect.run()
 }
 
-/**
- * @internal Do not use this in user code.
- */
 export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<GnimNode>> {
     const renderer = getRenderer()
 
@@ -200,18 +197,17 @@ export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<Gni
     }
 }
 
-function modelToAccessor<T>(model: Gio.ListModel) {
+function modelToAccessor<T>(model: Gio.ListModel): Accessor<T[]> {
     function* getModelItems() {
         let index = 0
-        let item = model.get_item(index)
-        while (item !== null) {
-            yield item
-            item = model.get_item(++index)
+        let item: GObject.Object | null
+        while ((item = model.get_item(index++)) !== null) {
+            yield item as T
         }
     }
 
     return createAccessor(
-        () => [...getModelItems()] as T[],
+        () => [...getModelItems()],
         (callback) => {
             const id = model.connect("items-changed", callback)
             return () => model.disconnect(id)
