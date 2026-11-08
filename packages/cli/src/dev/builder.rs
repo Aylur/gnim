@@ -6,6 +6,7 @@ use crate::plugin::css::GnimCssPlugin;
 use crate::plugin::resource::GnimResourcePlugin;
 use crate::plugin::sourcemap::GnimSourceMapPlugin;
 use rolldown::ModuleType;
+use rolldown_plugin::Pluginable;
 use std::borrow::Cow;
 use std::fs;
 use std::future::Future;
@@ -40,10 +41,10 @@ pub async fn build_modules(plugin: GnimDevPlugin) -> Result<rolldown::BundleOutp
             ..rolldown_dev_config()
         },
         vec![
-            Arc::new(plugin),
-            Arc::new(GnimCssPlugin::default()),
-            Arc::new(GnimResourcePlugin::default()),
-            Arc::new(GnimSourceMapPlugin),
+            Pluginable::new_shared(plugin),
+            Pluginable::new_shared(GnimCssPlugin::default()),
+            Pluginable::new_shared(GnimResourcePlugin::default()),
+            Pluginable::new_shared(GnimSourceMapPlugin),
         ],
     )
     .expect("Failed to create bundler");
@@ -51,7 +52,7 @@ pub async fn build_modules(plugin: GnimDevPlugin) -> Result<rolldown::BundleOutp
     bundler.write().await.map_err(|err| {
         err.into_vec()
             .iter()
-            .map(|d| d.to_diagnostic().to_color_string())
+            .map(|d| d.to_diagnostic().convert_to_string(true))
             .collect::<Vec<_>>()
             .join("\n")
     })

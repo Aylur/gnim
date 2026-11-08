@@ -76,7 +76,7 @@ pub fn generate_resource(
     Ok(())
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct GnimResourcePlugin {
     prefix: Option<String>,
     imports: Arc<RwLock<HashSet<ResourceFile>>>,

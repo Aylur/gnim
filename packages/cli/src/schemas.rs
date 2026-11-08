@@ -7,8 +7,8 @@ use quick_xml::escape::{partial_escape, resolve_xml_entity};
 use quick_xml::events::{BytesStart, BytesText, Event};
 use quick_xml::reader::Reader;
 use quick_xml::writer::Writer;
+use rolldown_plugin::Pluginable;
 use std::io::Cursor;
-use std::sync::Arc;
 use std::{fs, path, process};
 
 const PRINTER: &str = r#"
@@ -48,14 +48,14 @@ async fn transpile_typescript(
             ))),
             ..rolldown_config()
         },
-        vec![Arc::new(GnimSourceMapPlugin)],
+        vec![Pluginable::new_shared(GnimSourceMapPlugin)],
     )
     .expect("Failed to create bundler");
 
     bundler.write().await.map_err(|err| {
         err.into_vec()
             .iter()
-            .map(|d| d.to_diagnostic().to_color_string())
+            .map(|d| d.to_diagnostic().convert_to_string(true))
             .collect::<Vec<_>>()
             .join("\n")
     })
@@ -84,16 +84,16 @@ fn write_err(e: impl std::fmt::Display) -> String {
 }
 
 fn rebuild_tag(elem: &BytesStart) -> Result<BytesStart<'static>, String> {
-    let name = String::from_utf8_lossy(elem.name().as_ref()).into_owned();
+    let name = elem.name().as_ref().to_owned();
     let mut tag = BytesStart::new(name);
 
     for attr in elem.attributes() {
         let attr = attr.map_err(parse_err)?;
-        let key = String::from_utf8_lossy(attr.key.as_ref()).into_owned();
+        let key = attr.key.as_ref().to_owned();
         let value = attr
             .normalized_value(quick_xml::XmlVersion::Implicit1_0)
             .map_err(parse_err)?;
-        tag.push_attribute((key.as_bytes(), escape_attribute(&value).as_bytes()));
+        tag.push_attribute((key.as_str(), escape_attribute(&value).as_str()));
     }
 
     Ok(tag)
@@ -110,12 +110,12 @@ fn format_xml(input: &str) -> Result<String, String> {
         let event = reader.read_event().map_err(parse_err)?;
 
         match event {
-            Event::Text(e) => text.push_str(&e.decode().map_err(parse_err)?),
+            Event::Text(e) => text.push_str(&e),
             Event::GeneralRef(e) => match e.resolve_char_ref().map_err(parse_err)? {
                 Some(ch) => text.push(ch),
                 None => {
-                    let name = e.decode().map_err(parse_err)?;
-                    let resolved = resolve_xml_entity(&name)
+                    let name = &*e;
+                    let resolved = resolve_xml_entity(name)
                         .ok_or_else(|| format!("Failed to parse xml: unknown entity &{name};"))?;
                     text.push_str(resolved);
                 }

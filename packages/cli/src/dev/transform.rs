@@ -152,7 +152,9 @@ pub fn transform_imports<'a>(
             _ => continue,
         };
 
-        let import_source = literal.value.as_str();
+        let Some(import_source) = literal.value.as_str() else {
+            continue;
+        };
         if let Some(resolved) = resolve_import_path(chunk_filename, import_source) {
             let versioned = add_version_query(import_source, tracker.get_version(&resolved));
             if versioned != import_source {

@@ -48,9 +48,12 @@ fn gjs_data_url(code: &str) -> Option<String> {
 /// Source map paths are relative to the output file by default, which is somewhere in the
 /// dev rundir. This makes them relative to the working directory, or absolute when outside of it.
 pub fn source_path_transform() -> rolldown::SourceMapPathTransform {
-    rolldown::SourceMapPathTransform::new(Arc::new(|source: &str, map_path: &str| {
-        let path = display_path(source, map_path);
-        Box::pin(async move { Ok(path) })
+    rolldown::SourceMapPathTransform::new(Arc::new(|sources: Vec<String>, map_path: &str| {
+        let paths = sources
+            .iter()
+            .map(|source| display_path(source, map_path))
+            .collect();
+        Box::pin(async move { Ok(paths) })
     }))
 }
 

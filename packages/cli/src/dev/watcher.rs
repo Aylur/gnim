@@ -124,7 +124,6 @@ fn create_watcher(args: DevWatcherArgs, watcher_restart_tx: mpsc::UnboundedSende
             // I'm not sure if this is the correct way to do this, but
             // without debounce the change event is emitted twice
             debounce: Some(Duration::from_millis(100)),
-            ..Default::default()
         },
     )
     .expect("Failed to create watcher");

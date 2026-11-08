@@ -4,9 +4,10 @@ use crate::plugin::resource::{GResource, GnimResourcePlugin, ResourceFile, gener
 use crate::plugin::sourcemap::GnimSourceMapPlugin;
 use crate::{dev_rundir, rolldown_config};
 use clap::Args;
+use rolldown_plugin::Pluginable;
 use rolldown_utils::replace_all_placeholder::ReplaceAllPlaceholder;
 use std::path::{Path, PathBuf};
-use std::{fs, io, sync::Arc};
+use std::{fs, io};
 
 #[derive(Args)]
 pub struct BundleArgs {
@@ -55,7 +56,7 @@ pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
 
     let outfile = Path::new(args.outfile.as_deref().unwrap_or("gresource"));
     let tracker = ModuleTracker::new(&args.entry, false).await?;
-    let resources = Arc::new(GnimResourcePlugin::new(Some(resource_prefix.clone())));
+    let resources = GnimResourcePlugin::new(Some(resource_prefix.clone()));
     let js_bundle_target = dev_rundir().join(mainjs).to_string_lossy().to_string();
 
     let mut bundler = rolldown::Bundler::with_plugins(
@@ -65,16 +66,16 @@ pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
             ..rolldown_config()
         },
         vec![
-            Arc::new(GnimCssPlugin::new(tracker.gtk_version)),
-            resources.clone(),
-            Arc::new(GnimSourceMapPlugin),
+            Pluginable::new_shared(GnimCssPlugin::new(tracker.gtk_version)),
+            Pluginable::new_shared(resources.clone()),
+            Pluginable::new_shared(GnimSourceMapPlugin),
         ],
     )
     .expect("Failed to create bundler");
 
     bundler.write().await.map_err(|err| {
         err.iter()
-            .map(|d| d.to_diagnostic().to_color_string())
+            .map(|d| d.to_diagnostic().convert_to_string(true))
             .collect::<Vec<_>>()
             .join("\n")
     })?;

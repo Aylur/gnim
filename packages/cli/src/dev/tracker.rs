@@ -2,9 +2,10 @@ use crate::plugin::css::GnimCssPlugin;
 use crate::plugin::resource::GnimResourcePlugin;
 use crate::plugin::sourcemap::GnimSourceMapPlugin;
 use crate::{dev_rundir, rolldown_dev_config};
+use rolldown_plugin::Pluginable;
 use std::borrow::Cow;
 use std::path::Path;
-use std::{collections::HashMap, fs, io, sync::Arc};
+use std::{collections::HashMap, fs, io};
 
 const DEV_ENTRY: &str = "gnim:dev";
 
@@ -95,10 +96,10 @@ impl ModuleTracker {
                 ..rolldown_dev_config()
             },
             vec![
-                Arc::new(GnimDevEntryPlugin(prog_entry.clone())),
-                Arc::new(GnimCssPlugin::default()),
-                Arc::new(GnimResourcePlugin::default()),
-                Arc::new(GnimSourceMapPlugin),
+                Pluginable::new_shared(GnimDevEntryPlugin(prog_entry.clone())),
+                Pluginable::new_shared(GnimCssPlugin::default()),
+                Pluginable::new_shared(GnimResourcePlugin::default()),
+                Pluginable::new_shared(GnimSourceMapPlugin),
             ],
         )
         .expect("failed to create bundler");
@@ -109,7 +110,7 @@ impl ModuleTracker {
                 return Err(err
                     .into_vec()
                     .into_iter()
-                    .map(|err| err.to_diagnostic().to_color_string())
+                    .map(|err| err.to_diagnostic().convert_to_string(true))
                     .collect::<Vec<_>>()
                     .join("\n"));
             }
