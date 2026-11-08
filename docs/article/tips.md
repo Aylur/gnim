@@ -87,11 +87,15 @@ export function DialogRoot(props: {
 Place `DialogRoot` in a window.
 
 ```tsx
-<Adw.Window>
-  <DialogRoot>
-    <AppContent />
-  </DialogRoot>
-</Adw.Window>
+let window: Gtk.Window
+
+return (
+  <Adw.Window ref={(self) => (window = self)}>
+    <DialogRoot getWindow={() => window}>
+      <AppContent />
+    </DialogRoot>
+  </Adw.Window>
+)
 ```
 
 Define a dialog that takes `DialogProps<T>`.
@@ -99,7 +103,7 @@ Define a dialog that takes `DialogProps<T>`.
 ```tsx
 function MyDialog({ ref, resolve }: DialogProps<string>) {
   return (
-    <Adw.Dialog>
+    <Adw.Dialog ref={ref}>
       <Gtk.Button onClicked={() => resolve("Hello!")} />
     </Adw.Dialog>
   )
