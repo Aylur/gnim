@@ -15,8 +15,8 @@ import {
     subscribe,
     untrack,
     type Accessor,
-} from "../jsx/reactive.js"
-import { batch, createScope, getScope as getActiveScope, runScope } from "../jsx/signal.js"
+} from "../lib/jsx/reactive.js"
+import { batch, createScope, getScope as getActiveScope, runScope } from "../lib/jsx/signal.js"
 
 describe("createRoot", () => {
     it("returns the value produced by its callback", () => {

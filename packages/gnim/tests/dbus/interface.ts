@@ -1,7 +1,7 @@
 import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import type { Keyof } from "../../util.js"
-import { createDBusInterface, method, property, signal } from "../index.js"
+import type { Keyof } from "../../lib/util.js"
+import { createDBusInterface, method, property, signal } from "../../lib/dbus/index.js"
 
 const NAME = "com.example.Interface"
 const TIMEOUT = 10_000

@@ -1,8 +1,8 @@
 import GObject from "gi://GObject?version=2.0"
 import Gio from "gi://Gio?version=2.0"
 import { describe, expect, it, vi } from "vitest"
-import type { CC, CCProps, GnimNode } from "../jsx/element.js"
-import { For, Fragment, Portal, With, jsx } from "../jsx/element.js"
+import type { CC, CCProps, GnimNode } from "../lib/jsx/element.js"
+import { For, Fragment, Portal, With, jsx } from "../lib/jsx/element.js"
 import {
     computed,
     createContext,
@@ -15,9 +15,9 @@ import {
     setContext,
     subscribe,
     type Accessor,
-} from "../jsx/reactive.js"
-import { BaseRenderer, render } from "../jsx/render.js"
-import { connectSignal } from "../jsx/store.js"
+} from "../lib/jsx/reactive.js"
+import { BaseRenderer, render } from "../lib/jsx/render.js"
+import { connectSignal } from "../lib/jsx/store.js"
 
 const emit = GObject.signal_emit_by_name
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve))

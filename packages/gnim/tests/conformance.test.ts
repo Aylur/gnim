@@ -5,8 +5,15 @@ import {
     type ReactiveFramework,
 } from "reactive-framework-test-suite"
 import { describe, expect, it } from "vitest"
-import { computed, createRoot, createState, effect, onCleanup, untrack } from "../jsx/reactive.js"
-import { batch } from "../jsx/signal.js"
+import {
+    computed,
+    createRoot,
+    createState,
+    effect,
+    onCleanup,
+    untrack,
+} from "../lib/jsx/reactive.js"
+import { batch } from "../lib/jsx/signal.js"
 
 const reactive: ReactiveFramework = {
     name: "reactive",

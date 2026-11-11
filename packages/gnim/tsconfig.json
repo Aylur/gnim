@@ -18,8 +18,8 @@
         "types": ["node", "gi"],
         "typeRoots": ["./node_modules/@types", "../../.gnim/types"]
     },
-    "include": ["./lib/**/*", "./bin/**/*"],
+    "include": ["./lib/**/*", "./bin/**/*", "./tests/**/*"],
     // reactive-framework-test-suite ships TypeScript sources that use
     // parameter properties, which `erasableSyntaxOnly` rejects.
-    "exclude": ["./lib/_tests/conformance.test.ts"]
+    "exclude": ["./tests/conformance.test.ts"]
 }

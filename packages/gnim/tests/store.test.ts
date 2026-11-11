@@ -7,8 +7,8 @@ import {
     isAccessor,
     subscribe,
     type Accessor,
-} from "../jsx/reactive.js"
-import { bind, connectSignal, createStore, prop } from "../jsx/store.js"
+} from "../lib/jsx/reactive.js"
+import { bind, connectSignal, createStore, prop } from "../lib/jsx/store.js"
 
 const emit = GObject.signal_emit_by_name
 

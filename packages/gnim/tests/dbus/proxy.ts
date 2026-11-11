@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it, run } from "@gnim-js/assert"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import { bind } from "../../jsx/store.js"
+import { bind } from "../../lib/jsx/store.js"
 import {
     ComExampleInterface,
     expectSignal,

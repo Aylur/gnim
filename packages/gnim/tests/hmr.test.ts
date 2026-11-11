@@ -1,11 +1,11 @@
 import GObject from "gi://GObject?version=2.0"
 import { describe, expect, it } from "vitest"
-import type { CC, CCProps, FC, GnimNode } from "../jsx/element.js"
-import { For, With, jsx } from "../jsx/element.js"
-import { jsxDEV } from "../jsx/dev.js"
-import { createComponentRegistry } from "../jsx/hmr.js"
-import { createState, type Accessor, type Setter } from "../jsx/reactive.js"
-import { BaseRenderer, render } from "../jsx/render.js"
+import type { CC, CCProps, FC, GnimNode } from "../lib/jsx/element.js"
+import { For, With, jsx } from "../lib/jsx/element.js"
+import { jsxDEV } from "../lib/jsx/dev.js"
+import { createComponentRegistry } from "../lib/jsx/hmr.js"
+import { createState, type Accessor, type Setter } from "../lib/jsx/reactive.js"
+import { BaseRenderer, render } from "../lib/jsx/render.js"
 
 class Widget extends GObject.Object {
     label = ""

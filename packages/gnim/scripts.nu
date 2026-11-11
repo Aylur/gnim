@@ -39,8 +39,8 @@ def run-dbus-tests []: nothing -> int {
     }
 
     let code = with-env { DBUS_SESSION_BUS_ADDRESS: (job recv --timeout 5sec) } {
-        let service = spawn-gnim-test lib/dbus/_tests/service.ts
-        let proxy = spawn-gnim-test lib/dbus/_tests/proxy.ts
+        let service = spawn-gnim-test tests/dbus/service.ts
+        let proxy = spawn-gnim-test tests/dbus/proxy.ts
 
         let codes = [
             (wait-gnim-test service $service)

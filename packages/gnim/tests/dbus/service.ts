@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, run } from "@gnim-js/assert"
 import GLib from "gi://GLib?version=2.0"
-import { bind } from "../../jsx/store.js"
-import type { InferEmitter, InferImplementation } from "../index.js"
+import { bind } from "../../lib/jsx/store.js"
+import type { InferEmitter, InferImplementation } from "../../lib/dbus/index.js"
 import { ComExampleInterface, INITIAL, sleep, UPDATED } from "./interface.js"
 
 const loop = GLib.MainLoop.new(null, false)

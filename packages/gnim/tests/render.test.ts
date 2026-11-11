@@ -1,9 +1,9 @@
 import GObject from "gi://GObject?version=2.0"
 import { describe, expect, it, vi } from "vitest"
-import type { CC, CCProps, GnimNode } from "../jsx/element.js"
-import { For, jsx, With } from "../jsx/element.js"
-import { createState, type Accessor } from "../jsx/reactive.js"
-import { BaseRenderer, getRenderer, render, type Renderer } from "../jsx/render.js"
+import type { CC, CCProps, GnimNode } from "../lib/jsx/element.js"
+import { For, jsx, With } from "../lib/jsx/element.js"
+import { createState, type Accessor } from "../lib/jsx/reactive.js"
+import { BaseRenderer, getRenderer, render, type Renderer } from "../lib/jsx/render.js"
 
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve))
 
