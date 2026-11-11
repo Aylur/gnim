@@ -19,7 +19,7 @@
         "prepack": "pnpm -w run docs:build && cp ../../docs/.vitepress/dist/llms-full.txt ./llms-full.txt",
         "lint": "eslint .",
         "fmt": "prettier --check . --ignore-path ../../.gitignore",
-        "test": "vitest run",
+        "test": "nu scripts.nu test",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
@@ -29,6 +29,7 @@
         "@gnim-js/linux-x64": "workspace:*"
     },
     "devDependencies": {
+        "@gnim-js/assert": "workspace:*",
         "@eslint/js": "catalog:",
         "@types/node": "catalog:",
         "eslint": "catalog:",

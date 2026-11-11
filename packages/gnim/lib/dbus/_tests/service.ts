@@ -1,12 +1,12 @@
-import System from "system"
+import { afterAll, beforeAll, describe, expect, it, run } from "@gnim-js/assert"
+import GLib from "gi://GLib?version=2.0"
 import { bind } from "../../jsx/store.js"
 import type { InferEmitter, InferImplementation } from "../index.js"
-import { assert, assertEq, assertThrows, report, sleep } from "./assert.js"
-import { ComExampleInterface, INITIAL, loop, UPDATED } from "./interface.js"
+import { ComExampleInterface, INITIAL, sleep, UPDATED } from "./interface.js"
 
+const loop = GLib.MainLoop.new(null, false)
 type Emitter = InferEmitter<typeof ComExampleInterface>
 
-// records of client-driven interactions, verified when the client calls Quit
 const invoked: string[] = []
 const seenAutoNotifies: string[] = []
 const seenPropertyNotifies: string[] = []
@@ -114,11 +114,8 @@ class Implementation implements InferImplementation<typeof ComExampleInterface> 
     }
     Quit() {
         invoked.push("Quit")
-        // let the method return before verifying and quitting
-        setTimeout(() => {
-            verifyClientPhase()
-            loop.quit()
-        }, 200)
+        // let the method return before quitting
+        setTimeout(() => loop.quit(), 200)
     }
 }
 
@@ -126,140 +123,136 @@ const service = await ComExampleInterface.serve({
     implementation: (em) => new Implementation(em),
 })
 
-// access flags are enforced on the service object itself
-assertThrows(() => void service.WriteOnlyProperty, "server: reading a write-only property throws")
-assertThrows(() => {
-    // @ts-expect-error read-only property
-    service.ReadOnlyProperty = 0
-}, "server: writing a read-only property throws")
+afterAll(() => service.unexport())
 
-// setting a data property notifies (and auto-emits PropertiesChanged on the bus)
-let autoNotifies = 0
-const autoId = service.connect("notify::property-auto", () => autoNotifies++)
-service.PropertyAuto = "local-change"
-assertEq(service.PropertyAuto, "local-change", "server: local data property set is applied")
-assertEq(autoNotifies, 1, "server: local data property set emits notify::")
-service.PropertyAuto = "local-change"
-assertEq(autoNotifies, 1, "server: setting the same value does not notify")
-service.PropertyAuto = INITIAL.PropertyAuto
-assertEq(autoNotifies, 2, "server: resetting to a different value notifies again")
-service.disconnect(autoId)
+describe("service object", () => {
+    it("enforces access flags", () => {
+        expect(() => void service.WriteOnlyProperty).toThrow()
+        expect(() => {
+            // @ts-expect-error read-only property
+            service.ReadOnlyProperty = 0
+        }).toThrow()
+    })
 
-const boundAuto = bind(service, "property-auto")
-assertEq(boundAuto(), INITIAL.PropertyAuto, "server: bind with a kebab-case name reads the value")
-service.PropertyAuto = "bound-change"
-assertEq(boundAuto(), "bound-change", "server: bind reflects the updated value")
-service.PropertyAuto = INITIAL.PropertyAuto
+    it("data properties notify when they change", () => {
+        let notifies = 0
+        const id = service.connect("notify::property-auto", () => notifies++)
+        service.PropertyAuto = "local-change"
+        expect(service.PropertyAuto).toBe("local-change")
+        expect(notifies).toBe(1)
 
-// getter/setter properties notify through the emitter called in the setter
-let propNotifies = 0
-const propId = service.connect("notify::property", () => propNotifies++)
-service.Property = "local-change"
-assertEq(service.Property, "local-change", "server: accessor setter was invoked")
-assertEq(propNotifies, 1, "server: emitter.Property() emits notify::")
-service.Property = INITIAL.Property
-service.disconnect(propId)
+        service.PropertyAuto = "local-change"
+        expect(notifies).toBe(1)
 
-// read-only properties are updated internally and notified with the emitter
-let roNotifies = 0
-const roId = service.connect("notify::read-only-property", () => roNotifies++)
-service.SetReadOnly(11)
-assertEq(service.ReadOnlyProperty, 11, "server: read-only property updated internally")
-assertEq(roNotifies, 1, "server: emitter.ReadOnlyProperty() emits notify::")
-service.SetReadOnly(INITIAL.ReadOnlyProperty)
-service.disconnect(roId)
+        service.PropertyAuto = INITIAL.PropertyAuto
+        expect(notifies).toBe(2)
+        service.disconnect(id)
+    })
 
-// methods can be invoked directly on the service object
-assertEq(service.Echo("local"), ["local"], "server: direct sync method call")
-assertEq(await service.AsyncEcho("local"), ["local"], "server: direct async method call")
+    it("bind with a kebab-case name", () => {
+        const bound = bind(service, "property-auto")
+        expect(bound()).toBe(INITIAL.PropertyAuto)
+        service.PropertyAuto = "bound-change"
+        expect(bound()).toBe("bound-change")
+        service.PropertyAuto = INITIAL.PropertyAuto
+    })
 
-// emitter signals are also emitted as gobject signals, synchronously
-const receivedSignals: unknown[][] = []
-const sigId = service.connect("multi-arg-signal", (_s: unknown, msg: string, count: number) => {
-    receivedSignals.push([msg, count])
+    it("getter/setter properties notify through the emitter", () => {
+        let notifies = 0
+        const id = service.connect("notify::property", () => notifies++)
+        service.Property = "local-change"
+        expect(service.Property).toBe("local-change")
+        expect(notifies).toBe(1)
+        service.Property = INITIAL.Property
+        service.disconnect(id)
+    })
+
+    it("read-only properties are updated internally and notified with the emitter", () => {
+        let notifies = 0
+        const id = service.connect("notify::read-only-property", () => notifies++)
+        service.SetReadOnly(11)
+        expect(service.ReadOnlyProperty).toBe(11)
+        expect(notifies).toBe(1)
+        service.SetReadOnly(INITIAL.ReadOnlyProperty)
+        service.disconnect(id)
+    })
+
+    it("methods can be invoked directly", async () => {
+        expect(service.Echo("local")).toEqual(["local"])
+        expect(await service.AsyncEcho("local")).toEqual(["local"])
+    })
+
+    it("emitter signals are emitted as gobject signals synchronously", () => {
+        const received: unknown[][] = []
+        const id = service.connect("multi-arg-signal", (_s: unknown, msg: string, count: number) =>
+            received.push([msg, count]),
+        )
+        service.implementation.emitter.MultiArgSignal("local", 1)
+        service.disconnect(id)
+        expect(received).toEqual([["local", 1]])
+    })
 })
-service.implementation.emitter.MultiArgSignal("local", 1)
-assertEq(receivedSignals, [["local", 1]], "server: emitter emits the gobject signal")
-service.disconnect(sigId)
 
-// reset the records the self tests produced, then track the client-driven phase
-invoked.length = 0
-service.connect("notify::property-auto", () => seenAutoNotifies.push(service.PropertyAuto))
-service.connect("notify::property", () => seenPropertyNotifies.push(service.Property))
-service.connect("notify::read-only-property", () => {
-    seenReadOnlyNotifies.push(service.ReadOnlyProperty)
+describe("client phase", () => {
+    // tracks what happens while serving the client script, until it calls Quit
+    beforeAll(async () => {
+        invoked.length = 0
+        service.connect("notify::property-auto", () => seenAutoNotifies.push(service.PropertyAuto))
+        service.connect("notify::property", () => seenPropertyNotifies.push(service.Property))
+        service.connect("notify::read-only-property", () => {
+            seenReadOnlyNotifies.push(service.ReadOnlyProperty)
+        })
+        service.connect("string-signal", (_s: unknown, value: string) => {
+            seenStringSignals.push(value)
+        })
+        service.connect("multi-arg-signal", (_s: unknown, msg: string, count: number) => {
+            seenMultiArgSignals.push([msg, count])
+        })
+        service.connect("no-arg-signal", () => seenNoArgSignals++)
+
+        await loop.runAsync()
+    })
+
+    it("notify:: fired for remote property changes", () => {
+        expect(seenAutoNotifies).toEqual([UPDATED.PropertyAuto, UPDATED.Poked])
+        expect(seenPropertyNotifies).toEqual([UPDATED.Property])
+        expect(seenReadOnlyNotifies).toEqual([UPDATED.ReadOnlyProperty])
+    })
+
+    it("signals were emitted as gobject signals", () => {
+        expect(seenNoArgSignals).toBe(1)
+        expect(seenStringSignals).toEqual([UPDATED.SignalString])
+        expect(seenMultiArgSignals).toEqual([[UPDATED.SignalString, UPDATED.SignalCount]])
+    })
+
+    it("received the state written by the client", () => {
+        expect(service.PropertyAuto).toBe(UPDATED.Poked)
+        expect(service.Property).toBe(UPDATED.Property)
+        expect(service.ReadOnlyProperty).toBe(UPDATED.ReadOnlyProperty)
+        expect(service.GetWriteOnly()).toEqual([UPDATED.WriteOnlyProperty])
+        expect(service.ArrayProp).toEqual(UPDATED.ArrayProp)
+        expect(service.DictProp).toEqual(UPDATED.DictProp)
+    })
+
+    it("every method was invoked by the client", () => {
+        for (const name of [
+            "NoArgsNoReturn",
+            "AsyncNoReturn",
+            "Echo",
+            "AsyncEcho",
+            "Concat",
+            "SyncFail",
+            "AsyncFail",
+            "CustomFail",
+            "EmitSignals",
+            "SetReadOnly",
+            "GetWriteOnly",
+            "Poke",
+            "Quit",
+        ]) {
+            expect(invoked).toContain(name)
+        }
+    })
 })
-service.connect("string-signal", (_s: unknown, value: string) => seenStringSignals.push(value))
-service.connect("multi-arg-signal", (_s: unknown, msg: string, count: number) => {
-    seenMultiArgSignals.push([msg, count])
-})
-service.connect("no-arg-signal", () => seenNoArgSignals++)
 
-function verifyClientPhase() {
-    // gobject notify:: signals emitted while serving the client
-    assertEq(
-        seenAutoNotifies,
-        [UPDATED.PropertyAuto, UPDATED.Poked],
-        "server: notify:: fired once per remote PropertyAuto change",
-    )
-    assertEq(
-        seenPropertyNotifies,
-        [UPDATED.Property],
-        "server: notify:: fired for the accessor property",
-    )
-    assertEq(
-        seenReadOnlyNotifies,
-        [UPDATED.ReadOnlyProperty],
-        "server: notify:: fired for the read-only property",
-    )
-
-    // gobject signals emitted while serving the client
-    assertEq(seenNoArgSignals, 1, "server: NoArgSignal emitted as a gobject signal")
-    assertEq(
-        seenStringSignals,
-        [UPDATED.SignalString],
-        "server: StringSignal emitted as a gobject signal",
-    )
-    assertEq(
-        seenMultiArgSignals,
-        [[UPDATED.SignalString, UPDATED.SignalCount]],
-        "server: MultiArgSignal emitted as a gobject signal",
-    )
-
-    // final state written by the client
-    assertEq(service.PropertyAuto, UPDATED.Poked, "server: final PropertyAuto")
-    assertEq(service.Property, UPDATED.Property, "server: accessor setter received the value")
-    assertEq(service.ReadOnlyProperty, UPDATED.ReadOnlyProperty, "server: final ReadOnlyProperty")
-    assertEq(
-        service.GetWriteOnly(),
-        [UPDATED.WriteOnlyProperty],
-        "server: write-only setter received the client value",
-    )
-    assertEq(service.ArrayProp, UPDATED.ArrayProp, "server: final ArrayProp")
-    assertEq(service.DictProp, UPDATED.DictProp, "server: final DictProp")
-
-    // every method was invoked by the client
-    for (const name of [
-        "NoArgsNoReturn",
-        "AsyncNoReturn",
-        "Echo",
-        "AsyncEcho",
-        "Concat",
-        "SyncFail",
-        "AsyncFail",
-        "CustomFail",
-        "EmitSignals",
-        "SetReadOnly",
-        "GetWriteOnly",
-        "Poke",
-        "Quit",
-    ]) {
-        assert(invoked.includes(name), `server: ${name} was invoked by the client`)
-    }
-}
-
-await loop.runAsync()
-
-const failed = report("service")
-service.unexport()
-System.exit(failed > 0 ? 1 : 0)
+await run()

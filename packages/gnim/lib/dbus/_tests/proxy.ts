@@ -1,140 +1,147 @@
+import { afterAll, describe, expect, it, run } from "@gnim-js/assert"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
-import system from "system"
-import {
-    assert,
-    assertEq,
-    assertRejects,
-    assertThrows,
-    expectSignal,
-    report,
-    sleep,
-} from "./assert.js"
 import { bind } from "../../jsx/store.js"
-import { ComExampleInterface, INITIAL, UPDATED } from "./interface.js"
+import {
+    ComExampleInterface,
+    expectSignal,
+    INITIAL,
+    sleep,
+    UPDATED,
+    waitForServiceToAppear,
+} from "./interface.js"
 
+await waitForServiceToAppear()
 const proxy = await ComExampleInterface.proxy()
 
-try {
-    print("\n-- property access flags --")
-    assertThrows(() => void proxy.WriteOnlyProperty, "reading a write-only property throws")
-    assertThrows(() => {
-        // @ts-expect-error read-only property
-        proxy.ReadOnlyProperty = 0
-    }, "writing a read-only property throws")
+describe("property access flags", () => {
+    it("reading a write-only property throws", () => {
+        expect(() => void proxy.WriteOnlyProperty).toThrow()
+    })
 
-    print("\n-- methods --")
-    assertEq(await proxy.NoArgsNoReturn(), [], "sync method with no out args resolves []")
-    assertEq(await proxy.AsyncNoReturn(), [], "async method with no out args resolves []")
-    assertEq(await proxy.Echo("hello"), ["hello"], "sync method returns its out tuple")
-    assertEq(await proxy.AsyncEcho("hello"), ["hello"], "async implementation behaves the same")
-    assertEq(await proxy.Concat(["a", "b", "c"], "-"), ["a-b-c"], "method with container in args")
+    it("writing a read-only property throws", () => {
+        expect(() => {
+            // @ts-expect-error read-only property
+            proxy.ReadOnlyProperty = 0
+        }).toThrow()
+    })
+})
 
-    print("\n-- method errors --")
-    const syncError = await assertRejects(proxy.SyncFail(), "throwing sync implementation rejects")
-    assert(syncError instanceof GLib.Error, "sync error is a GLib.Error")
-    const asyncError = await assertRejects(
-        proxy.AsyncFail(),
-        "rejecting async implementation rejects",
-    )
-    assert(asyncError instanceof GLib.Error, "async error is a GLib.Error")
-    const customError = await assertRejects(proxy.CustomFail(), "custom dbus error rejects")
-    assert(customError instanceof GLib.Error, "custom error is a GLib.Error")
+describe("methods", () => {
+    it("methods with no out args resolve []", async () => {
+        expect(await proxy.NoArgsNoReturn()).toEqual([])
+        expect(await proxy.AsyncNoReturn()).toEqual([])
+    })
 
-    print("\n-- signals --")
-    const noArgSignal = expectSignal(proxy, "no-arg-signal")
-    const stringSignal = expectSignal(proxy, "string-signal")
-    const multiArgSignal = expectSignal(proxy, "multi-arg-signal")
-    await proxy.EmitSignals(UPDATED.SignalString, UPDATED.SignalCount)
-    assertEq(await noArgSignal, [], "signal with no args emitted as a gobject signal")
-    assertEq(await stringSignal, [UPDATED.SignalString], "signal with a single arg")
-    assertEq(
-        await multiArgSignal,
-        [UPDATED.SignalString, UPDATED.SignalCount],
-        "signal with multiple args",
-    )
+    it("methods return their out tuple", async () => {
+        expect(await proxy.Echo("hello")).toEqual(["hello"])
+        expect(await proxy.AsyncEcho("hello")).toEqual(["hello"])
+    })
 
-    print("\n-- auto-emitting data property --")
-    const autoNotify = expectSignal(proxy, "notify::property-auto")
-    proxy.PropertyAuto = UPDATED.PropertyAuto
-    assertEq(
-        proxy.PropertyAuto,
-        UPDATED.PropertyAuto,
-        "set is applied to the local cache immediately",
-    )
-    const [autoPspec] = await autoNotify
-    assertEq(
-        (autoPspec as GObject.ParamSpec).name,
-        "property-auto",
-        "notify:: passes the pspec of the changed property",
-    )
-    assertEq(
-        proxy.PropertyAuto,
-        UPDATED.PropertyAuto,
-        "value after the PropertiesChanged round trip",
-    )
+    it("container in args", async () => {
+        expect(await proxy.Concat(["a", "b", "c"], "-")).toEqual(["a-b-c"])
+    })
+})
 
-    let unchangedNotifies = 0
-    const unchangedId = proxy.connect("notify::property-auto", () => unchangedNotifies++)
-    proxy.PropertyAuto = UPDATED.PropertyAuto
-    await proxy.Echo("barrier") // round trip so the service processed the Set call
-    await sleep(200)
-    assertEq(unchangedNotifies, 0, "setting the same value does not emit PropertiesChanged")
-    proxy.disconnect(unchangedId)
+describe("method errors", () => {
+    it("throwing sync implementation rejects with a GLib.Error", async () => {
+        await expect(proxy.SyncFail()).rejects.toThrow(GLib.Error)
+    })
 
-    const pokeNotify = expectSignal(proxy, "notify::property-auto")
-    await proxy.Poke(UPDATED.Poked)
-    await pokeNotify
-    assertEq(proxy.PropertyAuto, UPDATED.Poked, "server-initiated change is propagated")
+    it("rejecting async implementation rejects with a GLib.Error", async () => {
+        await expect(proxy.AsyncFail()).rejects.toThrow(GLib.Error)
+    })
 
-    print("\n-- getter/setter property --")
-    const propNotify = expectSignal(proxy, "notify::property")
-    proxy.Property = UPDATED.Property
-    await propNotify
-    assertEq(proxy.Property, UPDATED.Property, "accessor property round trip")
+    it("custom dbus error rejects with a GLib.Error", async () => {
+        await expect(proxy.CustomFail()).rejects.toThrow(GLib.Error)
+    })
+})
 
-    print("\n-- read-only property --")
-    const boundReadOnly = bind(proxy, "read-only-property")
-    assertEq(
-        boundReadOnly(),
-        INITIAL.ReadOnlyProperty,
-        "bind with a kebab-case name reads the value",
-    )
-    const readOnlyNotify = expectSignal(proxy, "notify::read-only-property")
-    await proxy.SetReadOnly(UPDATED.ReadOnlyProperty)
-    await readOnlyNotify
-    assertEq(
-        proxy.ReadOnlyProperty,
-        UPDATED.ReadOnlyProperty,
-        "server-side update through the emitter is propagated",
-    )
-    assertEq(boundReadOnly(), UPDATED.ReadOnlyProperty, "bind reflects the updated value")
+describe("signals", () => {
+    it("are emitted as gobject signals", async () => {
+        const noArgSignal = expectSignal(proxy, "no-arg-signal")
+        const stringSignal = expectSignal(proxy, "string-signal")
+        const multiArgSignal = expectSignal(proxy, "multi-arg-signal")
+        await proxy.EmitSignals(UPDATED.SignalString, UPDATED.SignalCount)
+        expect(await noArgSignal).toEqual([])
+        expect(await stringSignal).toEqual([UPDATED.SignalString])
+        expect(await multiArgSignal).toEqual([UPDATED.SignalString, UPDATED.SignalCount])
+    })
+})
 
-    print("\n-- write-only property --")
-    proxy.WriteOnlyProperty = UPDATED.WriteOnlyProperty
-    assertEq(
-        await proxy.GetWriteOnly(),
-        [UPDATED.WriteOnlyProperty],
-        "write-only value reached the service",
-    )
+describe("auto-emitting data property", () => {
+    it("set is applied locally and round trips", async () => {
+        const autoNotify = expectSignal(proxy, "notify::property-auto")
+        proxy.PropertyAuto = UPDATED.PropertyAuto
+        expect(proxy.PropertyAuto).toBe(UPDATED.PropertyAuto)
 
-    print("\n-- container properties --")
-    const arrayNotify = expectSignal(proxy, "notify::array-prop")
-    proxy.ArrayProp = UPDATED.ArrayProp
-    await arrayNotify
-    assertEq(proxy.ArrayProp, UPDATED.ArrayProp, "string array property round trip")
+        const [pspec] = await autoNotify
+        expect((pspec as GObject.ParamSpec).name).toBe("property-auto")
+        expect(proxy.PropertyAuto).toBe(UPDATED.PropertyAuto)
+    })
 
-    const dictNotify = expectSignal(proxy, "notify::dict-prop")
-    proxy.DictProp = UPDATED.DictProp
-    await dictNotify
-    assertEq(proxy.DictProp, UPDATED.DictProp, "dict property round trip")
+    it("setting the same value does not emit PropertiesChanged", async () => {
+        let notifies = 0
+        const id = proxy.connect("notify::property-auto", () => notifies++)
+        proxy.PropertyAuto = UPDATED.PropertyAuto
+        await proxy.Echo("barrier") // round trip so the service processed the Set call
+        await sleep(200)
+        proxy.disconnect(id)
+        expect(notifies).toBe(0)
+    })
 
-    await proxy.Quit()
-} catch (error) {
-    console.error(error)
-    await proxy.Quit().catch(() => null)
-    system.exit(1)
-}
+    it("server-initiated changes are propagated", async () => {
+        const pokeNotify = expectSignal(proxy, "notify::property-auto")
+        await proxy.Poke(UPDATED.Poked)
+        await pokeNotify
+        expect(proxy.PropertyAuto).toBe(UPDATED.Poked)
+    })
+})
 
-const failed = report("proxy")
-system.exit(failed > 0 ? 1 : 0)
+describe("getter/setter property", () => {
+    it("round trips", async () => {
+        const notify = expectSignal(proxy, "notify::property")
+        proxy.Property = UPDATED.Property
+        await notify
+        expect(proxy.Property).toBe(UPDATED.Property)
+    })
+})
+
+describe("read-only property", () => {
+    it("server-side updates through the emitter are propagated", async () => {
+        const bound = bind(proxy, "read-only-property")
+        expect(bound()).toBe(INITIAL.ReadOnlyProperty)
+
+        const notify = expectSignal(proxy, "notify::read-only-property")
+        await proxy.SetReadOnly(UPDATED.ReadOnlyProperty)
+        await notify
+        expect(proxy.ReadOnlyProperty).toBe(UPDATED.ReadOnlyProperty)
+        expect(bound()).toBe(UPDATED.ReadOnlyProperty)
+    })
+})
+
+describe("write-only property", () => {
+    it("the value reaches the service", async () => {
+        proxy.WriteOnlyProperty = UPDATED.WriteOnlyProperty
+        expect(await proxy.GetWriteOnly()).toEqual([UPDATED.WriteOnlyProperty])
+    })
+})
+
+describe("container properties", () => {
+    it("string arrays round trip", async () => {
+        const notify = expectSignal(proxy, "notify::array-prop")
+        proxy.ArrayProp = UPDATED.ArrayProp
+        await notify
+        expect(proxy.ArrayProp).toEqual(UPDATED.ArrayProp)
+    })
+
+    it("dicts round trip", async () => {
+        const notify = expectSignal(proxy, "notify::dict-prop")
+        proxy.DictProp = UPDATED.DictProp
+        await notify
+        expect(proxy.DictProp).toEqual(UPDATED.DictProp)
+    })
+})
+
+afterAll(() => proxy.Quit())
+await run()
