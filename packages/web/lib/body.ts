@@ -297,6 +297,7 @@ export {
     type BodySource,
     take as takeBody,
     init as initBody,
+    bodyChunks,
     sourceStream,
     isReplayable,
 }

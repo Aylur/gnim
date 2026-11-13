@@ -11,6 +11,7 @@
         "url": "https://ko-fi.com/aylur"
     },
     "scripts": {
+        "prepare": "mkdir -p tests/cert && openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 36500 -subj /CN=localhost -addext subjectAltName=DNS:localhost,IP:127.0.0.1 -keyout tests/cert/key.pem -out tests/cert/cert.pem",
         "build": "tsc -p tsconfig.build.json",
         "prepublishOnly": "pnpm run build",
         "lint": "eslint .",

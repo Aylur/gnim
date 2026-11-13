@@ -87,10 +87,14 @@ async function sendMessage(
     source: BodySource | null,
 ): Promise<{ message: Soup.Message; stream: Gio.InputStream }> {
     const cancellable = request.signal
-    const message = new Soup.Message({
-        method: request.method,
-        uri: GLib.Uri.parse(url, Soup.HTTP_URI_FLAGS),
-    })
+    const uri = GLib.Uri.parse(url, Soup.HTTP_URI_FLAGS)
+
+    const scheme = uri.get_scheme()
+    if (scheme !== "http" && scheme !== "https") {
+        throw new TypeError(`fetch failed: scheme "${scheme}" is not supported`)
+    }
+
+    const message = new Soup.Message({ method: request.method, uri })
 
     const messageHeaders = message.get_request_headers()
     for (const [name, value] of headers) {

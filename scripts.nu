@@ -10,16 +10,18 @@ def "main types" [] {
         pnpm --filter @gnim-js/gnome-shell run girs
     }
 
-    girgen -d $"packages/gnome-shell/gir-1.0/gnome($runtime)" -d .gnim/girs -i Gee-0.8 gjs -o .gnim/types/gi
+    (cargo run
+        --package gnim
+        --
+        types
+        -d $"packages/gnome-shell/gir-1.0/gnome($runtime)"
+        -d .gnim/girs
+        -i Gee-0.8
+    )
 }
 
 def "main check" [] {
-    mkdir .gnim/types/gi
-
-    if (ls .gnim/types/gi | length) == 0 {
-        girgen -d $"packages/gnome-shell/gir-1.0/gnome($runtime)" -d .gnim/girs -i Gee-0.8 gjs -o .gnim/types/gi
-    }
-
+    main types
     $env.ESLINT_FLAGS = "unstable_native_nodejs_ts_config"
     pnpm run --parallel '/(typecheck|fmt|lint|test)/'
 }
