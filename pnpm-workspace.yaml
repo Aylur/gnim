@@ -7,6 +7,8 @@ packages:
     - "packages/gnome-shell"
     - "packages/create"
     - "packages/io"
+    - "packages/web"
+    - "packages/assert"
 
 catalog:
     "@types/node": ^26.1.2
