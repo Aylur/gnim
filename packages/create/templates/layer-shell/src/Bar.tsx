@@ -1,23 +1,50 @@
-import { execAsync } from "@gnim-js/io/process"
-import { createPoll } from "@gnim-js/io/timer"
-import Gls from "gi://Gtk4LayerShell?version=1.0"
 import Gdk from "gi://Gdk?version=4.0"
+import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
+import Gls from "gi://Gtk4LayerShell?version=1.0"
 import Gtk from "gi://Gtk?version=4.0"
-import { createState, Portal } from "gnim"
+import { createState, onCleanup, Portal } from "gnim"
 import { fmt } from "gnim/intl"
 import { App } from "./main"
+
+async function exec(argv: string[]): Promise<string> {
+  const process = Gio.Subprocess.new(
+    argv,
+    Gio.SubprocessFlags.STDERR_PIPE | Gio.SubprocessFlags.STDOUT_PIPE,
+  )
+
+  return new Promise((resolve, reject) => {
+    process.communicate_utf8_async(null, null, (_, res) => {
+      try {
+        const [, out, err] = process.communicate_utf8_finish(res)
+        if (process.get_successful()) {
+          return resolve(out ?? "")
+        } else {
+          reject(Error(err ?? "Unknown error"))
+        }
+      } catch (error) {
+        reject(error)
+      }
+    })
+  })
+}
+
+function createClock(format = "%H:%M") {
+  const now = () => GLib.DateTime.new_now_local()?.format(format) ?? ""
+  const [clock, setClock] = createState(now())
+  const interval = setInterval(() => setClock(now()), 1000)
+  onCleanup(() => clearInterval(interval))
+  return clock
+}
 
 export default function Bar(props: { monitor: Gdk.Monitor }) {
   const { gettext: t } = App.gettext
   const [open, setOpen] = createState(false)
+  const clock = createClock()
 
-  const clock = createPoll("", 1000, () => {
-    return GLib.DateTime.new_now_local()?.format("%H:%M") ?? ""
-  })
-
-  function onClicked() {
-    execAsync("echo hello").then(print)
+  async function onClicked() {
+    const hello = await exec(["echo", "hello"])
+    print(hello)
   }
 
   function initBarWindow(win: Gtk.Window) {
