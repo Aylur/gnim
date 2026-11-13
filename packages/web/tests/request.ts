@@ -126,7 +126,7 @@ describe("Request", () => {
         await request.text()
         expect(request.bodyUsed).toBe(true)
         await expect(request.text()).rejects.toThrow(TypeError)
-        expect(() => request.stream).toThrow(TypeError)
+        expect(() => request.gstream).toThrow(TypeError)
     })
 
     it("reads bodies as a Gio.InputStream", async () => {
@@ -136,16 +136,16 @@ describe("Request", () => {
         }
         const post = (body: BodyInit) => new Request("https://a.com", { method: "POST", body })
 
-        expect(await readStream(post("text").stream!)).toBe("text")
-        expect(await readStream(post(chunks()).stream!)).toBe("streamed chunks")
-        expect(await readStream(post("").stream!)).toBe("")
+        expect(await readStream(post("text").gstream!)).toBe("text")
+        expect(await readStream(post(chunks()).gstream!)).toBe("streamed chunks")
+        expect(await readStream(post("").gstream!)).toBe("")
 
         const empty = new Request("https://a.com")
-        expect(empty.stream).toBeNull()
+        expect(empty.gstream).toBeNull()
         expect(empty.bodyUsed).toBe(false)
 
         const request = post("same")
-        expect(request.stream).toBe(request.stream)
+        expect(request.gstream).toBe(request.gstream)
     })
 
     it("reads bodies of every kind as chunks", async () => {

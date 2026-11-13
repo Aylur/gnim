@@ -64,7 +64,7 @@ describe("serve", () => {
         expect(new URL(request.url).pathname).toBe("/path")
         expect(new URL(request.url).search).toBe("?a=1")
         expect(request.headers.get("x-test")).toBe("1")
-        expect(request.stream).toBe(null)
+        expect(request.gstream).toBe(null)
         expect(address).toBeInstanceOf(Gio.InetSocketAddress)
     })
 
@@ -121,7 +121,7 @@ describe("serve", () => {
     })
 
     it("streams a request body back as the response", async () => {
-        const server = start({ fetch: (request) => new Response(request.stream) })
+        const server = start({ fetch: (request) => new Response(request.gstream) })
         const data = pattern(4 * 1024 * 1024)
 
         async function* upload() {
@@ -194,7 +194,7 @@ describe("serve", () => {
 
         const head = await fetch(server.url!, { method: "HEAD" })
         expect(head.status).toBe(200)
-        expect(head.stream).toBe(null)
+        expect(head.gstream).toBe(null)
         expect(read).toBe(false)
 
         const empty = await fetch(url(server, "/empty"))
@@ -456,7 +456,7 @@ describe("serve over HTTPS", () => {
         const decoder = new TextDecoder()
         const server = start({
             tls: { cert: decoder.decode(cert), key: decoder.decode(key) },
-            fetch: (request) => new Response(request.stream),
+            fetch: (request) => new Response(request.gstream),
         })
 
         const data = pattern(1024 * 1024)

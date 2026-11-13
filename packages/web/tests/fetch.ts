@@ -171,10 +171,10 @@ describe("fetch", () => {
         expect(isCancelled(error)).toBe(true)
     })
 
-    it("streams the response through stream", async () => {
+    it("streams the response through gstream", async () => {
         const response = await fetch(server.url("/stream"))
-        expect(response.stream).toBeInstanceOf(Gio.InputStream)
-        expect(await new Response(response.stream).text()).toBe("one two three")
+        expect(response.gstream).toBeInstanceOf(Gio.InputStream)
+        expect(await new Response(response.gstream).text()).toBe("one two three")
     })
 
     it("follows redirects", async () => {
@@ -306,7 +306,7 @@ describe("fetch", () => {
         expect(await noContent.text()).toBe("")
 
         const head = await fetch(server.url("/text"), { method: "HEAD" })
-        expect(head.stream).toBeNull()
+        expect(head.gstream).toBeNull()
         expect(await head.text()).toBe("")
     })
 
@@ -784,7 +784,7 @@ describe("file descriptors", () => {
             }
             await new Response(failing()).text().catch(() => null)
 
-            const stream = new Response(endless()).stream!
+            const stream = new Response(endless()).gstream!
             stream.close(null)
         }
         await settle()

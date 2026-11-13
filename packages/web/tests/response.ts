@@ -78,7 +78,7 @@ describe("Response", () => {
 
         const response = new Response(file)
         expect(response.headers.get("content-type")).toBe("application/json")
-        expect(response.stream).toBeInstanceOf(Gio.FileInputStream)
+        expect(response.gstream).toBeInstanceOf(Gio.FileInputStream)
 
         const blob = await new Response(file).blob()
         expect(blob.size).toBe(3)

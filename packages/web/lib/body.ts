@@ -91,7 +91,7 @@ function sourceStream(source: BodySource): Gio.InputStream {
         case "bytes":
             return Gio.MemoryInputStream.new_from_bytes(new GLib.Bytes(source.bytes))
         case "blob":
-            return source.blob.stream()
+            return source.blob.gstream()
         case "stream":
             return source.stream
         case "chunks":
@@ -201,13 +201,13 @@ abstract class Body {
         return this.#source !== null
     }
 
-    /** `ReadableStream` is not yet implemented. Use {@link stream} or {@link chunks}. */
+    /** `ReadableStream` is not yet implemented. Use {@link gstream} or {@link chunks}. */
     get body(): never {
-        throw new Error("Body.body: ReadableStream is not implemented, use stream instead")
+        throw new Error("Body.body: ReadableStream is not implemented, use gstream instead")
     }
 
     /** The body as a `Gio.InputStream`, `null` when there is no body. */
-    get stream(): Gio.InputStream | null {
+    get gstream(): Gio.InputStream | null {
         if (this.#stream) return this.#stream
         const source = this.#take()
         if (source) this.#stream = sourceStream(source)

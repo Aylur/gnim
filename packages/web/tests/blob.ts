@@ -89,26 +89,26 @@ describe("Blob", () => {
     })
 
     it("streams in memory blobs", async () => {
-        const stream = new Blob(["a", "b"]).stream()
+        const stream = new Blob(["a", "b"]).gstream()
         expect(stream).toBeInstanceOf(Gio.MemoryInputStream)
         expect(await readStream(stream)).toBe("ab")
     })
 
     it("streams whole files from the file", async () => {
-        const stream = new Blob([tempFile("contents")]).stream()
+        const stream = new Blob([tempFile("contents")]).gstream()
         expect(stream).toBeInstanceOf(Gio.FileInputStream)
         expect(await readStream(stream)).toBe("contents")
     })
 
     it("streams files mixed with other parts", async () => {
         const blob = new Blob(["<", tempFile("hello world"), ">"]).slice(0, 7)
-        expect(await readStream(blob.stream())).toBe("<hello ")
+        expect(await readStream(blob.gstream())).toBe("<hello ")
     })
 
     it("streams large files", async () => {
         const contents = "x".repeat(200 * 1024)
         const blob = new Blob(["<", tempFile(contents), ">"])
-        expect(await readStream(blob.stream())).toBe(`<${contents}>`)
+        expect(await readStream(blob.gstream())).toBe(`<${contents}>`)
     })
 
     it("has a string tag", () => {

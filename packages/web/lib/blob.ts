@@ -147,7 +147,7 @@ class Blob {
     }
 
     /** The contents as a `Gio.InputStream`. */
-    stream(): Gio.InputStream {
+    gstream(): Gio.InputStream {
         const parts = this.#parts
         const [first] = parts
 

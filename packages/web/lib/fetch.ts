@@ -50,7 +50,7 @@ function setBody(
             message.set_request_body_from_bytes(contentType, new GLib.Bytes(source.bytes))
             break
         case "blob":
-            message.set_request_body(contentType, source.blob.stream(), source.blob.size)
+            message.set_request_body(contentType, source.blob.gstream(), source.blob.size)
             break
         case "stream":
             message.set_request_body(contentType, source.stream, -1)
