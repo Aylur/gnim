@@ -1,7 +1,12 @@
 {
   description = "Gnim";
 
-  outputs = inputs: {
+  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
+
+  outputs = inputs: let
+    systems = ["x86_64-linux" "aarch64-linux"];
+    forAllSystems = inputs.nixpkgs.lib.genAttrs systems;
+  in {
     templates = {
       default = {
         path = ./nix/template;
@@ -15,5 +20,20 @@
         '';
       };
     };
+
+    devShells = forAllSystems (system: let
+      pkgs = inputs.nixpkgs.legacyPackages.${system};
+    in {
+      default = pkgs.mkShell {
+        packages = [
+          pkgs.gjs
+          pkgs.glib
+          pkgs.gobject-introspection
+          pkgs.libsoup_3
+          pkgs.gettext
+          pkgs.dbus
+        ];
+      };
+    });
   };
 }

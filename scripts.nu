@@ -1,20 +1,25 @@
 #!/usr/bin/env nu
 
 let runtime = $env.GNOME_RUNTIME? | default "50"
+let ci = $env.CI? == "true"
 
 def "main types" [] {
-    mkdir .gnim
-    flatpak run --command=cp --filesystem=home $"org.gnome.Sdk//($runtime)" -r /usr/share/gir-1.0 ./.gnim/girs
+    let shell_girs = $"packages/gnome-shell/gir-1.0/gnome($runtime)"
 
-    if (which nix | length) > 0 {
-        pnpm --filter @gnim-js/gnome-shell run girs
+    if not $ci {
+        mkdir .gnim
+        flatpak run --command=cp --filesystem=home $"org.gnome.Sdk//($runtime)" -r /usr/share/gir-1.0 ./.gnim/girs
+
+        if (which nix | length) > 0 {
+            pnpm --filter @gnim-js/gnome-shell run girs
+        }
     }
 
     (cargo run
         --package gnim
         --
         types
-        -d $"packages/gnome-shell/gir-1.0/gnome($runtime)"
+        -d $shell_girs
         -d .gnim/girs
         -i Gee-0.8
     )

@@ -5,12 +5,12 @@ on:
         branches:
             - "**"
 
+env:
+    GNOME_RUNTIME: "50"
+
 jobs:
     lint:
         runs-on: ubuntu-latest
-
-        env:
-            GNOME_RUNTIME: "50"
 
         steps:
             - name: Checkout
@@ -34,8 +34,8 @@ jobs:
               id: types-cache
               uses: actions/cache@v6
               with:
-                  path: .gnim/types/gi
-                  key: gi-types-${{ runner.os }}-gnome${{ env.GNOME_RUNTIME }}-${{ hashFiles('pnpm-lock.yaml', 'packages/gnome-shell/gir-1.0/flake.lock') }}
+                  path: .gnim/types
+                  key: gi-types-${{ runner.os }}-gnome${{ env.GNOME_RUNTIME }}-${{ hashFiles('pnpm-lock.yaml', 'Cargo.lock', 'packages/cli/src/types.rs', 'packages/gnome-shell/gir-1.0/flake.lock') }}
 
             - name: Fetch gir files from GNOME SDK
               if: steps.types-cache.outputs.cache-hit != 'true'
@@ -61,5 +61,55 @@ jobs:
                   nix build ./packages/gnome-shell/gir-1.0#gnome$GNOME_RUNTIME \
                       -o packages/gnome-shell/gir-1.0/gnome$GNOME_RUNTIME
 
+            - name: Setup Rust
+              if: steps.types-cache.outputs.cache-hit != 'true'
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Cache Rust
+              if: steps.types-cache.outputs.cache-hit != 'true'
+              uses: Swatinem/rust-cache@v2
+
+            - name: Generate types
+              if: steps.types-cache.outputs.cache-hit != 'true'
+              run: pnpm run types
+
             - name: Run checks in parallel
-              run: pnpm run check
+              env:
+                  ESLINT_FLAGS: unstable_native_nodejs_ts_config
+              run: pnpm run --parallel '/(typecheck|fmt|lint)/'
+
+    test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v6
+              with:
+                  version: 12
+
+            - name: Setup Node
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+                  cache: "pnpm"
+
+            - name: Install dependencies
+              run: pnpm -r install --frozen-lockfile
+
+            - name: Install Nix
+              uses: DeterminateSystems/determinate-nix-action@v3
+
+            - name: Setup Rust
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Cache Rust
+              uses: Swatinem/rust-cache@v2
+
+            - name: Build CLI
+              run: cargo build --package gnim
+
+            - name: Run tests
+              run: nix develop --command pnpm run test
