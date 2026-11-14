@@ -111,5 +111,12 @@ jobs:
             - name: Build CLI
               run: cargo build --package gnim
 
+            # dbus-daemon from nix looks for /etc/dbus-1/session.conf
+            # which Ubuntu only ships under /usr/share
+            - name: Setup dbus session config
+              run: |
+                  sudo mkdir -p /etc/dbus-1
+                  sudo cp /usr/share/dbus-1/session.conf /etc/dbus-1/session.conf
+
             - name: Run tests
               run: nix develop --command pnpm run test
