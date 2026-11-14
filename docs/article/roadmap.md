@@ -35,3 +35,10 @@ mostly because I wanted to fit it into a single binary so that there is no
 dependency on Node and npm packages to make it easier to distribute.
 
 Planned: rewrite it in TypeScript as a Rolldown plugin.
+
+## Testing library
+
+GJS has [jasmine-gjs](https://github.com/ptomato/jasmine-gjs) which is not
+TypeScript friendly.
+
+Planned: vitest like assert library and a `gnim test` CLI tool.
