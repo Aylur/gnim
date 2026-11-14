@@ -25,6 +25,8 @@
       pkgs = inputs.nixpkgs.legacyPackages.${system};
     in {
       default = pkgs.mkShell {
+        GIO_EXTRA_MODULES = "${pkgs.glib-networking}/lib/gio/modules";
+
         packages = [
           pkgs.gjs
           pkgs.glib
