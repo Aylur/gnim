@@ -37,9 +37,17 @@ export default defineConfig({
                     { text: "GObject", link: "/reference/gobject" },
                     { text: "DBus", link: "/reference/dbus" },
                     { text: "Schemas", link: "/reference/schemas" },
-                    { text: "Packages", link: "/reference/packages" },
                     { text: "CLI", link: "/reference/cli" },
                     { text: "Runtime", link: "/reference/runtime" },
+                ],
+            },
+            {
+                text: "Packages",
+                items: [
+                    { text: "Gtk4", link: "/package/gtk4" },
+                    { text: "Gtk3", link: "/package/gtk3" },
+                    { text: "GNOME Shell", link: "/package/gnome-shell" },
+                    { text: "Web", link: "/package/web" },
                 ],
             },
             {

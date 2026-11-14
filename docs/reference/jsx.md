@@ -176,8 +176,8 @@ return (
 > [!NOTE]
 >
 > Renderers can define additional attributes on class components. The Gtk
-> renderers for example define [`css` and `class`](/reference/packages#css)
-> attributes on widgets.
+> renderers for example define [`css` and `class`](/package/gtk4#css) attributes
+> on widgets.
 
 ## Function Components
 

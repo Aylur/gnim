@@ -1,6 +1,6 @@
 import Clutter from "gi://Clutter"
 import St from "gi://St"
-import { effect, onCleanup } from "gnim"
+import { onMount } from "gnim"
 import { register } from "gnim/gobject"
 import * as Main from "resource:///org/gnome/shell/ui/main.js"
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js"
@@ -18,7 +18,7 @@ class PanelMenuButton extends PanelMenu.Button {
   }) {
     super(props.menuAlignment ?? 0.5, props.nameText, props.dontCreateMenu)
 
-    effect(() => {
+    onMount(() => {
       Main.panel.addToStatusArea(props.role, this, props.position, props.box)
     })
   }
