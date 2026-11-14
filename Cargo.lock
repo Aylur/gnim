@@ -840,7 +840,7 @@ checksum = "c1d4989169eb40469469b2aecfc0d8d9ebcf56149fa23b57a515d261e67e3907"
 
 [[package]]
 name = "gnim"
-version = "2.0.0-beta.28"
+version = "2.0.0-beta.29"
 dependencies = [
  "clap",
  "colored",
