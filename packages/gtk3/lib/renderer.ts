@@ -1,3 +1,4 @@
+import Gio from "gi://Gio?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import Gtk from "gi://Gtk?version=3.0"
 import {
@@ -52,7 +53,7 @@ function rule<P extends GObject.Object, C extends GObject.Object>(
 
 function setCss(widget: Gtk.Widget, css: string) {
     if (!css.includes("{") || !css.includes("}")) {
-        css = `* { ${css} }`
+        css = css.trim().endsWith(";") ? `* { ${css} }` : `* { ${css}; }`
     }
 
     const ctx = widget.get_style_context()
@@ -71,6 +72,18 @@ function flattenClassList(classList: unknown): MaybeAccessor<string> {
     if (isAccessor(classList)) return flattenClassList(classList())
     if (Array.isArray(classList)) return classList.map(flattenClassList).join(" ")
     return ""
+}
+
+function emptyWidget() {
+    return new Gtk.Box({ visible: false })
+}
+
+function notebookPageOfTab(notebook: Gtk.Notebook, tab: Gtk.Widget) {
+    for (let i = 0; i < notebook.get_n_pages(); i++) {
+        const page = notebook.get_nth_page(i)
+        if (page && notebook.get_tab_label(page) === tab) return page
+    }
+    return null
 }
 
 function isAdjustable(object: GObject.Object) {
@@ -103,7 +116,58 @@ export class GtkRenderer extends BaseRenderer {
         }),
         rule(Gtk.TextView, Gtk.TextBuffer, {
             append: (p, c) => p.set_buffer(c),
-            remove: (p) => p.set_buffer(null),
+            remove: (p, c) => void (p.buffer === c && p.set_buffer(null)),
+        }),
+        rule(Gtk.MenuButton, Gtk.Popover, {
+            append: (p, c) => p.set_popover(c),
+            remove: (p, c) => void (p.get_popover() === c && p.set_popover(null)),
+        }),
+        rule(Gtk.MenuButton, Gio.MenuModel, {
+            append: (p, c) => p.set_menu_model(c),
+            remove: (p, c) => void (p.menuModel === c && p.set_menu_model(null)),
+        }),
+        rule(Gtk.Popover, Gio.MenuModel, {
+            append: (p, c) => p.bind_model(c, null),
+            remove: (p) => p.bind_model(null, null),
+        }),
+        rule(Gtk.Notebook, Gtk.Widget, {
+            remove(p, c) {
+                switch (getSlot(c)) {
+                    case "tab": {
+                        // the tab label goes away with its page
+                        const page = notebookPageOfTab(p, c)
+                        if (page) p.set_tab_label(page, null)
+                        return
+                    }
+                    case "action-start":
+                        return p.set_action_widget(emptyWidget(), Gtk.PackType.START)
+                    case "action-end":
+                        return p.set_action_widget(emptyWidget(), Gtk.PackType.END)
+                }
+                return false
+            },
+        }),
+        // non-row children are wrapped in an implicit Gtk.ListBoxRow
+        rule(Gtk.ListBox, Gtk.Widget, {
+            when: (p, c) => !(c instanceof Gtk.ListBoxRow) && c.get_parent()?.get_parent() === p,
+            remove: (p, c) => p.remove(c.get_parent()!),
+        }),
+        rule(Gtk.TextTagTable, Gtk.TextTag, {
+            append: (p, c) => void p.add(c),
+            remove: (p, c) => p.remove(c),
+        }),
+        rule(Gtk.TreeView, Gtk.TreeViewColumn, {
+            remove: (p, c) => void p.remove_column(c),
+        }),
+        rule(Gtk.CellArea, Gtk.CellRenderer, {
+            remove: (p, c) => p.remove(c),
+        }),
+        rule(Gtk.CellLayout as unknown as Ctor<Gtk.CellLayout & GObject.Object>, Gtk.CellRenderer, {
+            remove: (p, c) => p.get_area()?.remove(c),
+        }),
+        rule(Gtk.WindowGroup, Gtk.Window, {
+            append: (p, c) => p.add_window(c),
+            remove: (p, c) => p.remove_window(c),
         }),
         rule(Gtk.Container, Gtk.Widget, {
             remove: (p, c) => p.remove(c),
