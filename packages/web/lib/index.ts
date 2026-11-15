@@ -13,5 +13,4 @@ export {
 } from "./request.js"
 export { Response, type ResponseInit } from "./response.js"
 export { fetch } from "./fetch.js"
-export { fetch as default } from "./fetch.js"
 export { serve, type Server, type ServeOptions, type ServeTls } from "./serve.js"
