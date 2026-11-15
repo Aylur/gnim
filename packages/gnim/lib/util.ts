@@ -3,9 +3,9 @@ import GObject from "gi://GObject?version=2.0"
 
 export function kebabcase(str: string) {
     return str
-        .replace(/([a-z])([A-Z])/g, "$1-$2")
-        .replaceAll("_", "-")
-        .toLowerCase()
+        .replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)
+        .replace(/[-_ ]+/g, "-")
+        .replace(/^-/, "")
 }
 
 export function camelcase(str: string) {
@@ -19,10 +19,7 @@ export function pascalcase(str: string) {
 }
 
 export function snakecase(str: string) {
-    return str
-        .replace(/([a-z])([A-Z])/g, "$1-$2")
-        .replaceAll("-", "_")
-        .toLowerCase()
+    return kebabcase(str).replaceAll("-", "_")
 }
 
 // port of GJS's `_getCallerBasename` that lets us skip middlemen urls
