@@ -3,7 +3,7 @@ import GLibUnix from "gi://GLibUnix?version=2.0"
 import Gio from "gi://Gio?version=2.0"
 import Soup from "gi://Soup?version=3.0"
 import { type BodySource, bodyChunks, initBody, takeBody } from "./body.js"
-import { CHUNK_SIZE, closeStream, decoder } from "./lib.js"
+import { CHUNK_SIZE, closeStream, decoder, isError } from "./lib.js"
 import { Request } from "./request.js"
 import { NULL_BODY_STATUS, Response } from "./response.js"
 import { URL } from "./url.js"
@@ -327,7 +327,7 @@ function tlsCertificate(tls: ServeTls): Gio.TlsCertificate {
 }
 
 function defaultError(error: unknown): Response {
-    if (Error.isError(error)) {
+    if (isError(error)) {
         logError(error)
     } else {
         console.warn(error)

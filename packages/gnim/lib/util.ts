@@ -22,6 +22,12 @@ export function snakecase(str: string) {
     return kebabcase(str).replaceAll("-", "_")
 }
 
+export function isError(value: unknown): value is Error | GLib.Error {
+    //  GJS >=1.85
+    if ("isError" in Error) return Error.isError(value)
+    return value instanceof Error || value instanceof GLib.Error
+}
+
 // port of GJS's `_getCallerBasename` that lets us skip middlemen urls
 function callerBasename(...skipUrls: string[]): string | null {
     const scriptRegex = /^(.+:\/\/)?(.*\/)?(.+)\.js$/

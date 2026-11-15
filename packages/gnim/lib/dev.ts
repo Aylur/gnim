@@ -6,6 +6,7 @@ import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { type FC } from "./jsx/element.js"
 import { createComponentRegistry } from "./jsx/hmr.js"
+import { isError } from "./util.js"
 
 const props = JSON.parse(GLib.getenv("GNIM_DEV")!) as {
     applicationId?: string
@@ -44,7 +45,7 @@ function isCss(id: string) {
 }
 
 function logImportError(error: unknown, source: string) {
-    if (Error.isError(error)) {
+    if (isError(error)) {
         logError(error, `[dev] failed to import ${source}`)
     } else {
         console.error(`[dev] failed to import ${source}:`, error)

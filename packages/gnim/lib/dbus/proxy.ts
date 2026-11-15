@@ -2,7 +2,7 @@ import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { pspecFromGType } from "../gobject/gtype.js"
-import { createGTypeName, kebabcase, pascalcase } from "../util.js"
+import { createGTypeName, isError, kebabcase, pascalcase } from "../util.js"
 import {
     inferGType,
     type DBusGObject,
@@ -93,7 +93,7 @@ export function createProxyClass(info: Gio.DBusInterfaceInfo, gtypeName?: string
                             throw Error(`property "${prop.name}" is not writable`)
                         }
                         this.#setProperty(prop.name, v).catch((error) =>
-                            logError(Error.isError(error) ? error : Error(String(error))),
+                            logError(isError(error) ? error : Error(String(error))),
                         )
                     },
                 }

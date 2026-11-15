@@ -166,3 +166,8 @@ export {
     writeBytes,
     writeAll,
 }
+
+/** `Error.isError` needs GJS 1.85, and a `GLib.Error` is not an `instanceof Error`. */
+export function isError(value: unknown): value is Error | GLib.Error {
+    return value instanceof Error || value instanceof GLib.Error
+}

@@ -2,7 +2,7 @@ import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { pspecFromGType } from "../gobject/gtype.js"
-import { createGTypeName, findDescriptor, kebabcase, pascalcase } from "../util.js"
+import { createGTypeName, findDescriptor, isError, kebabcase, pascalcase } from "../util.js"
 import {
     inferGType,
     type DBusGObject,
@@ -208,7 +208,7 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
                 try {
                     return (this.implementation[propertyName] = value)
                 } catch (err) {
-                    logError(Error.isError(err) ? err : Error(String(err)))
+                    logError(isError(err) ? err : Error(String(err)))
                 }
             }
 
@@ -243,7 +243,7 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
                     return new GLib.Variant(prop.signature, value)
                 }
             } catch (err) {
-                logError(Error.isError(err) ? err : Error(String(err)))
+                logError(isError(err) ? err : Error(String(err)))
             }
             return null
         }
@@ -267,7 +267,7 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
             try {
                 this.#setProperty(propertyName, value.deepUnpack())
             } catch (err) {
-                logError(Error.isError(err) ? err : Error(String(err)))
+                logError(isError(err) ? err : Error(String(err)))
             }
         }
 
