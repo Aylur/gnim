@@ -297,14 +297,10 @@ export class GtkRenderer extends BaseRenderer {
             append: (p, c) => p.set_popover(c),
             remove: (p, c) => p.popover === c && p.set_popover(null),
         }),
-        ...(Gtk.PopoverBin
-            ? [
-                  rule(Gtk.PopoverBin, Gtk.Popover, {
-                      append: (p, c) => p.set_popover(c),
-                      remove: (p, c) => p.popover === c && p.set_popover(null),
-                  }),
-              ]
-            : []),
+        rule(Gtk.PopoverBin, Gtk.Popover, {
+            append: (p, c) => p.set_popover(c),
+            remove: (p, c) => p.popover === c && p.set_popover(null),
+        }),
         rule(Gtk.MenuButton, Gio.MenuModel, {
             append: (p, c) => p.set_menu_model(c),
             remove: (p) => p.set_menu_model(null),
@@ -450,7 +446,7 @@ export class GtkRenderer extends BaseRenderer {
             append: (p, c) => p.add_window(c),
             remove: (p, c) => p.remove_window(c),
         }),
-    ]
+    ].filter((r) => r.parent && r.child)
 
     private applyRules(
         op: "append" | "remove",
