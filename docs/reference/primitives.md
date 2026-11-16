@@ -237,14 +237,20 @@ subscribe(a, () => {
 })
 
 const unsubscribe = subscribe(
-  () => {
-    a()
-    b()
-  },
+  () => [a(), b()],
   () => console.log("a or b changed"),
 )
 
 unsubscribe() // can be stopped manually
+```
+
+Notice that `prev` is the return value of the previus `callback`.
+
+```ts
+subscribe(a, (count = 0) => {
+  console.log("changed", count, times)
+  return count + 1
+})
 ```
 
 > [!WARNING]
