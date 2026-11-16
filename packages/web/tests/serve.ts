@@ -68,6 +68,21 @@ describe("serve", () => {
         expect(address).toBeInstanceOf(Gio.InetSocketAddress)
     })
 
+    it("keeps percent-encoded delimiters in the path of the request URL", async () => {
+        let received: Request | null = null
+        const server = start({
+            fetch(request) {
+                received = request
+                return new Response(null, { status: 204 })
+            },
+        })
+
+        await fetch(url(server, "/a%2Fb%3Fc%23d%25e?q=%26%23"))
+        const { pathname, search } = new URL((received! as Request).url)
+        expect(pathname).toBe("/a%2Fb%3Fc%23d%25e")
+        expect(search).toBe("?q=%26%23")
+    })
+
     it("sends the status, status text and headers of the response", async () => {
         const server = start({
             fetch: () =>

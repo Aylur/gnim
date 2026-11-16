@@ -450,7 +450,6 @@ type ServeOptions = (
   serverHeader?: string
   tlsAuthMode?: Gio.TlsAuthenticationMode
   tlsDatabase?: Gio.TlsDatabase | null
-  rawPaths?: boolean
 }
 ```
 
@@ -470,8 +469,6 @@ type ServeOptions = (
   against `tlsDatabase`.
 - [`tlsDatabase`](https://libsoup.gnome.org/libsoup-3.0/property.Server.tls-database.html):
   the database client certificates are verified against.
-- [`rawPaths`](https://libsoup.gnome.org/libsoup-3.0/property.Server.raw-paths.html):
-  keep percent-encoded characters in the path of requests as they are.
 
 ## Differences from browsers and other runtimes
 

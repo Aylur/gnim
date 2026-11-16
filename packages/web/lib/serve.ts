@@ -34,8 +34,6 @@ interface ServerProps {
     tlsAuthMode?: Gio.TlsAuthenticationMode
     /** Verifies client certificates. */
     tlsDatabase?: Gio.TlsDatabase | null
-    /** Keeps percent-encoded characters of the path as they are. */
-    rawPaths?: boolean
 }
 
 type ServeOptions = ServerProps &
@@ -389,13 +387,22 @@ function serve(options: ServeOptions): Server {
         hostname = "localhost",
         unix,
         tls,
-        ...props
+        serverHeader,
+        tlsAuthMode,
+        tlsDatabase,
     } = options
     const address: Address = typeof unix === "string" ? { unix } : { port, hostname }
     const certificate = tls ? tlsCertificate(tls) : null
     const secure = certificate !== null
 
-    const soup = new Soup.Server({ ...props, tlsCertificate: certificate })
+    const soup = new Soup.Server({
+        serverHeader,
+        tlsAuthMode,
+        tlsDatabase,
+        rawPaths: true,
+        tlsCertificate: certificate,
+    })
+
     listen(soup, address, secure ? Soup.ServerListenOptions.HTTPS : 0)
 
     const messages = new WeakMap<Request, Soup.ServerMessage>()
