@@ -38,18 +38,25 @@ describe("getLocale", () => {
         expect(getLocale().toString()).toBe("de-DE")
     })
 
-    it.each(["C", "POSIX", "not a locale"])("falls back to en-US on %s", async (lang) => {
-        vi.stubGlobal("logError", vi.fn())
+    it.each(["C", "C.UTF-8", "POSIX"])("falls back to en-US on %s", async (lang) => {
         const { getLocale } = await importLocale({ LANG: lang })
 
         expect(getLocale().toString()).toBe("en-US")
     })
 
     it("falls back to en-US when the variable is unset", async () => {
-        vi.stubGlobal("logError", vi.fn())
         const { getLocale } = await importLocale({})
 
         expect(getLocale().toString()).toBe("en-US")
+    })
+
+    it("logs an error and falls back to en-US on an invalid locale", async () => {
+        const logError = vi.fn()
+        vi.stubGlobal("logError", logError)
+        const { getLocale } = await importLocale({ LANG: "not a locale" })
+
+        expect(getLocale().toString()).toBe("en-US")
+        expect(logError).toHaveBeenCalledOnce()
     })
 })
 
@@ -67,13 +74,24 @@ describe("getPreferredLocale", () => {
     })
 
     it("falls through to the next variable when LANGUAGE has no usable entry", async () => {
-        vi.stubGlobal("logError", vi.fn())
         const { getPreferredLocale } = await importLocale({
-            LANGUAGE: "C",
+            LANGUAGE: "C.UTF-8",
             LC_MESSAGES: "hu_HU.UTF-8",
         })
 
         expect(getPreferredLocale()).toBe("hu-HU")
+    })
+
+    it("logs an error when LANGUAGE has no valid entry", async () => {
+        const logError = vi.fn()
+        vi.stubGlobal("logError", logError)
+        const { getPreferredLocale } = await importLocale({
+            LANGUAGE: "not a locale:C",
+            LANG: "hu_HU.UTF-8",
+        })
+
+        expect(getPreferredLocale()).toBe("hu-HU")
+        expect(logError).toHaveBeenCalledOnce()
     })
 
     it("prefers LANGUAGE over the LC_* variables", async () => {

@@ -12,7 +12,11 @@ type FmtArgs<T, Fn> = T extends {
     ? Prettify<Args & Record<Extract<Tags, string>, Fn>>
     : never
 
-const preferredLocale = /* @__PURE__ */ getPreferredLocale()
+let preferredLocale: string | string[] | null = null
+
+function locale() {
+    return (preferredLocale ??= getPreferredLocale())
+}
 
 /**
  * Replace placeholders and format XML tags as strings.
@@ -31,7 +35,7 @@ export function fmt<T extends Text<any>>(
 ): JSX.Element
 
 export function fmt(text: string, fmtArgs: Record<string, any>): GnimNode {
-    return new IntlMessageFormat(text, preferredLocale).format(fmtArgs)
+    return new IntlMessageFormat(text, locale()).format(fmtArgs)
 }
 
 type StringFmtArgs<T> = T extends {
@@ -46,7 +50,7 @@ type StringFmtArgs<T> = T extends {
 export function sfmt<T extends Text<any>>(text: T, fmtArgs: StringFmtArgs<T>): string
 
 export function sfmt(text: string, fmtArgs: Record<string, PrimitiveType>): string {
-    const message = new IntlMessageFormat(text, preferredLocale, undefined, { ignoreTag: true })
+    const message = new IntlMessageFormat(text, locale(), undefined, { ignoreTag: true })
 
     const result = message.format(fmtArgs)
     if (Array.isArray(result)) {

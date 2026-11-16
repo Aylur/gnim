@@ -19,23 +19,36 @@ type LocaleEnvVar =
 
 const cache = new Map<LocaleEnvVar, Intl.Locale>()
 
+/** Strips the codeset and modifier, e.g. `de_DE.UTF-8@euro` -> `de_DE`. */
+function baseName(name: string) {
+    return name.replace(/\..*$/, "").replace(/@.*$/, "")
+}
+
+function isDefaultLocale(name: string) {
+    const base = baseName(name)
+    return !base || base === "C" || base === "POSIX"
+}
+
 function parseLocale(name: string): Intl.Locale | null {
-    if (!name || name === "C" || name === "POSIX") return null
+    if (isDefaultLocale(name)) return null
 
     try {
-        return new Intl.Locale(name.replace(/\..*$/, "").replace(/@.*$/, "").replace(/_/g, "-"))
+        return new Intl.Locale(baseName(name).replace(/_/g, "-"))
     } catch {
         return null
     }
 }
 
 function getLocaleFromEnv(env: LocaleEnvVar): Intl.Locale {
-    const lang = GLib.getenv(env)
-    const locale = lang ? parseLocale(lang) : null
+    const lang = GLib.getenv(env) ?? ""
+    const locale = parseLocale(lang)
 
     if (locale) return locale
 
-    logError(Error(`Variable ${env} does not specify a locale, falling back to en-US`))
+    if (!isDefaultLocale(lang)) {
+        logError(new Error(`Variable ${env} does not specify a valid locale: ${lang}, using en-US`))
+    }
+
     return new Intl.Locale("en-US")
 }
 
@@ -67,7 +80,9 @@ export function getPreferredLocale(): string | string[] {
 
         if (locales.length > 0) return locales
 
-        logError(Error(`Variable LANGUAGE does not specify any locale: ${language}`))
+        if (!language.split(":").every(isDefaultLocale)) {
+            logError(new Error(`Variable LANGUAGE does not specify any valid locale: ${language}`))
+        }
     }
 
     if (GLib.getenv("LC_ALL")) {
