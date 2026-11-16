@@ -1,6 +1,7 @@
 import GLib from "gi://GLib?version=2.0"
 import Gio from "gi://Gio?version=2.0"
 import Soup from "gi://Soup?version=3.0"
+import GObject from "gi://GObject?version=2.0"
 import { Blob, File, blobChunks } from "./blob.js"
 import { decoder, encoder } from "./lib.js"
 import { URLSearchParams } from "./url.js"
@@ -32,7 +33,13 @@ function toEntry(
 /**
  * Implementation of the [FormData](https://developer.mozilla.org/docs/Web/API/FormData) web API.
  */
-class FormData {
+class FormData extends GObject.Object {
+    declare static readonly $gtype: GObject.GType<FormData>
+
+    static {
+        GObject.registerClass({ GTypeName: "GnimWeb_FormData" }, this)
+    }
+
     #list: Array<[string, FormDataEntryValue]> = []
 
     /** Appends an entry. A `Blob` or `Gio.File` value becomes a `File`. */
@@ -65,6 +72,7 @@ class FormData {
     /** Replaces all entries named `name` with a single entry. */
     set(name: string, value: string): void
     set(name: string, value: Blob | Gio.File, filename?: string): void
+    set(...args: never[]): unknown
     set(name: string, value: string | Blob | Gio.File, filename?: string): void {
         const entry = toEntry(name, value, filename ?? null)
         const i = this.#list.findIndex(([n]) => n === name)

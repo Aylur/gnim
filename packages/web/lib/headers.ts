@@ -1,4 +1,5 @@
 import Soup from "gi://Soup?version=3.0"
+import GObject from "gi://GObject?version=2.0"
 
 export type HeadersInit =
     Headers | Soup.MessageHeaders | Iterable<readonly [string, string]> | Record<string, string>
@@ -27,7 +28,13 @@ let isFrozen: (headers: Headers) => boolean
 /**
  * Implementation of the [Headers](https://developer.mozilla.org/docs/Web/API/Headers) web API.
  */
-class Headers {
+class Headers extends GObject.Object {
+    declare static readonly $gtype: GObject.GType<Headers>
+
+    static {
+        GObject.registerClass({ GTypeName: "GnimWeb_Headers" }, this)
+    }
+
     #list: Array<[string, string]> = []
     #immutable = false
 
@@ -37,6 +44,8 @@ class Headers {
     }
 
     constructor(init: HeadersInit = {}) {
+        super()
+
         if (init instanceof Headers) {
             this.#list = init.#list.map(([name, value]) => [name, value])
         } else if (init instanceof Soup.MessageHeaders) {
@@ -103,6 +112,8 @@ class Headers {
     }
 
     /** Replaces all values of `name` with `value`. */
+    set(name: string, value: string): void
+    set(...args: never[]): unknown
     set(name: string, value: string): void {
         const v = normalizeValue(value)
         validate(name, v)

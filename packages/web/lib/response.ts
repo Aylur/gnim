@@ -1,3 +1,4 @@
+import GObject from "gi://GObject?version=2.0"
 import { Body, type BodyInit, initBody } from "./body.js"
 import { Headers, type HeadersInit, freezeHeaders, isFrozenHeaders } from "./headers.js"
 import { URL } from "./url.js"
@@ -28,6 +29,12 @@ let init: (response: Response, state: Partial<ResponseState>) => void
  * Implementation of the [Response](https://developer.mozilla.org/docs/Web/API/Response) web API.
  */
 class Response extends Body {
+    declare static readonly $gtype: GObject.GType<Response>
+
+    static {
+        GObject.registerClass({ GTypeName: "GnimWeb_Response" }, this)
+    }
+
     #state: ResponseState
 
     static {

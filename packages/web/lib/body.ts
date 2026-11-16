@@ -1,4 +1,5 @@
 import GLib from "gi://GLib?version=2.0"
+import GObject from "gi://GObject?version=2.0"
 import Gio from "gi://Gio?version=2.0"
 import { Blob, File, blobChunks } from "./blob.js"
 import { FormData, decodeFormData, encodeFormData } from "./formdata.js"
@@ -160,7 +161,13 @@ let init: (body: Body, source: BodySource | null) => void
 /**
  * Shared implementation of the body mixin used by `Request` and `Response`.
  */
-abstract class Body {
+abstract class Body extends GObject.Object {
+    declare static readonly $gtype: GObject.GType<Body>
+
+    static {
+        GObject.registerClass({ GTypeName: "GnimWeb_Body" }, this)
+    }
+
     #source: BodySource | null = null
     #used = false
     #stream: Gio.InputStream | null = null
@@ -177,7 +184,9 @@ abstract class Body {
      * @param body the body to extract, or another body whose source is transferred
      * @param headers receives a default `content-type` when it does not have one
      */
-    protected constructor(body: BodyInit | Body | null, headers: Headers) {
+    constructor(body: BodyInit | Body | null, headers: Headers) {
+        super()
+
         this.headers = headers
 
         if (body instanceof Body) {
@@ -293,11 +302,11 @@ abstract class Body {
 
 export {
     Body,
+    bodyChunks,
+    init as initBody,
+    isReplayable,
+    sourceStream,
+    take as takeBody,
     type BodyInit,
     type BodySource,
-    take as takeBody,
-    init as initBody,
-    bodyChunks,
-    sourceStream,
-    isReplayable,
 }

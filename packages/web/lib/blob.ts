@@ -1,5 +1,6 @@
-import GLib from "gi://GLib?version=2.0"
 import Gio from "gi://Gio?version=2.0"
+import GLib from "gi://GLib?version=2.0"
+import GObject from "gi://GObject?version=2.0"
 import {
     CHUNK_SIZE,
     collect,
@@ -96,7 +97,13 @@ let chunksOf: (blob: Blob) => AsyncGenerator<Uint8Array>
 /**
  * Implementation of the [Blob](https://developer.mozilla.org/docs/Web/API/Blob) web API.
  */
-class Blob {
+class Blob extends GObject.Object {
+    declare static readonly $gtype: GObject.GType<Blob>
+
+    static {
+        GObject.registerClass({ GTypeName: "GnimWeb_Blob" }, this)
+    }
+
     #parts: Part[]
     #size: number
     readonly #type: string
@@ -106,6 +113,8 @@ class Blob {
     }
 
     constructor(parts: Iterable<BlobPart> = [], options: BlobPropertyBag = {}) {
+        super()
+
         const { type = "", endings = "transparent" } = options
         if (endings !== "transparent" && endings !== "native") {
             throw new TypeError(`Blob: invalid endings "${endings}"`)
@@ -205,6 +214,12 @@ function gioFileInit(file: Gio.File, name?: string): { name: string; options: Fi
  * Implementation of the [File](https://developer.mozilla.org/docs/Web/API/File) web API.
  */
 class File extends Blob {
+    declare static readonly $gtype: GObject.GType<File>
+
+    static {
+        GObject.registerClass({ GTypeName: "GnimWeb_File" }, this)
+    }
+
     /** The name of the file. */
     readonly name: string
     /**
@@ -232,9 +247,9 @@ class File extends Blob {
 
 export {
     Blob,
+    chunksOf as blobChunks,
     File,
     type BlobPart,
     type BlobPropertyBag,
     type FilePropertyBag,
-    chunksOf as blobChunks,
 }

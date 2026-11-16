@@ -289,13 +289,9 @@ function pspec(
     if (declaration instanceof GObject.ParamSpec) return declaration
 
     // special cased for `import.meta.GNIM_DISABLE_GLOBAL_OVERRIDES`
-    if (
-        declaration === Date ||
-        declaration === Function ||
-        declaration === Array ||
-        declaration === Set ||
-        declaration === Map
-    ) {
+    const jsobjectTypes: unknown[] = [Date, Function, Array, Set, Map, Error, Uint8Array, Promise]
+
+    if (jsobjectTypes.includes(declaration)) {
         return GObject.ParamSpec.jsobject(name, "", "", flags)
     }
 

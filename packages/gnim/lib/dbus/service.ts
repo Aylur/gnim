@@ -442,7 +442,7 @@ export async function serve<T extends InterfaceDeclaration, S extends ServiceImp
                     cancellable?.set_error_if_cancelled()
                     exported = service.export(conn, objectPath)
                 } catch (error) {
-                    reject(error)
+                    rejectService(error)
                 }
             },
             resolveService,
@@ -468,6 +468,8 @@ export async function serve<T extends InterfaceDeclaration, S extends ServiceImp
         const cancelId = cancellable?.connect(() => {
             unexport()
             Gio.bus_unown_name(busId)
+            if (settled) return
+            settled = true
             try {
                 cancellable.set_error_if_cancelled()
             } catch (error) {

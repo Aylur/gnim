@@ -143,6 +143,18 @@ declare global {
     interface SetConstructor {
         $gtype: GObject.GType<Set<any>>
     }
+
+    interface ErrorConstructor {
+        $gtype: GObject.GType<Error>
+    }
+
+    interface Uint8ArrayConstructor {
+        $gtype: GObject.GType<Uint8Array>
+    }
+
+    interface PromiseConstructor {
+        $gtype: GObject.GType<Promise<any>>
+    }
 }
 
 // @ts-expect-error let gnome-shell extensions disable it
@@ -152,6 +164,9 @@ if (!import.meta.GNIM_DISABLE_GLOBAL_OVERRIDES) {
     Date.$gtype = GObject.TYPE_JSOBJECT as DateConstructor["$gtype"]
     Map.$gtype = GObject.TYPE_JSOBJECT as MapConstructor["$gtype"]
     Set.$gtype = GObject.TYPE_JSOBJECT as SetConstructor["$gtype"]
+    Error.$gtype = GObject.TYPE_JSOBJECT as ErrorConstructor["$gtype"]
+    Uint8Array.$gtype = GObject.TYPE_JSOBJECT as Uint8ArrayConstructor["$gtype"]
+    Promise.$gtype = GObject.TYPE_JSOBJECT as PromiseConstructor["$gtype"]
 }
 
 export type Annotations<O extends GObject.Object, S extends keyof O> = {

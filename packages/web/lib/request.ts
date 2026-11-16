@@ -1,5 +1,6 @@
 import type Gio from "gi://Gio?version=2.0"
 import type Soup from "gi://Soup?version=3.0"
+import GObject from "gi://GObject?version=2.0"
 import { Body, type BodyInit, initBody } from "./body.js"
 import { Headers, type HeadersInit } from "./headers.js"
 import { URL } from "./url.js"
@@ -80,6 +81,12 @@ function normalizeMethod(method: string): string {
  * Implementation of the [Request](https://developer.mozilla.org/docs/Web/API/Request) web API.
  */
 class Request extends Body {
+    declare static readonly $gtype: GObject.GType<Request>
+
+    static {
+        GObject.registerClass({ GTypeName: "GnimWeb_Request" }, this)
+    }
+
     /** The URL of the request. */
     readonly url: string
     /** The method, uppercase for the standard methods. */

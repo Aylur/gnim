@@ -1,4 +1,5 @@
 import GLib from "gi://GLib?version=2.0"
+import GObject from "gi://GObject?version=2.0"
 import { decoder, encoder } from "./lib.js"
 
 type URLSearchParamsInit =
@@ -64,7 +65,13 @@ let resetSearchParams: (params: URLSearchParams, query: string) => void
 /**
  * Implementation of the [URLSearchParams](https://developer.mozilla.org/docs/Web/API/URLSearchParams) web API.
  */
-class URLSearchParams {
+class URLSearchParams extends GObject.Object {
+    declare static readonly $gtype: GObject.GType<URLSearchParams>
+
+    static {
+        GObject.registerClass({ GTypeName: "GnimWeb_URLSearchParams" }, this)
+    }
+
     #list: Array<[string, string]> = []
     #onUpdate: ((query: string) => void) | null = null
 
@@ -78,6 +85,8 @@ class URLSearchParams {
     }
 
     constructor(init: URLSearchParamsInit = "") {
+        super()
+
         if (typeof init === "string") {
             this.#list = parseQuery(init.startsWith("?") ? init.slice(1) : init)
         } else if (init instanceof URLSearchParams) {
@@ -153,6 +162,8 @@ class URLSearchParams {
      * Sets the value of `name`, replacing all of its values.
      * [MDN](https://developer.mozilla.org/docs/Web/API/URLSearchParams/set)
      */
+    set(name: string, value: string): void
+    set(...args: never[]): unknown
     set(name: string, value: string): void {
         const i = this.#list.findIndex(([n]) => n === name)
         if (i === -1) {
@@ -375,7 +386,13 @@ function resolve(url: string | URL, base: string | URL): string {
  * Implementation of the [URL](https://developer.mozilla.org/docs/Web/API/URL) web API
  * on top of [GLib.Uri](https://docs.gtk.org/glib/struct.Uri.html).
  */
-class URL {
+class URL extends GObject.Object {
+    declare static readonly $gtype: GObject.GType<URL>
+
+    static {
+        GObject.registerClass({ GTypeName: "GnimWeb_URL" }, this)
+    }
+
     #c: Components
     readonly #searchParams: URLSearchParams
 
@@ -402,6 +419,8 @@ class URL {
     constructor(url: GLib.Uri)
     constructor(url: string | URL, base?: string | URL)
     constructor(url: string | URL | GLib.Uri, base?: string | URL) {
+        super()
+
         this.#c = parse(url instanceof GLib.Uri || !base ? href(url) : resolve(url, base))
         this.#searchParams = new URLSearchParams(this.#c.query ?? "")
         attachSearchParams(this.#searchParams, (query) => {
