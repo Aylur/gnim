@@ -24,7 +24,7 @@ console.log("Hello", { world: true })
 
 `console.profile()`, `console.profileEnd()` and `console.timeStamp()` are not
 implemented. Messages are logged with the `Gjs-Console` log domain by default,
-see [`setConsoleLogDomain`](#setconsolelogdomain).
+see [`setConsoleLogDomain`](#console-module).
 
 > [!WARNING]
 >
@@ -67,7 +67,7 @@ Example:
 log("Hello World")
 ```
 
-Prefer [`console.log`](#console-log).
+Prefer [`console.log`](#console).
 
 ### `print`
 
@@ -325,7 +325,7 @@ const current = setlocale(LocaleCategory.ALL, null)
 Pass `null` as `locale` to query the current locale. It is rarely necessary to
 call this, GJS sets the locale from the environment on startup.
 
-## `console`
+## `console` {#console-module}
 
 Configures the global [`console`](#console) object.
 
