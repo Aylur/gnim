@@ -148,6 +148,12 @@ function bodyRedirect(message: Soup.Message, request: Request): URL | null {
     return new URL(location, message.get_uri().to_string())
 }
 
+function fragmentlessHref(url: string): string {
+    const parsed = new URL(url)
+    parsed.hash = ""
+    return parsed.href
+}
+
 /**
  * Implementation of the [fetch](https://developer.mozilla.org/docs/Web/API/Window/fetch) web API.
  *
@@ -212,7 +218,7 @@ export async function fetch(
     const hasBody = request.method !== "HEAD" && !NULL_BODY_STATUS.includes(status)
     if (!hasBody) closeStream(stream).catch(logError)
 
-    const finalUrl = message.get_uri().to_string()
+    const finalUrl = fragmentlessHref(message.get_uri().to_string())
 
     const response = new Response(null, { headers: message.get_response_headers() })
     if (hasBody) initBody(response, { kind: "stream", stream, cancellable: request.signal })
@@ -221,8 +227,8 @@ export async function fetch(
         status,
         statusText: message.get_reason_phrase() ?? "",
         type: "basic",
-        url: new URL(finalUrl).href,
-        redirected: redirects > 0 || finalUrl !== url.href,
+        url: finalUrl,
+        redirected: redirects > 0 || finalUrl !== fragmentlessHref(url.href),
     })
 
     freezeHeaders(response.headers)

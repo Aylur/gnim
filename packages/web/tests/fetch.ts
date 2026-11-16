@@ -39,6 +39,12 @@ describe("fetch", () => {
         expect(await response.text()).toBe("hello")
     })
 
+    it("leaves the fragment out of the response URL", async () => {
+        const response = await fetch(server.url("/text#fragment"))
+        expect(response.url).toBe(server.url("/text"))
+        expect(response.redirected).toBe(false)
+    })
+
     it("sends method, headers and body", async () => {
         const response = await fetch(server.url("/echo"), {
             method: "PUT",
