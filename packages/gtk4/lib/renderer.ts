@@ -56,6 +56,12 @@ function rule<P extends GObject.Object, C extends GObject.Object>(
     return { parent, child, ...impl }
 }
 
+export function loadCss(provider: Gtk.CssProvider, css: string) {
+    // load_from_string was added in GTK 4.12
+    if (Gtk.get_minor_version() >= 12) provider.load_from_string(css)
+    else provider.load_from_data(css, -1)
+}
+
 function setCss(widget: Gtk.Widget, css: string) {
     if (!css.includes("{") || !css.includes("}")) {
         css = css.trim().endsWith(";") ? `* { ${css} }` : `* { ${css}; }`
@@ -67,7 +73,7 @@ function setCss(widget: Gtk.Widget, css: string) {
     if (prev) ctx.remove_provider(prev)
 
     const provider = new Gtk.CssProvider()
-    provider.load_from_string(css)
+    loadCss(provider, css)
     ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
     cssProviders.set(widget, provider)
 }

@@ -143,10 +143,10 @@ async function writeAll(
     data: Uint8Array,
     cancellable: Gio.Cancellable | null,
 ) {
-    let bytes = new GLib.Bytes(data)
-    while (bytes.get_size() > 0) {
-        const written = await writeBytes(output, bytes, cancellable)
-        bytes = GLib.Bytes.new_from_bytes(bytes, written, bytes.get_size() - written)
+    // GLib.Bytes.new_from_bytes is an instance method before GJS 1.85, so the rest is copied
+    while (data.byteLength > 0) {
+        const written = await writeBytes(output, new GLib.Bytes(data), cancellable)
+        data = data.subarray(written)
     }
 }
 

@@ -1,6 +1,7 @@
 import Gdk from "gi://Gdk?version=4.0"
 import Gtk from "gi://Gtk?version=4.0"
 import { computed, onCleanup, type Accessor, type MaybeAccessor } from "gnim"
+import { loadCss } from "./renderer.js"
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {}
 
@@ -55,7 +56,7 @@ function injectCss(stylesheet: string): () => void {
         logError(Error(`css error: ${error.message}`))
     })
 
-    provider.load_from_string(stylesheet)
+    loadCss(provider, stylesheet)
 
     Gtk.StyleContext.add_provider_for_display(display, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
 

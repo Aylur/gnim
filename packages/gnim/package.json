@@ -85,7 +85,7 @@
         "llms-full.txt"
     ],
     "engines": {
-        "gjs": ">=1.83.0"
+        "gjs": ">=1.74.0"
     },
     "keywords": [
         "GJS",

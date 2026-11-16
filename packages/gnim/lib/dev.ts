@@ -1,7 +1,6 @@
 import Gettext from "gettext"
 import gi from "gi"
 import Gio from "gi://Gio?version=2.0"
-import GIRepository from "gi://GIRepository?version=3.0"
 import GLib from "gi://GLib?version=2.0"
 import GObject from "gi://GObject?version=2.0"
 import { type FC } from "./jsx/element.js"
@@ -29,11 +28,7 @@ type SocketMsg = {
 let sourceCss: null | ((id: string, stylesheet: string) => void) = null
 
 function path([root, ...segments]: [root: string | Gio.File, ...segments: string[]]) {
-    const file = Gio.file_new_build_filenamev([
-        typeof root === "string" ? root : root.get_path()!,
-        ...segments,
-    ])
-    return file.get_path()!
+    return GLib.build_filenamev([typeof root === "string" ? root : root.get_path()!, ...segments])
 }
 
 function exists(file: string) {
@@ -89,7 +84,10 @@ function initIcons() {
 
 function initLibdir() {
     const root = props.root ?? GLib.get_current_dir()
-    const gir = GIRepository.Repository.dup_default()
+    const Repo = gi.require("GIRepository")
+
+    // GJS uses GIRepository 2.0 before 1.85, where these are static
+    const gir = Repo.__version__ === "3.0" ? Repo.Repository.dup_default() : Repo.Repository
     const id = props.applicationId
 
     const dist = path([root, "dist"])
@@ -142,7 +140,9 @@ function initCss() {
         const providers = new Map<string, InstanceType<typeof Gtk.CssProvider>>()
         sourceCss = function (id: string, stylesheet: string) {
             const provider = providers.get(id) ?? newGtk4Provider()
-            provider.load_from_string(stylesheet)
+            // load_from_string was added in GTK 4.12
+            if (Gtk.get_minor_version() >= 12) provider.load_from_string(stylesheet)
+            else provider.load_from_data(stylesheet, -1)
             if (!providers.has(id)) {
                 providers.set(id, provider)
                 Gtk.StyleContext.add_provider_for_display(

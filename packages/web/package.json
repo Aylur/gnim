@@ -42,7 +42,7 @@
         "dist"
     ],
     "engines": {
-        "gjs": ">=1.83.0"
+        "gjs": ">=1.82.0"
     },
     "keywords": [
         "GJS",
