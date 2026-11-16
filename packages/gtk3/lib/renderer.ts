@@ -21,6 +21,7 @@ const noop = () => {}
 const dummyBuilder = new Gtk.Builder()
 const encoder = new TextEncoder()
 const cssProviders = new WeakMap<Gtk.Widget, Gtk.CssProvider>()
+const cssClasses = new WeakMap<Gtk.Widget, string[]>()
 
 /**
  * @returns The `slot` that was set in JSX on `object`.
@@ -65,6 +66,22 @@ function setCss(widget: Gtk.Widget, css: string) {
     provider.load_from_data(encoder.encode(css))
     ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
     cssProviders.set(widget, provider)
+}
+
+function setClasses(widget: Gtk.Widget, classList: string) {
+    const ctx = widget.get_style_context()
+    const next = classList.split(/\s+/).filter((n) => n !== "")
+    const prev = cssClasses.get(widget) ?? []
+
+    for (const name of prev) {
+        if (!next.includes(name)) ctx.remove_class(name)
+    }
+
+    for (const name of next) {
+        ctx.add_class(name)
+    }
+
+    cssClasses.set(widget, next)
 }
 
 function flattenClassList(classList: unknown): MaybeAccessor<string> {
@@ -226,16 +243,7 @@ export class GtkRenderer extends BaseRenderer {
         }
 
         if (object instanceof Gtk.Widget && key === "class" && typeof value === "string") {
-            const ctx = object.get_style_context()
-
-            for (const name of ctx.list_classes()) {
-                ctx.remove_class(name)
-            }
-
-            for (const name of value.split(/\s+/).filter((n) => n !== "")) {
-                ctx.add_class(name)
-            }
-            return
+            return setClasses(object, value)
         }
 
         super.setProperty(object, key, value)

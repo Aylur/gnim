@@ -92,18 +92,14 @@ return (
 )
 ```
 
+`class` only adds and removes the class names it lists, so the classes a widget
+has by default, such as `text-button` on a `Gtk.Button`, are kept.
+
 > [!WARNING]
 >
-> Passing `cssClasses` or `class` assigns the widget's `css-classes` property,
-> which means any class name that a widget might have by default will be
-> overwritten. To preserve them, they have to be explicitly specified. Or you
-> might want to imperatively append/remove class names instead.
->
-> ```tsx
-> return <Gtk.Window class={["background", "MyWindow"]} />
->
-> return <Gtk.Window ref={(self) => self.add_css_class("MyWindow")} />
-> ```
+> Passing `cssClasses` assigns the widget's `css-classes` property, which means
+> any class name that a widget might have by default will be overwritten. Prefer
+> `class` instead.
 
 ## `getSlot`
 
