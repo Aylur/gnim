@@ -58,7 +58,6 @@ function rule<P extends GObject.Object, C extends GObject.Object>(
 }
 
 export function loadCss(provider: Gtk.CssProvider, css: string) {
-    // load_from_string was added in GTK 4.12
     if (Gtk.get_minor_version() >= 12) provider.load_from_string(css)
     else provider.load_from_data(css, -1)
 }
@@ -233,10 +232,10 @@ export class GtkRenderer extends BaseRenderer {
                       remove: (p, c) => p.menuModel === c && p.set_menu_model(null),
                   }),
                   rule(Adw.Window, Gtk.Widget, {
-                      remove: (p, c) => p.content === c && p.set_content(null),
+                      remove: (p, c) => void (p.content === c && p.set_content(null)),
                   }),
                   rule(Adw.ApplicationWindow, Gtk.Widget, {
-                      remove: (p, c) => p.content === c && p.set_content(null),
+                      remove: (p, c) => void (p.content === c && p.set_content(null)),
                   }),
                   rule(Adw.NavigationSplitView, Gtk.Widget, {
                       remove(p, c) {
@@ -464,6 +463,18 @@ export class GtkRenderer extends BaseRenderer {
         rule(Gtk.ShortcutsWindow, Gtk.ShortcutsSection, {
             remove: (_, c) => (c.get_parent() as Gtk.Stack | null)?.remove(c),
         }),
+        rule(Gtk.Window, Gtk.Widget, {
+            when: (p, c) => p.get_titlebar() === c,
+            remove: (p) => p.set_titlebar(null),
+        }),
+        rule(Gtk.Frame, Gtk.Widget, {
+            when: (p, c) => p.get_label_widget() === c,
+            remove: (p) => p.set_label_widget(null),
+        }),
+        rule(Gtk.Expander, Gtk.Widget, {
+            when: (p, c) => p.get_label_widget() === c,
+            remove: (p) => p.set_label_widget(null),
+        }),
         rule(Gtk.WindowGroup, Gtk.Window, {
             append: (p, c) => p.add_window(c),
             remove: (p, c) => p.remove_window(c),
@@ -571,7 +582,12 @@ export class GtkRenderer extends BaseRenderer {
 
             // Most Bin-like containers have a .set_child()
             if ("set_child" in parent && typeof parent.set_child == "function") {
-                return parent.set_child(null)
+                if (!child.get_parent()) return
+                const current =
+                    "get_child" in parent && typeof parent.get_child == "function"
+                        ? parent.get_child()
+                        : null
+                if (current === child) return parent.set_child(null)
             }
         }
 

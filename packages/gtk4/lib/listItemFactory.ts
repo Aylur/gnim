@@ -26,10 +26,11 @@ export type Factory<T extends GObject.Object> = (item: Accessor<Item<T> | null>)
 class ListItemFactoryChild<T extends GObject.Object> extends GObject.Object implements Buildable {
     setValue!: (value: Item<T> | null) => void
     teardown!: () => void
-    child: Gtk.Widget | null = null
+    listItem: Item<T>
 
-    constructor(scope: Scope, factory: Factory<T>) {
+    constructor(listItem: Item<T>, scope: Scope, factory: Factory<T>) {
         super()
+        this.listItem = listItem
 
         createRoot((teardown) => {
             const [value, setValue] = createState<Item<T> | null>(null)
@@ -39,17 +40,17 @@ class ListItemFactoryChild<T extends GObject.Object> extends GObject.Object impl
         }, scope)
     }
 
-    [appendChild](item: GObject.Object) {
-        if (item instanceof Gtk.Widget) {
-            this.child = item
+    [appendChild](child: GObject.Object) {
+        if (child instanceof Gtk.Widget) {
+            this.listItem.child = child
             return true
         }
         return false
     }
 
-    [removeChild](item: GObject.Object) {
-        if (this.child === item) {
-            this.child = null
+    [removeChild](child: GObject.Object) {
+        if (this.listItem.child === child) {
+            this.listItem.child = null
             return true
         }
         return false
@@ -70,9 +71,7 @@ export function createListItemFactory<T extends GObject.Object>(
 
     return newObject(Gtk.SignalListItemFactory, {
         onSetup: factoryHandler<T>((item) => {
-            const child = new ListItemFactoryChild(scope, fn)
-            item.child = child.child
-            itemMap.set(item, child)
+            itemMap.set(item, new ListItemFactoryChild(item, scope, fn))
         }),
         onTeardown: factoryHandler<T>((item) => {
             itemMap.get(item)?.teardown()
