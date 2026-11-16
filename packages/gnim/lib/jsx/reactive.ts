@@ -57,7 +57,7 @@ export interface Accessor<T = unknown> {
  */
 export function subscribe<T>(track: () => void, callback: (prev?: T) => T): Signal.Fn {
     let first = true
-    const effect = new Signal.Effect<T>((prev) => {
+    const effect = new Signal.Effect<T>("render", (prev) => {
         track()
         if (first) {
             return void (first = false) as T
@@ -120,8 +120,7 @@ export function createContext<T>(defaultValue: T): Context<T> {
 
     function Context(props: { value: T; children: GnimNode }) {
         const { value, children } = props
-        const scope = Signal.createScope({ mountWithParent: true })
-        return Signal.runScope(scope, () => {
+        return Signal.runScope(Signal.createScope(), () => {
             Signal.setContext(ctx, value)
             return resolveNode(children)
         })
@@ -231,12 +230,7 @@ export function onCleanup(callback: Signal.Fn) {
  * immediately. Mount callbacks run untracked.
  */
 export function onMount(fn: Signal.Fn) {
-    const scope = Signal.getScope()
-    if (!scope || scope.mounted) {
-        untrack(fn)
-    } else {
-        Signal.onMount(fn)
-    }
+    Signal.onMount(fn)
 }
 
 /**
@@ -387,15 +381,8 @@ export function createState<T>(init: T, options?: StateOptions<NoInfer<T>>): Sta
     return [createAccessor(get), set]
 }
 
-type EffectOptions = {
-    /**
-     * Run the effect immediately instead of after the {@link Scope} returns.
-     */
-    immediate?: boolean
-}
-
 /**
- * Scedule a function which tracks reactive values accessed within
+ * Schedule a function which tracks reactive values accessed within
  * and re-runs synchronously whenever they change.
  *
  * Errors thrown by `fn` propagate to the code that triggered the run.
@@ -416,13 +403,22 @@ type EffectOptions = {
  * dispose() // stop effect manually
  * ```
  */
-export function effect<T = void>(fn: (prev?: T) => T, opts?: EffectOptions): Signal.Fn {
-    const effect = new Signal.Effect(fn)
-    if (opts?.immediate || !effect.parent || effect.parent.mounted) {
-        effect.run()
-    } else {
-        Signal.onMount(() => effect.run())
-    }
+export function effect<T = void>(fn: (prev?: T) => T): Signal.Fn {
+    const effect = new Signal.Effect("user", fn)
+    Signal.onMount(() => effect.run())
+    return () => effect.dispose()
+}
+
+/**
+ * Like {@link effect}, but runs immediately and re-runs before user effects
+ * and mount callbacks.
+ *
+ * @param fn Receives the value returned by the previous run.
+ * @returns A function that disposes the effect.
+ */
+export function renderEffect<T = void>(fn: (prev?: T) => T): Signal.Fn {
+    const effect = new Signal.Effect("render", fn)
+    effect.run()
     return () => effect.dispose()
 }
 

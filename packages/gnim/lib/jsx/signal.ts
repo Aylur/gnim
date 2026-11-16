@@ -30,7 +30,8 @@ const QUEUED = 64
 const UNSET = 128
 const ERROR = 256
 
-const queue: Array<{ run: Fn }> = []
+const renderQueue: Array<{ run: Fn }> = []
+const userQueue: Array<{ run: Fn }> = []
 const annotatedErrors = new WeakSet<Error>()
 
 function runAll<T>(items: T[], fn: (item: T) => void, reverse: boolean): void {
@@ -65,9 +66,11 @@ function setActiveScope(scope: Scope | null) {
 function flush() {
     let threw = false
     let error: unknown
-    while (queue.length > 0) {
+    ++batchDepth
+    while (renderQueue.length > 0 || userQueue.length > 0) {
         try {
-            queue.shift()!.run()
+            const job = renderQueue.shift() ?? userQueue.shift()
+            job!.run()
         } catch (e) {
             if (!threw) {
                 threw = true
@@ -75,13 +78,14 @@ function flush() {
             }
         }
     }
+    --batchDepth
     if (threw) throw error
 }
 
-export function batch(fn: Fn) {
+export function batch<T>(fn: () => T): T {
     ++batchDepth
     try {
-        fn()
+        return fn()
     } finally {
         if (--batchDepth === 0) {
             flush()
@@ -102,12 +106,9 @@ export interface Scope {
     parent: Scope | null
     name?: string
     source?: string
-    mountWithParent?: boolean
     children?: Scope[]
     cleanups?: Fn[]
-    mounts?: Fn[]
     context?: Map<object, unknown> | null
-    mounted?: boolean
     disposed?: boolean
 
     dispose(): void
@@ -126,26 +127,33 @@ function attachScope(scope: Scope): void {
 
 export function runScope<T>(scope: Scope, fn: () => T): T {
     if (scope.disposed) throw Error("scope is disposed")
-    const parent = scope.parent
-    const mountWithParent = scope.mountWithParent && parent !== null && !parent.mounted
-    if (mountWithParent) {
-        parent.mounts ??= []
-        parent.mounts.push(() => flushMounts(scope))
+    return batch(() => {
+        const prevScope = setActiveScope(scope)
+        try {
+            return fn()
+        } catch (e) {
+            cancelMounts(scope)
+            annotateError(e, scope)
+            throw e
+        } finally {
+            activeScope = prevScope
+            if (scope.disposed) resetScope(scope)
+        }
+    })
+}
+
+function cancelMounts(scope: Scope): void {
+    for (let i = userQueue.length - 1; i >= 0; i--) {
+        const job = userQueue[i]
+        if (!(job instanceof MountJob)) continue
+
+        for (const s of ancestors(job.owner)) {
+            if (s === scope) {
+                userQueue.splice(i, 1)
+                continue
+            }
+        }
     }
-    const prevScope = setActiveScope(scope)
-    let result: T
-    try {
-        result = fn()
-        if (!mountWithParent && !scope.disposed) flushMounts(scope)
-    } catch (e) {
-        scope.mounts = []
-        annotateError(e, scope)
-        throw e
-    } finally {
-        activeScope = prevScope
-        if (scope.disposed) resetScope(scope)
-    }
-    return result
 }
 
 function runAllInScope<T>(scope: Scope, items: T[], fn: (item: T) => void, reverse: boolean) {
@@ -157,15 +165,23 @@ function runAllInScope<T>(scope: Scope, items: T[], fn: (item: T) => void, rever
     }
 }
 
-function flushMounts(scope: Scope): void {
-    if (scope.mounted || scope.disposed) return
-    scope.mounted = true
-    const mounts = scope.mounts
-    scope.mounts = []
-    if (mounts) {
-        const prevScope = setActiveScope(scope)
+class MountJob {
+    owner = activeScope
+    fn: Fn
+
+    constructor(fn: Fn) {
+        this.fn = fn
+    }
+
+    run(): void {
+        const owner = this.owner
+        if (owner?.disposed) return
+        const prevScope = setActiveScope(owner)
         try {
-            runAllInScope(scope, mounts, untrack, false)
+            untrack(this.fn)
+        } catch (e) {
+            annotateError(e, owner)
+            throw e
         } finally {
             activeScope = prevScope
         }
@@ -177,8 +193,6 @@ function resetScope(scope: Scope): void {
     const cleanups = scope.cleanups
     scope.children = []
     scope.cleanups = []
-    scope.mounts = []
-    scope.mounted = false
     try {
         if (children) runAll(children, disposeChildScope, true)
     } finally {
@@ -205,15 +219,10 @@ function disposeScope(scope: Scope): boolean {
     return true
 }
 
-export function createScope(props?: {
-    parent?: Scope | null
-    name?: string
-    mountWithParent?: boolean
-}): Scope {
+export function createScope(props?: { parent?: Scope | null; name?: string }): Scope {
     const scope: Scope = {
         parent: typeof props?.parent === "undefined" ? activeScope : props.parent,
         name: props?.name,
-        mountWithParent: props?.mountWithParent,
         dispose: () => disposeScope(scope),
     }
 
@@ -269,11 +278,9 @@ export function onCleanup(fn: Fn): void {
 }
 
 export function onMount(fn: Fn): void {
-    if (!activeScope) throw Error("onMount called outside of a scope")
-    if (!activeScope.mounted) {
-        activeScope.mounts ??= []
-        activeScope.mounts.push(fn)
-    }
+    const job = new MountJob(fn)
+    if (batchDepth > 0) userQueue.push(job)
+    else job.run()
 }
 
 export function setContext<T>(ctx: Context<T>, value: T): void {
@@ -443,9 +450,7 @@ export class Computed<T> extends ReactiveNode implements Scope {
     parent: Scope | null = activeScope
     children: Scope[] = []
     cleanups: Fn[] = []
-    mounts: Fn[] = []
     context: Map<object, unknown> | null = null
-    mounted = false
     disposed = false
 
     value!: T
@@ -533,24 +538,28 @@ export class Effect<T> extends ReactiveNode implements Scope {
     parent: Scope | null = activeScope
     children: Scope[] = []
     cleanups: Fn[] = []
-    mounts: Fn[] = []
     context: Map<object, unknown> | null = null
-    mounted = false
     disposed = false
 
     value?: T
     fn: (prev?: T) => T
+    queue: "user" | "render"
 
-    constructor(fn: (prev?: T) => T) {
+    /**
+     * @param queue user effects re-run after every render effect of the flush
+     */
+    constructor(queue: "user" | "render", fn: (prev?: T) => T) {
         super(WATCHING)
         this.fn = fn
+        this.queue = queue
         attachScope(this)
     }
 
     notify(): void {
         if (!(this.flags & QUEUED)) {
             this.flags |= QUEUED
-            queue.push(this)
+            if (this.queue === "user") userQueue.push(this)
+            else renderQueue.push(this)
         }
     }
 

@@ -138,7 +138,7 @@ export abstract class BaseRenderer implements Renderer {
         }
 
         for (const [prop, accessor] of accessors) {
-            const effect = new Effect(() => {
+            const effect = new Effect("render", () => {
                 const value = accessor()
                 untrack(() => this.setProperty(object, prop, value))
             })

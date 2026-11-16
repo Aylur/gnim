@@ -11,6 +11,7 @@ import {
     isAccessor,
     onCleanup,
     onMount,
+    renderEffect,
     setContext,
     subscribe,
     untrack,
@@ -238,16 +239,17 @@ describe("onMount", () => {
         expect(order).toEqual([1, 2, 3])
     })
 
-    it("runs immediately when the scope is already mounted", () => {
-        const spy = vi.fn()
+    it("runs after runScope returns when re-entering a scope", () => {
+        const order: string[] = []
 
         const scope = createRoot(() => getScope())
 
         runScope(scope, () => {
-            onMount(spy)
-            expect(spy).toHaveBeenCalledTimes(1)
+            onMount(() => order.push("mount"))
+            order.push("sync")
         })
 
+        expect(order).toEqual(["sync", "mount"])
         scope.dispose()
     })
 
@@ -619,6 +621,39 @@ describe("subscribe", () => {
     })
 })
 
+describe("renderEffect", () => {
+    it("runs immediately", () => {
+        const order: string[] = []
+
+        createRoot(() => {
+            renderEffect(() => order.push("effect"))
+            order.push("sync")
+        })
+
+        expect(order).toEqual(["effect", "sync"])
+    })
+
+    it("re-runs before user effects and mount callbacks", () => {
+        const order: string[] = []
+
+        const { setValue, dispose } = createRoot((dispose) => {
+            const [value, setValue] = createState(0)
+            effect(() => order.push(`user ${value()}`))
+            renderEffect(() => {
+                order.push(`render ${value()}`)
+                if (value() === 1) onMount(() => order.push("mount"))
+            })
+            return { setValue, dispose }
+        })
+
+        order.length = 0
+        setValue(1)
+        expect(order).toEqual(["render 1", "user 1", "mount"])
+
+        dispose()
+    })
+})
+
 describe("effect", () => {
     it("runs once when the owning scope mounts", () => {
         const order: string[] = []
@@ -631,18 +666,7 @@ describe("effect", () => {
         expect(order).toEqual(["sync", "effect"])
     })
 
-    it("runs immediately when the immediate option is set", () => {
-        const order: string[] = []
-
-        createRoot(() => {
-            effect(() => order.push("effect"), { immediate: true })
-            order.push("sync")
-        })
-
-        expect(order).toEqual(["effect", "sync"])
-    })
-
-    it("runs immediately when created in an already mounted scope", () => {
+    it("runs after runScope returns when created in a re-entered scope", () => {
         const spy = vi.fn()
 
         const { scope, value, setValue, dispose } = createRoot((dispose) => {
@@ -652,8 +676,8 @@ describe("effect", () => {
 
         runScope(scope, () => {
             effect(() => spy(value()))
-            expect(spy).toHaveBeenNthCalledWith(1, 0)
         })
+        expect(spy).toHaveBeenNthCalledWith(1, 0)
 
         setValue(1)
         expect(spy).toHaveBeenNthCalledWith(2, 1)
@@ -1957,13 +1981,10 @@ describe("edge cases", () => {
             const dispose = effect(() => {
                 if (!stop()) return
                 dispose()
-                effect(
-                    () => {
-                        spy(n())
-                        onCleanup(cleanup)
-                    },
-                    { immediate: true },
-                )
+                renderEffect(() => {
+                    spy(n())
+                    onCleanup(cleanup)
+                })
                 effect(() => spy(n()))
             })
 
@@ -1987,7 +2008,7 @@ describe("edge cases", () => {
                     dispose()
                     accessor()
                     onCleanup(cleanup)
-                    effect(() => spy(n()), { immediate: true })
+                    renderEffect(() => spy(n()))
                 })
             })
 
@@ -2009,10 +2030,10 @@ describe("edge cases", () => {
                 const value = computed(() => {
                     dispose()
                     onCleanup(cleanup)
-                    effect(() => spy(n()), { immediate: true })
+                    renderEffect(() => spy(n()))
                     return accessor()
                 })
-                effect(() => void value(), { immediate: true })
+                renderEffect(() => void value())
             })
 
             expect(unsubscribe).toHaveBeenCalledTimes(1)
@@ -2033,7 +2054,7 @@ describe("edge cases", () => {
                 dispose()
                 onCleanup(cleanup)
                 onMount(mount)
-                effect(() => spy(n()), { immediate: true })
+                renderEffect(() => spy(n()))
             })
 
             expect(cleanup).toHaveBeenCalledTimes(1)
@@ -2052,12 +2073,9 @@ describe("edge cases", () => {
             const [value, setValue] = createState(0)
             let disposeInner = () => {}
             // immediate, so it subscribes before the inner effect and runs first
-            effect(
-                () => {
-                    if (value() === 1) disposeInner()
-                },
-                { immediate: true },
-            )
+            renderEffect(() => {
+                if (value() === 1) disposeInner()
+            })
             createRoot((dispose) => {
                 disposeInner = dispose
                 effect(() => spy(value()))
@@ -2096,12 +2114,9 @@ describe("throwing effects", () => {
 
         expect(() =>
             createRoot(() => {
-                effect(
-                    () => {
-                        throw Error("boom")
-                    },
-                    { immediate: true },
-                )
+                renderEffect(() => {
+                    throw Error("boom")
+                })
             }),
         ).toThrow("boom")
 
@@ -2677,7 +2692,7 @@ describe("mount timing", () => {
 
         createRoot(() => {
             const scope = getScope()
-            runScope(createScope({ mountWithParent: true }), () => {
+            runScope(createScope(), () => {
                 setContext(Ctx, "provided")
                 const provider = getScope()
                 onMount(() => {

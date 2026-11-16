@@ -1169,6 +1169,44 @@ describe("component scopes", () => {
         setShow(true)
         expect(calls).toEqual(["late"])
     })
+
+    it("mounts For items after they are attached", () => {
+        const root = new Box()
+        const [items, setItems] = createState(["a"])
+        const calls: string[] = []
+
+        function Item({ label }: { label: string }) {
+            onMount(() => calls.push(`${label}:${labels(root)}`))
+            return jsx(Widget, { label })
+        }
+
+        renderTree(
+            () => jsx(For, { each: items, children: (label: string) => jsx(Item, { label }) }),
+            root,
+        )
+        setItems(["a", "b"])
+
+        expect(calls).toEqual(["a:a", "b:a,b"])
+    })
+
+    it("mounts With children after they are attached", () => {
+        const root = new Box()
+        const [value, setValue] = createState("a")
+        const calls: string[] = []
+
+        function Child({ label }: { label: string }) {
+            onMount(() => calls.push(`${label}:${labels(root)}`))
+            return jsx(Widget, { label })
+        }
+
+        renderTree(
+            () => jsx(With, { value, children: (label: string) => jsx(Child, { label }) }),
+            root,
+        )
+        setValue("b")
+
+        expect(calls).toEqual(["a:a", "b:b"])
+    })
 })
 
 describe("component errors", () => {

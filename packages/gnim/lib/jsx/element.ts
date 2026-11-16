@@ -137,7 +137,7 @@ export function mountChildren(children: GnimNode, mount?: GObject.Object) {
         return
     }
 
-    const mountEffect = new Effect(function mountEffect() {
+    const mountEffect = new Effect("render", function mountEffect() {
         const children = nodes.map(unpackSlot).flat()
         setChildren(children, currentChildren)
         currentChildren = children
@@ -185,7 +185,6 @@ export function resolveNode(node: GnimNode): Array<GObject.Object | Accessor<Gni
 
     const scope = createScope({
         name: `<${type.name || "Anonymous"}>`,
-        mountWithParent: true,
     })
 
     if (import.meta.GNIM_DEV) devHooks.createElementScope(node, scope)

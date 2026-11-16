@@ -9,8 +9,8 @@ import {
     computed,
     createRoot,
     createState,
-    effect,
     onCleanup,
+    renderEffect,
     untrack,
 } from "../lib/jsx/reactive.js"
 import { batch } from "../lib/jsx/signal.js"
@@ -27,7 +27,7 @@ const reactive: ReactiveFramework = {
     },
     effect(fn) {
         return createRoot((dispose) => {
-            effect(() => {
+            renderEffect(() => {
                 const cleanup = fn()
                 if (typeof cleanup === "function") onCleanup(cleanup)
             })
@@ -35,7 +35,7 @@ const reactive: ReactiveFramework = {
         })
     },
     run(fn) {
-        createRoot(fn)
+        fn()
     },
     batch(fn) {
         return batch(fn)

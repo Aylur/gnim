@@ -23,6 +23,7 @@ export {
     isAccessor,
     onCleanup,
     onMount,
+    renderEffect,
     runScope,
     setContext,
     subscribe,

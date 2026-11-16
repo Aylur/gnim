@@ -178,7 +178,7 @@ const value: Accessor<string | null> = bind(outer, "nested", "field")
 
 ## `effect`
 
-Schedule a function to run after the current `Scope` returns, tracking
+Schedule a function to run after the current root `Scope` returns, tracking
 dependencies and re-running the function whenever they change.
 
 ```ts
@@ -206,6 +206,15 @@ dispose() // can be stopped manually
 > Effects are a common pitfall for beginners when deciding when to use them and
 > when not to use them. You can read about
 > [when it is discouraged and their alternatives](/tutorial/gnim#when-not-to-use-an-effect).
+
+## `renderEffect`
+
+Like [`effect`](#effect), but scheduled to run synchronously
+<span style="opacity:0.6;">(in the render phase)</span>.
+
+```ts
+function renderEffect<T>(fn: (prev?: T) => T): () => void
+```
 
 ## `subscribe`
 
