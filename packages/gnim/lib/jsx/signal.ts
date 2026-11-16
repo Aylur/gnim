@@ -447,7 +447,7 @@ export class External<T> extends ReactiveNode {
 }
 
 export class Computed<T> extends ReactiveNode implements Scope {
-    parent: Scope | null = activeScope
+    parent: Scope | null
     children: Scope[] = []
     cleanups: Fn[] = []
     context: Map<object, unknown> | null = null
@@ -458,10 +458,15 @@ export class Computed<T> extends ReactiveNode implements Scope {
     isEqual: Equals<T>
     error: unknown
 
-    constructor(getter: (prev?: T) => T, isEqual: Equals<NoInfer<T>> = Object.is) {
+    constructor(
+        getter: (prev?: T) => T,
+        isEqual: Equals<NoInfer<T>> = Object.is,
+        parent: Scope | null = activeScope,
+    ) {
         super(MUTABLE | DIRTY | UNSET)
         this.getter = getter
         this.isEqual = isEqual
+        this.parent = parent
         attachScope(this)
     }
 

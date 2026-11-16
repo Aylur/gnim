@@ -47,7 +47,7 @@ export function createStore<S extends Record<PropertyKey, any>>(store: S): Store
                 enumerable: true,
             })
         } else if ("get" in desc) {
-            const computed = new Computed(desc.get!.bind(obj))
+            const computed = new Computed(desc.get!.bind(obj), Object.is, null)
             Object.defineProperty(obj, key, {
                 get: (accessors[key] = computed.get.bind(computed)),
                 set: desc.set,

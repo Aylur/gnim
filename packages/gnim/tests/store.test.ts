@@ -349,6 +349,22 @@ describe("createStore", () => {
         expect(store.count).toBe(5)
     })
 
+    it("keeps getters reactive after the creating scope is disposed", () => {
+        const store = createRoot((dispose) => {
+            const store = createStore({
+                value: 1,
+                get double() {
+                    return this.value * 2
+                },
+            })
+            dispose()
+            return store
+        })
+
+        store.value = 2
+        expect(store.double).toBe(4)
+    })
+
     it("enumerates its fields", () => {
         const store = createStore({
             a: 1,
