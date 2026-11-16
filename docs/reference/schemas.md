@@ -115,6 +115,22 @@ const settings = createSettings(gioSettings, {
 })
 ```
 
+### Variant values
+
+Accessors unpack values recursively typing `v` values as `unknown`, setters need
+`Variant`.
+
+```ts
+import { type Variant, variant } from "gnim/schema"
+
+// [!code focus:5]
+type Get = { [key: string]: unknown } // "a{sv}"
+type Set = { [key: string]: Variant } // "a{sv}"
+
+const complex: Get = settings.complexKey()
+settings.setComplexKey((prev: Set) => ({ ...prev, other: variant("i", 1) }))
+```
+
 ### Translatable values
 
 GSettings uses gettext to look up translations for summaries and descriptions.
