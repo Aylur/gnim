@@ -265,6 +265,7 @@ export function inferGType(type: string): GObject.GType<any> {
 }
 
 export type InterfaceInfo<T extends InterfaceDeclaration> = Gio.DBusInterfaceInfo & {
+    /** Similarly to GObject annotations, this does not exist at runtime */
     readonly $declarations: T
 }
 

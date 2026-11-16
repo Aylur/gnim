@@ -20,7 +20,9 @@ import {
 } from "./service.js"
 
 export interface DBusInterface<T extends InterfaceDeclaration> {
-    $declarations: T
+    /** Similarly to GObject annotations, this does not exist at runtime */
+    readonly $declarations: T
+
     Proxy: ProxyClass<T>
     Service: ServiceClass<T>
     proxy(props?: ProxyProps): Promise<ProxyInstance<T>>
