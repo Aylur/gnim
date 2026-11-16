@@ -109,7 +109,7 @@ function MyButton() {
 
 Now that you have declared `MyButton`, you can nest it into another component.
 
-```tsx
+```tsx {6}
 function MyWindow() {
   return (
     <Gtk.Window>
@@ -132,6 +132,7 @@ JavaScript so that you can embed some variable from your code and display it.
 
 ```tsx
 function MyButton() {
+  // [!code focus:3]
   const label = "hello"
 
   return <Gtk.Button>{label}</Gtk.Button>
@@ -142,6 +143,7 @@ You can also pass JavaScript to markup properties.
 
 ```tsx
 function MyButton() {
+  // [!code focus:3]
   const label = "hello"
 
   return <Gtk.Button label={label} />
@@ -155,6 +157,7 @@ For example, you can use an if statement to conditionally include JSX:
 
 ```tsx
 function MyWidget() {
+  // [!code focus:9]
   let content: GnimNode
 
   if (condition) {
@@ -173,6 +176,7 @@ You can also inline a
 
 ```tsx
 function MyWidget() {
+  // [!code focus]
   return <Gtk.Box>{condition ? <TrueComponent /> : <FalseComponent />}</Gtk.Box>
 }
 ```
@@ -182,6 +186,7 @@ When you don’t need the `else` branch, you can also use a shorter
 
 ```tsx
 function MyWidget() {
+  // [!code focus]
   return <Gtk.Box>{condition && <TrueComponent />}</Gtk.Box>
 }
 ```
@@ -200,9 +205,11 @@ or
 
 ```tsx
 function MyWidget() {
+  // [!code focus]
   const labels = ["label1", "label2", "label3"]
 
   return (
+    // [!code focus:5]
     <Gtk.Box>
       {labels.map((label) => (
         <Gtk.Label label={label} />
@@ -219,6 +226,7 @@ widget:
 
 ```tsx
 function MyButton() {
+  // [!code focus:5]
   function onClicked(self: Gtk.Button) {
     console.log(self, "was clicked")
   }
@@ -287,6 +295,7 @@ to hook into GObject properties and stores.
 import { createState, computed } from "gnim"
 
 function Counter() {
+  // [!code focus:6]
   const [count, setCount] = createState(0)
   const label = computed(() => count().toString())
 
@@ -307,20 +316,21 @@ function Counter() {
 import { Object, register, property } from "gnim/gobject"
 import { bind, computed } from "gnim"
 
+// [!code focus:4]
 @register
 class CountStore extends Object {
   @property count: number = 0
 }
 
 function Counter() {
+  // [!code focus:7]
   const counter = new CountStore()
+  const count = bind(counter, "count")
+  const label = computed(() => count().toString())
 
   function increment() {
     counter.count += 1
   }
-
-  const count = bind(counter, "count")
-  const label = computed(() => count().toString())
 
   return (
     <Box>
@@ -334,17 +344,19 @@ function Counter() {
 ```tsx [Store example]
 import { createStore, bind, computed } from "gnim"
 
+// [!code focus:3]
 const counter = createStore({
   count: 0,
 })
 
 function Counter() {
+  // [!code focus:6]
+  const count = bind(counter, "count")
+  const label = computed(() => count().toString())
+
   function increment() {
     counter.count += 1
   }
-
-  const count = bind(counter, "count")
-  const label = computed(() => count().toString())
 
   return (
     <Box>
@@ -382,9 +394,11 @@ component to "unwrap" the Accessor.
 ```tsx
 import { With, type Accessor } from "gnim"
 
+// [!code focus]
 let value: Accessor<{ member: string } | null>
 
 return (
+  // [!code focus:3]
   <With value={value}>
     {(value) => value && <Label label={value.member} />}
   </With>
@@ -412,9 +426,11 @@ new items are inserted while widgets associated with removed items are disposed.
 ```tsx
 import { For, type Accessor } from "gnim"
 
+// [!code focus]
 let list: Accessor<Array<T>>
 
 return (
+  // [!code focus:5]
   <For each={list}>
     {(item: T, index: Accessor<number>) => (
       <Label label={index.as((i) => `${i}. ${item}`)} />
@@ -499,9 +515,9 @@ created in the global scope has no owner, so you have to dispose it yourself
 with the function it returns.
 
 ```ts
-const globalObject: GObject.Object
+const myObject: GObject.Object
 
-const field = bind(globalObject, "field")
+const field = bind(myObject, "field")
 
 const dispose = effect(() => {
   console.log("field is", field())
@@ -577,6 +593,7 @@ scopes to make sure every widget ref is alive.
 
 ```tsx
 function MyWindow() {
+  // [!code focus:7]
   let win: Gtk.Window
 
   effect(() => {

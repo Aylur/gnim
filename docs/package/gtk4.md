@@ -16,6 +16,7 @@ import { render } from "@gnim-js/gtk4"
 
 let app: Gtk.Application
 
+// [!code focus:8]
 const dispose = render(
   () => (
     <Gtk.Window visible>
@@ -134,6 +135,7 @@ import Gtk from "gi://Gtk?version=4.0"
 import { createListItemFactory } from "@gnim-js/gtk4/listItemFactory"
 
 function StringList() {
+  // [!code focus:10]
   const model = Gtk.StringList.new(["one", "two", "three"])
 
   return (
@@ -185,14 +187,17 @@ Example:
 ```tsx
 import { keyframes, style } from "@gnim-js/gtk4"
 
-const spin = keyframes({
-  from: { transform: "rotate(0turn)" },
-  to: { transform: "rotate(1turn)" },
-})
+export function Component() {
+  // [!code focus:10]
+  const spin = keyframes({
+    from: { transform: "rotate(0turn)" },
+    to: { transform: "rotate(1turn)" },
+  })
 
-const className = style({
-  animation: `${spin} 1s linear infinite`,
-})
+  const className = style({
+    animation: `${spin} 1s linear infinite`,
+  })
 
-return <Gtk.Label class={className} label="styled" />
+  return <Gtk.Label class={className} label="styled" />
+}
 ```

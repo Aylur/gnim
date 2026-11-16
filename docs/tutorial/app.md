@@ -17,7 +17,7 @@ handlers, or create a subclass and implement its methods.
 
 ::: code-group
 
-```ts [Subclassing]
+```ts [Subclassing] {23}
 import Gtk from "gi://Gtk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
@@ -25,6 +25,7 @@ import { register } from "gnim/gobject"
 import { render } from "@gnim-js/gtk4"
 import { programInvocationName, programArgs } from "system"
 
+// [!code focus:23]
 @register
 class MyApp extends Gtk.Application {
   constructor() {
@@ -50,13 +51,14 @@ export const app = new MyApp()
 app.runAsync([programInvocationName, ...programArgs])
 ```
 
-```ts [Without subclassing]
+```ts [Without subclassing] {18}
 import Gtk from "gi://Gtk?version=4.0"
 import Gio from "gi://Gio?version=2.0"
 import GLib from "gi://GLib?version=2.0"
 import { render } from "@gnim-js/gtk4"
 import { programInvocationName, programArgs } from "system"
 
+// [!code focus:16]
 GLib.set_prgname("example-myapp")
 GLib.set_application_name("My App")
 
@@ -91,6 +93,7 @@ on screen instead of launching another instance.
 ```tsx
 @register
 class MyApp extends Gtk.Application {
+  // [!code focus:14]
   declare window?: Gtk.Window
 
   vfunc_activate(): void {
@@ -98,15 +101,11 @@ class MyApp extends Gtk.Application {
       return this.window.present()
     }
 
-    const dispose = render(() => {
-      effect(() => {
-        this.window?.present()
-      })
+    const dispose = render(() => (
+      <Gtk.Window application={this} ref={(self) => (this.window = self)} />
+    ))
 
-      return (
-        <Gtk.Window application={this} ref={(self) => (this.window = self)} />
-      )
-    })
+    this.window?.present()
     this.connect("shutdown", dispose)
   }
 }
@@ -127,6 +126,7 @@ First, define a schema in `<app-id>.gschema.ts`, for example
 import GLib from "gi://GLib?version=2.0"
 import { defineSchemaList, Schema, Enum, Flags } from "gnim/schema"
 
+// [!code focus:25]
 const myFlags = new Flags("my.flags", ["one", "two"])
 const myEnum = new Enum("my.enum", ["one", "two"])
 

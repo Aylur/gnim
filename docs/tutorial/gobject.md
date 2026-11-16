@@ -42,12 +42,12 @@ returns a handler ID. Signals are disconnected by passing that ID to
 ```ts
 const button = new Gtk.Button({ label: "Lorem Ipsum" })
 
-// Connecting a signal
+// [!code focus:3]
 const handlerId = button.connect("clicked", () => {
   console.log("Button clicked!")
 })
 
-// Disconnecting a signal
+// [!code focus:1]
 button.disconnect(handlerId)
 ```
 
@@ -59,6 +59,7 @@ emitting object:
 ```ts
 const selectLabel = Gtk.Label.new("")
 
+// [!code focus]
 selectLabel.connect("move-cursor", (label, step, count, extendSelection) => {
   if (label === selectLabel) {
     console.log("selectLabel emitted the signal!")
@@ -71,6 +72,7 @@ selectLabel.connect("move-cursor", (label, step, count, extendSelection) => {
   if (extendSelection) {
     console.log("The selection was extended")
   }
+  // [!code focus]
 })
 ```
 
@@ -79,20 +81,22 @@ selectLabel.connect("move-cursor", (label, step, count, extendSelection) => {
 Some signals expect a return value, usually a `boolean`. The type and behavior
 of the return value will be described in the documentation for the signal.
 
-```ts
+```ts {11,14}
 const linkLabel = new Gtk.Label({
   label: '<a href="https://www.gnome.org">GNOME</a>',
   useMarkup: true,
 })
 
+// [!code focus]
 linkLabel.connect("activate-link", (label, uri) => {
   if (uri.startsWith("file://")) {
     console.log(`Ignoring ${uri}`)
-    return true
+
+    return true // [!code focus]
   }
 
-  return false
-})
+  return false // [!code focus]
+}) // [!code focus]
 ```
 
 > [!WARNING]
@@ -106,7 +110,6 @@ which will be coerced to a _truthy_ value. If necessary, use a traditional
 
 ```ts
 linkLabel.connect("activate-link", (label, uri) => {
-  // Do something asynchronous with the signal arguments
   Promise.resolve(uri).catch(console.error)
 
   return true
@@ -128,8 +131,9 @@ const invisibleLabel = new Gtk.Label({
   visible: false,
 })
 
-let visible
+let visible: boolean
 
+// [!code focus:5]
 visible = invisibleLabel.visible
 visible = invisibleLabel.get_visible()
 
@@ -146,8 +150,9 @@ const markupLabel = new Gtk.Label({
   useMarkup: true,
 })
 
-let useMarkup
+let useMarkup: boolean
 
+// [!code focus:11]
 // If using native accessors, you can use `underscore_case` or `camelCase`
 useMarkup = markupLabel.use_markup
 useMarkup = markupLabel.useMarkup
@@ -177,9 +182,10 @@ signal when the value is changed. You can connect to this signal in the form of
 ```ts
 const changingLabel = Gtk.Label.new("Original Label")
 
+// [!code focus]
 const labelId = changingLabel.connect("notify::label", (object, _pspec) => {
   console.log(`New label is "${object.label}"`)
-})
+}) // [!code focus]
 ```
 
 ## Subclassing GObject
@@ -187,24 +193,24 @@ const labelId = changingLabel.connect("notify::label", (object, _pspec) => {
 Implementing a GObject in a Gnim app is usually not necessary since you will
 mostly be using function components. However, Gnim provides an abstraction over
 [GJS's API](https://gjs.guide/guides/gobject/subclassing.html) using
-[decorators](/reference/gobject).
+[decorators](/reference/gobject) when you do need to implement a subclass for
+example to implement interfaces and virtual functions.
 
 ```ts
 import GObject from "gi://GObject?version=2.0"
 import { register, property, signal } from "gnim/gobject"
 
+// [!code focus:13]
 @register
 class MyObj extends GObject.Object {
-  @property
-  myProp: string
+  @property myProp: string
 
   constructor({ myProp = "" } = {}) {
     super()
     this.myProp = myProp
   }
 
-  @signal
-  mySignal(a: string, b: number): void {
+  @signal mySignal(a: string, b: number): void {
     // default handler
   }
 }

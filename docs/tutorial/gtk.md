@@ -14,6 +14,7 @@ such as `Gtk.Application`.
 import GLib from "gi://GLib?version=2.0"
 import Gtk from "gi://Gtk?version=4.0"
 
+// [!code focus:8]
 Gtk.init()
 
 const loop = GLib.MainLoop.new(null, false)
@@ -64,6 +65,7 @@ win.present()
 > ```ts
 > import { gettext as t } from "gettext"
 >
+> // [!code focus:7]
 > const win = new Gtk.Window({
 >   title: t("My App"),
 > })

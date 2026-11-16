@@ -16,6 +16,7 @@ import { render } from "@gnim-js/gtk3"
 
 let app: Gtk.Application
 
+// [!code focus:8]
 const dispose = render(
   () => (
     <Gtk.Window>
