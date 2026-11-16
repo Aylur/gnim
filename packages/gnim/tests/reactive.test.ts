@@ -15,9 +15,16 @@ import {
     setContext,
     subscribe,
     untrack,
+    runScope,
+    batch,
     type Accessor,
+    type Scope,
 } from "../lib/jsx/reactive.js"
-import { batch, createScope, getScope as getActiveScope, runScope } from "../lib/jsx/signal.js"
+import type { Scope as SignalScope } from "../lib/jsx/signal.js"
+
+function asScope(s: Scope) {
+    return s as unknown as SignalScope
+}
 
 describe("createRoot", () => {
     it("returns the value produced by its callback", () => {
@@ -33,7 +40,7 @@ describe("createRoot", () => {
     })
 
     it("restores the previous scope after it returns", () => {
-        expect(getActiveScope()).toBeNull()
+        expect(() => getScope()).toThrow()
 
         createRoot(() => {
             const outer = getScope()
@@ -43,7 +50,7 @@ describe("createRoot", () => {
             expect(getScope()).toBe(outer)
         })
 
-        expect(getActiveScope()).toBeNull()
+        expect(() => getScope()).toThrow()
     })
 
     it("runs cleanups registered inside it when disposed", () => {
@@ -127,7 +134,7 @@ describe("getScope", () => {
             const root = getScope()
             effect(() => {
                 expect(getScope()).not.toBe(root)
-                expect(getScope().parent).toBe(root)
+                expect(asScope(getScope()).parent).toBe(root)
             })
             dispose()
         })
@@ -173,7 +180,7 @@ describe("onCleanup", () => {
                 throw Error("boom")
             })
             onCleanup(first)
-            return { scope: getScope(), dispose }
+            return { scope: asScope(getScope()), dispose }
         })
 
         expect(() => dispose()).toThrow("boom")
@@ -250,7 +257,7 @@ describe("onMount", () => {
         })
 
         expect(order).toEqual(["sync", "mount"])
-        scope.dispose()
+        asScope(scope).dispose()
     })
 
     it("runs immediately outside of a scope", () => {
@@ -285,7 +292,7 @@ describe("onMount", () => {
         ).toThrow("boom")
 
         expect(spy).toHaveBeenCalledTimes(1)
-        expect(getActiveScope()).toBeNull()
+        expect(() => getScope()).toThrow()
     })
 
     it("runs untracked", () => {
@@ -532,7 +539,7 @@ describe("subscribe", () => {
 
         setValue(1)
         expect(observer).not.toHaveBeenCalled()
-        expect(scope.children ?? []).toHaveLength(0)
+        expect(asScope(scope).children ?? []).toHaveLength(0)
 
         expect(() => dispose()).not.toThrow()
     })
@@ -852,7 +859,7 @@ describe("effect", () => {
 describe("scope bookkeeping", () => {
     it("does not grow the owning scope on effect and computed re-runs", () => {
         const { scope, setValue, dispose } = createRoot((dispose) => {
-            const scope = getScope()
+            const scope = asScope(getScope())
             const [value, setValue] = createState(0)
             const double = computed(() => value() * 2)
             effect(() => double())
@@ -878,11 +885,11 @@ describe("scope bookkeeping", () => {
     it("detaches a disposed child scope from its parent", () => {
         const { scope, dispose } = createRoot((dispose) => ({ scope: getScope(), dispose }))
 
-        const child = createRoot(() => getScope(), scope)
-        expect(scope.children).toContain(child)
+        const child = createRoot(() => asScope(getScope()), scope)
+        expect(asScope(scope).children).toContain(child)
 
         child.dispose()
-        expect(scope.children).not.toContain(child)
+        expect(asScope(scope).children).not.toContain(child)
 
         dispose()
     })
@@ -1104,7 +1111,7 @@ describe("computed", () => {
         })
 
         expect(() => setA(1)).toThrow("boom")
-        expect(getActiveScope()).toBeNull()
+        expect(() => getScope()).toThrow()
 
         setA(2)
         expect(spy).toHaveBeenLastCalledWith(2)
@@ -2106,11 +2113,11 @@ describe("throwing effects", () => {
         ).toThrow("boom")
 
         expect(spy).toHaveBeenCalledTimes(1)
-        expect(getActiveScope()).toBeNull()
+        expect(() => getScope()).toThrow()
     })
 
     it("restores the current scope when an immediate effect throws", () => {
-        expect(getActiveScope()).toBeNull()
+        expect(() => getScope()).toThrow()
 
         expect(() =>
             createRoot(() => {
@@ -2120,7 +2127,7 @@ describe("throwing effects", () => {
             }),
         ).toThrow("boom")
 
-        expect(getActiveScope()).toBeNull()
+        expect(() => getScope()).toThrow()
     })
 
     it("rethrows errors from re-runs and keeps other effects running", () => {
@@ -2143,7 +2150,7 @@ describe("throwing effects", () => {
         // the throwing effect kept its subscriptions and the system stays live
         setValue(2)
         expect(spy).toHaveBeenLastCalledWith(2)
-        expect(getActiveScope()).toBeNull()
+        expect(() => getScope()).toThrow()
 
         dispose()
     })
@@ -2186,7 +2193,7 @@ describe("createContext", () => {
 
     it("returns the value produced by the provider callback", () => {
         const Ctx = createContext(0)
-        const result = runScope(createScope(), () => {
+        const result = runScope(createRoot(getScope), () => {
             setContext(Ctx, 1)
             return getContext(Ctx) + 1
         })
@@ -2197,7 +2204,7 @@ describe("createContext", () => {
         const Ctx = createContext("fallback")
 
         createRoot(() => {
-            runScope(createScope(), () => {
+            runScope(createRoot(getScope), () => {
                 setContext(Ctx, "outer")
 
                 createRoot((dispose) => {
@@ -2205,7 +2212,7 @@ describe("createContext", () => {
                     dispose()
                 }, getScope())
 
-                runScope(createScope(), () => {
+                runScope(createRoot(getScope), () => {
                     setContext(Ctx, "inner")
                     expect(getContext(Ctx)).toBe("inner")
                 })
@@ -2219,7 +2226,7 @@ describe("createContext", () => {
         const Ctx = createContext<string | undefined>("fallback")
 
         createRoot(() => {
-            runScope(createScope(), () => {
+            runScope(createRoot(getScope), () => {
                 setContext(Ctx, undefined)
                 expect(getContext(Ctx)).toBeUndefined()
             })
@@ -2231,7 +2238,7 @@ describe("createContext", () => {
         const spy = vi.fn()
 
         const dispose = createRoot((dispose) => {
-            runScope(createScope(), () => {
+            runScope(createRoot(getScope), () => {
                 setContext(Ctx, "provided")
                 effect(() => spy(getContext(Ctx)))
             })
@@ -2247,7 +2254,7 @@ describe("createContext", () => {
         const cleanup = vi.fn()
 
         const dispose = createRoot((dispose) => {
-            runScope(createScope(), () => {
+            runScope(createRoot(getScope), () => {
                 setContext(Ctx, 1)
                 onCleanup(cleanup)
             })
@@ -2692,7 +2699,7 @@ describe("mount timing", () => {
 
         createRoot(() => {
             const scope = getScope()
-            runScope(createScope(), () => {
+            runScope(createRoot(getScope), () => {
                 setContext(Ctx, "provided")
                 const provider = getScope()
                 onMount(() => {
@@ -2736,6 +2743,6 @@ describe("mount timing", () => {
             }),
         ).toThrow("boom")
 
-        expect(getActiveScope()).toBeNull()
+        expect(() => getScope()).toThrow()
     })
 })

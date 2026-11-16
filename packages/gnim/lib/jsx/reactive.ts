@@ -73,7 +73,8 @@ export function subscribe<T>(track: () => void, callback: (prev?: T) => T): Sign
  * Scopes own child scopes, cleanup and mount callbacks and context values.
  * Disposing a scope disposes its children recursively.
  */
-export type Scope = Signal.Scope
+export type Scope = { [scope]: never }
+declare const scope: unique symbol
 
 /**
  * Context lets components pass information deep down
@@ -210,7 +211,7 @@ export function getScope(): Scope {
         throw Error("cannot get scope: out of tracking context")
     }
 
-    return scope
+    return scope as unknown as Scope
 }
 
 /**
@@ -258,7 +259,7 @@ export function onMount(fn: Signal.Fn) {
  * ```
  */
 export function createRoot<T>(fn: (dispose: Signal.Fn) => T, parent?: Scope | null) {
-    const scope = Signal.createScope({ parent })
+    const scope = Signal.createScope({ parent: parent as unknown as Signal.Scope })
     return Signal.runScope(scope, () => fn(() => scope.dispose()))
 }
 
@@ -494,5 +495,5 @@ export function batch(fn: Signal.Fn): void {
  * @see getScope
  */
 export function runScope<T>(scope: Scope, fn: () => T): T {
-    return Signal.runScope(scope, fn)
+    return Signal.runScope(scope as unknown as Signal.Scope, fn)
 }

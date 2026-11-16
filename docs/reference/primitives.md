@@ -463,7 +463,7 @@ A scope holds cleanup functions, child scopes and context values. `effect` and
 torn down before they re-run.
 
 ```js
-createRoot(() => {
+createRoot((dispose) => {
   const scope = getScope()
 
   // Inside this function scope, synchronously executed code will have access
@@ -472,7 +472,7 @@ createRoot(() => {
   scopedFunction()
 
   // At a later point it can be disposed.
-  scope.dispose()
+  setTimeout(() => dispose())
 })
 ```
 
