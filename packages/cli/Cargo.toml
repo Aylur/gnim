@@ -12,7 +12,7 @@ include = ["/src"]
 clap = { version = "4", features = ["derive"] }
 quick-xml = "0.42"
 colored = "3"
-girgen = "0.4.2"
+girgen = "0.4.3"
 grass = "0.13.4"
 lightningcss = "1.0.0-alpha.72"
 serde = { version = "1", features = ["derive"] }
