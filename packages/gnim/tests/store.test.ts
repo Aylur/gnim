@@ -226,7 +226,7 @@ describe("bind", () => {
 
     it("resolves to undefined when an intermediate property is undefined", () => {
         class LooseParent extends GObject.Object {
-            child?: Child
+            child?: Child = undefined
         }
 
         const spy = vi.fn()

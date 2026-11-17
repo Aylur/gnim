@@ -77,13 +77,14 @@ export function createServiceClass(info: Gio.DBusInterfaceInfo, gtypeName?: stri
     const { READABLE, WRITABLE } = Gio.DBusPropertyInfoFlags
 
     return class DBusService extends GObject.Object {
-        static info = info
-        static name = info.name
+        static readonly info = info
 
         #dbusObject: Gio.DBusExportedObject
         implementation: Record<string, unknown>
 
         static {
+            Object.defineProperty(this, "name", { value: info.name })
+
             const props = info.properties.map((prop) => {
                 const gtype = inferGType(prop.signature)
                 const name = kebabcase(prop.name)

@@ -260,8 +260,8 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
         }
 
         const signal = {
-            param_types: paramtypes.map((i) => ("$gtype" in i ? i.$gtype : i)),
-            return_type: "$gtype" in returntype ? returntype.$gtype : returntype,
+            param_types: paramtypes.map(gtypeOf),
+            return_type: gtypeOf(returntype),
             accumulator: options?.accumulator,
             flags: options?.flags,
         }
@@ -279,6 +279,12 @@ function registerClass(constructor: ObjectConstructor, options: RegisterOptions 
         },
         constructor,
     )
+}
+
+function gtypeOf(type: TypeParameter): GObject.GType {
+    if ("$gtype" in type) return type.$gtype
+    if (typeof type === "function") return GObject.TYPE_JSOBJECT
+    return type
 }
 
 function pspec(

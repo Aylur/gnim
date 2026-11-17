@@ -27,9 +27,11 @@ def wait-gnim-test [name: string, id: int] {
     $result.exit_code
 }
 
-def run-dbus-tests []: nothing -> int {
-    cargo build --quiet --package gnim
+def run-gnim-test [file: string]: nothing -> int {
+    wait-gnim-test $file (spawn-gnim-test $file)
+}
 
+def run-dbus-tests []: nothing -> int {
     let bus = job spawn {
         (dbus-daemon --session --nofork --print-address
             | lines
@@ -56,11 +58,13 @@ def run-dbus-tests []: nothing -> int {
 
 def "main test" [] {
     cd ($env.CURRENT_FILE | path dirname)
+    cargo build --quiet --package gnim
 
     let vitest = try { vitest run; true } catch { false }
+    let gobject = run-gnim-test tests/gobject/index.ts
     let dbus = run-dbus-tests
 
-    if not $vitest or $dbus != 0 {
+    if not $vitest or $gobject != 0 or $dbus != 0 {
         exit 1
     }
 }

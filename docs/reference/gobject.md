@@ -197,6 +197,17 @@ new MyObject().field // ""
 new MyObject({ field: "hello" }).field // "hello"
 ```
 
+The default value of an object property is `null`, so annotate it as nullable.
+
+```ts
+@register
+class MyObject extends GObject.Object {
+  @property(Gtk.Widget) declare child: Gtk.Widget | null
+}
+
+new MyObject().child // null
+```
+
 ### Property type declaration
 
 The runtime type of the property will be inferred from TypeScript annotations.
@@ -244,6 +255,16 @@ class MyObject {
 Omitting the explicit property declaration will use a default type guessed from
 the TypeScript annotation. Omitting both will result in a runtime error.
 
+> [!WARNING]
+>
+> TypeScript emits `Object` as the type of any union, so a property annotated as
+> `Gtk.Widget | null` is guessed to be a `GObject.JSObject` instead of a
+> `Gtk.Widget`. Declare the type explicitly in that case.
+>
+> ```ts
+> @property(Gtk.Widget) declare child: Gtk.Widget | null
+> ```
+
 ### Property accessors
 
 When implementing property setters you will also need to explicitly emit notify
@@ -288,6 +309,16 @@ class MyObject {
   mySignal(arg: number): void {
     // default handler
   }
+}
+```
+
+Like properties, a parameter annotated with a union such as `Gtk.Widget | null`
+is guessed to be a `GObject.JSObject`, so declare its type explicitly.
+
+```ts
+class MyObject {
+  @signal([Gtk.Widget], GObject.VoidType)
+  mySignal(widget: Gtk.Widget | null): void {}
 }
 ```
 

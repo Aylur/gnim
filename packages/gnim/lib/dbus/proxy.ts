@@ -70,10 +70,11 @@ export function createProxyClass<T extends InterfaceDeclaration>(
 
 export function createProxyClass(info: Gio.DBusInterfaceInfo, gtypeName?: string): any {
     return class DBusProxy extends GObject.Object {
-        static info = info as InterfaceInfo<any>
-        static name = info.name
+        static readonly info = info as InterfaceInfo<any>
 
         static {
+            Object.defineProperty(this, "name", { value: info.name })
+
             const { READABLE, WRITABLE } = Gio.DBusPropertyInfoFlags
 
             const props = info.properties.map((prop) => {
