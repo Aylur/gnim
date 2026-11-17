@@ -46,6 +46,45 @@ fn walk_recursively(root: &Path) -> io::Result<Vec<PathBuf>> {
     })
 }
 
+fn include_files(dir: &Path) -> io::Result<Vec<ResourceFile>> {
+    let dir = fs::canonicalize(dir)?;
+
+    let last = dir
+        .file_name()
+        .ok_or_else(|| io::Error::other("path has no last segment"))?
+        .to_string_lossy()
+        .to_string();
+
+    let files = walk_recursively(&dir)?
+        .into_iter()
+        .filter(|file| file.is_file())
+        .map(|file| {
+            let rel = file
+                .strip_prefix(&dir)
+                .expect("file must be inside dir")
+                .to_string_lossy();
+
+            let alias = if rel.is_empty() {
+                last.clone()
+            } else {
+                format!("{last}/{rel}")
+            };
+
+            // example:
+            //
+            // dir: "$(pwd)/data/icons"
+            // file: "$(pwd)/data/icons/path/to/file.svg"
+            //
+            // <file alias="icons/path/to/file.svg">$file</file>
+            ResourceFile {
+                file: file.to_string_lossy().to_string(),
+                alias,
+            }
+        });
+
+    Ok(files.collect())
+}
+
 pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
     let mainjs = "main.js";
 
@@ -83,7 +122,8 @@ pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
     let extra_files: Vec<ResourceFile> = args
         .include
         .iter()
-        .filter_map(|dir| match walk_recursively(dir) {
+        .filter_map(|dir| match include_files(dir) {
+            Ok(files) => Some(files),
             Err(err) => {
                 eprintln!(
                     "Failed to include {} in the bundle: {}",
@@ -91,42 +131,6 @@ pub async fn bundle(args: &BundleArgs) -> Result<(), String> {
                     err
                 );
                 None
-            }
-            Ok(files) => {
-                let result: Vec<ResourceFile> = files
-                    .iter()
-                    .filter(|file| file.is_file())
-                    .map(|file| {
-                        let last = dir
-                            .file_name()
-                            .expect("dir must have a last segment")
-                            .to_string_lossy();
-
-                        let rel = file
-                            .strip_prefix(dir)
-                            .expect("file must be inside dir")
-                            .to_string_lossy();
-
-                        let alias = if rel.is_empty() {
-                            format!("{last}")
-                        } else {
-                            format!("{last}/{rel}")
-                        };
-
-                        // example:
-                        //
-                        // dir: "$(pwd)/data/icons"
-                        // file: "$(pwd)/data/icons/path/to/file.svg"
-                        //
-                        // <file alias="icons/path/to/file.svg">$file</file>
-                        ResourceFile {
-                            file: file.to_string_lossy().to_string(),
-                            alias,
-                        }
-                    })
-                    .collect();
-
-                Some(result)
             }
         })
         .flatten()

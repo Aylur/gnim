@@ -17,11 +17,11 @@ grass = "0.13.4"
 lightningcss = "1.0.0-alpha.72"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rolldown = { git = "https://github.com/rolldown/rolldown" }
-rolldown_watcher = { git = "https://github.com/rolldown/rolldown" }
-rolldown_plugin = { git = "https://github.com/rolldown/rolldown" }
-rolldown_common = { git = "https://github.com/rolldown/rolldown" }
-rolldown_utils = { git = "https://github.com/rolldown/rolldown" }
-string_wizard = { git = "https://github.com/rolldown/rolldown" }
+rolldown = { git = "https://github.com/rolldown/rolldown", rev = "f285eaf12cc34a429d5a51512a15d69248cca76c" }
+rolldown_watcher = { git = "https://github.com/rolldown/rolldown", rev = "f285eaf12cc34a429d5a51512a15d69248cca76c" }
+rolldown_plugin = { git = "https://github.com/rolldown/rolldown", rev = "f285eaf12cc34a429d5a51512a15d69248cca76c" }
+rolldown_common = { git = "https://github.com/rolldown/rolldown", rev = "f285eaf12cc34a429d5a51512a15d69248cca76c" }
+rolldown_utils = { git = "https://github.com/rolldown/rolldown", rev = "f285eaf12cc34a429d5a51512a15d69248cca76c" }
+string_wizard = { git = "https://github.com/rolldown/rolldown", rev = "f285eaf12cc34a429d5a51512a15d69248cca76c" }
 oxc = { version = "0.157.0", features = ["transformer", "codegen"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "net", "io-util", "sync", "process"] }

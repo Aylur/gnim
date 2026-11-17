@@ -2,8 +2,7 @@ use clap::Args;
 use colored::Colorize;
 use girgen::generator::{Error, Event, gjs};
 use girgen::{default_dirs, girgen};
-use std::sync::OnceLock;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, OnceLock};
 use std::{fs, io, io::Write, path};
 
 const GNIM_ENV: &str = r#"
@@ -51,9 +50,16 @@ pub struct TypeArgs {
 
 static VERBOSE: OnceLock<bool> = OnceLock::new();
 
-// 9 lib files + index.d.ts + package.json
-static N_GIRS: AtomicUsize = AtomicUsize::new(11);
-static N_GENERATED: AtomicUsize = AtomicUsize::new(0);
+struct Progress {
+    total: usize,
+    done: usize,
+}
+
+static PROGRESS: Mutex<Progress> = Mutex::new(Progress {
+    // 10 gjs lib files + index.d.ts + package.json
+    total: 12,
+    done: 0,
+});
 
 fn stem(path: &path::Path) -> &str {
     path.file_stem()
@@ -111,18 +117,17 @@ fn on_verbose_event(event: Event) {
 
 // TODO: impl a progress bar
 fn on_silent_event(event: Event) {
-    let mut out = io::stderr();
+    let mut progress = PROGRESS.lock().unwrap_or_else(|err| err.into_inner());
 
     match event {
         Event::Parsed { file_path: _ } => {
-            let girs = N_GIRS.fetch_add(1, Ordering::Relaxed) + 1;
-            write!(out, "\r  0/{}\x1b[K", girs).unwrap();
+            progress.total += 1;
         }
         Event::Failed { repo, err: _ } => {
-            if repo.is_some() {
-                let girs = N_GIRS.fetch_sub(1, Ordering::Relaxed) + 1;
-                write!(out, "\r  0/{}\x1b[K", girs).unwrap();
+            if repo.is_none() {
+                return;
             }
+            progress.total -= 1;
         }
         Event::Generated {
             repo: _,
@@ -132,9 +137,7 @@ fn on_silent_event(event: Event) {
             repo: _,
             out_path: _,
         } => {
-            let girs = N_GIRS.load(Ordering::Relaxed);
-            let gens = N_GENERATED.fetch_add(1, Ordering::Relaxed) + 1;
-            write!(out, "\r{:>n$}/{}\x1b[K", gens, girs, n = 3).unwrap();
+            progress.done += 1;
         }
         Event::Ignored {
             file_path: _,
@@ -144,10 +147,12 @@ fn on_silent_event(event: Event) {
         | Event::ParseFailed {
             file_path: _,
             err: _,
-        } => (),
+        } => return,
     }
 
-    out.flush().unwrap();
+    let mut out = io::stderr();
+    write!(out, "\r{:>3}/{}\x1b[K", progress.done, progress.total).ok();
+    out.flush().ok();
 }
 
 fn on_event(event: Event) {
@@ -175,18 +180,31 @@ pub async fn types(args: &TypeArgs) -> Result<(), String> {
         },
     };
 
-    girgen(girgen_args).map_err(|err| match err {
-        Error::Empty => "nothing to generate".to_string(),
-        Error::FsError(error) => error.to_string(),
-    })?;
+    let result = girgen(girgen_args)
+        .map_err(|err| match err {
+            Error::Empty => "nothing to generate".to_string(),
+            Error::FsError(error) => error.to_string(),
+        })
+        .and_then(|_| write_gnim_env(&args.outdir));
 
-    fs::create_dir_all(format!("{}/gnim", args.outdir)).unwrap();
+    if !args.verbose {
+        eprintln!();
+    }
 
-    fs::write(format!("{}/gnim/env.d.ts", args.outdir), GNIM_ENV)
-        .expect("Failed to write gnim/env.d.ts");
+    result
+}
 
-    fs::write(format!("{}/gnim/package.json", args.outdir), GNIM_PACKAGE)
-        .expect("Failed to write gnim/package.json");
+fn write_gnim_env(outdir: &str) -> Result<(), String> {
+    let gnim_dir = path::Path::new(outdir).join("gnim");
+
+    fs::create_dir_all(&gnim_dir)
+        .map_err(|err| format!("Failed to create {}: {}", gnim_dir.display(), err))?;
+
+    for (file, content) in [("env.d.ts", GNIM_ENV), ("package.json", GNIM_PACKAGE)] {
+        let path = gnim_dir.join(file);
+        fs::write(&path, content)
+            .map_err(|err| format!("Failed to write {}: {}", path.display(), err))?;
+    }
 
     Ok(())
 }

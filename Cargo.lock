@@ -2532,7 +2532,7 @@ dependencies = [
 [[package]]
 name = "rolldown"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "anyhow",
  "append-only-vec",
@@ -2648,7 +2648,7 @@ checksum = "a4eca3ed5535d04e688c4518bcf36595b862967468e7f8f267d70820eab6edb9"
 [[package]]
 name = "rolldown_common"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2686,7 +2686,7 @@ dependencies = [
 [[package]]
 name = "rolldown_dev_common"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "derive_more",
  "rolldown_common",
@@ -2697,7 +2697,7 @@ dependencies = [
 [[package]]
 name = "rolldown_devtools"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "blake3",
  "rolldown_devtools_action",
@@ -2712,7 +2712,7 @@ dependencies = [
 [[package]]
 name = "rolldown_devtools_action"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "serde",
  "ts-rs",
@@ -2721,7 +2721,7 @@ dependencies = [
 [[package]]
 name = "rolldown_devtools_metrics"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "rolldown_std_utils",
  "rustc-hash",
@@ -2732,7 +2732,7 @@ dependencies = [
 [[package]]
 name = "rolldown_ecmascript"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "arcstr",
  "oxc",
@@ -2745,7 +2745,7 @@ dependencies = [
 [[package]]
 name = "rolldown_ecmascript_utils"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "memchr",
  "oxc",
@@ -2756,7 +2756,7 @@ dependencies = [
 [[package]]
 name = "rolldown_error"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2776,7 +2776,7 @@ dependencies = [
 [[package]]
 name = "rolldown_fs"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "oxc_resolver",
  "vfs",
@@ -2785,7 +2785,7 @@ dependencies = [
 [[package]]
 name = "rolldown_fs_watcher"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "globstar",
  "rolldown-notify",
@@ -2801,7 +2801,7 @@ dependencies = [
 [[package]]
 name = "rolldown_plugin"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2831,7 +2831,7 @@ dependencies = [
 [[package]]
 name = "rolldown_plugin_asset_module"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "anyhow",
  "rolldown_common",
@@ -2844,7 +2844,7 @@ dependencies = [
 [[package]]
 name = "rolldown_plugin_chunk_import_map"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "arcstr",
  "rolldown_common",
@@ -2858,7 +2858,7 @@ dependencies = [
 [[package]]
 name = "rolldown_plugin_copy_module"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2872,7 +2872,7 @@ dependencies = [
 [[package]]
 name = "rolldown_plugin_data_url"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "arcstr",
  "base64-simd 0.8.0",
@@ -2886,7 +2886,7 @@ dependencies = [
 [[package]]
 name = "rolldown_plugin_hmr"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "rolldown_common",
  "rolldown_plugin",
@@ -2895,7 +2895,7 @@ dependencies = [
 [[package]]
 name = "rolldown_plugin_lazy_compilation"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "arcstr",
  "rolldown_common",
@@ -2907,7 +2907,7 @@ dependencies = [
 [[package]]
 name = "rolldown_plugin_oxc_runtime"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "arcstr",
  "phf 0.14.0",
@@ -2919,7 +2919,7 @@ dependencies = [
 [[package]]
 name = "rolldown_plugin_utils"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2938,7 +2938,7 @@ dependencies = [
 [[package]]
 name = "rolldown_resolver"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -2954,7 +2954,7 @@ dependencies = [
 [[package]]
 name = "rolldown_sourcemap"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "memchr",
  "oxc",
@@ -2964,7 +2964,7 @@ dependencies = [
 [[package]]
 name = "rolldown_std_utils"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "regex",
  "sugar_path",
@@ -2973,7 +2973,7 @@ dependencies = [
 [[package]]
 name = "rolldown_tracing"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "tracing",
  "tracing-subscriber",
@@ -2982,7 +2982,7 @@ dependencies = [
 [[package]]
 name = "rolldown_utils"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -3020,7 +3020,7 @@ dependencies = [
 [[package]]
 name = "rolldown_watcher"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "anyhow",
  "arcstr",
@@ -3295,7 +3295,7 @@ checksum = "d08889ec5408683408db66ad89e0e1f93dff55c73a4ccc71c427d5b277ee47e6"
 [[package]]
 name = "string_wizard"
 version = "1.3.0"
-source = "git+https://github.com/rolldown/rolldown#f285eaf12cc34a429d5a51512a15d69248cca76c"
+source = "git+https://github.com/rolldown/rolldown?rev=f285eaf12cc34a429d5a51512a15d69248cca76c#f285eaf12cc34a429d5a51512a15d69248cca76c"
 dependencies = [
  "memchr",
  "oxc_index",
