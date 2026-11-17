@@ -62,13 +62,19 @@ describe("getLocale", () => {
 
 describe("getPreferredLocale", () => {
     it("normalizes every entry of LANGUAGE", async () => {
-        const { getPreferredLocale } = await importLocale({ LANGUAGE: "hu_HU:en_US.UTF-8:de" })
+        const { getPreferredLocale } = await importLocale({
+            LANGUAGE: "hu_HU:en_US.UTF-8:de",
+            LANG: "en_US.UTF-8",
+        })
 
         expect(getPreferredLocale()).toEqual(["hu-HU", "en-US", "de"])
     })
 
     it("drops entries that do not name a locale", async () => {
-        const { getPreferredLocale } = await importLocale({ LANGUAGE: "hu_HU::C:en" })
+        const { getPreferredLocale } = await importLocale({
+            LANGUAGE: "hu_HU::C:en",
+            LANG: "en_US.UTF-8",
+        })
 
         expect(getPreferredLocale()).toEqual(["hu-HU", "en"])
     })
@@ -99,6 +105,31 @@ describe("getPreferredLocale", () => {
             LANGUAGE: "de",
             LC_ALL: "hu_HU.UTF-8",
             LANG: "en_US.UTF-8",
+        })
+
+        expect(getPreferredLocale()).toEqual(["de"])
+    })
+
+    it.each(["C", "C.UTF-8", "POSIX"])(
+        "ignores LANGUAGE when the messages locale is %s",
+        async (lang) => {
+            const { getPreferredLocale } = await importLocale({ LANGUAGE: "de", LANG: lang })
+
+            expect(getPreferredLocale()).toBe("en-US")
+        },
+    )
+
+    it("ignores LANGUAGE when no locale is set", async () => {
+        const { getPreferredLocale } = await importLocale({ LANGUAGE: "de" })
+
+        expect(getPreferredLocale()).toBe("en-US")
+    })
+
+    it("honors LANGUAGE when LC_ALL overrides a C LANG", async () => {
+        const { getPreferredLocale } = await importLocale({
+            LANGUAGE: "de",
+            LC_ALL: "hu_HU.UTF-8",
+            LANG: "C",
         })
 
         expect(getPreferredLocale()).toEqual(["de"])

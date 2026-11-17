@@ -9,6 +9,11 @@ export type Text<T> = T & {
     [tags]: GetTags<T>
 }
 
+export type PluralText<S1, S2> = (S1 | S2) & {
+    [args]: GetArgs<S1> & GetArgs<S2>
+    [tags]: GetTags<S1> | GetTags<S2>
+}
+
 export interface GettextDomain {
     /**
      * @param msgid A string to translate.
@@ -30,7 +35,7 @@ export interface GettextDomain {
         msgid1: S1,
         msgid2: S2,
         n: number,
-    ): Text<S1 | S2>
+    ): PluralText<S1, S2>
     /**
      * @param msgctxt A context to disambiguate `msgid`.
      * @param msgid A string to translate.

@@ -20,36 +20,23 @@ type LocaleEnvVar =
 const cache = new Map<LocaleEnvVar, Intl.Locale>()
 
 /** Strips the codeset and modifier, e.g. `de_DE.UTF-8@euro` -> `de_DE`. */
-function baseName(name: string) {
-    return name.replace(/\..*$/, "").replace(/@.*$/, "")
+function baseName(locale: string) {
+    return locale.replace(/\..*$/, "").replace(/@.*$/, "")
 }
 
-function isDefaultLocale(name: string) {
-    const base = baseName(name)
+function isDefaultLocale(locale: string | null) {
+    const base = locale && baseName(locale)
     return !base || base === "C" || base === "POSIX"
 }
 
-function parseLocale(name: string): Intl.Locale | null {
-    if (isDefaultLocale(name)) return null
+function parseLocale(locale: string | null): Intl.Locale | null {
+    if (!locale || isDefaultLocale(locale)) return null
 
     try {
-        return new Intl.Locale(baseName(name).replace(/_/g, "-"))
+        return new Intl.Locale(baseName(locale).replace(/_/g, "-"))
     } catch {
         return null
     }
-}
-
-function getLocaleFromEnv(env: LocaleEnvVar): Intl.Locale {
-    const lang = GLib.getenv(env) ?? ""
-    const locale = parseLocale(lang)
-
-    if (locale) return locale
-
-    if (!isDefaultLocale(lang)) {
-        logError(new Error(`Variable ${env} does not specify a valid locale: ${lang}, using en-US`))
-    }
-
-    return new Intl.Locale("en-US")
 }
 
 /**
@@ -58,21 +45,30 @@ function getLocaleFromEnv(env: LocaleEnvVar): Intl.Locale {
  * @example LANG="en_US.UTF-8" -> "en-US"
  */
 export function getLocale(env: LocaleEnvVar = "LANG") {
-    let locale = cache.get(env)
-    if (locale) return locale
+    if (cache.has(env)) return cache.get(env)!
 
-    locale = getLocaleFromEnv(env)
-    cache.set(env, locale)
-    return locale
+    const value = GLib.getenv(env)
+    const locale = parseLocale(value)
+
+    if (!locale && !isDefaultLocale(value)) {
+        const msg = `Variable ${env} does not specify a valid locale: "${value}", using en-US`
+        logError(new Error(msg))
+    }
+
+    const resolved = locale ?? new Intl.Locale("en-US")
+    cache.set(env, resolved)
+    return resolved
 }
 
 /**
  * Get the BCP 47 formatted locale in the order that `gettext` resolves them.
  */
 export function getPreferredLocale(): string | string[] {
+    const messages = GLib.getenv("LC_ALL") || GLib.getenv("LC_MESSAGES") || GLib.getenv("LANG")
     const language = GLib.getenv("LANGUAGE")
 
-    if (language) {
+    // gettext ignores LANGUAGE when the messages locale is C
+    if (language && !isDefaultLocale(messages)) {
         const locales = language
             .split(":")
             .flatMap((name) => parseLocale(name) ?? [])
@@ -85,13 +81,11 @@ export function getPreferredLocale(): string | string[] {
         }
     }
 
-    if (GLib.getenv("LC_ALL")) {
-        return getLocale("LC_ALL").toString()
+    const locale = parseLocale(messages)
+
+    if (!locale && !isDefaultLocale(messages)) {
+        logError(new Error(`Locale "${messages}" is not valid, using en-US`))
     }
 
-    if (GLib.getenv("LC_MESSAGES")) {
-        return getLocale("LC_MESSAGES").toString()
-    }
-
-    return getLocale("LANG").toString()
+    return (locale ?? new Intl.Locale("en-US")).toString()
 }
