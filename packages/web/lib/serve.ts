@@ -387,18 +387,14 @@ function serve(options: ServeOptions): Server {
         hostname = "localhost",
         unix,
         tls,
-        serverHeader,
-        tlsAuthMode,
-        tlsDatabase,
+        ...serverProps
     } = options
     const address: Address = typeof unix === "string" ? { unix } : { port, hostname }
     const certificate = tls ? tlsCertificate(tls) : null
     const secure = certificate !== null
 
     const soup = new Soup.Server({
-        serverHeader,
-        tlsAuthMode,
-        tlsDatabase,
+        ...serverProps,
         rawPaths: true,
         tlsCertificate: certificate,
     })
