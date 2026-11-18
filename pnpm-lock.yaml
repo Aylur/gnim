@@ -65,6 +65,12 @@ importers:
 
   packages/cli: {}
 
+  packages/cli/npm/darwin-arm64: {}
+
+  packages/cli/npm/darwin-x64: {}
+
+  packages/cli/npm/linux-arm64: {}
+
   packages/cli/npm/linux-x64: {}
 
   packages/create:
@@ -126,6 +132,15 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.4.0)(vite@7.3.6(@types/node@26.4.0)(jiti@2.7.0))
     optionalDependencies:
+      '@gnim-js/darwin-arm64':
+        specifier: workspace:*
+        version: link:../cli/npm/darwin-arm64
+      '@gnim-js/darwin-x64':
+        specifier: workspace:*
+        version: link:../cli/npm/darwin-x64
+      '@gnim-js/linux-arm64':
+        specifier: workspace:*
+        version: link:../cli/npm/linux-arm64
       '@gnim-js/linux-x64':
         specifier: workspace:*
         version: link:../cli/npm/linux-x64

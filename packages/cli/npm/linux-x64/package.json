@@ -12,7 +12,7 @@
         "x64"
     ],
     "scripts": {
-        "prepublishOnly": "pnpm --filter @gnim-js/cli run build"
+        "prepublishOnly": "test -f gnim"
     },
     "exports": "./gnim",
     "files": [

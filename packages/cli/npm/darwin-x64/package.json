@@ -1,0 +1,21 @@
+{
+    "name": "@gnim-js/darwin-x64",
+    "version": "2.0.0-beta.30",
+    "author": "Aylur",
+    "license": "MIT",
+    "homepage": "https://gnimjs.dev/",
+    "repository": "github:Aylur/gnim",
+    "os": [
+        "darwin"
+    ],
+    "cpu": [
+        "x64"
+    ],
+    "scripts": {
+        "prepublishOnly": "test -f gnim"
+    },
+    "exports": "./gnim",
+    "files": [
+        "gnim"
+    ]
+}

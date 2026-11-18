@@ -26,6 +26,9 @@
         "intl-messageformat": "^11.2.13"
     },
     "optionalDependencies": {
+        "@gnim-js/darwin-arm64": "workspace:*",
+        "@gnim-js/darwin-x64": "workspace:*",
+        "@gnim-js/linux-arm64": "workspace:*",
         "@gnim-js/linux-x64": "workspace:*"
     },
     "devDependencies": {

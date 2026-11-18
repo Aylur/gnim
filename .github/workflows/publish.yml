@@ -1,0 +1,57 @@
+name: Publish
+
+on:
+    push:
+        branches:
+            - main
+
+concurrency: publish
+
+jobs:
+    build:
+        uses: ./.github/workflows/cli.yml
+
+    publish:
+        needs: build
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                shell: nix develop --command bash -e {0}
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+
+            - name: Install Nix
+              uses: DeterminateSystems/determinate-nix-action@v3
+
+            - name: Setup Rust
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Cache Rust
+              uses: Swatinem/rust-cache@v2
+
+            - name: Download CLI binaries
+              uses: actions/download-artifact@v7
+              with:
+                  path: artifacts
+
+            # artifacts do not keep file permissions
+            - name: Place CLI binaries
+              run: |
+                  for dir in artifacts/*; do
+                      install -m 755 "$dir/gnim" "packages/cli/npm/$(basename "$dir")/gnim"
+                  done
+
+            - name: Install dependencies
+              run: pnpm -r install --frozen-lockfile
+
+            - name: Generate types
+              run: pnpm run types
+
+            - name: Publish
+              env:
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+              run: |
+                  pnpm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+                  pnpm -r publish --access public --no-git-checks
