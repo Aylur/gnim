@@ -13,7 +13,7 @@
         "types": "./scripts.nu types",
         "check": "./scripts.nu check",
         "build": "pnpm -r run --parallel build",
-        "test": "pnpm -r run --parallel test",
+        "test": "pnpm -r run --parallel test && ./scripts.nu pack-test",
         "lint": "pnpm -r run --parallel lint",
         "fmt": "pnpm -r run --parallel fmt",
         "typecheck": "pnpm -r run --parallel typecheck",

@@ -32,8 +32,12 @@ def run-gnim-test [file: string]: nothing -> int {
 }
 
 def run-dbus-tests []: nothing -> int {
+    # CI: dbus-daemon from nix hardcodes the config path to /etc
+    let daemon = which dbus-daemon | get 0.path | path expand
+    let config = $daemon | path dirname | path join ../share/dbus-1/session.conf | path expand
+
     let bus = job spawn {
-        (dbus-daemon --session --nofork --print-address
+        (^$daemon --config-file $config --nofork --print-address
             | lines
             | each {|address| $address | job send 0 }
             | ignore

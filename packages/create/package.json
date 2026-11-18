@@ -34,7 +34,7 @@
         "templates"
     ],
     "engines": {
-        "gjs": ">=1.83.0"
+        "node": ">=22.4.0"
     },
     "keywords": [
         "GJS",

@@ -22,29 +22,76 @@ import nunjucks from "nunjucks"
 const execFileAsync = promisify(execFile)
 
 const templateOptions = [
-    { value: "adwaita", label: "Adwaita Application" },
-    { value: "layer-shell", label: "Gtk4 Layer Shell" },
-    { value: "empty", label: "Empty" },
+    {
+        value: "adwaita",
+        label: "Adwaita Application",
+        id: "com.example.MyApp",
+        name: "my-app",
+    },
+    {
+        value: "layer-shell",
+        label: "Gtk4 Layer Shell",
+        id: "com.example.MyShell",
+        name: "my-shell",
+    },
+    {
+        value: "empty",
+        label: "Empty",
+        id: "com.example.MyApp",
+        name: "my-app",
+    },
     {
         value: "gnome-shell",
         label: "Gnome Shell Extension",
         hint: "experimental",
+        id: "my-extension@me.dev",
+        name: "My Extension",
     },
 ] as const
 
 type Template = (typeof templateOptions)[number]["value"]
 
+const usage = `Usage: create-gnim [directory] [options]
+
+Options not given on the command line are prompted for.
+
+Options:
+  -t, --template <name>     Template to create the project from
+      --id <id>             Application ID, or the UUID of a GNOME Shell extension
+      --name <name>         Application or extension name
+      --description <text>  Description of a GNOME Shell extension
+      --[no-]vala           Add Vala source files to the project
+      --[no-]agents         Create an AGENTS.md file
+      --[no-]git            Initialize a git repository
+      --[no-]install        Install the dependencies
+  -h, --help                Show this help`
+
 function parseCliArgs() {
     const args = parseArgs({
         options: {
             template: { type: "string", short: "t" },
+            id: { type: "string" },
+            name: { type: "string" },
+            description: { type: "string" },
             vala: { type: "boolean" },
             agents: { type: "boolean" },
+            git: { type: "boolean" },
+            install: { type: "boolean" },
+            help: { type: "boolean", short: "h" },
         },
+        allowPositionals: true,
+        allowNegative: true,
         strict: false,
     })
 
-    const { template, vala, agents } = args.values
+    const [dir] = args.positionals
+    const { template, id, name, description, vala, agents, git, install } =
+        args.values
+
+    if (args.values.help) {
+        console.log(usage)
+        process.exit(0)
+    }
 
     if (typeof template !== "undefined") {
         const valid: string[] = templateOptions.map((option) => option.value)
@@ -58,9 +105,24 @@ function parseCliArgs() {
 
     return {
         template: (template ?? null) as Template | null,
+        dir: dir ?? null,
+        id: typeof id === "string" ? id : null,
+        name: typeof name === "string" ? name : null,
+        description: typeof description === "string" ? description : null,
         vala: typeof vala === "boolean" ? vala : null,
         agents: typeof agents === "boolean" ? agents : null,
+        git: typeof git === "boolean" ? git : null,
+        install: typeof install === "boolean" ? install : null,
     }
+}
+
+function checked(value: string, validate: (value: string) => string | void) {
+    const error = validate(value)
+    if (error) {
+        console.error(error)
+        process.exit(1)
+    }
+    return value
 }
 
 function detectPackageManager() {
@@ -97,19 +159,21 @@ function defaultGirDirs(): string[] {
     })
 }
 
+function validateTargetDir(path: string | undefined) {
+    if (!path) return "Directory is required"
+    try {
+        const s = statSync(path)
+        if (s.isFile()) return "Target is an existing file"
+    } catch {
+        // noop
+    }
+}
+
 async function askTargetDir() {
     const targetDir = await text({
         message: "Where should the project be created?",
         placeholder: "./myapp",
-        validate(path) {
-            if (!path) return "Directory is required"
-            try {
-                const s = statSync(path)
-                if (s.isFile()) return "Target is an existing file"
-            } catch {
-                // noop
-            }
-        },
+        validate: validateTargetDir,
     })
 
     if (isCancel(targetDir)) {
@@ -119,47 +183,49 @@ async function askTargetDir() {
     return targetDir
 }
 
+function validateAppId(id: string | undefined) {
+    if (!id) {
+        return "ID is required"
+    }
+
+    if (id.length === 0) {
+        return "The ID cannot be empty."
+    }
+
+    if (id.length > 255) {
+        return "The ID must not exceed 255 characters."
+    }
+
+    if (id.startsWith(".")) {
+        return "The ID must not begin with a period."
+    }
+
+    const parts = id.split(".")
+
+    if (parts.length < 2) {
+        return "The ID must contain at least one period."
+    }
+
+    for (const part of parts) {
+        if (part.length === 0) {
+            return "Each segment between periods must contain at least one character."
+        }
+
+        if (/^\d/.test(part)) {
+            return "Each segment must not begin with a digit."
+        }
+
+        if (!/^[A-Za-z0-9_-]+$/.test(part)) {
+            return "Each segment may only contain ASCII letters, digits, underscores, or hyphens."
+        }
+    }
+}
+
 async function askAppId(placeholder: string) {
     const id = await text({
         message: "Pick an application ID",
         placeholder,
-        validate(id) {
-            if (!id) {
-                return "ID is required"
-            }
-
-            if (id.length === 0) {
-                return "The ID cannot be empty."
-            }
-
-            if (id.length > 255) {
-                return "The ID must not exceed 255 characters."
-            }
-
-            if (id.startsWith(".")) {
-                return "The ID must not begin with a period."
-            }
-
-            const parts = id.split(".")
-
-            if (parts.length < 2) {
-                return "The ID must contain at least one period."
-            }
-
-            for (const part of parts) {
-                if (part.length === 0) {
-                    return "Each segment between periods must contain at least one character."
-                }
-
-                if (/^\d/.test(part)) {
-                    return "Each segment must not begin with a digit."
-                }
-
-                if (!/^[A-Za-z0-9_-]+$/.test(part)) {
-                    return "Each segment may only contain ASCII letters, digits, underscores, or hyphens."
-                }
-            }
-        },
+        validate: validateAppId,
     })
 
     if (isCancel(id)) {
@@ -169,19 +235,21 @@ async function askAppId(placeholder: string) {
     return id
 }
 
-async function askGnomeUuid() {
+function validateGnomeUuid(id: string | undefined) {
+    if (!id) {
+        return "ID is required"
+    }
+
+    if (!/^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/.test(id)) {
+        return "ID must be in the format of an email address"
+    }
+}
+
+async function askGnomeUuid(placeholder: string) {
     const id = await text({
         message: "Pick an extension UUID.",
-        placeholder: "my-extension@me.dev",
-        validate(id) {
-            if (!id) {
-                return "ID is required"
-            }
-
-            if (!/^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/.test(id)) {
-                return "ID must be in the format of an email address"
-            }
-        },
+        placeholder,
+        validate: validateGnomeUuid,
     })
 
     if (isCancel(id)) {
@@ -204,17 +272,19 @@ async function askDescription(placeholder: string) {
     return (id ?? "").trim()
 }
 
+function validateAppName(name: string | undefined) {
+    if (!name) return "A name is required"
+
+    if (!/^[a-z0-9][a-z0-9._-]*$/.test(name)) {
+        return "The name may only contain lowercase letters, digits, periods, underscores, or hyphens, and must start with a letter or digit."
+    }
+}
+
 async function askAppName(placeholder: string) {
     const name = await text({
         message: "Pick an application name",
         placeholder,
-        validate(name) {
-            if (!name) return "A name is required"
-
-            if (!/^[a-z0-9][a-z0-9._-]*$/.test(name)) {
-                return "The name may only contain lowercase letters, digits, periods, underscores, or hyphens, and must start with a letter or digit."
-            }
-        },
+        validate: validateAppName,
     })
 
     if (isCancel(name)) {
@@ -224,13 +294,15 @@ async function askAppName(placeholder: string) {
     return name
 }
 
+function validateExtensionName(name: string | undefined) {
+    if (!name?.trim()) return "A name is required"
+}
+
 async function askExtensionName(placeholder: string) {
     const name = await text({
         message: "Pick an extension name",
         placeholder,
-        validate(name) {
-            if (!name?.trim()) return "A name is required"
-        },
+        validate: validateExtensionName,
     })
 
     if (isCancel(name)) {
@@ -451,10 +523,10 @@ async function createAgentsMd(dir: string) {
 }
 
 async function main() {
+    const args = parseCliArgs()
+
     console.log()
     intro(`\x1b[7;34m\x1b[1m${" Gnim "}\x1b[0m`)
-
-    const args = parseCliArgs()
     let { template, vala, agents } = args
 
     if (!template) {
@@ -470,49 +542,46 @@ async function main() {
         template = answer
     }
 
-    if (template === "gnome-shell") {
-        vala = false
-    } else {
-        vala ??= await askVala()
-    }
+    const placeholder = templateOptions.find(
+        (option) => option.value === template,
+    )!
 
     let id: string
-    let name: string = ""
-    let description: string = ""
+    let name: string
+    let description = ""
 
-    switch (template) {
-        case "adwaita": {
-            id = await askAppId("com.example.MyApp")
-            name = await askAppName("my-app")
-            break
-        }
-        case "layer-shell": {
-            id = await askAppId("com.example.MyShell")
-            name = await askAppName("my-shell")
-            break
-        }
-        case "empty": {
-            id = await askAppId("com.example.MyApp")
-            name = await askAppName("my-app")
-            break
-        }
-        case "gnome-shell": {
-            id = await askGnomeUuid()
-            name = await askExtensionName("My Extension")
-            description = await askDescription("Extension that lets you do xyz")
-            break
-        }
+    if (template === "gnome-shell") {
+        vala = false
+        id = args.id
+            ? checked(args.id, validateGnomeUuid)
+            : await askGnomeUuid(placeholder.id)
+        name = args.name
+            ? checked(args.name, validateExtensionName).trim()
+            : await askExtensionName(placeholder.name)
+        description =
+            args.description?.trim() ??
+            (await askDescription("Extension that lets you do xyz"))
+    } else {
+        vala ??= await askVala()
+        id = args.id
+            ? checked(args.id, validateAppId)
+            : await askAppId(placeholder.id)
+        name = args.name
+            ? checked(args.name, validateAppName)
+            : await askAppName(placeholder.name)
     }
 
-    const dir = await askTargetDir()
+    const dir = args.dir
+        ? checked(args.dir, validateTargetDir)
+        : await askTargetDir()
     if (existsSync(dir) && readdirSync(dir).length > 0) {
         log.warn(`${dir} is not empty`)
     }
-    const git = await askGit()
+    const git = args.git ?? (await askGit())
     if (agents === null) {
         agents = await askAgents()
     }
-    const install = await askInstall()
+    const install = args.install ?? (await askInstall())
     const extenstionId = id.split("@")[0]
 
     const variables = {
