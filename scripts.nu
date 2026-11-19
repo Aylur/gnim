@@ -8,7 +8,7 @@ def "main types" [] {
 
     mkdir .gnim
 
-    if not $ci {
+    if not $ci and (which flatpak | length) > 0 {
         flatpak run --command=cp --filesystem=home $"org.gnome.Sdk//($runtime)" -r /usr/share/gir-1.0 ./.gnim/girs
     }
 
