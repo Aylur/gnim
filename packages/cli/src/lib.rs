@@ -5,7 +5,7 @@ pub mod plugin;
 pub mod schemas;
 pub mod types;
 
-use std::{path::PathBuf, sync::OnceLock};
+use std::{env, ffi, fs, path::Path, path::PathBuf, process, sync::OnceLock};
 
 static GLOBAL_OPTIONS: OnceLock<GlobalOptions> = OnceLock::new();
 
@@ -27,18 +27,18 @@ pub fn root() -> PathBuf {
     GLOBAL_OPTIONS
         .get()
         .and_then(|o| o.root.clone())
-        .or_else(|| std::env::current_dir().ok())
+        .or_else(|| env::current_dir().ok())
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
 pub fn dev_rundir() -> PathBuf {
-    let dir = std::env::var("XDG_RUNTIME_DIR")
+    let dir = env::var("XDG_RUNTIME_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("/tmp"))
-        .join(format!("gnim_{}", std::process::id()));
+        .join(format!("gnim_{}", process::id()));
 
-    std::fs::create_dir_all(&dir).ok();
-    dir
+    fs::create_dir_all(&dir).ok();
+    fs::canonicalize(&dir).unwrap_or(dir)
 }
 
 pub fn rolldown_config() -> rolldown::BundlerOptions {
@@ -110,13 +110,13 @@ pub fn parse_key_val(s: &str) -> Result<(String, String), String> {
 }
 
 pub fn is_in_path(program: &str) -> bool {
-    std::env::var_os("PATH")
-        .and_then(|paths| std::env::split_paths(&paths).find(|dir| dir.join(program).is_file()))
+    env::var_os("PATH")
+        .and_then(|paths| env::split_paths(&paths).find(|dir| dir.join(program).is_file()))
         .is_some()
 }
 
-pub fn gsettings_schema_dir(gnim_schemas: &std::path::Path) -> std::ffi::OsString {
-    use std::env::{join_paths, split_paths, var_os};
+pub fn gsettings_schema_dir(gnim_schemas: &Path) -> ffi::OsString {
+    use env::{join_paths, split_paths, var_os};
 
     // nix uses GSETTINGS_SCHEMAS_PATH
     let schema_paths = var_os("GSETTINGS_SCHEMAS_PATH")
