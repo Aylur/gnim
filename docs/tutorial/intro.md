@@ -2,29 +2,35 @@
 
 This tutorial will walk you through creating a Gtk4 application from scratch
 using Gnim. Before jumping in, you are expected to know
-[TypeScript](https://learnxinyminutes.com/typescript/) or at least JavaScript.
+[TypeScript](https://learnxinyminutes.com/typescript/) or at least
+[JavaScript](https://learnxinyminutes.com/javascript/).
+
+> [!TIP]
+>
+> Using TypeScript is _not_ required, but it is _recommended_. Even if you
+> decide to use JavaScript, do not forget to set up a TypeScript LSP in your
+> chosen text editor to benefit from the generated type annotations.
 
 ## JavaScript Runtime
 
-The JavaScript runtime Gnim uses is [GJS](https://gitlab.gnome.org/GNOME/gjs).
-It is built on Firefox's SpiderMonkey JavaScript engine and the GNOME platform
-libraries.
+The JavaScript runtime that Gnim uses is
+[GJS](https://gitlab.gnome.org/GNOME/gjs). It is built on Firefox's SpiderMonkey
+JavaScript engine and the GNOME platform libraries.
 
 > [!IMPORTANT]
 >
 > GJS is **not** Node, **not** Deno, and **not** Bun. GJS does not implement
 > some common Web APIs you might be used to from these other runtimes such as
 > `fetch`. The standard library of GJS comes from
-> [`GLib`](https://docs.gtk.org/glib/), [`Gio`](https://docs.gtk.org/gio//) and
+> [`GLib`](https://docs.gtk.org/glib/), [`Gio`](https://docs.gtk.org/gio/) and
 > [`GObject`](https://docs.gtk.org/gobject/) which are libraries written in C
 > and exposed to GJS through
 > [FFI](https://en.wikipedia.org/wiki/Foreign_function_interface) using
-> [GObject Introspection](https://gi.readthedocs.io/en/latest/)
+> [GObject Introspection](https://gi.readthedocs.io/en/latest/).
 
-## Development Environment
+## Installing system dependencies
 
-For setting up a development environment you will need the following
-dependencies installed:
+You will need the following dependencies installed:
 
 - gjs
 - gtk4
@@ -32,32 +38,32 @@ dependencies installed:
 
 ::: code-group
 
-```sh [Arch]
+```sh [<i class="devicon-archlinux-plain"></i> Arch]
 sudo pacman -Syu gjs gtk4 npm
 ```
 
-```sh [Fedora]
+```sh [<i class="devicon-fedora-plain"></i> Fedora]
 sudo dnf install gjs-devel gtk4-devel npm
 ```
 
-```sh [Ubuntu]
-sudo apt install libgjs-dev libgtk-3-dev npm
+```sh [<i class="devicon-ubuntu-plain"></i> Ubuntu]
+sudo apt install libgjs-dev libgtk-4-dev npm
 ```
 
-```nix [Nix]
-# flake.nix
+```nix [<i class="devicon-nixos-plain"></i> Nix]
 {
   inputs.nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
-  outputs = {
-    self,
-    nixpkgs,
-  }: let
-    forAllSystems = nixpkgs.lib.genAttrs ["x86_64-linux" "aarch64-linux"];
+  outputs = { self, nixpkgs }: let
+    forAllSystems = nixpkgs.lib.genAttrs [
+      "x86_64-linux"
+      "aarch64-linux"
+    ];
   in {
     devShells = forAllSystems (system: let
       pkgs = nixpkgs.legacyPackages.${system};
     in {
+      # [!code focus:10]
       # enter this shell using `nix develop`
       default = pkgs.mkShell {
         packages = with pkgs; [
@@ -75,101 +81,119 @@ sudo apt install libgjs-dev libgtk-3-dev npm
 
 :::
 
-Since GJS does not support `node_modules` we have to use a bundler. For this
-tutorial we will use `esbuild` which you can either install using your system
-package manager or `npm`. You also have to configure `tsconfig.json` which will
-tell the bundler about the environment and JSX runtime.
+## Using a template
 
-1. init a directory
+::: code-group
+
+```sh [<i class="devicon-npm-plain"></i> npm]
+npm create gnim@beta
+```
+
+```sh [<i class="devicon-pnpm-plain"></i> pnpm]
+pnpm create gnim@beta
+```
+
+```sh [<i class="devicon-yarn-original"></i> yarn]
+yarn create gnim@beta
+```
+
+:::
+
+> [!TIP] <i class="devicon-nixos-plain"></i> Nix
+>
+> For nix users, Gnim provides a nix template.
+>
+> ```sh
+> nix flake init --template github:aylur/gnim/v2
+> ```
+
+## Creating a new project manually
+
+1. Create a project directory and install Gnim
 
    ```sh
    mkdir gnim-app
    cd gnim-app
-   npm install gnim
-   npm install typescript esbuild @girs/gtk-4.0 @girs/gjs -D
+   npm install gnim@beta @gnim-js/gtk4@beta
    ```
 
-2. configure `tsconfig.json`
+2. Configure `tsconfig.json`
 
    ```json
    {
      "compilerOptions": {
-       "target": "ES2020",
+       "experimentalDecorators": true,
+       "emitDecoratorMetadata": true,
+       "useDefineForClassFields": false,
+       "target": "ES2024",
        "module": "ES2022",
-       "lib": ["ES2024"],
+       "lib": ["ESNext"],
        "outDir": "dist",
        "strict": true,
        "moduleResolution": "Bundler",
        "skipLibCheck": true,
        "jsx": "react-jsx",
-       "jsxImportSource": "gnim/gtk4"
-     }
+       "jsxImportSource": "gnim",
+       "types": ["gi", "gnim"],
+       "typeRoots": ["./.gnim/types"]
+     },
+     "include": ["./src/**/*"]
    }
    ```
 
-3. by convention, source files go in the `src` directory
-
-   ```sh
-   mkdir src
-   ```
-
-4. create an `env.d.ts` file
-
-   ```ts
-   import "@girs/gtk-4.0"
-   import "@girs/gjs"
-   import "@girs/gjs/dom"
-   ```
-
-5. create the entry point
-
-   ```ts
-   console.log("hello world")
-   ```
-
-6. write a build script
-
-   ```sh
-   # scripts/build.sh
-   esbuild --bundle src/main.ts \
-     --outdir=dist \
-     --external:gi://* \
-     --external:resource://* \
-     --external:system \
-     --external:gettext \
-     --format=esm \
-     --sourcemap=inline
-   ```
-
-Finally, your project structure should like like this:
-
-```txt
-.
-├── node_modules
-├── package-lock.json
-├── package.json
-├── scripts
-│   └── build.sh
-├── src
-│   ├── env.d.ts
-│   └── main.ts
-└── tsconfig.json
-```
-
-To make running the project easier you can add a `dev` script in `package.json`.
+3. Add scripts to `package.json`
 
 ```json
 {
   "scripts": {
-    "dev": "bash scripts/build.sh ; gjs -m dist/main.js"
-  },
-  "dependencies": {},
-  "devDependencies": {}
+    "types": "gnim types",
+    "dev": "gnim dev src/main.tsx"
+  }
 }
 ```
 
-Running the project then will consist of this short command:
+4. Generate types
 
-```sh
-npm run dev
-```
+   ```sh
+   npm run types
+   ```
+
+   > [!TIP]
+   >
+   > Make sure to ignore generated files.
+   >
+   > ```sh
+   > echo ".gnim/" > .gitignore
+   > ```
+
+5. Create the entry point
+
+   :::code-group
+
+   ```tsx [src/main.tsx]
+   import Gtk from "gi://Gtk?version=4.0"
+   import { render } from "@gnim-js/gtk4"
+
+   function AppWindow() {
+     return (
+       <Gtk.Window visible>
+         <Gtk.Label label="Hello from Gnim!" />
+       </Gtk.Window>
+     )
+   }
+
+   const app = new Gtk.Application()
+   app.connect("activate", () => {
+     const dispose = render(AppWindow, app)
+     app.connect("shutdown", dispose)
+   })
+   app.runAsync(null)
+   ```
+
+   :::
+
+6. Start the dev server
+
+   ```sh
+   npm run dev
+   ```

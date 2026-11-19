@@ -1,0 +1,147 @@
+import { describe, it, expect, beforeEach, vi } from "vitest"
+
+const LOCALE_VARS = ["LANGUAGE", "LC_ALL", "LC_MESSAGES", "LC_TIME", "LANG"]
+
+/** Import a fresh copy, the module caches resolved locales. */
+async function importLocale(env: Record<string, string>) {
+    for (const name of LOCALE_VARS) vi.stubEnv(name, undefined)
+    for (const [name, value] of Object.entries(env)) vi.stubEnv(name, value)
+
+    vi.resetModules()
+    return import("../lib/intl/locale.js")
+}
+
+beforeEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+})
+
+describe("getLocale", () => {
+    it("normalizes a POSIX locale name into a BCP 47 tag", async () => {
+        const { getLocale } = await importLocale({ LANG: "en_US.UTF-8" })
+
+        expect(getLocale().toString()).toBe("en-US")
+    })
+
+    it("reads the requested category", async () => {
+        const { getLocale } = await importLocale({
+            LANG: "en_US.UTF-8",
+            LC_TIME: "hu_HU.UTF-8",
+        })
+
+        expect(getLocale("LC_TIME").toString()).toBe("hu-HU")
+    })
+
+    it("strips the modifier", async () => {
+        const { getLocale } = await importLocale({ LANG: "de_DE.UTF-8@euro" })
+
+        expect(getLocale().toString()).toBe("de-DE")
+    })
+
+    it.each(["C", "C.UTF-8", "POSIX"])("falls back to en-US on %s", async (lang) => {
+        const { getLocale } = await importLocale({ LANG: lang })
+
+        expect(getLocale().toString()).toBe("en-US")
+    })
+
+    it("falls back to en-US when the variable is unset", async () => {
+        const { getLocale } = await importLocale({})
+
+        expect(getLocale().toString()).toBe("en-US")
+    })
+
+    it("logs an error and falls back to en-US on an invalid locale", async () => {
+        const logError = vi.fn()
+        vi.stubGlobal("logError", logError)
+        const { getLocale } = await importLocale({ LANG: "not a locale" })
+
+        expect(getLocale().toString()).toBe("en-US")
+        expect(logError).toHaveBeenCalledOnce()
+    })
+})
+
+describe("getPreferredLocale", () => {
+    it("normalizes every entry of LANGUAGE", async () => {
+        const { getPreferredLocale } = await importLocale({
+            LANGUAGE: "hu_HU:en_US.UTF-8:de",
+            LANG: "en_US.UTF-8",
+        })
+
+        expect(getPreferredLocale()).toEqual(["hu-HU", "en-US", "de"])
+    })
+
+    it("drops entries that do not name a locale", async () => {
+        const { getPreferredLocale } = await importLocale({
+            LANGUAGE: "hu_HU::C:en",
+            LANG: "en_US.UTF-8",
+        })
+
+        expect(getPreferredLocale()).toEqual(["hu-HU", "en"])
+    })
+
+    it("falls through to the next variable when LANGUAGE has no usable entry", async () => {
+        const { getPreferredLocale } = await importLocale({
+            LANGUAGE: "C.UTF-8",
+            LC_MESSAGES: "hu_HU.UTF-8",
+        })
+
+        expect(getPreferredLocale()).toBe("hu-HU")
+    })
+
+    it("logs an error when LANGUAGE has no valid entry", async () => {
+        const logError = vi.fn()
+        vi.stubGlobal("logError", logError)
+        const { getPreferredLocale } = await importLocale({
+            LANGUAGE: "not a locale:C",
+            LANG: "hu_HU.UTF-8",
+        })
+
+        expect(getPreferredLocale()).toBe("hu-HU")
+        expect(logError).toHaveBeenCalledOnce()
+    })
+
+    it("prefers LANGUAGE over the LC_* variables", async () => {
+        const { getPreferredLocale } = await importLocale({
+            LANGUAGE: "de",
+            LC_ALL: "hu_HU.UTF-8",
+            LANG: "en_US.UTF-8",
+        })
+
+        expect(getPreferredLocale()).toEqual(["de"])
+    })
+
+    it.each(["C", "C.UTF-8", "POSIX"])(
+        "ignores LANGUAGE when the messages locale is %s",
+        async (lang) => {
+            const { getPreferredLocale } = await importLocale({ LANGUAGE: "de", LANG: lang })
+
+            expect(getPreferredLocale()).toBe("en-US")
+        },
+    )
+
+    it("ignores LANGUAGE when no locale is set", async () => {
+        const { getPreferredLocale } = await importLocale({ LANGUAGE: "de" })
+
+        expect(getPreferredLocale()).toBe("en-US")
+    })
+
+    it("honors LANGUAGE when LC_ALL overrides a C LANG", async () => {
+        const { getPreferredLocale } = await importLocale({
+            LANGUAGE: "de",
+            LC_ALL: "hu_HU.UTF-8",
+            LANG: "C",
+        })
+
+        expect(getPreferredLocale()).toEqual(["de"])
+    })
+
+    it("resolves in the order gettext does", async () => {
+        const { getPreferredLocale } = await importLocale({
+            LC_ALL: "hu_HU.UTF-8",
+            LC_MESSAGES: "de_DE.UTF-8",
+            LANG: "en_US.UTF-8",
+        })
+
+        expect(getPreferredLocale()).toBe("hu-HU")
+    })
+})

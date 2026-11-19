@@ -1,46 +1,57 @@
-name: Publish to npm
+name: Publish
 
 on:
     push:
-        tags:
-            - "v*"
+        branches:
+            - main
+
+concurrency: publish
 
 jobs:
+    build:
+        uses: ./.github/workflows/cli.yml
+
     publish:
+        needs: build
         runs-on: ubuntu-latest
+        defaults:
+            run:
+                shell: nix develop --command bash -e {0}
 
         steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+            - name: Checkout
+              uses: actions/checkout@v7
 
-            - name: Check if tag matches version
+            - name: Install Nix
+              uses: DeterminateSystems/determinate-nix-action@v3
+
+            - name: Setup Rust
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Cache Rust
+              uses: Swatinem/rust-cache@v2
+
+            - name: Download CLI binaries
+              uses: actions/download-artifact@v7
+              with:
+                  path: artifacts
+
+            # artifacts do not keep file permissions
+            - name: Place CLI binaries
               run: |
-                  [[ "${GITHUB_REF}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
-
-            - name: Setup pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                  version: 10
-
-            - name: Setup Node
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 20
-                  cache: "pnpm"
-
-            - name: Install glib-compile-resources
-              run: sudo apt install -y libglib2.0-dev-bin
+                  for dir in artifacts/*; do
+                      install -m 755 "$dir/gnim" "packages/cli/npm/$(basename "$dir")/gnim"
+                  done
 
             - name: Install dependencies
-              run: pnpm install --frozen-lockfile
+              run: pnpm -r install --frozen-lockfile
 
-            - name: Lint
-              run: pnpm lint
+            - name: Generate types
+              run: pnpm run types
 
-            - name: Build project
-              run: pnpm build
-
-            - name: Publish to npm
-              run: npm publish
+            - name: Publish
               env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+                  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+              run: |
+                  pnpm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+                  pnpm -r publish --access public --no-git-checks

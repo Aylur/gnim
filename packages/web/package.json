@@ -1,0 +1,54 @@
+{
+    "name": "@gnim-js/web",
+    "version": "2.0.0-beta.30",
+    "type": "module",
+    "author": "Aylur",
+    "license": "MIT",
+    "homepage": "https://gnimjs.dev/",
+    "repository": "github:Aylur/gnim",
+    "funding": {
+        "type": "kofi",
+        "url": "https://ko-fi.com/aylur"
+    },
+    "scripts": {
+        "prepare": "mkdir -p tests/cert && openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 36500 -subj /CN=localhost -addext subjectAltName=DNS:localhost,IP:127.0.0.1 -keyout tests/cert/key.pem -out tests/cert/cert.pem",
+        "build": "tsc -p tsconfig.build.json",
+        "prepublishOnly": "pnpm run build",
+        "lint": "eslint .",
+        "fmt": "prettier --check . --ignore-path ../../.gitignore",
+        "test": "cargo run --package gnim -- dev tests/index.ts",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@gnim-js/assert": "workspace:*",
+        "gnim": "workspace:^",
+        "@eslint/js": "catalog:",
+        "eslint": "catalog:",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:"
+    },
+    "exports": {
+        ".": "./lib/index.ts"
+    },
+    "publishConfig": {
+        "exports": {
+            ".": {
+                "import": "./dist/index.js",
+                "types": "./dist/index.d.ts"
+            }
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "engines": {
+        "gjs": ">=1.82.0"
+    },
+    "keywords": [
+        "GJS",
+        "Gnim",
+        "Gnome",
+        "fetch",
+        "Soup"
+    ]
+}

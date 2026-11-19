@@ -5,27 +5,67 @@ on:
         branches:
             - "**"
 
+env:
+    GNOME_RUNTIME: "50"
+
+defaults:
+    run:
+        shell: nix develop --command bash -e {0}
+
 jobs:
     lint:
         runs-on: ubuntu-latest
 
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
-            - name: Setup pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                  version: 10
-
-            - name: Setup Node
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 20
-                  cache: "pnpm"
+            - name: Install Nix
+              uses: DeterminateSystems/determinate-nix-action@v3
 
             - name: Install dependencies
-              run: pnpm install --frozen-lockfile
+              run: pnpm -r install --frozen-lockfile
 
-            - name: Lint
-              run: pnpm lint
+            - name: Setup Rust
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Cache Rust
+              uses: Swatinem/rust-cache@v2
+
+            - name: Generate types
+              run: pnpm run types
+
+            - name: Run checks in parallel
+              env:
+                  ESLINT_FLAGS: unstable_native_nodejs_ts_config
+              run: pnpm run --parallel '/(typecheck|fmt|lint)/'
+
+    test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+
+            - name: Install Nix
+              uses: DeterminateSystems/determinate-nix-action@v3
+
+            - name: Setup Rust
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: x86_64-unknown-linux-musl
+
+            - name: Cache Rust
+              uses: Swatinem/rust-cache@v2
+
+            - name: Install dependencies
+              run: pnpm -r install --frozen-lockfile
+
+            - name: Generate types
+              run: pnpm run types
+
+            - name: Build CLI
+              run: cargo build --package gnim
+
+            - name: Run tests
+              run: pnpm run test

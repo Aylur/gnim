@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "verbatimModuleSyntax": true,
+        "erasableSyntaxOnly": true,
+
+        "module": "ES2022",
+        "target": "ES2024",
+        "lib": ["ESNext"],
+
+        "declaration": true,
+        "inlineSourceMap": true,
+        "outDir": "dist",
+        "skipLibCheck": true,
+
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "moduleResolution": "Bundler",
+        "types": ["gi"],
+        "typeRoots": ["../../.gnim/types"]
+    },
+    "include": ["./lib/**/*", "./spec/**/*", "./tests/**/*"]
+}
