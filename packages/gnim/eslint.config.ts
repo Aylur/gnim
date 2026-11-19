@@ -7,16 +7,12 @@ export default defineConfig(
     eslint.configs.recommended,
     ...tseslint.configs.recommended,
     {
+        ignores: ["docs/.vitepress/", "dist/", ".gnim/", "target/"],
         languageOptions: {
             parserOptions: {
                 tsconfigRootDir: import.meta.dirname,
             },
         },
-    },
-    {
-        ignores: ["docs/.vitepress/", "dist/", ".gnim/", "target/"],
-    },
-    {
         rules: {
             "@typescript-eslint/no-explicit-any": "off",
             "@typescript-eslint/no-namespace": "off",

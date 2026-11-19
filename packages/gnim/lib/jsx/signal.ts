@@ -142,29 +142,6 @@ export function runScope<T>(scope: Scope, fn: () => T): T {
     })
 }
 
-function cancelMounts(scope: Scope): void {
-    for (let i = userQueue.length - 1; i >= 0; i--) {
-        const job = userQueue[i]
-        if (!(job instanceof MountJob)) continue
-
-        for (const s of ancestors(job.owner)) {
-            if (s === scope) {
-                userQueue.splice(i, 1)
-                continue
-            }
-        }
-    }
-}
-
-function runAllInScope<T>(scope: Scope, items: T[], fn: (item: T) => void, reverse: boolean) {
-    try {
-        runAll(items, fn, reverse)
-    } catch (e) {
-        annotateError(e, scope)
-        throw e
-    }
-}
-
 class MountJob {
     owner = activeScope
     fn: Fn
@@ -185,6 +162,29 @@ class MountJob {
         } finally {
             activeScope = prevScope
         }
+    }
+}
+
+function cancelMounts(scope: Scope): void {
+    for (let i = userQueue.length - 1; i >= 0; i--) {
+        const job = userQueue[i]
+        if (!(job instanceof MountJob)) continue
+
+        for (const s of ancestors(job.owner)) {
+            if (s === scope) {
+                userQueue.splice(i, 1)
+                continue
+            }
+        }
+    }
+}
+
+function runAllInScope<T>(scope: Scope, items: T[], fn: (item: T) => void, reverse: boolean) {
+    try {
+        runAll(items, fn, reverse)
+    } catch (e) {
+        annotateError(e, scope)
+        throw e
     }
 }
 

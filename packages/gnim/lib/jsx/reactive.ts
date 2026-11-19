@@ -73,8 +73,8 @@ export function subscribe<T>(track: () => void, callback: (prev?: T) => T): Sign
  * Scopes own child scopes, cleanup and mount callbacks and context values.
  * Disposing a scope disposes its children recursively.
  */
-export type Scope = { [scope]: never }
 declare const scope: unique symbol
+export type Scope = { [scope]: never }
 
 /**
  * Context lets components pass information deep down
