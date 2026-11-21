@@ -417,6 +417,16 @@ export class GtkRenderer extends BaseRenderer {
             when: (p, c) => !(c instanceof Gtk.ListBoxRow) && c.get_parent()?.get_parent() === p,
             remove: (p, c) => p.remove(c.get_parent()!),
         }),
+        rule(Gtk.ScrolledWindow, Gtk.Widget, {
+            remove(p, c) {
+                const current = p.get_child()
+                if (current === c) return p.set_child(null)
+                if (current instanceof Gtk.Viewport && current.get_child() === c) {
+                    return p.set_child(null)
+                }
+                return false
+            },
+        }),
         rule(Gtk.InfoBar, Gtk.Widget, {
             remove(p, c) {
                 // Buildable appends action widgets to the action area without response data,
