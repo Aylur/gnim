@@ -173,7 +173,7 @@ function cancelMounts(scope: Scope): void {
         for (const s of ancestors(job.owner)) {
             if (s === scope) {
                 userQueue.splice(i, 1)
-                continue
+                break
             }
         }
     }
