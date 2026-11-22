@@ -42,3 +42,10 @@ GJS has [jasmine-gjs](https://github.com/ptomato/jasmine-gjs) which is not
 TypeScript friendly.
 
 Planned: vitest like assert library and a `gnim test` CLI tool.
+
+## Inspector
+
+There is currently no way to inspect the JSX tree at runtime, developers have to
+map GTK tree <-> JSX tree in their head using the GTK debug tool.
+
+Planned: Gnim tool for inspecting the JSX tree
