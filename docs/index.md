@@ -15,15 +15,15 @@ A library that brings JSX, reactivity, and type safety to GNOME JavaScript.
 ::: code-group
 
 ```sh [<i class="devicon-npm-plain"></i> npm]
-npm create gnim@beta
+npm create gnim
 ```
 
 ```sh [<i class="devicon-pnpm-plain"></i> pnpm]
-pnpm create gnim@beta
+pnpm create gnim
 ```
 
 ```sh [<i class="devicon-yarn-original"></i> yarn]
-yarn create gnim@beta
+yarn create gnim
 ```
 
 :::

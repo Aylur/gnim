@@ -1,6 +1,4 @@
-# Tips
-
-## Dialogs as async functions
+# Dialogs as async functions
 
 Dialogs usually ask the user for an input that gets processed further. Instead
 of holding an `open` state and wrapping event handlers, it makes more sense to
@@ -82,7 +80,7 @@ export function DialogRoot(props: {
 }
 ```
 
-### Dialog usage
+## Dialog usage
 
 Place `DialogRoot` in a window.
 
@@ -132,5 +130,5 @@ function AppContent() {
 >   dialog.
 > - Additional props can be passed by wrapping the dialog in an arrow function:
 >   ```tsx
->   openDialog((props) => <AddPluginDialog {...props} customProp />)
+>   openDialog((props) => <MyDialog {...props} customProp />)
 >   ```

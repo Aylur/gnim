@@ -86,15 +86,15 @@ sudo apt install libgjs-dev libgtk-4-dev npm
 ::: code-group
 
 ```sh [<i class="devicon-npm-plain"></i> npm]
-npm create gnim@beta
+npm create gnim
 ```
 
 ```sh [<i class="devicon-pnpm-plain"></i> pnpm]
-pnpm create gnim@beta
+pnpm create gnim
 ```
 
 ```sh [<i class="devicon-yarn-original"></i> yarn]
-yarn create gnim@beta
+yarn create gnim
 ```
 
 :::
@@ -114,7 +114,7 @@ yarn create gnim@beta
    ```sh
    mkdir gnim-app
    cd gnim-app
-   npm install gnim@beta @gnim-js/gtk4@beta
+   npm install gnim @gnim-js/gtk4
    ```
 
 2. Configure `tsconfig.json`

@@ -14,7 +14,7 @@ Renderer for GNOME Shell extensions. It renders
 > template:
 >
 > ```sh
-> npm create gnim@beta -- --template gnome-shell
+> npm create gnim -- --template gnome-shell
 > ```
 
 ## `render`

@@ -55,7 +55,7 @@ export default defineConfig({
                 items: [
                     { text: "Dev server", link: "/article/devserver" },
                     { text: "Assets", link: "/article/assets" },
-                    { text: "Tips", link: "/article/tips" },
+                    { text: "Async dialogs", link: "/article/async-dialogs" },
                     { text: "Buildable", link: "/article/buildable" },
                     { text: "Web framework comparisons", link: "/article/comparisons" },
                     { text: "GLib.Variant", link: "/article/gvariant" },
