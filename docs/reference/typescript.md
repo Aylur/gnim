@@ -1,0 +1,201 @@
+# TypeScript
+
+GObject has a few additional concepts about class methods and properties that
+cannot be expressed with TypeScript alone. For these we have a few special
+type-only fields on classes.
+
+We have annotations for:
+
+- signals
+- readable properties
+- writable properties
+- construct-only properties
+
+When implementing a GObject subclass you might want to annotate a subset of
+these or all of these depending on the use case.
+
+## Generating types
+
+Generating types can be done via the Gnim CLI.
+
+```sh
+gnim types --help
+```
+
+## Type annotations
+
+Every class that inherits from GObject is going to include a namespace
+containing type declarations where each member is written in `kebab-case`:
+
+```ts
+namespace MyClass {
+  export interface SignalSignatures extends GObject.Object.SignalSignatures {
+    // simple signal
+    "my-signal"(arg: number): void
+    // detailed signal annotated with the `::{}` suffix
+    "my-detailed-signal::{}"(arg: number): void
+  }
+
+  // ReadableProperties is also used for notify signal annotations
+  export interface ReadableProperties
+    extends GObject.Object.ReadableProperties {
+    // property which has a public getter
+    "my-prop": number
+  }
+
+  export interface WritableProperties
+    extends GObject.Object.WritableProperties {
+    // property which has a public setter
+    "my-prop": number
+  }
+
+  export interface ConstructOnlyProperties
+    extends GObject.Object.ConstructOnlyProperties {
+    // property which can only be set at construction
+    "my-ctor-prop": number
+  }
+}
+```
+
+And the class will refer to these using special `$`-prefixed fields:
+
+> [!IMPORTANT]
+>
+> These fields don't exist at runtime, they are used by other APIs to introspect
+> GObjects.
+
+```ts
+class MyClass extends GObject.Object {
+  declare readonly $signals: MyClass.SignalSignatures
+  declare readonly $readableProperties: MyClass.ReadableProperties
+  declare readonly $writableProperties: MyClass.WritableProperties
+  declare readonly $constructOnlyProperties: MyClass.ConstructOnlyProperties
+
+  @signal
+  mySignal(arg: number): void {}
+
+  @signal({ flags: GObject.SignalFlags.DETAILED })
+  myDetailedSignal(arg: number): void {}
+
+  @property
+  myProp: number
+
+  // GObject.ConstructorProps can be used to infer props from the annotations
+  constructor(props: Partial<GObject.ConstructorProps<MyClass>> = {}) {
+    // note that properties will be annotated as camelCase
+    const { myProp = 0, ...rest } = props
+    super(rest)
+    this.myProp = myProp
+
+    console.log(props.myCtorProp)
+  }
+}
+```
+
+Methods such as `connect()`, `emit()`, `notify()` and functions such as
+[`bind()`](/reference/primitives#bind) and
+[`connectSignal()`](/reference/primitives#connectsignal) will infer from these
+annotations.
+
+```ts
+const instance = new MyClass()
+
+instance.connect("my-signal", (source, arg) => {
+  console.log(arg)
+})
+
+instance.connect("my-detailed-signal::detail", (source, arg) => {
+  console.log(arg)
+})
+
+connectSignal(instance, "my-signal", (arg) => {
+  console.log(arg)
+})
+
+const myProp = bind(instance, "my-prop")
+```
+
+Writing these interfaces by hand means spelling every member out twice: once on
+the class and once kebab-cased in the annotation. The `Annotations` type helper
+generates the annotation entries from a set of class members by kebab-casing
+their names.
+
+```ts
+import GObject from "gi://GObject?version=2.0"
+import { register, property, signal, type Annotations } from "gnim/gobject"
+
+@register
+class MyClass extends GObject.Object {
+  declare readonly $signals: GObject.Object.SignalSignatures &
+    Annotations<MyClass, "mySignal">
+
+  declare readonly $readableProperties: GObject.Object.ReadableProperties &
+    Annotations<MyClass, "myProp" | "myOtherProp">
+
+  @property declare myProp: string
+  @property declare myOtherProp: number
+
+  @signal
+  mySignal(arg: string): void {}
+}
+
+const instance = new MyClass()
+
+instance.connect("my-signal", (_, arg) => console.log(arg))
+instance.connect("notify::my-prop", () => console.log(instance.myProp))
+```
+
+Due to how TypeScript's `this` type works, you need to annotate `this` or use a
+type cast to correctly infer types within the class.
+
+```ts
+class MyClass {
+  myFn(this: MyClass) {
+    this.notify("my-prop")
+  }
+
+  myFn() {
+    const self = this as MyClass
+    self.notify("my-prop")
+  }
+}
+```
+
+## Annotating GI imports
+
+You can define non-versioned GI imports.
+
+:::code-group
+
+```ts [env.d.ts]
+declare module "gi://Gtk" {
+  import Gtk from "gi://Gtk?version=4.0"
+  export default Gtk
+}
+```
+
+:::
+
+You can also use the `--alias` flag when generating types to do this
+automatically, which will generate an alias for each namespace.
+
+> [!TIP]
+>
+> To target specific versions you can ignore other versions.
+>
+> ```sh
+> gnim types --alias -i Gtk-3.0 -i Gdk-3.0
+> ```
+
+## Escape hatches
+
+To avoid using `@ts-expect-error` or `as any` assertions when the signal name is
+a `string`, you can use non-typed versions of signal-related functions:
+
+```ts
+GObject.signal_connect(object, "signal-name", (emitter, ...args) => {
+  console.log(emitter, ...args)
+})
+
+GObject.signal_emit_by_name(object, "signal-name", arg1, arg2)
+```
